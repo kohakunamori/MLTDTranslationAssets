@@ -24,7 +24,7 @@
 - **多媒体资产 Manifest**:
   - 939 张贴图索引（937 张已审校贴图 + 底栏贴图），支持 GitHub Release Assets / Cloudflare R2。
 - **名词表**:
-  - 90 个官方权威术语 + 52 偶像标准名录。
+  - 90 个参考术语表 + 52 偶像译名名录。
 
 ## 2. 验证与后续使用
 - 目录结构完全独立且干净，可直接在 `build\runs\text-localization\9.0.200\github-export-candidate` 下执行 `git init && git add . && git commit -m "feat: initial localization repository" && git push` 推送至 GitHub。

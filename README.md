@@ -1,7 +1,7 @@
 # MLTD 简体中文汉化开源资源库 (THE IDOLM@STER MILLION LIVE! THEATER DAYS Localization)
 
-欢迎来到《偶像大师 百万现场 剧场时光》(MLTD) 汉化资源的官方权威开源仓库（Single Source of Truth, SSOT）。
-本仓库沉淀了全量日文原文与高质量简体中文译文，并统一维护术语表、歌词与多媒体资源 Manifest。
+本项目为《偶像大师 百万现场 剧场时光》(MLTD) 简体中文本地化个人整理与社区协作数据仓库。
+本仓库沉淀了日文原文与整理的简体中文译文，并统一维护术语表、歌词与多媒体资源 Manifest。
 
 ## 目录结构
 
@@ -14,9 +14,9 @@
 - `lyrics/`：全曲目歌词库（432 首歌曲对齐双语歌词与时间戳）
   - `lyrics/songs/`：按歌曲独立分轨 JSONL
   - `lyrics/all_lyrics.jsonl`：全曲歌词总汇
-- `glossary/`：翻译规范与标准术语
-  - `glossary/authoritative-terms.json`：90 个官方权威术语（固定译名与避免词）
-  - `glossary/idols.json`：52 偶像标准官方定名与声优名录
+- `glossary/`：翻译规范与参考术语
+  - `glossary/authoritative-terms.json`：90 个参考术语表（固定译名与避免词）
+  - `glossary/idols.json`：52 偶像译名对照与声优名录
 - `manifests/`：富媒体与贴图元数据清单（文字在库，多媒体外链）
   - `manifests/images.manifest.json`：937 张已汉化贴图与底栏贴图的 SHA-256 索引
   - `manifests/bottom-bar.manifest.json`：底栏 7 标签图文与 Sprite 坐标
