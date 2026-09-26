@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MLTDLocalizationEntry",
+  "description": "Standard schema for a single localization line in MLTD locales",
+  "type": "object",
+  "required": [
+    "base_version",
+    "bundle",
+    "item_key",
+    "source_sha256",
+    "ja",
+    "zh",
+    "status",
+    "updated_at"
+  ],
+  "properties": {
+    "base_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+$",
+      "description": "Target client base version and assets build"
+    },
+    "bundle": {
+      "type": "string",
+      "description": "Logical or physical asset bundle name"
+    },
+    "item_key": {
+      "type": "string",
+      "description": "Unique key inside bundle"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex digest of ja source text"
+    },
+    "ja": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Original Japanese source text"
+    },
+    "zh": {
+      "type": "string",
+      "pattern": "^[^|\\^]*$",
+      "description": "Simplified Chinese translation (no | or ^ allowed)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "untranslated",
+        "pending",
+        "accepted"
+      ],
+      "description": "Translation review status"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp"
+    }
+  },
+  "additionalProperties": false
+}

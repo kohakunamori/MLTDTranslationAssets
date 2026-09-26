@@ -1,0 +1,599 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "match": "literal_substring_longest_first",
+    "model_sees_markers_not_authoritative_source_terms": true,
+    "exact_source_terms_can_skip_model": true,
+    "character_name_min_exact_evidence": 2,
+    "character_name_min_majority_ratio": 0.8
+  },
+  "counts": {
+    "entries": 90,
+    "curated": 38,
+    "evidence_backed_character_names": 26,
+    "idol_names": 26,
+    "owner_ruled_character_names": 3
+  },
+  "entries": {
+    "{$P$}さん": {
+      "target": "{$P$}先生",
+      "category": "player_address",
+      "evidence": "project_address_convention+official_legacy_majority"
+    },
+    "茜ちゃん": {
+      "target": "小茜",
+      "category": "character_nickname",
+      "evidence": "official_legacy_zhcn_consistent_substring"
+    },
+    "ゴールドランカー": {
+      "target": "黄金排名",
+      "category": "rank_title",
+      "evidence": "official_legacy_zhcn_consistent_substring"
+    },
+    "トッププラチナマスター": {
+      "target": "顶尖白金大师",
+      "category": "rank_title",
+      "evidence": "official_legacy_zhcn_consistent_substring"
+    },
+    "アナザー2衣装": {
+      "target": "异色2服装",
+      "category": "costume_system_term",
+      "evidence": "official_legacy_zhcn_consistent_substring"
+    },
+    "アナザー衣装": {
+      "target": "异色服装",
+      "category": "costume_system_term",
+      "evidence": "official_legacy_zhcn_consistent_substring"
+    },
+    "キミさけ": {
+      "target": "キミさけ",
+      "category": "brand_title",
+      "evidence": "project_policy_preserve_unofficially_localized_brand"
+    },
+    "ハイスコア ランキング": {
+      "target": "最高分排行榜",
+      "category": "ranking_label",
+      "evidence": "official_legacy_label_only_numeric_thresholds_ignored"
+    },
+    "イベント ランキング": {
+      "target": "活动排行榜",
+      "category": "ranking_label",
+      "evidence": "official_legacy_label_only_numeric_thresholds_ignored"
+    },
+    "ラウンジ ランキング": {
+      "target": "社交厅排行榜",
+      "category": "ranking_label",
+      "evidence": "official_legacy_label_only_numeric_thresholds_ignored"
+    },
+    "CHALLENGE FOR GLOW-RY D＠YS!!!": {
+      "target": "CHALLENGE FOR GLOW-RY D＠YS!!!",
+      "category": "brand_title",
+      "evidence": "project_policy_preserve_unofficially_localized_brand"
+    },
+    "7D@ys Smile!!": {
+      "target": "7D@ys Smile!!",
+      "category": "brand_title",
+      "evidence": "project_policy_preserve_unofficially_localized_brand"
+    },
+    "BRAND NEW PERFORM@NCE!!!": {
+      "target": "BRAND NEW PERFORM@NCE!!!",
+      "category": "brand_title",
+      "evidence": "project_policy_preserve_unofficially_localized_brand"
+    },
+    "THE IDOLM@STER M@STERS OF IDOL WORLD!!!!!": {
+      "target": "THE IDOLM@STER M@STERS OF IDOL WORLD!!!!!",
+      "category": "brand_title",
+      "evidence": "project_policy_preserve_unofficially_localized_brand"
+    },
+    "THE IDOLM@STER ORCHESTRA CONCERT": {
+      "target": "THE IDOLM@STER ORCHESTRA CONCERT",
+      "category": "brand_title",
+      "evidence": "project_policy_preserve_unofficially_localized_brand"
+    },
+    "打ち上げガシャ": {
+      "target": "庆功扭蛋",
+      "category": "system_term",
+      "evidence": "current_project_consistency_rule"
+    },
+    "シアターデイズ": {
+      "target": "剧场时光",
+      "category": "franchise_term",
+      "evidence": "current_project_consistency_rule"
+    },
+    "ミリオンジュエル": {
+      "target": "百万宝石",
+      "category": "currency",
+      "evidence": "current_project_consistency_rule"
+    },
+    "スペシャルログインボーナス": {
+      "target": "特别登录奖励",
+      "category": "system_term",
+      "evidence": "current_project_consistency_rule"
+    },
+    "BOTファン数": {
+      "target": "BOT粉丝数",
+      "category": "system_term",
+      "evidence": "information_preservation_rule"
+    },
+    "1stアニバーサリー": {
+      "target": "1周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "1stあにばーさりー": {
+      "target": "1周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "2ndアニバーサリー": {
+      "target": "2周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "2ndあにばーさりー": {
+      "target": "2周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "3rdアニバーサリー": {
+      "target": "3周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "3rdあにばーさりー": {
+      "target": "3周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "4thアニバーサリー": {
+      "target": "4周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "4thあにばーさりー": {
+      "target": "4周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "5thアニバーサリー": {
+      "target": "5周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "5thあにばーさりー": {
+      "target": "5周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "6thアニバーサリー": {
+      "target": "6周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "6thあにばーさりー": {
+      "target": "6周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "7thアニバーサリー": {
+      "target": "7周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "7thあにばーさりー": {
+      "target": "7周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "8thアニバーサリー": {
+      "target": "8周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "8thあにばーさりー": {
+      "target": "8周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "9thアニバーサリー": {
+      "target": "9周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "9thあにばーさりー": {
+      "target": "9周年纪念",
+      "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "天海春香": {
+      "target": "天海春香",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 103,
+      "published_text_rows": 103
+    },
+    "如月千早": {
+      "target": "如月千早",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 106,
+      "published_text_rows": 106
+    },
+    "星井美希": {
+      "target": "星井美希",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 99,
+      "published_text_rows": 99
+    },
+    "菊地真": {
+      "target": "菊地真",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 103,
+      "published_text_rows": 103
+    },
+    "秋月律子": {
+      "target": "秋月律子",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 95,
+      "published_text_rows": 95
+    },
+    "伊吹翼": {
+      "target": "伊吹翼",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 114,
+      "published_text_rows": 114
+    },
+    "田中琴葉": {
+      "target": "田中琴叶",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 121,
+      "published_text_rows": 121
+    },
+    "佐竹美奈子": {
+      "target": "佐竹美奈子",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 110,
+      "published_text_rows": 110
+    },
+    "箱崎星梨花": {
+      "target": "箱崎星梨花",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 116,
+      "published_text_rows": 116
+    },
+    "望月杏奈": {
+      "target": "望月杏奈",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 111,
+      "published_text_rows": 111
+    },
+    "七尾百合子": {
+      "target": "七尾百合子",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 120,
+      "published_text_rows": 120
+    },
+    "高山紗代子": {
+      "target": "高山纱代子",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 110,
+      "published_text_rows": 110
+    },
+    "高坂海美": {
+      "target": "高坂海美",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 106,
+      "published_text_rows": 106
+    },
+    "中谷育": {
+      "target": "中谷育",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 117,
+      "published_text_rows": 117
+    },
+    "天空橋朋花": {
+      "target": "天空桥朋花",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 106,
+      "published_text_rows": 106
+    },
+    "矢吹可奈": {
+      "target": "矢吹可奈",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 132,
+      "published_text_rows": 133
+    },
+    "二階堂千鶴": {
+      "target": "二阶堂千鹤",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 111,
+      "published_text_rows": 111
+    },
+    "大神環": {
+      "target": "大神环",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 103,
+      "published_text_rows": 103
+    },
+    "宮尾美也": {
+      "target": "宫尾美也",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 110,
+      "published_text_rows": 110
+    },
+    "真壁瑞希": {
+      "target": "真壁瑞希",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 130,
+      "published_text_rows": 130
+    },
+    "永吉昴": {
+      "target": "永吉昴",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 108,
+      "published_text_rows": 108
+    },
+    "北上麗花": {
+      "target": "北上丽花",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 130,
+      "published_text_rows": 130
+    },
+    "周防桃子": {
+      "target": "周防桃子",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_verbatim_source_mechanical_t2s",
+      "corpus_rows": 111,
+      "published_text_rows": 111
+    },
+    "エミリースチュアート": {
+      "target": "艾米莉·斯图亚特",
+      "category": "character_name",
+      "evidence": "owner_ruling_2026-09-26",
+      "mechanical_opencc_t2s": "艾蜜莉‧司徒亚特",
+      "reason": "owner chose the U+00B7 separator and the 米莉/斯图亚特 spelling"
+    },
+    "篠宮可憐": {
+      "target": "篠宫可怜",
+      "category": "character_name",
+      "evidence": "owner_ruling_2026-09-26",
+      "mechanical_opencc_t2s": "筿宫可怜",
+      "reason": "owner keeps the 篠 U+7BE0 family glyph instead of OpenCC's 筿 U+7B7F"
+    },
+    "白石紬": {
+      "target": "白石䌷",
+      "category": "character_name",
+      "evidence": "owner_ruling_2026-09-26",
+      "mechanical_opencc_t2s": "白石䌷",
+      "reason": "owner confirmed the published U+4337 form; no divergence from t2s"
+    },
+    "ジュリア": {
+      "target": "茱莉亚",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 8,
+      "evidence_total": 8,
+      "majority_ratio": 1.0
+    },
+    "ロコ": {
+      "target": "ROCO",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 6,
+      "evidence_total": 6,
+      "majority_ratio": 1.0
+    },
+    "三浦あずさ": {
+      "target": "三浦梓",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "北沢志保": {
+      "target": "北泽志保",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "双海亜美": {
+      "target": "双海亚美",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "双海真美": {
+      "target": "双海真美",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "四条貴音": {
+      "target": "四条贵音",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "島原エレナ": {
+      "target": "岛原艾琳娜",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "徳川まつり": {
+      "target": "德川茉莉",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "我那覇響": {
+      "target": "我那霸响",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "所恵美": {
+      "target": "所惠美",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "春日未来": {
+      "target": "春日未来",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 4,
+      "evidence_total": 4,
+      "majority_ratio": 1.0
+    },
+    "最上静香": {
+      "target": "最上静香",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "木下ひなた": {
+      "target": "木下日向",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "松田亜利沙": {
+      "target": "松田亚利沙",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "桜守歌織": {
+      "target": "樱守歌织",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "横山奈緒": {
+      "target": "横山奈绪",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "水瀬伊織": {
+      "target": "水濑伊织",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "百瀬莉緒": {
+      "target": "百濑莉绪",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "福田のり子": {
+      "target": "福田法子",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "舞浜歩": {
+      "target": "舞滨步",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "萩原雪歩": {
+      "target": "萩原雪步",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "豊川風花": {
+      "target": "丰川风花",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "野々原茜": {
+      "target": "野野原茜",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 4,
+      "evidence_total": 4,
+      "majority_ratio": 1.0
+    },
+    "馬場このみ": {
+      "target": "马场木实",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    },
+    "高槻やよい": {
+      "target": "高槻弥生",
+      "category": "character_name",
+      "evidence": "official_legacy_zhcn_exact_source",
+      "evidence_count": 3,
+      "evidence_total": 3,
+      "majority_ratio": 1.0
+    }
+  }
+}

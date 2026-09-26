@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "mltd-bottom-bar-manifest",
+  "generated_at": "2026-09-27T00:00:00Z",
+  "atlas_target": {
+    "serialized_file": "sharedassets1.assets",
+    "path_id": 4,
+    "texture": "theater_system_footer_main",
+    "size": [
+      512,
+      512
+    ],
+    "slot_count": 7
+  },
+  "slots": [
+    {
+      "index": 0,
+      "ja": "劇場",
+      "zh": "剧场",
+      "provenance": "project_decision"
+    },
+    {
+      "index": 1,
+      "ja": "アイドル",
+      "zh": "偶像",
+      "provenance": "shared_glossary"
+    },
+    {
+      "index": 2,
+      "ja": "コミュ",
+      "zh": "剧情",
+      "provenance": "project_decision"
+    },
+    {
+      "index": 3,
+      "ja": "ライブ",
+      "zh": "演唱会",
+      "provenance": "project_decision"
+    },
+    {
+      "index": 4,
+      "ja": "お仕事",
+      "zh": "工作",
+      "provenance": "project_decision"
+    },
+    {
+      "index": 5,
+      "ja": "ガシャ",
+      "zh": "转蛋",
+      "provenance": "project_decision"
+    },
+    {
+      "index": 6,
+      "ja": "ナビ",
+      "zh": "导航",
+      "provenance": "project_decision"
+    }
+  ],
+  "previews": {
+    "montage_off": {
+      "sha256": "49d7721967789b9020802c22713dc3e8ecf5307504176bb6cfccfb1623c03a5e",
+      "bytes": 97119
+    },
+    "montage_on": {
+      "sha256": "c371d85cc33b0f5419daf020f5e2364bac525fd04686e64020e66f825d4ce87e",
+      "bytes": 112776
+    }
+  }
+}

@@ -1,0 +1,583 @@
+{
+  "schema_version": 1,
+  "kind": "mltd-authoritative-idols",
+  "description": "Standard 52 idols of 765PRO plus theater staff and guest idols",
+  "counts": {
+    "total_standard_idols": 52,
+    "allstars": 13,
+    "theater": 39,
+    "staff_and_guests": 8
+  },
+  "idols": [
+    {
+      "idol_id": 1,
+      "speaker_code": "001har",
+      "name_jp": "天海春香",
+      "name_zh": "天海春香",
+      "type": "Princess",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 2,
+      "speaker_code": "002chi",
+      "name_jp": "如月千早",
+      "name_zh": "如月千早",
+      "type": "Fairy",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 3,
+      "speaker_code": "003mik",
+      "name_jp": "星井美希",
+      "name_zh": "星井美希",
+      "type": "Angel",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 4,
+      "speaker_code": "004yuk",
+      "name_jp": "萩原雪歩",
+      "name_zh": "萩原雪步",
+      "type": "Princess",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 5,
+      "speaker_code": "005yay",
+      "name_jp": "高槻やよい",
+      "name_zh": "高槻弥生",
+      "type": "Angel",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 6,
+      "speaker_code": "006mak",
+      "name_jp": "菊地真",
+      "name_zh": "菊地真",
+      "type": "Princess",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 7,
+      "speaker_code": "007ior",
+      "name_jp": "水瀬伊織",
+      "name_zh": "水濑伊织",
+      "type": "Fairy",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 8,
+      "speaker_code": "008tak",
+      "name_jp": "四条貴音",
+      "name_zh": "四条贵音",
+      "type": "Fairy",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 9,
+      "speaker_code": "009rit",
+      "name_jp": "秋月律子",
+      "name_zh": "秋月律子",
+      "type": "Princess",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 10,
+      "speaker_code": "010azu",
+      "name_jp": "三浦あずさ",
+      "name_zh": "三浦梓",
+      "type": "Angel",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 11,
+      "speaker_code": "011ami",
+      "name_jp": "双海亜美",
+      "name_zh": "双海亚美",
+      "type": "Angel",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 12,
+      "speaker_code": "012mam",
+      "name_jp": "双海真美",
+      "name_zh": "双海真美",
+      "type": "Angel",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 13,
+      "speaker_code": "013hib",
+      "name_jp": "我那覇響",
+      "name_zh": "我那霸响",
+      "type": "Princess",
+      "division": "765PRO Allstars",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 14,
+      "speaker_code": "014mir",
+      "name_jp": "春日未来",
+      "name_zh": "春日未来",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 15,
+      "speaker_code": "015siz",
+      "name_jp": "最上静香",
+      "name_zh": "最上静香",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 16,
+      "speaker_code": "016tsu",
+      "name_jp": "伊吹翼",
+      "name_zh": "伊吹翼",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 17,
+      "speaker_code": "017kth",
+      "name_jp": "田中琴葉",
+      "name_zh": "田中琴叶",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 18,
+      "speaker_code": "018ele",
+      "name_jp": "島原エレナ",
+      "name_zh": "岛原艾琳娜",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 19,
+      "speaker_code": "019min",
+      "name_jp": "佐竹美奈子",
+      "name_zh": "佐竹美奈子",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 20,
+      "speaker_code": "020meg",
+      "name_jp": "所恵美",
+      "name_zh": "所惠美",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 21,
+      "speaker_code": "021mat",
+      "name_jp": "徳川まつり",
+      "name_zh": "德川茉莉",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 22,
+      "speaker_code": "022ser",
+      "name_jp": "箱崎星梨花",
+      "name_zh": "箱崎星梨花",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 23,
+      "speaker_code": "023aka",
+      "name_jp": "野々原茜",
+      "name_zh": "野野原茜",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 24,
+      "speaker_code": "024ann",
+      "name_jp": "望月杏奈",
+      "name_zh": "望月杏奈",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 25,
+      "speaker_code": "025roc",
+      "name_jp": "ロコ",
+      "name_zh": "ROCO",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 26,
+      "speaker_code": "026yur",
+      "name_jp": "七尾百合子",
+      "name_zh": "七尾百合子",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 27,
+      "speaker_code": "027say",
+      "name_jp": "高山紗代子",
+      "name_zh": "高山纱代子",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 28,
+      "speaker_code": "028ari",
+      "name_jp": "松田亜利沙",
+      "name_zh": "松田亚利沙",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 29,
+      "speaker_code": "029umi",
+      "name_jp": "高坂海美",
+      "name_zh": "高坂海美",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 30,
+      "speaker_code": "030iku",
+      "name_jp": "中谷育",
+      "name_zh": "中谷育",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 31,
+      "speaker_code": "031tom",
+      "name_jp": "天空橋朋花",
+      "name_zh": "天空桥朋花",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 32,
+      "speaker_code": "032emi",
+      "name_jp": "エミリースチュアート",
+      "name_zh": "艾米莉·斯图亚特",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "owner_ruling_2026-09-26",
+      "note": "Owner chose U+00B7 middle dot separator and 艾米莉·斯图亚特 spelling"
+    },
+    {
+      "idol_id": 33,
+      "speaker_code": "033sih",
+      "name_jp": "北沢志保",
+      "name_zh": "北泽志保",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 34,
+      "speaker_code": "034ayu",
+      "name_jp": "舞浜歩",
+      "name_zh": "舞滨步",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 35,
+      "speaker_code": "035hin",
+      "name_jp": "木下ひなた",
+      "name_zh": "木下日向",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 36,
+      "speaker_code": "036kan",
+      "name_jp": "矢吹可奈",
+      "name_zh": "矢吹可奈",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 37,
+      "speaker_code": "037nao",
+      "name_jp": "横山奈緒",
+      "name_zh": "横山奈绪",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 38,
+      "speaker_code": "038chz",
+      "name_jp": "二階堂千鶴",
+      "name_zh": "二阶堂千鹤",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 39,
+      "speaker_code": "039kon",
+      "name_jp": "馬場このみ",
+      "name_zh": "马场木实",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 40,
+      "speaker_code": "040tam",
+      "name_jp": "大神環",
+      "name_zh": "大神环",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 41,
+      "speaker_code": "041fuk",
+      "name_jp": "豊川風花",
+      "name_zh": "丰川风花",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 42,
+      "speaker_code": "042miy",
+      "name_jp": "宮尾美也",
+      "name_zh": "宫尾美也",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 43,
+      "speaker_code": "043nor",
+      "name_jp": "福田のり子",
+      "name_zh": "福田法子",
+      "type": "Princess",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 44,
+      "speaker_code": "044miz",
+      "name_jp": "真壁瑞希",
+      "name_zh": "真壁瑞希",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 45,
+      "speaker_code": "045kar",
+      "name_jp": "篠宮可憐",
+      "name_zh": "篠宫可怜",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "owner_ruling_2026-09-26",
+      "note": "Owner preserves 篠 U+7BE0 glyph instead of OpenCC 筿"
+    },
+    {
+      "idol_id": 46,
+      "speaker_code": "046rio",
+      "name_jp": "百瀬莉緒",
+      "name_zh": "百濑莉绪",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 47,
+      "speaker_code": "047sub",
+      "name_jp": "永吉昴",
+      "name_zh": "永吉昴",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 48,
+      "speaker_code": "048rei",
+      "name_jp": "北上麗花",
+      "name_zh": "北上丽花",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 49,
+      "speaker_code": "049mom",
+      "name_jp": "周防桃子",
+      "name_zh": "周防桃子",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 50,
+      "speaker_code": "050jul",
+      "name_jp": "ジュリア",
+      "name_zh": "茱莉亚",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    },
+    {
+      "idol_id": 51,
+      "speaker_code": "051tmg",
+      "name_jp": "白石紬",
+      "name_zh": "白石䌷",
+      "type": "Fairy",
+      "division": "765PRO Theater",
+      "provenance": "owner_ruling_2026-09-26",
+      "note": "Owner confirmed published 白石䌷 (U+4337) form"
+    },
+    {
+      "idol_id": 52,
+      "speaker_code": "052kao",
+      "name_jp": "桜守歌織",
+      "name_zh": "樱守歌织",
+      "type": "Angel",
+      "division": "765PRO Theater",
+      "provenance": "official_legacy_mechanical_t2s",
+      "note": "Standard 765PRO idol roster"
+    }
+  ],
+  "staff_and_guests": [
+    {
+      "code": "101kot",
+      "name_jp": "音無小鳥",
+      "name_zh": "音无小鸟",
+      "role": "765PRO Clerk"
+    },
+    {
+      "code": "102mis",
+      "name_jp": "青羽美咲",
+      "name_zh": "青羽美咲",
+      "role": "765PRO Theater Clerk"
+    },
+    {
+      "code": "103jun",
+      "name_jp": "高木順二朗",
+      "name_zh": "高木顺二朗",
+      "role": "765PRO President"
+    },
+    {
+      "code": "201xxx",
+      "name_jp": "詩花",
+      "name_zh": "诗花",
+      "role": "961PRO Idol (Guest)"
+    },
+    {
+      "code": "202xxx",
+      "name_jp": "玲音",
+      "name_zh": "玲音",
+      "role": "961PRO Idol (Guest)"
+    },
+    {
+      "code": "204xxx",
+      "name_jp": "宮本フレデリカ",
+      "name_zh": "宫本芙蕾德莉卡",
+      "role": "346PRO Idol (Collab)"
+    },
+    {
+      "code": "205xxx",
+      "name_jp": "一ノ瀬志希",
+      "name_zh": "一之濑志希",
+      "role": "346PRO Idol (Collab)"
+    },
+    {
+      "code": "404apr",
+      "name_jp": "プロデューサー",
+      "name_zh": "制作人",
+      "role": "Producer"
+    }
+  ]
+}

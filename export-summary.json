@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "mltd-github-export-summary",
+  "generated_at": "2026-09-27T00:00:00Z",
+  "base_version": "9.0.200+1077500",
+  "out_dir": "build\\runs\\text-localization\\9.0.200\\github-export-candidate",
+  "locales": {
+    "total_rows": 74569,
+    "status_counts": {
+      "accepted": 50421,
+      "pending": 2332,
+      "untranslated": 21816
+    },
+    "match_methods": {
+      "legacy_exact": 35536,
+      "legacy_memory_sha": 14547,
+      "authoritative_term": 338,
+      "machine_draft": 2332,
+      "none": 21816
+    },
+    "category_counts": {
+      "story": 456,
+      "card": 349,
+      "dialogue": 7,
+      "birth": 42,
+      "master": 73715
+    },
+    "category_bundle_counts": {
+      "story": 13,
+      "card": 18,
+      "dialogue": 5,
+      "birth": 10,
+      "master": 5
+    },
+    "sanitized_delimiter_rows": 0
+  },
+  "lyrics": {
+    "total_songs": 432,
+    "total_slots": 12131,
+    "translated_slots": 12131
+  },
+  "images": {
+    "total_images": 939,
+    "reviewed_textures": 937,
+    "bottom_bar_textures": 2
+  },
+  "bottom_bar": {
+    "slot_count": 7
+  },
+  "glossary": {
+    "authoritative_terms": 90,
+    "standard_idols": 52
+  }
+}
