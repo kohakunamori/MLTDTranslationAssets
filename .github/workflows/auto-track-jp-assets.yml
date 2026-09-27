@@ -74,4 +74,11 @@ jobs:
 
           # Create PR
           PR_TITLE="chore(assets): detect and track Japanese asset version $LATEST_VER"
-          gh pr create --title "$PR_TITLE" --body "Detected new Japanese asset version $LATEST_VER from Matsurihi API. Updated manifests/asset-version.json." --head "$BRANCH_NAME" --base main || echo "PR might already exist"
+          PR_URL=$(gh pr create --title "$PR_TITLE" --body "Detected new Japanese asset version $LATEST_VER from Matsurihi API. Updated manifests/asset-version.json." --head "$BRANCH_NAME" --base main) || PR_URL=$(gh pr view "$BRANCH_NAME" --json url --jq .url)
+          echo "PR: $PR_URL"
+
+          # The manifest is informational: it records which asset version the
+          # repository is tracking, and the validation workflow gates the diff.
+          # Merge it directly instead of leaving the detection stranded in an
+          # open PR nobody revisits.
+          gh pr merge "$PR_URL" --squash --delete-branch || echo "Auto-merge failed; merge $PR_URL manually"
