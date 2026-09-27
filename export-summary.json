@@ -3,8 +3,8 @@
   "kind": "mltd-github-export-summary",
   "generated_at": "2026-09-27T00:00:00Z",
   "base_version": "9.0.200+1077500",
-  "out_dir": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\github-export-candidate",
-  "builtin_out_dir": "build/runs/client/9.0.200/github-export-apk-builtin",
+  "out_dir": "build\\runs\\text-localization\\9.0.200\\github-export-candidate",
+  "builtin_out_dir": "build\\runs\\client\\9.0.200\\github-export-apk-builtin",
   "locales": {
     "total_rows": 74569,
     "status_counts": {
@@ -38,7 +38,8 @@
   "lyrics": {
     "total_songs": 432,
     "total_slots": 12131,
-    "translated_slots": 12131
+    "translated_slots": 11065,
+    "english_bypass_slots": 1066
   },
   "images": {
     "total_images": 937,
