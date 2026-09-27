@@ -27,7 +27,7 @@ from typing import Any
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 RESERVED = ("|", "^")
 DEFAULT_AUTHOR = "ssot@mltd-localization.github"
-DEFAULT_AUTHOR_NAME = "GitHub SSOT (kohakunamori/MLTDTranslationData)"
+DEFAULT_AUTHOR_NAME = "GitHub SSOT (kohakunamori/MLTDTranslationAssets)"
 
 
 class SyncExportError(ValueError):
