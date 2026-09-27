@@ -9,3 +9,8 @@ node_modules/
 .idea/
 .vscode/
 d1-contributions-sync/
+
+# Backfill job scratch space: downloaded task maps, pristine textures and the
+# uploaded composites are all fetched from the public bucket at run time, so
+# nothing here is worth keeping between runs.
+work/
