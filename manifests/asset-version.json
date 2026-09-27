@@ -1,0 +1,7 @@
+{
+  "client_version": "9.0.200",
+  "asset_version": 1077500,
+  "last_synced_at": "2026-09-27T00:00:00Z",
+  "matsurihi_api": "https://api.matsurihi.me/api/mltd/v2/version/assets",
+  "asset_root": "https://td-assets.bn765.com/{version}/production/2018/Android"
+}

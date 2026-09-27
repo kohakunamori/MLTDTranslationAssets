@@ -1,0 +1,90 @@
+name: Auto Track Japanese Assets
+
+on:
+  schedule:
+    # Run once daily at 16:00 UTC (01:00 JST / 00:00 CST)
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+jobs:
+  track:
+    name: Check New Asset Releases
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check Japanese Asset Version
+        id: check-version
+        run: |
+          mkdir -p work
+          set +e
+          python scripts/track_jp_assets.py --check-only --output-json work/asset-report.json
+          EXIT_CODE=$?
+          set -e
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          if [ $EXIT_CODE -eq 10 ]; then
+            echo "has_update=true" >> $GITHUB_OUTPUT
+            LATEST_VER=$(python -c "import json; print(json.load(open('work/asset-report.json'))['latest_version'])")
+            CURRENT_VER=$(python -c "import json; print(json.load(open('work/asset-report.json'))['current_version'])")
+            INDEX_NAME=$(python -c "import json; print(json.load(open('work/asset-report.json'))['index_name'])")
+            UPDATED_AT=$(python -c "import json; print(json.load(open('work/asset-report.json'))['updated_at'])")
+            INDEX_URL=$(python -c "import json; print(json.load(open('work/asset-report.json'))['index_url'])")
+            echo "latest_version=$LATEST_VER" >> $GITHUB_OUTPUT
+            echo "current_version=$CURRENT_VER" >> $GITHUB_OUTPUT
+            echo "index_name=$INDEX_NAME" >> $GITHUB_OUTPUT
+            echo "updated_at=$UPDATED_AT" >> $GITHUB_OUTPUT
+            echo "index_url=$INDEX_URL" >> $GITHUB_OUTPUT
+            echo "Found new asset version: $CURRENT_VER -> $LATEST_VER"
+          else
+            echo "has_update=false" >> $GITHUB_OUTPUT
+            echo "No new asset version detected."
+          fi
+
+      - name: Update Manifest and Create Pull Request
+        if: steps.check-version.outputs.has_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_VER="${{ steps.check-version.outputs.latest_version }}"
+          CURRENT_VER="${{ steps.check-version.outputs.current_version }}"
+          INDEX_NAME="${{ steps.check-version.outputs.index_name }}"
+          UPDATED_AT="${{ steps.check-version.outputs.updated_at }}"
+          INDEX_URL="${{ steps.check-version.outputs.index_url }}"
+
+          # Update the version manifest
+          python scripts/track_jp_assets.py --update
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH_NAME="chore/asset-update-$LATEST_VER"
+          git checkout -b "$BRANCH_NAME"
+          git add manifests/asset-version.json
+          git commit -m "chore(assets): track new Japanese asset version $LATEST_VER"
+          git push -u origin "$BRANCH_NAME" --force
+
+          # Create PR
+          PR_TITLE="chore(assets): detect and track Japanese asset version $LATEST_VER"
+          PR_BODY="## 🎮 官方日服资源新版本检测报告
+
+- **检测时间**: $(date -u +"%Y-%m-%d %H:%M:%SZ")
+- **基准版本**: \`$CURRENT_VER\`
+- **最新版本**: \`$LATEST_VER\` (官方发布时间: \`$UPDATED_AT\`)
+- **索引文件**: \`$INDEX_NAME\`
+- **下载地址**: [${INDEX_NAME}]($INDEX_URL)
+
+本 PR 由 GitHub Actions 自动化检测脚本创建，已更新 \`manifests/asset-version.json\`。"
+
+          gh pr create --title "$PR_TITLE" --body "$PR_BODY" --head "$BRANCH_NAME" --base main || echo "PR might already exist"
