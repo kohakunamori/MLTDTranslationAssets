@@ -6,8 +6,11 @@ Checks:
 2. No reserved delimiters (| or ^) are present in any translation.
 3. Every category directory (story, card, dialogue, birth, master) is present and non-empty.
 4. Glossaries (authoritative-terms.json, idols.json) are valid JSON and contain expected terms.
-5. Manifests (images.manifest.json, bottom-bar.manifest.json) are valid and consistent.
+5. The image manifest is valid and consistent.
 6. Lyrics files are valid JSONL and match schema.
+
+The APK built-in surfaces (bottom bar atlas, BI text, font) are deliberately
+absent: they are delivered by the client repository instead.
 """
 from __future__ import annotations
 
@@ -126,7 +129,6 @@ def validate_glossary(root: Path) -> None:
 def validate_manifests(root: Path) -> None:
     manifests_dir = root / "manifests"
     images_file = manifests_dir / "images.manifest.json"
-    bottom_bar_file = manifests_dir / "bottom-bar.manifest.json"
 
     if not images_file.is_file():
         print(f"ERROR: Missing {images_file}", file=sys.stderr)
@@ -138,8 +140,14 @@ def validate_manifests(root: Path) -> None:
         print(f"ERROR: images.manifest.json images count {len(images)} < 937", file=sys.stderr)
         sys.exit(1)
 
-    if not bottom_bar_file.is_file():
-        print(f"ERROR: Missing {bottom_bar_file}", file=sys.stderr)
+    # Bottom-bar atlases are APK built-ins now; this repository must not carry them.
+    stray = [i.get("id") for i in images if i.get("kind") == "bottom_bar_atlas"]
+    if stray:
+        print(
+            f"ERROR: images.manifest.json still lists APK built-in atlas(es) {stray}; "
+            "they belong to the client repository",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 

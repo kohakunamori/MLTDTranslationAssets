@@ -11,9 +11,8 @@
     ]
   },
   "counts": {
-    "total_images": 939,
-    "reviewed_textures": 937,
-    "bottom_bar_textures": 2
+    "total_images": 937,
+    "reviewed_textures": 937
   },
   "images": [
     {
@@ -28125,64 +28124,6 @@
         }
       },
       "review_status": "user_approved_for_isolated_install_staging"
-    },
-    {
-      "id": "bottom_bar:montage_off",
-      "kind": "bottom_bar_atlas",
-      "bundle": "sharedassets1.assets:4",
-      "dimensions": {
-        "width": 512,
-        "height": 512
-      },
-      "original": {
-        "relative_path": "images/original/bottom_bar/original-off-reference.png",
-        "sha256": "6a7bc753977960e9f9ff35404f4b59fcae247d7427629213ca7fb07a4fad1b2f"
-      },
-      "localized": {
-        "relative_path": "images/localized/bottom_bar/montage-off.png",
-        "sha256": "49d7721967789b9020802c22713dc3e8ecf5307504176bb6cfccfb1623c03a5e"
-      },
-      "distribution": {
-        "storage_policy": "external_binary_hosting",
-        "github_release": {
-          "asset_name": "bottom_bar_montage_off.png",
-          "url_template": "https://github.com/{owner}/{repo}/releases/download/v1.0.0-assets/bottom_bar_montage_off.png"
-        },
-        "cloudflare_r2": {
-          "key": "images/bottom_bar/49d7721967789b9020802c22713dc3e8ecf5307504176bb6cfccfb1623c03a5e.png",
-          "url_template": "https://pub-mltd-assets.nyaneko.cn/images/bottom_bar/49d7721967789b9020802c22713dc3e8ecf5307504176bb6cfccfb1623c03a5e.png"
-        }
-      },
-      "review_status": "accepted"
-    },
-    {
-      "id": "bottom_bar:montage_on",
-      "kind": "bottom_bar_atlas",
-      "bundle": "sharedassets1.assets:4",
-      "dimensions": {
-        "width": 512,
-        "height": 512
-      },
-      "original": {
-        "relative_path": "images/original/bottom_bar/original-on-reference.png",
-        "sha256": "6a7bc753977960e9f9ff35404f4b59fcae247d7427629213ca7fb07a4fad1b2f"
-      },
-      "localized": {
-        "relative_path": "images/localized/bottom_bar/montage-on.png",
-        "sha256": "c371d85cc33b0f5419daf020f5e2364bac525fd04686e64020e66f825d4ce87e"
-      },
-      "distribution": {
-        "storage_policy": "external_binary_hosting",
-        "github_release": {
-          "asset_name": "bottom_bar_montage_on.png",
-          "url_template": "https://github.com/{owner}/{repo}/releases/download/v1.0.0-assets/bottom_bar_montage_on.png"
-        },
-        "cloudflare_r2": {
-          "key": "images/bottom_bar/c371d85cc33b0f5419daf020f5e2364bac525fd04686e64020e66f825d4ce87e.png",
-          "url_template": "https://pub-mltd-assets.nyaneko.cn/images/bottom_bar/c371d85cc33b0f5419daf020f5e2364bac525fd04686e64020e66f825d4ce87e.png"
-        }
-      },
-      "review_status": "accepted"
     }
   ]
 }

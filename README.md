@@ -1,7 +1,10 @@
 # MLTD 简体中文汉化开源资源库 (THE IDOLM@STER MILLION LIVE! THEATER DAYS Localization)
 
 本项目为《偶像大师 百万现场 剧场时光》(MLTD) 简体中文本地化个人整理与社区协作数据仓库。
-本仓库沉淀了日文原文与整理的简体中文译文，并统一维护术语表、歌词与多媒体资源 Manifest。
+本仓库沉淀了日文原文与整理的简体中文译文，并统一维护术语表、歌词与贴图 Manifest。
+
+本仓库只承载**经 assets 服务器下发**的面（`/cn/<asset>/` overlay）。底栏贴图、BI 文案与字体属于
+APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohakunamori/MLTDTranslationClient) 维护。
 
 ## 目录结构
 
@@ -17,9 +20,8 @@
 - `glossary/`：翻译规范与参考术语
   - `glossary/authoritative-terms.json`：90 个参考术语表（固定译名与避免词）
   - `glossary/idols.json`：52 偶像译名对照与声优名录
-- `manifests/`：富媒体与贴图元数据清单（文字在库，多媒体外链）
-  - `manifests/images.manifest.json`：937 张已汉化贴图与底栏贴图的 SHA-256 索引
-  - `manifests/bottom-bar.manifest.json`：底栏 7 标签图文与 Sprite 坐标
+- `manifests/`：贴图元数据清单（文字在库，多媒体外链）
+  - `manifests/images.manifest.json`：937 张已汉化贴图的 SHA-256 索引
 - `schema/`：数据规范与 JSON Schema 定义
 
 ## 版本分支与标签

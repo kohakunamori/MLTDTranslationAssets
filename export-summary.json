@@ -3,7 +3,8 @@
   "kind": "mltd-github-export-summary",
   "generated_at": "2026-09-27T00:00:00Z",
   "base_version": "9.0.200+1077500",
-  "out_dir": "build\\runs\\text-localization\\9.0.200\\github-export-candidate",
+  "out_dir": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\github-export-candidate",
+  "builtin_out_dir": "build/runs/client/9.0.200/github-export-apk-builtin",
   "locales": {
     "total_rows": 74569,
     "status_counts": {
@@ -40,9 +41,12 @@
     "translated_slots": 12131
   },
   "images": {
-    "total_images": 939,
-    "reviewed_textures": 937,
-    "bottom_bar_textures": 2
+    "total_images": 937,
+    "reviewed_textures": 937
+  },
+  "builtin": {
+    "surfaces": 3,
+    "bottom_bar_slots": 7
   },
   "bottom_bar": {
     "slot_count": 7
