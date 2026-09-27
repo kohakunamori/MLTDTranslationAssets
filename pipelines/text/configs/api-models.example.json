@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "_comment": [
+    "正常只需要改 defaults 的 provider 设置和 models。",
+    "models 的字符串值表示同一 provider 下的模型；需要单独覆盖并发/地址/协议时才改成对象。",
+    "所有 enabled 模型组成主动 worker pool；总并发约等于各模型 concurrency 之和。"
+  ],
+  "defaults": {
+    "preset": "mltd-balanced",
+    "base_url": "https://api.example.com/v1",
+    "api_protocol": "responses",
+    "api_key_env": "MLTD_API_KEY",
+    "concurrency": 8
+  },
+  "models": {
+    "main": "replace-with-model-name",
+    "second": {
+      "enabled": false,
+      "model": "replace-with-second-model",
+      "concurrency": 4
+    }
+  }
+}

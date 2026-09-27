@@ -23,6 +23,10 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
   - `glossary/idols.json`：52 偶像标准官方定名与声优名录
 - `manifests/`：贴图元数据清单（文字在库，多媒体外链）
   - `manifests/images.manifest.json`：937 张已汉化贴图的 SHA-256 索引
+- `pipelines/`：自动化汉化与生成流水线工具集
+  - `pipelines/text/`：全量文本提取、加密 GTX 解密/回写、多模型并发翻译与自动化质检流水线
+  - `pipelines/image/`：Sprite Atlas 几何重组、`gpt-image-2.5-sunburst` 图像重绘、`gpt-5.6-luna` 视觉审查与 ASTC 纹理回填流水线
+  - `pipelines/export/`：数据分发与 GitHub 规范导出工具
 - `schema/`：数据规范与 JSON Schema 定义
 
 ## 条目格式规范

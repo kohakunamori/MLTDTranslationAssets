@@ -1,0 +1,24 @@
+{
+  "schema_version": 3,
+  "prompt_version": "mltd-zhcn-system",
+  "output": "localization\\prompts\\mltd-zhcn-system.md",
+  "prompt_sha256": "415ee5790d6469d10611b2d2364fb5cfc0067ad0ed8df6b4695a6494d4b3982d",
+  "prompt_bytes": 11288,
+  "prompt_chars": 9674,
+  "policy_sha256": "041f2e4cab58ce2eb40b51706d7217170002db810e4808025e8f5cd90d8fb4aa",
+  "speaker_evidence_count": 72,
+  "embedded_speaker_identity_count": 61,
+  "omitted_unknown_speaker_count": 11,
+  "embedded_sample_count": 0,
+  "sources": {
+    "glossary": {
+      "path": "localization\\quality\\glossary.json",
+      "sha256": "b472b896bd819ebb1170a14563624283c542de99abd2a160b838cd43967d5946"
+    },
+    "character_evidence": {
+      "path": "build\\localization-90200\\character-voice-evidence.json",
+      "sha256": "433c405a080b4d0d51655652b2dda2b1d21ecdfeda923240f4c54ad56b993808",
+      "usage": "identity_only; historical translations retained for audit but not embedded"
+    }
+  }
+}

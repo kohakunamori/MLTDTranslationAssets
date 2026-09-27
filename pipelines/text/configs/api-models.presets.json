@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "这里放 MLTD 翻译器的通用行为；普通 provider/model 切换请改 api-models.local.json，不要改这里。",
+    "api-models.local.json 中模型对象写出的同名字段会覆盖 preset。"
+  ],
+  "presets": {
+    "mltd-balanced": {
+      "_comment": [
+        "默认生产 routing：UI/标题/短共享文本关闭 reasoning，描述/对话用 low，复杂共享文本用 high。",
+        "cache warmup 保持关闭：此前 Gemini gateway 的真实 warmup 消耗了请求和时间，但没有报告可见 cached tokens。"
+      ],
+      "reasoning_effort": "high",
+      "temperature": 0.1,
+      "timeout": 180,
+      "retries": 2,
+      "request_params_by_task": {
+        "UI": {
+          "reasoning_effort": "none",
+          "max_tokens": 256
+        },
+        "TITLE": {
+          "reasoning_effort": "none",
+          "max_tokens": 256
+        },
+        "SHARED_SIMPLE": {
+          "reasoning_effort": "none",
+          "max_tokens": 256
+        },
+        "DESCRIPTION": {
+          "reasoning_effort": "low",
+          "max_tokens": 1024
+        },
+        "DIALOGUE": {
+          "reasoning_effort": "low",
+          "max_tokens": 1024
+        },
+        "SHARED": {
+          "reasoning_effort": "high",
+          "max_tokens": 2048
+        }
+      },
+      "cache_warmup": false,
+      "cache_anchor": "MLTD_TRANSLATION_CACHE_ANCHOR",
+      "cache_partition_by_reasoning": true
+    }
+  }
+}

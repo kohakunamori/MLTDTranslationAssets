@@ -1,0 +1,31 @@
+{
+  "_comment": "Example only. Copy to config.json, enter image_provider.api_key there. config.json is Git-ignored and must never be shared.",
+  "image_provider": {
+    "base_url": "http://127.0.0.1:15721/v1",
+    "mode": "images_edits",
+    "model": "gpt-image-2.5-sunburst",
+    "api_key": "",
+    "api_key_env": "CLIPROXY_API_KEY",
+    "require_api_key": false,
+    "quality": "high",
+    "size": "auto",
+    "output_format": "png",
+    "timeout_seconds": 330,
+    "legacy_controller_model": "gpt-5.6-luna"
+  },
+  "vision": {
+    "base_url": "",
+    "model": "gpt-5.6-luna",
+    "timeout_seconds": 220
+  },
+  "network": {
+    "http_proxy": "",
+    "https_proxy": "",
+    "no_proxy": "localhost,127.0.0.1,::1",
+    "trust_env_proxy": false,
+    "proxy_localhost": false
+  },
+  "retry": {
+    "http": 1
+  }
+}

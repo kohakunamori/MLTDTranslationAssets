@@ -4,34 +4,34 @@
   "generated_at": "2026-09-27T00:00:00Z",
   "base_version": "9.0.200+1077500",
   "out_dir": "build\\runs\\text-localization\\9.0.200\\github-export-candidate",
-  "builtin_out_dir": "build\\runs\\client\\9.0.200\\github-export-apk-builtin",
+  "builtin_out_dir": null,
   "locales": {
-    "total_rows": 74569,
+    "total_rows": 391618,
     "status_counts": {
-      "accepted": 50421,
-      "pending": 2332,
-      "untranslated": 21816
+      "accepted": 391618,
+      "pending": 0,
+      "untranslated": 0
     },
     "match_methods": {
-      "legacy_exact": 35536,
-      "legacy_memory_sha": 14547,
-      "authoritative_term": 338,
-      "machine_draft": 2332,
-      "none": 21816
+      "legacy_exact": 90873,
+      "legacy_memory_sha": 22400,
+      "authoritative_term": 347,
+      "machine_draft": 277998,
+      "none": 0
     },
     "category_counts": {
-      "story": 456,
-      "card": 349,
-      "dialogue": 7,
-      "birth": 42,
-      "master": 73715
+      "story": 119229,
+      "card": 58132,
+      "dialogue": 1474,
+      "birth": 6647,
+      "master": 206136
     },
     "category_bundle_counts": {
-      "story": 13,
-      "card": 18,
-      "dialogue": 5,
-      "birth": 10,
-      "master": 5
+      "story": 3657,
+      "card": 2997,
+      "dialogue": 1077,
+      "birth": 1605,
+      "master": 2480
     },
     "sanitized_delimiter_rows": 0
   },
@@ -45,13 +45,8 @@
     "total_images": 937,
     "reviewed_textures": 937
   },
-  "builtin": {
-    "surfaces": 3,
-    "bottom_bar_slots": 7
-  },
-  "bottom_bar": {
-    "slot_count": 7
-  },
+  "builtin": {},
+  "bottom_bar": {},
   "glossary": {
     "authoritative_terms": 90,
     "standard_idols": 52
