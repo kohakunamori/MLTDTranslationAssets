@@ -1,6 +1,6 @@
 name: Auto Track Japanese Assets
 
-on:
+'on':
   schedule:
     # Run once daily at 16:00 UTC (01:00 JST / 00:00 CST)
     - cron: '0 16 * * *'
@@ -43,14 +43,8 @@ jobs:
             echo "has_update=true" >> $GITHUB_OUTPUT
             LATEST_VER=$(python -c "import json; print(json.load(open('work/asset-report.json'))['latest_version'])")
             CURRENT_VER=$(python -c "import json; print(json.load(open('work/asset-report.json'))['current_version'])")
-            INDEX_NAME=$(python -c "import json; print(json.load(open('work/asset-report.json'))['index_name'])")
-            UPDATED_AT=$(python -c "import json; print(json.load(open('work/asset-report.json'))['updated_at'])")
-            INDEX_URL=$(python -c "import json; print(json.load(open('work/asset-report.json'))['index_url'])")
             echo "latest_version=$LATEST_VER" >> $GITHUB_OUTPUT
             echo "current_version=$CURRENT_VER" >> $GITHUB_OUTPUT
-            echo "index_name=$INDEX_NAME" >> $GITHUB_OUTPUT
-            echo "updated_at=$UPDATED_AT" >> $GITHUB_OUTPUT
-            echo "index_url=$INDEX_URL" >> $GITHUB_OUTPUT
             echo "Found new asset version: $CURRENT_VER -> $LATEST_VER"
           else
             echo "has_update=false" >> $GITHUB_OUTPUT
@@ -64,9 +58,6 @@ jobs:
         run: |
           LATEST_VER="${{ steps.check-version.outputs.latest_version }}"
           CURRENT_VER="${{ steps.check-version.outputs.current_version }}"
-          INDEX_NAME="${{ steps.check-version.outputs.index_name }}"
-          UPDATED_AT="${{ steps.check-version.outputs.updated_at }}"
-          INDEX_URL="${{ steps.check-version.outputs.index_url }}"
 
           # Update the version manifest
           python scripts/track_jp_assets.py --update
@@ -83,14 +74,4 @@ jobs:
 
           # Create PR
           PR_TITLE="chore(assets): detect and track Japanese asset version $LATEST_VER"
-          PR_BODY="## 🎮 官方日服资源新版本检测报告
-
-- **检测时间**: $(date -u +"%Y-%m-%d %H:%M:%SZ")
-- **基准版本**: \`$CURRENT_VER\`
-- **最新版本**: \`$LATEST_VER\` (官方发布时间: \`$UPDATED_AT\`)
-- **索引文件**: \`$INDEX_NAME\`
-- **下载地址**: [${INDEX_NAME}]($INDEX_URL)
-
-本 PR 由 GitHub Actions 自动化检测脚本创建，已更新 \`manifests/asset-version.json\`。"
-
-          gh pr create --title "$PR_TITLE" --body "$PR_BODY" --head "$BRANCH_NAME" --base main || echo "PR might already exist"
+          gh pr create --title "$PR_TITLE" --body "Detected new Japanese asset version $LATEST_VER from Matsurihi API. Updated manifests/asset-version.json." --head "$BRANCH_NAME" --base main || echo "PR might already exist"
