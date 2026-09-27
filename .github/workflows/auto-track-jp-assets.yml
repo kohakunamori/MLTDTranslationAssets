@@ -51,6 +51,29 @@ jobs:
             echo "No new asset version detected."
           fi
 
+      - name: Archive the outgoing asset version
+        if: steps.check-version.outputs.has_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OLD_VER="${{ steps.check-version.outputs.current_version }}"
+          CLIENT_VER=$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['client_version'])")
+
+          # Version convention: `main` always carries the newest asset version.
+          # The state being left behind is frozen so an older version stays
+          # reproducible for anyone still pinned to it.
+          TAG="assets-$OLD_VER"
+          git tag -f "$TAG" >/dev/null 2>&1 || true
+          git push -f origin "$TAG"
+
+          RELEASE_BRANCH="release/$CLIENT_VER+$OLD_VER"
+          if git ls-remote --exit-code --heads origin "$RELEASE_BRANCH" >/dev/null 2>&1; then
+            echo "$RELEASE_BRANCH already exists; leaving it untouched."
+          else
+            git push origin "HEAD:refs/heads/$RELEASE_BRANCH"
+            echo "Created $RELEASE_BRANCH (tagged $TAG) for asset version $OLD_VER."
+          fi
+
       - name: Update Manifest and Create Pull Request
         if: steps.check-version.outputs.has_update == 'true'
         env:
@@ -80,5 +103,5 @@ jobs:
           # The manifest is informational: it records which asset version the
           # repository is tracking, and the validation workflow gates the diff.
           # Merge it directly instead of leaving the detection stranded in an
-          # open PR nobody revisits.
+          # open PR nobody revisits. `main` always tracks the newest version.
           gh pr merge "$PR_URL" --squash --delete-branch || echo "Auto-merge failed; merge $PR_URL manually"

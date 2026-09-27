@@ -22,6 +22,15 @@
   - `manifests/bottom-bar.manifest.json`：底栏 7 标签图文与 Sprite 坐标
 - `schema/`：数据规范与 JSON Schema 定义
 
+## 版本分支与标签
+
+`main` 始终跟踪**最新**资源版本；每条已经离开主线的资源版本另以两个 ref 冻结，供仍固定在旧版本的客户端复现：
+
+- 标签 `assets-<资源版本>`（如 `assets-1077500`）—— 该资源版本对应的仓库状态。
+- 分支 `release/<客户端版本>+<资源版本>`（如 `release/9.0.200+1077500`）—— 同一状态的长期分支。
+
+`auto-track-jp-assets.yml` 检测到新资源版本时，会先给**即将被取代**的版本打标签、建分支，再更新 `manifests/asset-version.json` 并合并。已存在的标签/分支不会被覆盖。
+
 ## 条目格式规范
 
 每一行 JSONL 严格遵循以下规范：
