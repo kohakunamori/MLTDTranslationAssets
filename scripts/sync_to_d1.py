@@ -10,6 +10,10 @@ to immediately reflect the 50,000+ accepted translations without manual re-entry
 Safety:
 - Strict source_sha256 verification against Japanese source text.
 - Rejection of reserved delimiters (| and ^) in translations.
+- Version identity is the digits-only `asset_version`. A legacy `base_version`
+  field is read only when it is itself digits-only, so a pre-decoupling entry
+  such as `9.0.200+1077100` fails the sync instead of being carried into D1 as
+  a composite identity.
 - SQL literals use CAST(X'...' AS TEXT) for text with control characters to avoid
   D1 expression tree depth > 100 error.
 - Purely isolated output: writes only to --out-dir.
@@ -25,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+ASSET_VERSION_PATTERN = re.compile(r"^[0-9]+$")
 RESERVED = ("|", "^")
 DEFAULT_AUTHOR = "ssot@mltd-localization.github"
 DEFAULT_AUTHOR_NAME = "GitHub SSOT (kohakunamori/MLTDTranslationAssets)"
@@ -87,7 +92,21 @@ def read_locales(repo_root: Path, statuses: set[str], files: list[Path] | None =
                 if status not in statuses:
                     continue
 
-                base_version = str(row.get("base_version", "")).strip()
+                # Version identity. Post-decoupling entries carry `asset_version`
+                # (digits only; `client_version` is always null on this axis). A
+                # legacy `base_version` is still read so an un-migrated file does
+                # not silently produce version-less rows -- but only when it is
+                # itself digits-only. `9.0.200+1077100` is not a version and must
+                # not be carried into D1.
+                declared_axis = str(row.get("asset_version", "") or "").strip()
+                legacy_axis = str(row.get("base_version", "") or "").strip()
+                axis_value = declared_axis or legacy_axis
+                if not ASSET_VERSION_PATTERN.match(axis_value):
+                    raise SyncExportError(
+                        f"{jsonl_file}:{line_no}: invalid asset axis {axis_value!r}; "
+                        "digits only, composite versions (e.g. 9.0.200+1077100) are forbidden"
+                    )
+                base_version = axis_value
                 bundle = str(row.get("bundle", "")).strip()
                 item_key = str(row.get("item_key", "")).strip()
                 source_sha = str(row.get("source_sha256", "")).strip().lower()
