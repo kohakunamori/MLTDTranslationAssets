@@ -51,28 +51,40 @@ jobs:
             echo "No new asset version detected."
           fi
 
-      - name: Archive the outgoing asset version
+      - name: Freeze the outgoing asset version
         if: steps.check-version.outputs.has_update == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           OLD_VER="${{ steps.check-version.outputs.current_version }}"
-          CLIENT_VER=$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['client_version'])")
 
           # Version convention: `main` always carries the newest asset version.
           # The state being left behind is frozen so an older version stays
           # reproducible for anyone still pinned to it.
+          #
+          # The freeze point is a TAG, not a branch. The `assets-<version>` tag
+          # is a single-axis name: it identifies one frozen asset state, which
+          # is exactly what a later `generated/<asset_version>/manifest.json`
+          # records as its `source_commit`.
+          #
+          # This step used to ALSO push a `release/<client_version>+<asset_version>`
+          # branch. That has been removed on purpose: Client and Assets are
+          # independent release axes, and a branch name that concatenates them
+          # (`release/9.0.200+1077500`) is a composite version — the exact string
+          # the rest of the pipeline now refuses
+          # (`scripts/export_localization_for_github.py::validate_asset_axis`).
+          # Creating one here would manufacture a name the release tooling
+          # cannot read. If a composite branch is ever seen again, it is a bug
+          # in this workflow, not a valid release identity.
+          if [[ "$OLD_VER" == *"+"* || "$OLD_VER" == *"client-"* ]]; then
+            echo "FAIL: asset version '$OLD_VER' looks composite; refuse to tag it" >&2
+            exit 1
+          fi
+
           TAG="assets-$OLD_VER"
           git tag -f "$TAG" >/dev/null 2>&1 || true
           git push -f origin "$TAG"
-
-          RELEASE_BRANCH="release/$CLIENT_VER+$OLD_VER"
-          if git ls-remote --exit-code --heads origin "$RELEASE_BRANCH" >/dev/null 2>&1; then
-            echo "$RELEASE_BRANCH already exists; leaving it untouched."
-          else
-            git push origin "HEAD:refs/heads/$RELEASE_BRANCH"
-            echo "Created $RELEASE_BRANCH (tagged $TAG) for asset version $OLD_VER."
-          fi
+          echo "Froze asset $OLD_VER as tag $TAG (no release branch: composite versions are forbidden)."
 
       - name: Update Manifest and Create Pull Request
         if: steps.check-version.outputs.has_update == 'true'
