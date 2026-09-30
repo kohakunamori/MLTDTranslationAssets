@@ -144,10 +144,12 @@ jobs:
           PY
 
       - name: Publish localized textures
+        if: steps.queue.outputs.queued != '0'
         run: |
           python scripts/restore/publish_localized.py --dir images/localized --manifest manifests/images.manifest.json
 
       - name: Mark queue rows finished
+        if: steps.queue.outputs.queued != '0'
         run: |
           python scripts/restore/report_restore_status.py --summary work/restore-summary.json --ledger work/restore-ledger.json
 
