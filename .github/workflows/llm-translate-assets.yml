@@ -57,6 +57,7 @@ jobs:
           cfg_dir="$RUNNER_TEMP/mltd-llm"
           install -d -m 700 "$cfg_dir"
           cp configs/api-models.example.json "$cfg_dir/api-models.local.json"
+          cp configs/api-models.presets.example.json "$cfg_dir/api-models.presets.json"
           python - "$cfg_dir/api-runtime.local.json" "$MLTD_LLM_API_KEY" <<'PY'
           import json
           import pathlib
@@ -68,7 +69,7 @@ jobs:
               "environment": {"api_key": {"MLTD_API_KEY": key}},
           }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
-          chmod 600 "$cfg_dir/api-models.local.json" "$cfg_dir/api-runtime.local.json"
+          chmod 600 "$cfg_dir/api-models.local.json" "$cfg_dir/api-models.presets.json" "$cfg_dir/api-runtime.local.json"
           echo "MLTD_LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
           echo "LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
 

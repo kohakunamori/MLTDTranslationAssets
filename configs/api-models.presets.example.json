@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "Public translation behavior presets; credentials stay in GitHub Actions secrets.",
+    "The workflow copies this file to the ephemeral runner configuration directory."
+  ],
+  "presets": {
+    "mltd-balanced": {
+      "reasoning_effort": "high",
+      "temperature": 0.1,
+      "timeout": 180,
+      "retries": 2,
+      "request_params_by_task": {
+        "UI": {"reasoning_effort": "none", "max_tokens": 256},
+        "TITLE": {"reasoning_effort": "none", "max_tokens": 256},
+        "SHARED_SIMPLE": {"reasoning_effort": "none", "max_tokens": 256},
+        "DESCRIPTION": {"reasoning_effort": "low", "max_tokens": 1024},
+        "DIALOGUE": {"reasoning_effort": "low", "max_tokens": 1024},
+        "SHARED": {"reasoning_effort": "high", "max_tokens": 2048}
+      },
+      "cache_warmup": false,
+      "cache_anchor": "MLTD_TRANSLATION_CACHE_ANCHOR",
+      "cache_partition_by_reasoning": true
+    }
+  }
+}
