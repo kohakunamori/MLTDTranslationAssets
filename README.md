@@ -35,7 +35,9 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
 
 ```json
 {
-  "base_version": "9.0.200+1077500",
+  "asset_version": "1077500",
+  "client_version": null,
+  "source_client_version": "9.0.200",
   "bundle": "event_0448_story_06_jp.gtx",
   "item_key": "event_0448_story_06_title",
   "source_sha256": "ea4cef9ff36d07f10f6bd00f4163edfa882ccd469392bc96127a9b2b6b45ae7f",
@@ -47,9 +49,10 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
 ```
 
 ### 关键约束
-1. **防止版本漂移**：`source_sha256` 必须与 `ja` 原文字符串的 SHA-256 强校验匹配。
-2. **安全隔离控制符**：客户端引擎使用 `|` 和 `^` 作为底层控制分隔符。**严禁在译文 `zh` 中输入半角 `|` 或 `^`**（可使用全角 `｜` 或 `＾`）。
-3. **状态说明**：
+1. **独立版本轴**：条目的身份是纯数字的 `asset_version`（assets 轴），`client_version` 在本轴恒为 `null`；`source_client_version`（`X.Y.Z`）只作溯源，不是身份的一部分。三者不得拼接成 `9.0.200+1077500`、`client-9.0.200-assets-1077500` 之类的组合串，组合字段 `base_version` 已废除。
+2. **防止版本漂移**：`source_sha256` 必须与 `ja` 原文字符串的 SHA-256 强校验匹配。
+3. **安全隔离控制符**：客户端引擎使用 `|` 和 `^` 作为底层控制分隔符。**严禁在译文 `zh` 中输入半角 `|` 或 `^`**（可使用全角 `｜` 或 `＾`）。
+4. **状态说明**：
    - `untranslated`：待翻译条目，`zh` 为空字符串。
    - `pending`：已生成初稿或机器翻译，等待人工审校。
    - `accepted`：已通过质量审校的正式译文。

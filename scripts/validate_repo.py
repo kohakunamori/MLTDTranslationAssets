@@ -2,7 +2,10 @@
 """Validation script for the MLTD Localization GitHub Repository.
 
 Checks:
-1. Every JSONL line in locales/ matches the JSON schema and passes source SHA-256 verification.
+1. Every JSONL line in locales/ matches the JSON schema and passes source SHA-256 verification,
+   including the version identity: an entry carries the independent axis fields
+   `asset_version` (digits only) / `client_version` (null on this axis) /
+   `source_client_version` (`X.Y.Z`). The retired composite `base_version` is refused.
 2. No reserved delimiters (| or ^) are present in any translation.
 3. Every category directory (story, card, dialogue, birth, master) is present and non-empty.
 4. Glossaries (authoritative-terms.json, idols.json) are valid JSON and contain expected terms.
@@ -25,6 +28,14 @@ RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 VALID_STATUSES = {"untranslated", "pending", "accepted"}
 CATEGORIES = ("story", "card", "dialogue", "birth", "master")
+
+# Version identity. Client and Assets are independent release axes
+# (docs: schema/entry.schema.json and the repository spec, §2):
+#   asset_version         this axis's identity, digits only
+#   client_version        must be null on the assets axis
+#   source_client_version provenance, `<X.Y.Z>`
+ASSET_VERSION_RE = re.compile(r"^[0-9]+$")
+CLIENT_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 
 def sha256_text(value: str) -> str:
@@ -63,11 +74,53 @@ def validate_locales(root: Path) -> dict[str, int]:
                         print(f"ERROR: {jf}:{line_idx} invalid JSON: {exc}", file=sys.stderr)
                         sys.exit(1)
 
-                    # Required keys
-                    for req_key in ("base_version", "bundle", "item_key", "source_sha256", "ja", "zh", "status", "updated_at"):
+                    # Required keys. The version identity is the independent
+                    # axis fields; a composite `base_version` is not a version
+                    # and is refused below rather than tolerated here.
+                    for req_key in ("asset_version", "client_version", "source_client_version",
+                                    "bundle", "item_key", "source_sha256", "ja", "zh",
+                                    "status", "updated_at"):
                         if req_key not in row:
                             print(f"ERROR: {jf}:{line_idx} missing key '{req_key}'", file=sys.stderr)
                             sys.exit(1)
+
+                    # Version axis check.
+                    if "base_version" in row:
+                        print(
+                            f"ERROR: {jf}:{line_idx} composite 'base_version' "
+                            f"{row['base_version']!r} is retired; carry the independent "
+                            "fields 'asset_version' + 'client_version' + 'source_client_version'",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+
+                    asset_version = row["asset_version"]
+                    # `client_version` is null on this axis, and the schema admits
+                    # only null there; a string would mean a row claiming both axes.
+                    if not isinstance(asset_version, str) or not ASSET_VERSION_RE.match(asset_version):
+                        print(
+                            f"ERROR: {jf}:{line_idx} 'asset_version' must be a digits-only "
+                            f"string, got {asset_version!r}",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+
+                    if row["client_version"] is not None:
+                        print(
+                            f"ERROR: {jf}:{line_idx} 'client_version' must be null on the assets "
+                            f"axis, got {row['client_version']!r}",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+
+                    source_client_version = row["source_client_version"]
+                    if not isinstance(source_client_version, str) or not CLIENT_VERSION_RE.match(source_client_version):
+                        print(
+                            f"ERROR: {jf}:{line_idx} 'source_client_version' must be `<X.Y.Z>`, "
+                            f"got {source_client_version!r}",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
 
                     ja = row["ja"]
                     zh = row["zh"]

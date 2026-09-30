@@ -4,7 +4,9 @@
   "description": "Standard schema for a single localization line in MLTD locales",
   "type": "object",
   "required": [
-    "base_version",
+    "asset_version",
+    "client_version",
+    "source_client_version",
     "bundle",
     "item_key",
     "source_sha256",
@@ -14,10 +16,19 @@
     "updated_at"
   ],
   "properties": {
-    "base_version": {
+    "asset_version": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+$",
-      "description": "Target client base version and assets build"
+      "pattern": "^[0-9]+$",
+      "description": "Assets release-axis identity (digits only)"
+    },
+    "client_version": {
+      "type": "null",
+      "description": "Always null on the assets axis: an entry never carries both axes"
+    },
+    "source_client_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Provenance only: the client version this batch of assets was authored against"
     },
     "bundle": {
       "type": "string",
