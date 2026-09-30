@@ -206,7 +206,8 @@ def run_overlay(snapshot: Path, archive: Path, ledger: Path, output: Path,
 
 
 def build_entries(overlay: Path, localization_manifest: Path, asset_version: str,
-                  source_client_version: str) -> list[dict]:
+                  source_client_version: str, *, index_name: str,
+                  index_path: Path) -> list[dict]:
     document = json.loads(localization_manifest.read_text(encoding="utf-8"))
     entries: list[dict] = []
     for row in document.get("bundles", []):
@@ -218,6 +219,9 @@ def build_entries(overlay: Path, localization_manifest: Path, asset_version: str
         entries.append({
             "logical_key": logical,
             "logical_path": f"production/2018/Android/{logical}",
+            # The MLTD client reads the official .data catalog and requests
+            # this hashed remote name, not the logical bundle name.
+            "runtime_path": f"production/2018/Android/{remote}",
             "resource_kind": "bundle",
             "channel": "assets",
             "asset_version": asset_version,
@@ -231,6 +235,22 @@ def build_entries(overlay: Path, localization_manifest: Path, asset_version: str
         })
     if not entries:
         raise ValueError("text overlay produced no changed bundles")
+    index_digest = sha256_file(index_path)
+    entries.append({
+        "logical_key": "__official_asset_index__",
+        "logical_path": f"production/2018/Android/{index_name}",
+        "runtime_path": f"production/2018/Android/{index_name}",
+        "resource_kind": "other",
+        "channel": "assets",
+        "asset_version": asset_version,
+        "client_version": None,
+        "source_client_version": source_client_version,
+        "source_sha256": index_digest,
+        "translated_sha256": index_digest,
+        "reuse_status": "exact",
+        "translation_status": "reused",
+        "artifact_file": str(index_path.resolve()),
+    })
     return entries
 
 
@@ -319,7 +339,8 @@ def main() -> int:
     run_overlay(snapshot, archive, ledger, overlay, version["client_version"], version["asset_version"])
     entries_path = work / "entries.json"
     entries = build_entries(overlay, overlay / "localization-manifest.json",
-                            version["asset_version"], version["client_version"])
+                            version["asset_version"], version["client_version"],
+                            index_name=version["index_name"], index_path=index_path)
     entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     store = GeneratedStore(args.output_root.resolve())
     result = store.build_release(

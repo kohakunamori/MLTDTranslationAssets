@@ -321,6 +321,12 @@
           "pattern": "^(?!/)(?!.*//)(?!.*(^|/)\\.\\.(/|$))[^\\\\]+$",
           "description": "Original game asset path as the assets server serves it, e.g. 'event/001/title.unity3d'. Clean relative posix path: no leading slash, no backslash, no '..'."
         },
+        "runtime_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*//)(?!.*(^|/)\\.\\.(/|$))[^\\\\]+$",
+          "description": "Optional client-facing path from the official asset index, e.g. 'production/2018/Android/<remote-hash>.unity3d'. When present, the distributor resolves this path to the same object as logical_path. Old manifests may omit it."
+        },
         "resource_kind": {
           "enum": [
             "bundle",

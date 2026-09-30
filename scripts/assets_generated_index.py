@@ -51,11 +51,12 @@ Rules implemented here
   staged_store:``): the live store root is untouched until the staging tree has
   been fully validated, and a failure while promoting -- or an exception inside
   the block -- rolls the root back to its previous bytes.
-* A manifest entry carries both ``logical_path`` (the original game asset path
-  the server keeps serving, e.g. ``event/001/title.unity3d``) and
-  ``object_path`` (where the bytes live in the store).  The server path never
-  changes; NAS-side mapping is ``asset_version + logical_path + manifest ->
-  object_path``.
+* A manifest entry carries ``logical_path`` (the original game asset path) and,
+  for bundles whose client-side catalog maps them to a hashed remote name,
+  ``runtime_path`` (the path the game actually requests).  The server keeps
+  accepting the logical path for diagnostics and old consumers, while the
+  runtime path is the first-class lookup key for a client-compatible mirror.
+  Both names resolve to the same content-addressed ``object_path``.
 * ``client_version`` (client axis) and ``asset_version`` (assets axis) are
   INDEPENDENT.  Combined identities such as ``9.0.200+1077100`` or
   ``client-9.0.200-assets-1077100`` are rejected outright.
@@ -570,6 +571,11 @@ def _resolve_logical_path(value: Any) -> str:
     return text
 
 
+def _resolve_runtime_path(value: Any) -> str:
+    """Validate the optional client-facing path in a generated entry."""
+    return _resolve_logical_path(value)
+
+
 # --------------------------------------------------------------------------- #
 # value objects
 # --------------------------------------------------------------------------- #
@@ -873,6 +879,19 @@ class GeneratedStore:
             }))
             manifest_entries[-1].pop("_artifact_abs", None)
 
+        runtime_paths: dict[str, str] = {}
+        for item in manifest_entries:
+            runtime_path = item.get("runtime_path")
+            if runtime_path is None:
+                continue
+            prior = runtime_paths.get(runtime_path)
+            if prior is not None and prior != item["logical_key"]:
+                raise GeneratedStoreError(
+                    f"runtime_path {runtime_path!r} is used by both {prior!r} and "
+                    f"{item['logical_key']!r}; one client path cannot map ambiguously"
+                )
+            runtime_paths[runtime_path] = item["logical_key"]
+
         manifest_entries.sort(key=lambda item: (item["logical_path"], item["logical_key"]))
         manifest = {
             "kind": MANIFEST_KIND,
@@ -1148,6 +1167,8 @@ class GeneratedStore:
 
             entry["logical_key"] = str(entry.get("logical_key") or logical_path)
             entry["logical_path"] = logical_path
+            if entry.get("runtime_path") is not None:
+                entry["runtime_path"] = _resolve_runtime_path(entry["runtime_path"])
             entry["source_sha256"] = _hex64(entry.get("source_sha256"), logical_key, "source_sha256")
             # Fail closed, not defaulted: a surface that forgot to declare what it
             # produced would otherwise be silently labelled `other` and a consumer
@@ -1256,6 +1277,8 @@ class GeneratedStore:
         for key in ("logical_key", "logical_path", "source_sha256", "translated_sha256",
                     "object_path", "artifact_sha256", "reuse_status", "translation_status"):
             final[key] = entry[key]
+        if entry.get("runtime_path") is not None:
+            final["runtime_path"] = entry["runtime_path"]
         final["resource_kind"] = validate_resource_kind(entry.get("resource_kind"))
         return final
 
