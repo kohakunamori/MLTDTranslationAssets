@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-from pathlib import Path
-_MODULE_DIR = Path(__file__).resolve().parent
-if str(_MODULE_DIR) not in sys.path:
-    sys.path.insert(0, str(_MODULE_DIR))
 """Estimate translation ETA from recent source-ID progress, never from file size.
 
 This module stores only tiny progress observations in the build workspace.

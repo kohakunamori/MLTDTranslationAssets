@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-from pathlib import Path
-_MODULE_DIR = Path(__file__).resolve().parent
-if str(_MODULE_DIR) not in sys.path:
-    sys.path.insert(0, str(_MODULE_DIR))
 """Independent semantic/style reviewer for MLTD translation candidates."""
 from __future__ import annotations
 
