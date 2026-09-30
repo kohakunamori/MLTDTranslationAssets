@@ -16,10 +16,17 @@ on:
         default: '20'
         type: string
 
+concurrency:
+  # Queue workers update image rows and manifests; never let two hourly runs
+  # consume the same queued batch concurrently.
+  group: assets-image-backfill
+  cancel-in-progress: false
+
 jobs:
   backfill:
     name: Slice and Paste Uploaded Composites
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
 
