@@ -34,6 +34,19 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Promote reviewed locale changes
+        env:
+          BEFORE_SHA: ${{ github.event.before || '' }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo 'No push parent is available (manual dispatch); nothing to promote.'
+          else
+            python scripts/promote_merged_locales.py \
+              --before "$BEFORE_SHA" \
+              --after "$AFTER_SHA"
+          fi
+
       - name: Install asset pipeline dependencies
         run: python -m pip install --disable-pip-version-check msgpack UnityPy Pillow pycryptodome
 
@@ -58,14 +71,14 @@ jobs:
             --root generated \
             --asset-version "$ASSET_VERSION"
 
-      - name: Commit generated release only
+      - name: Commit reviewed translations and generated release
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add generated/
+          git add generated/ locales/
           if git diff --cached --quiet; then
-            echo 'No generated release changes.'
+            echo 'No reviewed translation or generated release changes.'
             exit 0
           fi
-          git commit -m "build(assets): publish generated Unity3D release [skip ci]"
+          git commit -m "build(assets): publish reviewed translations and generated release [skip ci]"
           git push origin HEAD:main
