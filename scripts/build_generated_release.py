@@ -118,7 +118,8 @@ def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict
                 # The same bundle/key may have different source text in
                 # different asset versions.  Keep each source-bound candidate;
                 # the current official bundle selects the matching one below.
-                identity = (logical_name(bundle), key, sha256_text(source))
+                row_asset_version = str(row.get("asset_version", "")).strip()
+                identity = (logical_name(bundle), key, sha256_text(source), row_asset_version)
                 prior = seen.get(identity)
                 if prior is not None and prior != translation:
                     raise ValueError(f"conflicting translation for {identity}")
@@ -130,7 +131,7 @@ def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict
                     "source_sha256": sha256_text(source),
                     "translation": translation,
                     "status": "accepted",
-                    "asset_version": str(row.get("asset_version", asset_version)),
+                    "asset_version": row_asset_version or asset_version,
                 })
     if not grouped:
         raise ValueError("no accepted Assets translations were found")
@@ -138,7 +139,7 @@ def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict
 
 
 def select_rows_for_current_sources(
-    rows: list[dict], current_sources: dict[str, str]
+    rows: list[dict], current_sources: dict[str, str], asset_version: str | None = None
 ) -> list[dict]:
     """Select only source-bound translations matching the current bundle."""
     selected: dict[str, dict] = {}
@@ -149,8 +150,22 @@ def select_rows_for_current_sources(
             continue
         prior = selected.get(key)
         if prior is not None and prior["translation"] != row["translation"]:
-            raise ValueError(f"conflicting current-source translation for {key}")
-        selected[key] = row
+            # A newer release may intentionally revise a translation while an
+            # older release keeps the previous wording. Prefer the row bound
+            # to the release currently being built; reject ambiguity on the
+            # same asset axis.
+            prior_version = str(prior.get("asset_version", ""))
+            row_version = str(row.get("asset_version", ""))
+            if prior_version == row_version:
+                raise ValueError(f"conflicting current-source translation for {key}")
+            if asset_version and row_version == asset_version:
+                selected[key] = row
+            elif prior_version == asset_version:
+                continue
+            else:
+                raise ValueError(f"conflicting current-source translation for {key}")
+        else:
+            selected[key] = row
     return list(selected.values())
 
 
@@ -284,7 +299,9 @@ def main() -> int:
         remote = index[logical]["remote"]
         _name, plain, _cipher = read_gtx(archive / "jp-android" / remote)
         current_sources = dict(parse_records(plain))
-        selected_rows = select_rows_for_current_sources(rows, current_sources)
+        selected_rows = select_rows_for_current_sources(
+            rows, current_sources, str(version["asset_version"])
+        )
         if selected_rows:
             current_grouped[logical] = selected_rows
     canonical_grouped = current_grouped
