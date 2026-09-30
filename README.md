@@ -1,7 +1,7 @@
 # MLTD 简体中文汉化开源资源库 (THE IDOLM@STER MILLION LIVE! THEATER DAYS Localization Assets)
 
-欢迎来到《偶像大师 百万现场 剧场时光》(MLTD) 汉化资源的权威开源仓库（Single Source of Truth, SSOT）。
-本仓库沉淀了全量日文原文与高质量简体中文译文，并统一维护术语表、歌词与贴图 Manifest。
+这是一个个人业余项目，用于整理《偶像大师 百万现场 剧场时光》(MLTD) 的简体中文汉化资源。
+仓库中的文本、术语表、歌词和贴图 Manifest 会持续更新，欢迎通过 GitHub PR 参与修订。
 
 本仓库只承载**经 assets 服务器下发的面**（`/cn/<asset>/` overlay）。底栏贴图、BI 文案与字体属于
 APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohakunamori/MLTDTranslationClient)
@@ -24,8 +24,8 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
   - `lyrics/songs/`：按歌曲独立分轨 JSONL
   - `lyrics/all_lyrics.jsonl`：全曲歌词总汇
 - `glossary/`：翻译规范与标准术语
-  - `glossary/authoritative-terms.json`：90 个官方权威术语（固定译名与避免词）
-  - `glossary/idols.json`：52 偶像标准官方定名与声优名录
+  - `glossary/authoritative-terms.json`：项目当前采用的固定译名与避免词
+  - `glossary/idols.json`：项目整理的 52 名偶像与声优名录
 - `manifests/`：贴图元数据清单（文字在库，多媒体外链）
   - `manifests/images.manifest.json`：937 张已汉化贴图的 SHA-256 索引
 - `pipelines/`：自动化汉化与生成流水线工具集
@@ -62,7 +62,10 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 4. **状态说明**：
    - `untranslated`：待翻译条目，`zh` 为空字符串。
    - `pending`：已生成初稿或机器翻译，等待人工审校。
-   - `accepted`：已通过质量审校的正式译文。
+   - `accepted`：已通过人工质量审校、可进入构建的译文。
+
+`translation_stage`（新条目使用）进一步标记流程：`untranslated` →
+`llm_translated` → `human_translated`。LLM 结果仍是 `pending`，不会绕过人工审核。
 
 ## Web 翻译门户与在线协同
 

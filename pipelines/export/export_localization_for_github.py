@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Export MLTD localization assets into a standard GitHub public repository layout.
 
-SSOT architecture:
+Project architecture:
 - Text in Git: JSONL per bundle, categorized into story, card, dialogue, birth, master.
 - Binary media external: referenced in manifests/ with SHA-256 and Release/R2 URLs.
 - Zero delimiter leakage: intercepts '|' and '^' to protect game client engine.
@@ -871,8 +871,8 @@ def export_schemas_and_repo_docs(out_dir: Path, timestamp: str, builtin_out_dir:
 
     readme_content = f"""# MLTD 简体中文汉化开源资源库 (THE IDOLM@STER MILLION LIVE! THEATER DAYS Localization Assets)
 
-欢迎来到《偶像大师 百万现场 剧场时光》(MLTD) 汉化资源的权威开源仓库（Single Source of Truth, SSOT）。
-本仓库沉淀了全量日文原文与高质量简体中文译文，并统一维护术语表、歌词与贴图 Manifest。
+这是一个个人业余项目，用于整理《偶像大师 百万现场 剧场时光》(MLTD) 的简体中文汉化资源。
+仓库中的文本、术语表、歌词和贴图 Manifest 会持续更新，欢迎通过 GitHub PR 参与修订。
 
 本仓库只承载**经 assets 服务器下发的面**（`/cn/<asset>/` overlay）。底栏贴图、BI 文案与字体属于
 APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohakunamori/MLTDTranslationClient)
@@ -889,9 +889,9 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
 - `lyrics/`：全曲目歌词库（432 首歌曲对齐双语歌词与时间戳）
   - `lyrics/songs/`：按歌曲独立分轨 JSONL
   - `lyrics/all_lyrics.jsonl`：全曲歌词总汇
-- `glossary/`：翻译规范与标准术语
-  - `glossary/authoritative-terms.json`：90 个官方权威术语（固定译名与避免词）
-  - `glossary/idols.json`：52 偶像标准官方定名与声优名录
+- `glossary/`：翻译规范与项目术语
+  - `glossary/authoritative-terms.json`：项目当前采用的固定译名与避免词
+  - `glossary/idols.json`：项目整理的 52 名偶像与声优名录
 - `manifests/`：贴图元数据清单（文字在库，多媒体外链）
   - `manifests/images.manifest.json`：937 张已汉化贴图的 SHA-256 索引
 - `schema/`：数据规范与 JSON Schema 定义
@@ -1212,7 +1212,7 @@ def export_all(
 - **贴图 Manifest**:
   - {images_counts['total_images']} 张贴图索引，支持 GitHub Release Assets / Cloudflare R2。
 - **名词表**:
-  - 90 个官方权威术语 + 52 偶像标准名录。
+  - 90 个项目固定术语 + 52 名偶像名录。
 {f'''## 2. APK 内置面（独立仓库）
 
 - 输出目录: `{builtin_out_dir}`

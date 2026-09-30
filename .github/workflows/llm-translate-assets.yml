@@ -1,0 +1,95 @@
+name: Draft LLM translations
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+    inputs:
+      max_items:
+        description: 'Optional queue limit for a smoke run'
+        required: false
+        default: '0'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: assets-llm-translation
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    # The local provider configuration is never committed or copied into Git.
+    # The self-hosted runner supplies MLTD_LLM_CONFIG_PATH and its key through
+    # the runner environment/runtime config file.
+    runs-on: [self-hosted, windows, mltd-llm]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install translation dependencies
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check httpx msgpack UnityPy Pillow pycryptodome
+
+      - name: Require local provider configuration
+        shell: pwsh
+        run: |
+          if (-not $env:MLTD_LLM_CONFIG_PATH) { throw 'MLTD_LLM_CONFIG_PATH is not configured on this runner' }
+          if (-not (Test-Path -LiteralPath $env:MLTD_LLM_CONFIG_PATH)) { throw 'MLTD_LLM_CONFIG_PATH does not exist on this runner' }
+
+      - name: Detect latest official asset version
+        shell: pwsh
+        run: |
+          python scripts/track_jp_assets.py --update --output-json .llm-asset-check.json
+
+      - name: Extract new source rows from official latest assets
+        shell: pwsh
+        run: |
+          python scripts/refresh_latest_official_catalogue.py
+
+      - name: Collect untranslated rows
+        shell: pwsh
+        run: python scripts/llm_translate_untranslated.py collect --output .llm-queue.jsonl
+
+      - name: Translate with the existing provider pool
+        shell: pwsh
+        env:
+          LLM_CONFIG_PATH: ${{ env.MLTD_LLM_CONFIG_PATH }}
+        run: |
+          $count = (Get-Content .llm-queue.jsonl | Measure-Object -Line).Lines
+          if ($count -eq 0) { Write-Host 'No untranslated rows.'; exit 0 }
+          $limit = '${{ inputs.max_items }}'
+          $args = @('--input', '.llm-queue.jsonl', '--output', '.llm-draft.jsonl', '--failed-output', '.llm-failed.jsonl', '--summary', '.llm-summary.json', '--config', $env:MLTD_LLM_CONFIG_PATH, '--no-default-resume', '--batch-mode', 'dynamic')
+          if ($limit -and $limit -ne '0') { $args += @('--max-items', $limit) }
+          python pipelines/text/translate_mltd_api_pool.py @args
+
+      - name: Apply LLM drafts as pending review items
+        shell: pwsh
+        run: |
+          if (-not (Test-Path .llm-draft.jsonl)) { Write-Host 'No draft output.'; exit 0 }
+          python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl
+          python scripts/validate_repo.py
+
+      - name: Open review PR
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if (-not (git status --porcelain)) { Write-Host 'No changes to publish.'; exit 0 }
+          $version = (Get-Content manifests/asset-version.json | ConvertFrom-Json).asset_version
+          $branch = "bot/llm-translation/$version/${{ github.run_number }}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -b $branch
+          git add locales manifests/asset-version.json
+          git commit -m "draft(assets): add LLM translations for asset $version"
+          git push --set-upstream origin $branch
+          gh pr create --base main --head $branch --title "Draft LLM translations for assets $version" --body "LLM-generated draft only. Rows are marked pending / llm_translated and require human review before merge. Provider credentials and local configuration stay on the self-hosted runner."
