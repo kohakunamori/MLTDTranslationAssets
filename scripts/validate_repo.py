@@ -24,6 +24,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from pipelines.text.mltd_localize_gtx import validate_translation
+
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 VALID_STATUSES = {"untranslated", "pending", "accepted"}
@@ -148,6 +152,19 @@ def validate_locales(root: Path) -> dict[str, int]:
                     for d in RESERVED_DELIMITERS:
                         if d in zh:
                             print(f"ERROR: {jf}:{line_idx} translation contains illegal reserved delimiter '{d}': {zh}", file=sys.stderr)
+                            sys.exit(1)
+
+                    # Runtime format tokens are part of the source contract.
+                    # A row with a missing/duplicated token must not remain
+                    # `accepted`: it would make UnityFS generation unsafe.
+                    if status == "accepted":
+                        try:
+                            validate_translation(ja, zh)
+                        except ValueError as exc:
+                            print(
+                                f"ERROR: {jf}:{line_idx} protected-token validation failed: {exc}",
+                                file=sys.stderr,
+                            )
                             sys.exit(1)
 
     return counts
