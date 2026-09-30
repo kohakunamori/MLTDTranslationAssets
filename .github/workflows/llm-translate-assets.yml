@@ -119,7 +119,9 @@ jobs:
             --summary .llm-summary.json
             --config "$MLTD_LLM_CONFIG_PATH"
             --no-default-resume
-            --batch-mode dynamic
+            # The public Assets repository uses the tested single-item path;
+            # the optional Batch V2 adapter is not part of this repository.
+            --batch-mode single
             --glossary glossary/authoritative-terms.json
             --authoritative-terms glossary/authoritative-terms.json
             --character-evidence .llm-character-evidence.json
