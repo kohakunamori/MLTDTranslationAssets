@@ -18,12 +18,15 @@ concurrency:
   group: assets-llm-translation
   cancel-in-progress: false
 
+env:
+  PYTHONUNBUFFERED: '1'
+
 jobs:
   draft:
-    # The local provider configuration is never committed or copied into Git.
-    # The self-hosted runner supplies MLTD_LLM_CONFIG_PATH and its key through
-    # the runner environment/runtime config file.
-    runs-on: [self-hosted, windows, mltd-llm]
+    # GitHub-hosted Linux is intentional: the provider is the public HTTPS
+    # gateway configured in configs/api-models.example.json. Only the API key
+    # is imported from Actions secrets into an ephemeral runner-temp file.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,70 +39,113 @@ jobs:
           python-version: '3.11'
 
       - name: Install translation dependencies
-        shell: pwsh
+        shell: bash
         run: python -m pip install --disable-pip-version-check httpx msgpack UnityPy Pillow pycryptodome
 
-      - name: Require local provider configuration
-        shell: pwsh
+      - name: Materialize provider configuration from secrets
+        shell: bash
+        env:
+          MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
         run: |
-          if (-not $env:MLTD_LLM_CONFIG_PATH) { throw 'MLTD_LLM_CONFIG_PATH is not configured on this runner' }
-          if (-not (Test-Path -LiteralPath $env:MLTD_LLM_CONFIG_PATH)) { throw 'MLTD_LLM_CONFIG_PATH does not exist on this runner' }
+          set -euo pipefail
+          test -n "$MLTD_LLM_API_KEY"
+          cfg_dir="$RUNNER_TEMP/mltd-llm"
+          install -d -m 700 "$cfg_dir"
+          cp configs/api-models.example.json "$cfg_dir/api-models.local.json"
+          python - "$cfg_dir/api-runtime.local.json" "$MLTD_LLM_API_KEY" <<'PY'
+          import json
+          import pathlib
+          import sys
+          out = pathlib.Path(sys.argv[1])
+          key = sys.argv[2]
+          out.write_text(json.dumps({
+              "schema_version": 3,
+              "environment": {"api_key": {"MLTD_API_KEY": key}},
+          }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+          chmod 600 "$cfg_dir/api-models.local.json" "$cfg_dir/api-runtime.local.json"
+          echo "MLTD_LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
+          echo "LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
 
       - name: Detect latest official asset version
-        shell: pwsh
-        run: |
-          python scripts/track_jp_assets.py --update --output-json .llm-asset-check.json
+        shell: bash
+        run: python scripts/track_jp_assets.py --update --output-json .llm-asset-check.json
 
       - name: Extract new source rows from official latest assets
-        shell: pwsh
+        shell: bash
         run: |
-          $check = Get-Content .llm-asset-check.json | ConvertFrom-Json
-          if ($check.has_update) {
+          set -euo pipefail
+          has_update=$(python -c 'import json; print(str(json.load(open(".llm-asset-check.json"))["has_update"]).lower())')
+          if [ "$has_update" = true ]; then
             python scripts/refresh_latest_official_catalogue.py
-          } else {
-            Write-Host 'Official asset version unchanged; skip bundle download.'
-          }
+          else
+            echo 'Official asset version unchanged; skip bundle download.'
+          fi
 
       - name: Collect untranslated rows
-        shell: pwsh
+        shell: bash
         run: python scripts/llm_translate_untranslated.py collect --output .llm-queue.jsonl
 
       - name: Prepare project prompt inputs
-        shell: pwsh
+        shell: bash
         run: |
-          '{"schema_version":1,"speakers":{}}' | Set-Content -LiteralPath .llm-character-evidence.json -Encoding utf8
+          printf '%s\n' '{"schema_version":1,"speakers":{}}' > .llm-character-evidence.json
 
       - name: Translate with the existing provider pool
-        shell: pwsh
-        env:
-          LLM_CONFIG_PATH: ${{ env.MLTD_LLM_CONFIG_PATH }}
+        shell: bash
         run: |
-          $count = (Get-Content .llm-queue.jsonl | Measure-Object -Line).Lines
-          if ($count -eq 0) { Write-Host 'No untranslated rows.'; exit 0 }
-          $limit = '${{ inputs.max_items }}'
-          $args = @('--input', '.llm-queue.jsonl', '--output', '.llm-draft.jsonl', '--failed-output', '.llm-failed.jsonl', '--summary', '.llm-summary.json', '--config', $env:MLTD_LLM_CONFIG_PATH, '--no-default-resume', '--batch-mode', 'dynamic', '--glossary', 'glossary/authoritative-terms.json', '--authoritative-terms', 'glossary/authoritative-terms.json', '--character-evidence', '.llm-character-evidence.json', '--prompt-source', 'compiled', '--system-prompt', '.llm-system-prompt.md', '--prompt-manifest', 'pipelines/text/configs/mltd-zhcn-system.manifest.json')
-          if ($limit -and $limit -ne '0') { $args += @('--max-items', $limit) }
-          python pipelines/text/translate_mltd_api_pool.py @args
+          set -euo pipefail
+          count=$(wc -l < .llm-queue.jsonl)
+          if [ "$count" -eq 0 ]; then
+            echo 'No untranslated rows.'
+            exit 0
+          fi
+          limit='${{ inputs.max_items }}'
+          args=(
+            --input .llm-queue.jsonl
+            --output .llm-draft.jsonl
+            --failed-output .llm-failed.jsonl
+            --summary .llm-summary.json
+            --config "$MLTD_LLM_CONFIG_PATH"
+            --no-default-resume
+            --batch-mode dynamic
+            --glossary glossary/authoritative-terms.json
+            --authoritative-terms glossary/authoritative-terms.json
+            --character-evidence .llm-character-evidence.json
+            --prompt-source compiled
+            --system-prompt .llm-system-prompt.md
+            --prompt-manifest pipelines/text/configs/mltd-zhcn-system.manifest.json
+          )
+          if [ -n "$limit" ] && [ "$limit" != 0 ]; then args+=(--max-items "$limit"); fi
+          python pipelines/text/translate_mltd_api_pool.py "${args[@]}"
 
       - name: Apply LLM drafts as pending review items
-        shell: pwsh
+        shell: bash
         run: |
-          if (-not (Test-Path .llm-draft.jsonl)) { Write-Host 'No draft output.'; exit 0 }
+          set -euo pipefail
+          if [ ! -f .llm-draft.jsonl ]; then
+            echo 'No draft output.'
+            exit 0
+          fi
           python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl
           python scripts/validate_repo.py
 
       - name: Open review PR
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if (-not (git status --porcelain)) { Write-Host 'No changes to publish.'; exit 0 }
-          $version = (Get-Content manifests/asset-version.json | ConvertFrom-Json).asset_version
-          $branch = "bot/llm-translation/$version/${{ github.run_number }}"
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo 'No changes to publish.'
+            exit 0
+          fi
+          version=$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["asset_version"])')
+          branch="bot/llm-translation/$version/${GITHUB_RUN_NUMBER}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git checkout -b $branch
+          git checkout -b "$branch"
           git add locales manifests/asset-version.json
           git commit -m "draft(assets): add LLM translations for asset $version"
-          git push --set-upstream origin $branch
-          gh pr create --base main --head $branch --title "Draft LLM translations for assets $version" --body "LLM-generated draft only. Rows are marked pending / llm_translated and require human review before merge. Provider credentials and local configuration stay on the self-hosted runner."
+          git push --set-upstream origin "$branch"
+          gh pr create --base main --head "$branch" --title "Draft LLM translations for assets $version" --body "LLM-generated draft only. Rows are marked pending / llm_translated and require human review before merge. Provider credentials stay in Actions secrets and the runtime files are ephemeral."

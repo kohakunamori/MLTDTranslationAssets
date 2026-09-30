@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "_comment": [
+    "Public provider/model settings for the hosted LLM draft workflow; credentials belong in GitHub Actions secrets.",
+    "The workflow creates api-runtime.local.json in the ephemeral runner temp directory."
+  ],
+  "defaults": {
+    "preset": "mltd-balanced",
+    "base_url": "https://cpa.nyaneko.cn/v1",
+    "api_protocol": "responses",
+    "api_key_env": "MLTD_API_KEY",
+    "concurrency": 10,
+    "request_params": {
+      "prompt_cache_key": "mltd-zhcn-system",
+      "prompt_cache_options": {
+        "ttl": "30m"
+      }
+    }
+  },
+  "models": {
+    "gemini": "gemini-3.8-flash-high"
+  }
+}
