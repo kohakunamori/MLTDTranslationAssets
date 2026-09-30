@@ -64,6 +64,11 @@ jobs:
         shell: pwsh
         run: python scripts/llm_translate_untranslated.py collect --output .llm-queue.jsonl
 
+      - name: Prepare project prompt inputs
+        shell: pwsh
+        run: |
+          '{"schema_version":1,"speakers":{}}' | Set-Content -LiteralPath .llm-character-evidence.json -Encoding utf8
+
       - name: Translate with the existing provider pool
         shell: pwsh
         env:
@@ -72,7 +77,7 @@ jobs:
           $count = (Get-Content .llm-queue.jsonl | Measure-Object -Line).Lines
           if ($count -eq 0) { Write-Host 'No untranslated rows.'; exit 0 }
           $limit = '${{ inputs.max_items }}'
-          $args = @('--input', '.llm-queue.jsonl', '--output', '.llm-draft.jsonl', '--failed-output', '.llm-failed.jsonl', '--summary', '.llm-summary.json', '--config', $env:MLTD_LLM_CONFIG_PATH, '--no-default-resume', '--batch-mode', 'dynamic')
+          $args = @('--input', '.llm-queue.jsonl', '--output', '.llm-draft.jsonl', '--failed-output', '.llm-failed.jsonl', '--summary', '.llm-summary.json', '--config', $env:MLTD_LLM_CONFIG_PATH, '--no-default-resume', '--batch-mode', 'dynamic', '--glossary', 'glossary/authoritative-terms.json', '--authoritative-terms', 'glossary/authoritative-terms.json', '--character-evidence', '.llm-character-evidence.json', '--prompt-source', 'compiled', '--system-prompt', '.llm-system-prompt.md', '--prompt-manifest', 'pipelines/text/configs/mltd-zhcn-system.manifest.json')
           if ($limit -and $limit -ne '0') { $args += @('--max-items', $limit) }
           python pipelines/text/translate_mltd_api_pool.py @args
 
