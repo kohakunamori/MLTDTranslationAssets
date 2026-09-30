@@ -9,6 +9,10 @@ on:
         description: 'Optional queue limit for a smoke run'
         required: false
         default: '0'
+      max_bundles:
+        description: 'Optional official-bundle limit for a smoke run'
+        required: false
+        default: '0'
 
 permissions:
   contents: write
@@ -77,7 +81,12 @@ jobs:
           set -euo pipefail
           has_update=$(python -c 'import json; print(str(json.load(open(".llm-asset-check.json"))["has_update"]).lower())')
           if [ "$has_update" = true ]; then
-            python scripts/refresh_latest_official_catalogue.py
+            args=(scripts/refresh_latest_official_catalogue.py)
+            bundle_limit='${{ inputs.max_bundles }}'
+            if [ -n "$bundle_limit" ] && [ "$bundle_limit" != 0 ]; then
+              args+=(--max-bundles "$bundle_limit")
+            fi
+            python "${args[@]}"
           else
             echo 'Official asset version unchanged; skip bundle download.'
           fi
