@@ -12,11 +12,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Preflight reviewed locale changes
+        if: github.event_name == 'pull_request'
+        env:
+          BEFORE_SHA: ${{ github.event.pull_request.base.sha }}
+          AFTER_SHA: ${{ github.sha }}
+        run: python scripts/promote_merged_locales.py --before "$BEFORE_SHA" --after "$AFTER_SHA"
 
       - name: Run repository validation
         run: |

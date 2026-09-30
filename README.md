@@ -73,6 +73,16 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 - **Web 门户**：https://mltd-translate.nyaneko.cn
 - **提交 PR**：欢迎在 GitHub 直接提交 Pull Request，CI 机器人将对每一行的数据完整性进行自动化检测。
 
+合并后的资源会自动进入发布链路：
+
+1. `validate-localization.yml` 在 PR 检查工作区预演状态晋级，并验证源 hash、控制符和占位符；
+2. PR 合并到 `main` 后，`assets-generated.yml` 只对本次 diff 中有译文的 `pending/untranslated` 行标记为 `accepted`；
+3. 同一次 CI 运行调用 `scripts/build_generated_release.py`，生成并校验 `generated/<asset_version>/`；
+4. 机器人把状态晋级和 `generated/` 一起提交回 `main`，提交带 `[skip ci]`，不会自触发循环；
+5. `sync-to-portal.yml` 随 `locales/` 变更同步 Portal 索引。
+
+因此“审核通过”以 PR 合并为准；未合并的 PR 不会写入 `main` 或生成发布资源。构建或源校验失败时不会提交 `generated/`。
+
 ## 许可证与致谢
 
 本仓库文本基于游戏日版文本翻译与整理，版权归 Bandai Namco Entertainment Inc. 所有。
