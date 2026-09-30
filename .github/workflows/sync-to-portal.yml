@@ -13,10 +13,20 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: read
+
+concurrency:
+  # D1 sync is a remote state writer; serialize it instead of cancelling a
+  # run after it has generated or started applying SQL batches.
+  group: assets-sync-to-portal
+  cancel-in-progress: false
+
 jobs:
   sync:
     name: Sync to D1
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

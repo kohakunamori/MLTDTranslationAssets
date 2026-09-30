@@ -12,6 +12,12 @@ name: Auto Track Japanese Assets
         default: true
         type: boolean
 
+concurrency:
+  # The scheduled tracker mutates the asset-version tag/branch and opens a
+  # PR; a manual run must wait instead of racing the scheduled writer.
+  group: assets-track-jp-version
+  cancel-in-progress: false
+
 jobs:
   track:
     name: Check New Asset Releases

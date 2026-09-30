@@ -3,12 +3,38 @@ name: Validate Localization Repository
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'locales/**'
+      - 'lyrics/**'
+      - 'images/**'
+      - 'manifests/**'
+      - 'pipelines/**'
+      - 'scripts/**'
+      - 'schema/**'
+      - '.github/workflows/validate-localization.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'locales/**'
+      - 'lyrics/**'
+      - 'images/**'
+      - 'manifests/**'
+      - 'pipelines/**'
+      - 'scripts/**'
+      - 'schema/**'
+      - '.github/workflows/validate-localization.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
