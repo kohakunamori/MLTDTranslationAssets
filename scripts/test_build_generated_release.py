@@ -71,6 +71,24 @@ class GeneratedReleaseContracts(unittest.TestCase):
         chosen = build.select_rows_for_current_sources(rows, {"k": "新文"})
         self.assertEqual([row["translation"] for row in chosen], ["新译"])
 
+    def test_current_asset_version_wins_over_older_reused_translation(self):
+        rows = [
+            {"key": "k", "source": "同一原文", "translation": "旧译", "asset_version": "1077500"},
+            {"key": "k", "source": "同一原文", "translation": "新译", "asset_version": "1077640"},
+        ]
+        chosen = build.select_rows_for_current_sources(
+            rows, {"k": "同一原文"}, "1077640"
+        )
+        self.assertEqual([row["translation"] for row in chosen], ["新译"])
+
+    def test_same_asset_version_conflict_is_rejected(self):
+        rows = [
+            {"key": "k", "source": "同一原文", "translation": "甲", "asset_version": "1077640"},
+            {"key": "k", "source": "同一原文", "translation": "乙", "asset_version": "1077640"},
+        ]
+        with self.assertRaises(ValueError):
+            build.select_rows_for_current_sources(rows, {"k": "同一原文"}, "1077640")
+
 
 if __name__ == "__main__":
     unittest.main()
