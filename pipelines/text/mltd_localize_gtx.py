@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-from pathlib import Path
-_MODULE_DIR = Path(__file__).resolve().parent
-if str(_MODULE_DIR) not in sys.path:
-    sys.path.insert(0, str(_MODULE_DIR))
 """Build deterministic MLTD system-text localization overlays.
 
 The JP client loads five encrypted GTX TextAssets (CM/MD/MB/CD/ST).  This tool
@@ -23,6 +18,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import sys
+from pathlib import Path
+
+_MODULE_DIR = Path(__file__).resolve().parent
+if str(_MODULE_DIR) not in sys.path:
+    sys.path.insert(0, str(_MODULE_DIR))
 import json
 import re
 from collections import Counter
@@ -161,6 +162,10 @@ def validate_translation(source: str, translated: str) -> None:
 # Adding a status here IS the release decision.  A new workflow state must be added
 # deliberately; it can no longer become releasable merely by not matching a prefix.
 ACCEPTED_TRANSLATION_STATUSES = frozenset({
+    # Public Assets JSONL uses the repository schema's explicit review state.
+    # The older private release ledgers below use more granular provenance
+    # states, but `accepted` must remain the canonical public input state.
+    "accepted",
     # Machine and agent output.  `machine_translated` is what
     # scripts/translate_gtx_queue.py:62 (ACCEPTED_STATUS) and the API/Codex/non-GTX
     # pools emit; `agent_translated` is what a source-bound draft promotion emits

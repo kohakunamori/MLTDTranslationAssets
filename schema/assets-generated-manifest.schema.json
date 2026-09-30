@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mltd.internal/schemas/assets-generated-manifest.schema.json",
+  "title": "MLTD Assets Generated Manifest (content-addressed store)",
+  "description": "Manifest of one asset_version inside generated/. The store keeps exactly one successful build per asset_version and references every payload by SHA-256 (content addressing). CLIENT AND ASSETS ARE INDEPENDENT VERSION AXES: 'asset_version' (assets axis) and 'source_client_version' (client axis, the client the official source bytes came from) are separate fields, and both are forbidden from containing '+' or '-assets-'. Combined identities such as '9.0.200+1077100' or 'client-9.0.200-assets-1077100' were retired by the owner (2026-09-27) and are rejected here so they cannot come back through a manifest.",
+  "type": "object",
+  "required": [
+    "kind",
+    "schema_version",
+    "asset_version",
+    "client_version",
+    "source_client_version",
+    "source_commit",
+    "translation_commit",
+    "generated_commit",
+    "ci_run_id",
+    "build_status",
+    "generated_at_utc",
+    "entry_count",
+    "entries",
+    "reuse_summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "mltd-assets-generated-manifest",
+      "description": "Discriminator for this document type."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of this schema's contract."
+    },
+    "asset_version": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "Assets axis only: the official asset cohort this release materialises (e.g. '1077100'). Combined identities are forbidden."
+    },
+    "client_version": {
+      "type": "null",
+      "description": "Always null on an assets-channel release. The APK built-in surface is delivered by the client repository; recording a client version here would re-couple the two axes."
+    },
+    "source_client_version": {
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)*$",
+      "description": "Client axis only: the client version whose official asset bytes are the source of this release (e.g. '9.0.200'). It is context, not an identity: never concatenate it with asset_version."
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Commit of the official/pristine source snapshot used for this build."
+    },
+    "translation_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Commit of the translation repository content that was applied."
+    },
+    "generated_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Commit that already contained the generator inputs this build consumed. It is an ancestor of (or identical to) snapshot_commit by construction -- a later bot or documentation commit does not invalidate it."
+    },
+    "ci_run_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$",
+      "description": "CI run identity that produced this release, either a run number or GitHub's <run_id>.<run_attempt>. Provenance only: null means the producer had no run context and never means 'unknown, guess one'. Never a version string, so a '+' or '-assets-' inside it is refused."
+    },
+    "build_status": {
+      "enum": [
+        "success",
+        "failed"
+      ],
+      "description": "Only a successful build may write generated/. A 'failed' record documents the attempt without touching the store."
+    },
+    "generated_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of this build, informational only."
+    },
+    "entry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Must equal len(entries)."
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "reuse_summary": {
+      "type": "object",
+      "required": [
+        "entries",
+        "reuse_status_counts",
+        "translation_status_counts",
+        "rejected_entries",
+        "rejected_reasons"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reuse_status_counts": {
+          "type": "object",
+          "description": "Counts over the released entries only.",
+          "additionalProperties": false,
+          "properties": {
+            "exact": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "verified-compatible": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "suggested": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocked": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "translation_status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "untranslated": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pending": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "accepted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "modified": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reused": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "rejected_entries": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Entries refused admission; they are reported with reasons and are NOT part of the release."
+        },
+        "rejected_reasons": {
+          "type": "object",
+          "description": "Grouped counts of refusal reasons.",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "reuse_summary.entries must equal entry_count. Expressed as a shape check that JSON Schema can carry without arithmetic: both must equal len(entries). The tool enforces the equality in code; this clause pins the released-side invariant that suggested/blocked/untranslated/pending cannot be released.",
+      "properties": {
+        "reuse_summary": {
+          "properties": {
+            "reuse_status_counts": {
+              "properties": {
+                "suggested": {
+                  "const": 0
+                },
+                "blocked": {
+                  "const": 0
+                }
+              }
+            },
+            "translation_status_counts": {
+              "properties": {
+                "untranslated": {
+                  "const": 0
+                },
+                "pending": {
+                  "const": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "not": {
+    "description": "A combined version anywhere in the identity fields is rejected. '+' and '-assets-' are the two markers the retired '9.0.200+1077100' / 'client-9.0.200-assets-1077100' identities used; the per-field patterns already forbid them, and this clause states the ban explicitly so it cannot be relaxed by accident.",
+    "anyOf": [
+      {
+        "required": [
+          "asset_version"
+        ],
+        "properties": {
+          "asset_version": {
+            "pattern": "\\+"
+          }
+        }
+      },
+      {
+        "required": [
+          "asset_version"
+        ],
+        "properties": {
+          "asset_version": {
+            "pattern": "-assets-"
+          }
+        }
+      },
+      {
+        "required": [
+          "source_client_version"
+        ],
+        "properties": {
+          "source_client_version": {
+            "pattern": "\\+"
+          }
+        }
+      },
+      {
+        "required": [
+          "source_client_version"
+        ],
+        "properties": {
+          "source_client_version": {
+            "pattern": "-assets-"
+          }
+        }
+      }
+    ]
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "description": "One generated artifact. It carries BOTH logical_path (the original game asset path the assets server keeps serving, e.g. 'event/001/title.unity3d') and object_path (where the bytes live in the content-addressed store).",
+      "required": [
+        "channel",
+        "asset_version",
+        "client_version",
+        "source_client_version",
+        "source_commit",
+        "translation_commit",
+        "generated_commit",
+        "ci_run_id",
+        "logical_key",
+        "logical_path",
+        "resource_kind",
+        "source_sha256",
+        "translated_sha256",
+        "object_path",
+        "artifact_sha256",
+        "reuse_status",
+        "translation_status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "const": "assets",
+          "description": "This store only publishes the assets-channel surface; APK built-in artifacts belong to the client repository."
+        },
+        "asset_version": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Must equal the manifest's asset_version; assets axis only."
+        },
+        "client_version": {
+          "type": "null",
+          "description": "Always null: separate axes, never a combined identity."
+        },
+        "source_client_version": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)*$",
+          "description": "Client context that produced the official source bytes (e.g. '9.0.200')."
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "translation_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "generated_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "ci_run_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]+(\\.[0-9]+)?$",
+          "description": "CI run identity that produced this release, either a run number or GitHub's <run_id>.<run_attempt>. Provenance only: null means the producer had no run context and never means 'unknown, guess one'. Never a version string, so a '+' or '-assets-' inside it is refused."
+        },
+        "logical_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identity of the logical asset inside the translation repository."
+        },
+        "logical_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*//)(?!.*(^|/)\\.\\.(/|$))[^\\\\]+$",
+          "description": "Original game asset path as the assets server serves it, e.g. 'event/001/title.unity3d'. Clean relative posix path: no leading slash, no backslash, no '..'."
+        },
+        "resource_kind": {
+          "enum": [
+            "bundle",
+            "texture",
+            "audio",
+            "other"
+          ],
+          "description": "What the payload is, because the logical path alone does not say. Every entry declares it and the producer refuses an entry without one: a surface that forgot to classify its output must fail the build, not be silently labelled 'other'."
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the OFFICIAL source asset. Equality of this value across versions is what makes reuse 'exact'."
+        },
+        "translated_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the generated (localized) payload. Orthogonal to source_sha256: it can change while the source does not."
+        },
+        "object_path": {
+          "type": "string",
+          "pattern": "^objects/sha256/([0-9a-f]{2}/)?[0-9a-f]{64}$",
+          "description": "Store-relative content-addressed path, flat: objects/sha256/<full digest>. The optional <aa>/ segment is legacy compatibility: a manifest committed before the flat switch still resolves, and its shard is only pruned when no retained manifest names it."
+        },
+        "artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the stored bytes; must equal the digest embedded in object_path and the value listed in the release's checksums.txt."
+        },
+        "reuse_status": {
+          "enum": [
+            "exact",
+            "verified-compatible"
+          ],
+          "description": "Released manifests may only carry these two. 'exact' = source_sha256 unchanged (automatic reuse). 'verified-compatible' = source changed but a recorded verification authorises reuse. 'suggested' (path/name/text/visual similarity only) and 'blocked' (no evidence) are never released."
+        },
+        "translation_status": {
+          "enum": [
+            "accepted",
+            "modified",
+            "reused"
+          ],
+          "description": "Released manifests may only carry these three. 'accepted' = reviewed and approved; 'modified' = translated bytes differ from the previous release; 'reused' = identical translated bytes. 'untranslated' and 'pending' are never released. NOTE: a changed translation on an unchanged official source is reuse_status='exact' + translation_status='modified' -- it must NOT be relabelled 'verified-compatible'."
+        }
+      },
+      "not": {
+        "description": "Combined client+assets identity is rejected in an entry too; the per-field patterns already forbid it and this clause states the ban explicitly.",
+        "anyOf": [
+          {
+            "required": [
+              "asset_version"
+            ],
+            "properties": {
+              "asset_version": {
+                "pattern": "\\+"
+              }
+            }
+          },
+          {
+            "required": [
+              "asset_version"
+            ],
+            "properties": {
+              "asset_version": {
+                "pattern": "-assets-"
+              }
+            }
+          },
+          {
+            "required": [
+              "source_client_version"
+            ],
+            "properties": {
+              "source_client_version": {
+                "pattern": "\\+"
+              }
+            }
+          },
+          {
+            "required": [
+              "source_client_version"
+            ],
+            "properties": {
+              "source_client_version": {
+                "pattern": "-assets-"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

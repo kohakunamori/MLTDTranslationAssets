@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-from pathlib import Path
-_MODULE_DIR = Path(__file__).resolve().parent
-if str(_MODULE_DIR) not in sys.path:
-    sys.path.insert(0, str(_MODULE_DIR))
 """Fail-closed (client version, assets version) identity for one JP localization.
 
 The asset version is read from the archived snapshot's upstream URL, never
@@ -16,7 +11,12 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
+
+_MODULE_DIR = Path(__file__).resolve().parent
+if str(_MODULE_DIR) not in sys.path:
+    sys.path.insert(0, str(_MODULE_DIR))
 
 REPO = Path(__file__).resolve().parents[1]
 CLIENT_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")

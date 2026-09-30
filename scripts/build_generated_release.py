@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""Build the public Assets generated release from the official asset server.
+
+The repository contains translation sources, not an unchecked copy of the
+official archive.  This command resolves the independent ``asset_version``
+from ``manifests/asset-version.json``, downloads only the official bundles
+referenced by accepted translation rows, runs the existing GTX writer, and
+publishes the resulting Unity3D files through the content-addressed store.
+
+Image inputs are intentionally optional until reviewed PNGs are present.  A
+missing image input is reported as ``blocked`` and never represented as a
+successful image artifact; text generation can still produce a valid release.
+Use ``--require-images`` when a release is required to contain the image
+surface as well.
+"""
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+import msgpack
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+from assets_generated_index import GeneratedStore
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def load_version_manifest(path: Path) -> dict:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    version = str(value.get("asset_version", ""))
+    client = str(value.get("client_version", ""))
+    if not version.isdigit() or not client.count(".") == 2:
+        raise ValueError("asset-version.json has invalid independent version fields")
+    template = str(value.get("asset_root", ""))
+    if "{version}" not in template or not template.startswith("https://td-assets.bn765.com/"):
+        raise ValueError("asset_root must be the official td-assets.bn765.com template")
+    index_name = str(value.get("index_name", ""))
+    if not index_name or "/" in index_name or "\\" in index_name:
+        raise ValueError("asset-version.json has no safe official index_name")
+    return {"asset_version": version, "client_version": client,
+            "asset_root": template.format(version=version).rstrip("/"),
+            "index_name": index_name}
+
+
+def load_official_index(path: Path) -> dict[str, dict]:
+    raw = msgpack.unpackb(path.read_bytes(), raw=False, strict_map_key=False)
+    if not isinstance(raw, list) or len(raw) != 1 or not isinstance(raw[0], dict):
+        raise ValueError("official asset index is not the expected one-table format")
+    result: dict[str, dict] = {}
+    for logical, row in raw[0].items():
+        if not isinstance(logical, str) or not isinstance(row, list) or len(row) != 3:
+            raise ValueError(f"malformed official asset index row: {logical!r}")
+        catalog_hash, remote, declared_size = row
+        remote = str(remote)
+        declared_size = int(declared_size)
+        if not remote.endswith(".unity3d") or not remote.isascii() or "/" in remote or "\\" in remote:
+            raise ValueError(f"unsafe official remote object name: {remote!r}")
+        if declared_size < 0:
+            raise ValueError(f"negative declared size for {logical!r}")
+        result[logical] = {"catalog_hash": str(catalog_hash), "remote": remote,
+                           "declared_size": declared_size}
+    if not result:
+        raise ValueError("official asset index is empty")
+    return result
+
+
+def logical_name(bundle: str) -> str:
+    return bundle if bundle.endswith(".unity3d") else bundle + ".unity3d"
+
+
+def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    seen: dict[tuple[str, str], str] = {}
+    for path in sorted((root / "locales").rglob("*.jsonl")):
+        with path.open(encoding="utf-8") as stream:
+            for line_no, line in enumerate(stream, 1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if row.get("status") != "accepted" or not str(row.get("zh", "")):
+                    continue
+                source = str(row.get("ja", ""))
+                translation = str(row.get("zh", ""))
+                if not source or "|" in translation or "^" in translation:
+                    raise ValueError(f"invalid accepted translation at {path}:{line_no}")
+                if str(row.get("source_sha256", "")).lower() != sha256_text(source):
+                    raise ValueError(f"source hash mismatch at {path}:{line_no}")
+                bundle = str(row.get("bundle", ""))
+                key = str(row.get("item_key", ""))
+                if not bundle or not key:
+                    raise ValueError(f"accepted row lacks bundle/item_key at {path}:{line_no}")
+                identity = (logical_name(bundle), key)
+                prior = seen.get(identity)
+                if prior is not None and prior != translation:
+                    raise ValueError(f"conflicting translation for {identity}")
+                seen[identity] = translation
+                grouped.setdefault(identity[0], []).append({
+                    "bundle": bundle,
+                    "key": key,
+                    "source": source,
+                    "source_sha256": sha256_text(source),
+                    "translation": translation,
+                    "status": "accepted",
+                    "asset_version": str(row.get("asset_version", asset_version)),
+                })
+    if not grouped:
+        raise ValueError("no accepted Assets translations were found")
+    return grouped
+
+
+def download(url: str, destination: Path, declared_size: int | None) -> None:
+    if destination.is_file() and (declared_size is None or destination.stat().st_size == declared_size):
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".part")
+    request = Request(url, headers={"User-Agent": "MLTDTranslationAssets-generated/1"})
+    with urlopen(request, timeout=90) as response, temporary.open("wb") as stream:
+        shutil.copyfileobj(response, stream, length=1 << 20)
+    if declared_size is not None and temporary.stat().st_size != declared_size:
+        temporary.unlink(missing_ok=True)
+        raise ValueError(f"official object size mismatch for {url}")
+    temporary.replace(destination)
+
+
+def write_snapshot(path: Path, version: dict, index_path: Path,
+                   selected: dict[str, dict]) -> None:
+    objects = [{"logical": logical, **row} for logical, row in sorted(selected.items())]
+    path.write_text(json.dumps({
+        "complete": True,
+        "scope": "jp-android",
+        "asset_index": str(index_path.resolve()),
+        "upstream_root": version["asset_root"],
+        "objects": objects,
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def run_overlay(snapshot: Path, archive: Path, ledger: Path, output: Path,
+                client_version: str, asset_version: str) -> None:
+    command = [sys.executable, str(ROOT / "pipelines/text/mltd_localization_pipeline.py"),
+               "build-overlay", "--snapshot", str(snapshot),
+               "--client-version", client_version, "--asset-version", asset_version,
+               "--archive-root", str(archive), "--translations", str(ledger),
+               "--output-root", str(output), "--progress-every", "250"]
+    subprocess.run(command, cwd=ROOT, check=True)
+
+
+def build_entries(overlay: Path, localization_manifest: Path, asset_version: str,
+                  source_client_version: str) -> list[dict]:
+    document = json.loads(localization_manifest.read_text(encoding="utf-8"))
+    entries: list[dict] = []
+    for row in document.get("bundles", []):
+        logical = str(row["logical"])
+        remote = str(row["remote"])
+        artifact = overlay / "jp-android" / remote
+        if not artifact.is_file():
+            raise ValueError(f"localization manifest names missing artifact: {artifact}")
+        entries.append({
+            "logical_key": logical,
+            "logical_path": f"production/2018/Android/{logical}",
+            "resource_kind": "bundle",
+            "channel": "assets",
+            "asset_version": asset_version,
+            "client_version": None,
+            "source_client_version": source_client_version,
+            "source_sha256": str(row["source_bundle_sha256"]),
+            "translated_sha256": str(row["output_plain_sha256"]),
+            "reuse_status": "exact",
+            "translation_status": "modified",
+            "artifact_file": str(artifact.resolve()),
+        })
+    if not entries:
+        raise ValueError("text overlay produced no changed bundles")
+    return entries
+
+
+def image_inputs_are_complete(root: Path) -> bool:
+    manifest = json.loads((root / "manifests/images.manifest.json").read_text(encoding="utf-8"))
+    rows = manifest.get("images", [])
+    if not rows:
+        return False
+    return all((root / str(row.get("localized", {}).get("relative_path", ""))).is_file()
+               for row in rows)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version-manifest", type=Path,
+                        default=ROOT / "manifests/asset-version.json")
+    parser.add_argument("--work-root", type=Path, default=ROOT / ".generated-work")
+    parser.add_argument("--output-root", type=Path, default=ROOT / "generated")
+    parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--translation-commit", required=True)
+    parser.add_argument("--generated-commit", required=True)
+    parser.add_argument("--ci-run-id", default=os.environ.get("GITHUB_RUN_ID"))
+    parser.add_argument("--max-bundles", type=int, default=0,
+                        help="test-only cap; production must leave this at zero")
+    parser.add_argument("--require-images", action="store_true")
+    args = parser.parse_args()
+    if not args.ci_run_id:
+        raise ValueError("CI run identity is required; set GITHUB_RUN_ID or --ci-run-id")
+    version = load_version_manifest(args.version_manifest)
+    images_ready = image_inputs_are_complete(ROOT)
+    if args.require_images and not images_ready:
+        raise ValueError("--require-images was requested but reviewed localized PNG inputs are incomplete")
+    grouped = read_translation_rows(ROOT, version["asset_version"])
+    work = args.work_root.resolve()
+    work.mkdir(parents=True, exist_ok=True)
+    index_path = work / version["index_name"]
+    download(f"{version['asset_root']}/{version['index_name']}", index_path, None)
+    # The index has no size in the version manifest; its decoded one-table
+    # structure is the authoritative validation.
+    index = load_official_index(index_path)
+    selected = {}
+    canonical_grouped: dict[str, list[dict]] = {}
+    index_by_fold = {name.casefold(): name for name in index}
+    for logical, rows in grouped.items():
+        canonical = index_by_fold.get(logical.casefold())
+        if canonical is None:
+            raise ValueError(f"translated logical bundle is absent from official index: {logical}")
+        selected[canonical] = index[canonical]
+        canonical_grouped[canonical] = rows
+    if args.max_bundles:
+        selected = dict(list(sorted(selected.items()))[:args.max_bundles])
+    archive = work / "archive"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        futures = [pool.submit(download,
+                                f"{version['asset_root']}/{row['remote']}",
+                                archive / "jp-android" / row["remote"],
+                                row["declared_size"])
+                   for row in selected.values()]
+        for future in futures:
+            future.result()
+    snapshot = work / "snapshot.json"
+    write_snapshot(snapshot, version, index_path, selected)
+    ledger = work / "translations.jsonl"
+    with ledger.open("w", encoding="utf-8", newline="\n") as stream:
+        for logical in selected:
+            for row in canonical_grouped[logical]:
+                stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+    overlay = work / "overlay"
+    run_overlay(snapshot, archive, ledger, overlay, version["client_version"], version["asset_version"])
+    entries_path = work / "entries.json"
+    entries = build_entries(overlay, overlay / "localization-manifest.json",
+                            version["asset_version"], version["client_version"])
+    entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    store = GeneratedStore(args.output_root.resolve())
+    result = store.build_release(
+        version["asset_version"], entries,
+        source_commit=args.source_commit,
+        translation_commit=args.translation_commit,
+        generated_commit=args.generated_commit,
+        source_client_version=version["client_version"],
+        ci_run_id=args.ci_run_id,
+        entries_base=work,
+    )
+    if not result.written:
+        raise RuntimeError(result.note)
+    report = {
+        "status": "success", "asset_version": version["asset_version"],
+        "client_version": version["client_version"], "selected_bundles": len(selected),
+        "generated_entries": len(entries), "generated_manifest": str(result.manifest_path),
+        "image_surface": "ready_for_injection" if images_ready else "blocked_missing_reviewed_inputs",
+        "official_index_sha256": sha256_file(index_path),
+    }
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
