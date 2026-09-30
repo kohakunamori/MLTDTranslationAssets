@@ -305,7 +305,14 @@ def save_localized_bundle(source: Path, output: Path, translated_text: str) -> d
     env, _obj, data, name, old_cipher = get_text_asset(source)
     new_plain = translated_text.encode("utf-8")
     new_cipher = encrypt_payload(new_plain)
-    data.m_Script = new_cipher
+    # UnityPy exposes TextAsset.m_Script as bytes/memoryview for its native
+    # TextAsset class, but as a string for some typetree-backed bundles.  Keep
+    # the type that the reader supplied: native TextAsset.save() requires
+    # bytes, while the typetree writer calls `.encode()` on strings.
+    if isinstance(data.m_Script, str):
+        data.m_Script = new_cipher.decode("utf-8", "surrogateescape")
+    else:
+        data.m_Script = new_cipher
     data.save()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(env.file.save(packer="lz4"))
