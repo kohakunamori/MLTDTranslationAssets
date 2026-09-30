@@ -63,6 +63,14 @@ class GeneratedReleaseContracts(unittest.TestCase):
             with self.assertRaises(ValueError):
                 build.load_version_manifest(path)
 
+    def test_same_key_different_source_is_selected_by_current_source(self):
+        rows = [
+            {"key": "k", "source": "旧文", "translation": "旧译"},
+            {"key": "k", "source": "新文", "translation": "新译"},
+        ]
+        chosen = build.select_rows_for_current_sources(rows, {"k": "新文"})
+        self.assertEqual([row["translation"] for row in chosen], ["新译"])
+
 
 if __name__ == "__main__":
     unittest.main()
