@@ -62,6 +62,15 @@
       ],
       "description": "Translation review status"
     },
+    "translation_stage": {
+      "type": "string",
+      "enum": [
+        "untranslated",
+        "llm_translated",
+        "human_translated"
+      ],
+      "description": "Translation lifecycle marker; LLM output remains pending until human review"
+    },
     "updated_at": {
       "type": "string",
       "format": "date-time",
