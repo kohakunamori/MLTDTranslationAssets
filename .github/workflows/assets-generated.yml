@@ -1,0 +1,71 @@
+name: Build generated Assets
+
+'on':
+  push:
+    branches: [main]
+    paths:
+      - 'locales/**'
+      - 'lyrics/**'
+      - 'images/**'
+      - 'manifests/**'
+      - 'pipelines/**'
+      - 'scripts/**'
+      - 'schema/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: assets-generated-main
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install asset pipeline dependencies
+        run: python -m pip install --disable-pip-version-check msgpack UnityPy Pillow pycryptodome
+
+      - name: Validate translation source
+        run: python scripts/validate_repo.py
+
+      - name: Build generated Unity3D release
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          SOURCE_COMMIT="$(git rev-parse HEAD)"
+          python scripts/build_generated_release.py \
+            --source-commit "$SOURCE_COMMIT" \
+            --translation-commit "$SOURCE_COMMIT" \
+            --generated-commit "$SOURCE_COMMIT" \
+            --ci-run-id "$GITHUB_RUN_ID"
+
+      - name: Verify generated release
+        run: |
+          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
+          python scripts/assets_generated_index.py verify \
+            --root generated \
+            --asset-version "$ASSET_VERSION"
+
+      - name: Commit generated release only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add generated/
+          if git diff --cached --quiet; then
+            echo 'No generated release changes.'
+            exit 0
+          fi
+          git commit -m "build(assets): publish generated Unity3D release [skip ci]"
+          git push origin HEAD:main

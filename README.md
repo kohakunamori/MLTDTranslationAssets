@@ -7,6 +7,11 @@
 APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohakunamori/MLTDTranslationClient)
 维护。
 
+仓库同时保存可审阅的翻译源和 CI 生成的 Unity3D 二进制。官方日版资源不直接复制进 Git：
+公开 GitHub Actions 在构建时按 manifests/asset-version.json 从官方 assets-server 下载基线，
+只把经过源哈希校验的汉化结果写入 generated/。生成物使用内容寻址存储，跨版本相同二进制只保留一个对象。
+构建失败不会创建或覆盖 generated/<asset_version>/。
+
 ## 目录结构
 
 - `locales/`：核心业务文本库（UTF-8 JSONL，单行精确定位）
@@ -28,6 +33,8 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
   - `pipelines/image/`：Sprite Atlas 几何重组、`gpt-image-2.5-sunburst` 图像重绘、`gpt-5.6-luna` 视觉审查与 ASTC 纹理回填流水线
   - `pipelines/export/`：数据分发与 GitHub 规范导出工具
 - `schema/`：数据规范与 JSON Schema 定义
+
+generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容寻址去重，generated/<asset_version>/manifest.json 与 checksums.txt 描述可分发对象。
 
 ## 条目格式规范
 
