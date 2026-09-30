@@ -1,6 +1,6 @@
-# LLM 翻译草稿流程
+# LLM 翻译自动并入流程
 
-本项目是个人业余项目。LLM 只负责生成可审阅的草稿，不自动把结果当作最终译文。
+本项目是个人业余项目。LLM 结果按项目约定自动提交到 Assets 默认分支，之后由维护者检查和修正。
 
 ## 流程
 
@@ -9,8 +9,8 @@
   -> source_sha256 去重
   -> LLM 翻译
   -> pending + translation_stage=llm_translated
-  -> GitHub Pull Request
-  -> 人工修改/审核
+  -> 自动提交默认分支
+  -> 人工检查/修正
   -> accepted + translation_stage=human_translated
   -> Assets CI 生成 Unity3D
 ```
@@ -32,5 +32,7 @@
 临时文件不会提交、不会写进工作区；日志和 PR 内容不包含 key。不要把本地
 `api-runtime.local.json`、API key、代理凭据或任何 provider token 提交到仓库。
 
-工作流可定时或手动触发。失败不会提交半成品；成功只创建包含待人工审核草稿的
-PR。没有待翻译内容时直接退出，不调用 provider。
+工作流可定时或手动触发。失败不会提交半成品；成功直接提交包含
+`llm_translated` 标记的结果到默认分支，不创建审核 PR。`status=pending` 仍表示
+该结果尚未被人工确认；维护者可以直接修改并改为 `accepted` /
+`human_translated`。没有待翻译内容时直接退出，不调用 provider。

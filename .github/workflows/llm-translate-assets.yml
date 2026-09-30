@@ -1,4 +1,4 @@
-name: Draft LLM translations
+name: Auto-apply LLM translations
 
 on:
   schedule:
@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: assets-llm-translation
@@ -132,7 +131,7 @@ jobs:
           if [ -n "$limit" ] && [ "$limit" != 0 ]; then args+=(--max-items "$limit"); fi
           python pipelines/text/translate_mltd_api_pool.py "${args[@]}"
 
-      - name: Apply LLM drafts as pending review items
+      - name: Apply LLM translations
         shell: bash
         run: |
           set -euo pipefail
@@ -143,22 +142,32 @@ jobs:
           python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl
           python scripts/validate_repo.py
 
-      - name: Open review PR
+      - name: Commit LLM translations to main
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [ -z "$(git status --porcelain)" ]; then
+          if [ -z "$(git status --porcelain -- locales manifests/asset-version.json)" ]; then
             echo 'No changes to publish.'
             exit 0
           fi
           version=$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["asset_version"])')
-          branch="bot/llm-translation/$version/${GITHUB_RUN_NUMBER}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git checkout -b "$branch"
           git add locales manifests/asset-version.json
-          git commit -m "draft(assets): add LLM translations for asset $version"
-          git push --set-upstream origin "$branch"
-          gh pr create --base main --head "$branch" --title "Draft LLM translations for assets $version" --body "LLM-generated draft only. Rows are marked pending / llm_translated and require human review before merge. Provider credentials stay in Actions secrets and the runtime files are ephemeral."
+          git commit -m "ci(assets): apply LLM translations for asset $version"
+
+          # Publish directly to main by policy. Never force-push: if another
+          # workflow advances main, rebase this generated commit and retry.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "Published LLM translations to main on attempt $attempt."
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo 'main advanced during LLM publish; refusing to force-push.' >&2
+              exit 1
+            fi
+            git fetch origin main
+            git rebase origin/main
+            python scripts/validate_repo.py
+          done
