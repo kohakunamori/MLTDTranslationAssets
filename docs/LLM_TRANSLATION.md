@@ -20,12 +20,17 @@
 `pending`，人工确认后使用 `accepted`。LLM 工作流不会覆盖 `accepted` 或已有
 `pending` 行。
 
-## Provider 配置
+## GitHub-hosted provider
 
-`.github/workflows/llm-translate-assets.yml` 只在自托管 runner 上运行，因为本地
-provider 可能位于 `127.0.0.1` 或本地代理之后。runner 必须通过环境变量
-`MLTD_LLM_CONFIG_PATH` 指向现有的 `api-models.local.json`；相邻的
-`api-runtime.local.json` 会由现有池加载。配置和 API key 不得提交到仓库。
+`.github/workflows/llm-translate-assets.yml` 使用 GitHub-hosted `ubuntu-latest`，
+通过公开 HTTPS provider gateway 运行，不依赖 NAS、Windows runner 或本地回环代理。
+非敏感的模型/provider 参数在 `configs/api-models.example.json`；API key 只存为
+仓库 Actions secret `MLTD_LLM_API_KEY`。
+
+工作流开始时把这个 secret 注入一次性 `$RUNNER_TEMP` 文件，并生成相邻的
+`api-runtime.local.json`，以复用现有 `translate_mltd_api_pool.py` 的配置加载器。
+临时文件不会提交、不会写进工作区；日志和 PR 内容不包含 key。不要把本地
+`api-runtime.local.json`、API key、代理凭据或任何 provider token 提交到仓库。
 
 工作流可定时或手动触发。失败不会提交半成品；成功只创建包含待人工审核草稿的
-PR。真实 runner、provider、GitHub 权限未配置前，这个工作流只是可审计的部署模板。
+PR。没有待翻译内容时直接退出，不调用 provider。
