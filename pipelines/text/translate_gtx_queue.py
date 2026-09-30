@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import sys
-from pathlib import Path
-_MODULE_DIR = Path(__file__).resolve().parent
-if str(_MODULE_DIR) not in sys.path:
-    sys.path.insert(0, str(_MODULE_DIR))
 """Translate deduplicated MLTD GTX source values with resumable batch backends.
 
 The input is the JSONL queue emitted by mltd_localization_pipeline.py make-queue.
