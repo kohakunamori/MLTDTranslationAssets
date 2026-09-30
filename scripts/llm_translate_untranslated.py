@@ -116,7 +116,11 @@ def apply(args: argparse.Namespace) -> int:
                 row["updated_at"] = timestamp
                 changed = True
                 updated += 1
-            lines.append(json.dumps(row, ensure_ascii=False, separators=(",", ":")))
+                lines.append(json.dumps(row, ensure_ascii=False, separators=(",", ":")))
+            else:
+                # Preserve untouched source lines byte-for-byte so a small LLM
+                # draft does not rewrite an entire 300k-line JSONL file.
+                lines.append(line)
         if changed:
             path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({"updated": updated, "drafts": len(translations),
