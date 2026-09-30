@@ -65,7 +65,8 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
    - `accepted`：已通过人工质量审校、可进入构建的译文。
 
 `translation_stage`（新条目使用）进一步标记流程：`untranslated` →
-`llm_translated` → `human_translated`。LLM 结果仍是 `pending`，不会绕过人工审核。
+`llm_translated` → `human_translated`。LLM CI 的结果会自动提交到 `main`，但仍
+保留 `pending`，方便维护者审校；只有人工确认后才改为 `human_translated`。
 
 ## Web 翻译门户与在线协同
 
@@ -81,7 +82,9 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 4. 机器人把状态晋级和 `generated/` 一起提交回 `main`，提交带 `[skip ci]`，不会自触发循环；
 5. `sync-to-portal.yml` 随 `locales/` 变更同步 Portal 索引。
 
-因此“审核通过”以 PR 合并为准；未合并的 PR 不会写入 `main` 或生成发布资源。构建或源校验失败时不会提交 `generated/`。
+普通协作翻译仍以 GitHub PR 合并作为审核入口；LLM CI 是例外：它会先把结果
+直接写入 `main` 并保留 `llm_translated` 标记，维护者可直接修正。构建或源校验
+失败时不会提交 `generated/`。
 
 ## 许可证与致谢
 
