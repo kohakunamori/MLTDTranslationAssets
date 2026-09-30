@@ -89,6 +89,33 @@ class GeneratedReleaseContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             build.select_rows_for_current_sources(rows, {"k": "同一原文"}, "1077640")
 
+    def test_generated_entries_keep_client_runtime_name_and_index(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            overlay = root / "overlay" / "jp-android"
+            overlay.mkdir(parents=True)
+            bundle = overlay / "remote-hash.unity3d"
+            bundle.write_bytes(b"translated")
+            index = root / "index.data"
+            index.write_bytes(b"official-index")
+            manifest = root / "localization-manifest.json"
+            manifest.write_text(json.dumps({"bundles": [{
+                "logical": "story.gtx.unity3d",
+                "remote": "remote-hash.unity3d",
+                "source_bundle_sha256": "a" * 64,
+                "output_plain_sha256": "b" * 64,
+            }]}), encoding="utf-8")
+            entries = build.build_entries(
+                root / "overlay", manifest, "1077640", "9.0.200",
+                index_name="index.data", index_path=index,
+            )
+            translated = next(e for e in entries if e["logical_key"] == "story.gtx.unity3d")
+            self.assertEqual(translated["runtime_path"],
+                             "production/2018/Android/remote-hash.unity3d")
+            catalog = next(e for e in entries if e["logical_key"] == "__official_asset_index__")
+            self.assertEqual(catalog["runtime_path"], "production/2018/Android/index.data")
+            self.assertEqual(catalog["translated_sha256"], build.sha256_file(index))
+
 
 if __name__ == "__main__":
     unittest.main()
