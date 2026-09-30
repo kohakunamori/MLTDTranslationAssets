@@ -24,11 +24,11 @@
       "logical_key": "__official_asset_index__",
       "logical_path": "production/2018/Android/21933512fc16ac60a80e302f2c6624902d609be6.data",
       "source_sha256": "3f93cdb7073b7108eea1f8289948ecbb080f631eed5e0abe14bb048978fab271",
-      "translated_sha256": "3f93cdb7073b7108eea1f8289948ecbb080f631eed5e0abe14bb048978fab271",
-      "object_path": "objects/sha256/3f93cdb7073b7108eea1f8289948ecbb080f631eed5e0abe14bb048978fab271",
-      "artifact_sha256": "3f93cdb7073b7108eea1f8289948ecbb080f631eed5e0abe14bb048978fab271",
+      "translated_sha256": "fd62d48383b685166b6c46cc4cf04d46700e0ea984e2a34ff9bc1870004fe557",
+      "object_path": "objects/sha256/fd62d48383b685166b6c46cc4cf04d46700e0ea984e2a34ff9bc1870004fe557",
+      "artifact_sha256": "fd62d48383b685166b6c46cc4cf04d46700e0ea984e2a34ff9bc1870004fe557",
       "reuse_status": "exact",
-      "translation_status": "reused",
+      "translation_status": "modified",
       "runtime_path": "production/2018/Android/21933512fc16ac60a80e302f2c6624902d609be6.data",
       "resource_kind": "other"
     },
@@ -236365,8 +236365,8 @@
       "untranslated": 0,
       "pending": 0,
       "accepted": 0,
-      "modified": 11816,
-      "reused": 1
+      "modified": 11817,
+      "reused": 0
     },
     "rejected_entries": 0,
     "rejected_reasons": {}
