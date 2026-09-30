@@ -5962,10 +5962,10 @@
       "blocked": 0,
       "bundles": {
         "birth_bdl2_001har_005_jp.gtx": {
-          "pending": 1,
+          "pending": 4,
           "total": 8,
           "translated": 4,
-          "untranslated": 3
+          "untranslated": 0
         },
         "birth_bdl2_001har_006_jp.gtx": {
           "pending": 0,
@@ -9658,13 +9658,13 @@
       "icon": "🎂",
       "id": "birth_live",
       "name": "生日特别演出剧情",
-      "pending": 1,
+      "pending": 4,
       "reused": 0,
       "suggested": 0,
       "total": 3736,
       "translated": 3732,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -71152,10 +71152,10 @@
   "domains": [
     {
       "id": "birth",
-      "pending": 1,
+      "pending": 4,
       "total": 6651,
       "translated": 6647,
-      "untranslated": 3
+      "untranslated": 0
     },
     {
       "id": "card",
@@ -71190,30 +71190,30 @@
   "kind": "assets",
   "release": {
     "asset_version": "1077640",
-    "assets_commit": "ff455d9ce736b6f2deb199259ce639e03c187805",
+    "assets_commit": "a94e401bfd537f3c78a1e8d2e2aefb1aaa3150ca",
     "release_id": "assets-1077640",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "0c0463b31ef21f750de1297a0851b2adb8aae6f180515548d96a385577ca404e",
+    "source_manifest_sha256": "643999fa480609d2f5a97f78768ea669687678341a446816a06b2b0a42cdc20a",
     "status": "published",
     "updated_at": "2026-09-30T15:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "ff455d9ce736b6f2deb199259ce639e03c187805",
+    "commit": "a94e401bfd537f3c78a1e8d2e2aefb1aaa3150ca",
     "generated_entry_count": 11816,
-    "generated_manifest_sha256": "0c0463b31ef21f750de1297a0851b2adb8aae6f180515548d96a385577ca404e",
+    "generated_manifest_sha256": "643999fa480609d2f5a97f78768ea669687678341a446816a06b2b0a42cdc20a",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "90eb5dbf8143eb558409dccf1c4b216ad87864303c286ad5b28adac48e721a16",
+    "source_catalogue_sha256": "8ef6c6bb89a0049c4b575038fc51dfd73c5042c7715b1d437d1e1eeb85dc59d1",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
   "totals": {
     "blocked": 0,
-    "pending": 100,
+    "pending": 103,
     "reused": 0,
     "suggested": 0,
     "total": 391584,
     "translated": 391481,
-    "untranslated": 3
+    "untranslated": 0
   }
 }
