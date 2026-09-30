@@ -21,8 +21,16 @@ import hashlib
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
+PROTECTED_TOKEN_RE = re.compile(
+    r"\{[^{}]+\}"
+    r"|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]"
+    r"|<[^<>\r\n]+>"
+    r"|\\[nrt]"
+    r"|\\[0-9]{2}\\"
+)
 ROOT = Path(__file__).resolve().parents[1]
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -40,6 +48,13 @@ CLIENT_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest().lower()
+
+
+def validate_translation_tokens(source: str, translated: str) -> None:
+    before = Counter(PROTECTED_TOKEN_RE.findall(source))
+    after = Counter(PROTECTED_TOKEN_RE.findall(translated))
+    if before != after:
+        raise ValueError(f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}")
 
 
 def validate_locales(root: Path) -> dict[str, int]:
@@ -148,6 +163,19 @@ def validate_locales(root: Path) -> dict[str, int]:
                     for d in RESERVED_DELIMITERS:
                         if d in zh:
                             print(f"ERROR: {jf}:{line_idx} translation contains illegal reserved delimiter '{d}': {zh}", file=sys.stderr)
+                            sys.exit(1)
+
+                    # Runtime format tokens are part of the source contract.
+                    # A row with a missing/duplicated token must not remain
+                    # `accepted`: it would make UnityFS generation unsafe.
+                    if status == "accepted":
+                        try:
+                            validate_translation_tokens(ja, zh)
+                        except ValueError as exc:
+                            print(
+                                f"ERROR: {jf}:{line_idx} protected-token validation failed: {exc}",
+                                file=sys.stderr,
+                            )
                             sys.exit(1)
 
     return counts
