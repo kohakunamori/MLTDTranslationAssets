@@ -3,7 +3,7 @@
 这是一个个人业余项目，用于整理《偶像大师 百万现场 剧场时光》(MLTD) 的简体中文汉化资源。
 仓库中的文本、术语表、歌词和贴图 Manifest 会持续更新，欢迎通过 GitHub PR 参与修订。
 
-本仓库只承载**经 assets 服务器下发的面**（`/cn/<asset>/` overlay）。底栏贴图、BI 文案与字体属于
+本仓库只承载**经 assets 服务器下发的面**。正式生成物通过显式版本的 `/generated-assets/<asset>/` 路由提供，历史 `/cn/<asset>/` overlay 仍保留用于兼容与回滚。底栏贴图、BI 文案与字体属于
 APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohakunamori/MLTDTranslationClient)
 维护。
 
@@ -34,7 +34,7 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
   - `pipelines/export/`：数据分发与 GitHub 规范导出工具
 - `schema/`：数据规范与 JSON Schema 定义
 
-generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容寻址去重，generated/<asset_version>/manifest.json 与 checksums.txt 描述可分发对象。
+generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容寻址去重，generated/<asset_version>/manifest.json 与 checksums.txt 描述可分发对象。每个翻译 bundle 同时记录 `logical_path` 与可选的 `runtime_path`；后者来自官方 `.data` 目录中的哈希文件名，是客户端实际请求的路径。`.data` 官方目录本身也会进入生成发布，未翻译的其他运行时 bundle 由 NAS 只读回源官方 assets-server。
 
 ## 条目格式规范
 
