@@ -92,7 +92,19 @@ def get_text_asset(bundle: Path):
     data = objects[0].read()
     raw = data.m_Script
     if isinstance(raw, str):
-        raw = raw.encode("utf-8")
+        # Some official TextAssets contain arbitrary encrypted bytes.  UnityPy
+        # may expose those bytes as a Python string containing surrogateescape
+        # code points; plain UTF-8 encoding then fails before the ciphertext
+        # reaches the decryptor.  Recover the original bytes without replacing
+        # or normalizing them.  `surrogatepass` is only a fallback for a parser
+        # that created literal unpaired surrogates.
+        try:
+            raw = raw.encode("utf-8")
+        except UnicodeEncodeError:
+            try:
+                raw = raw.encode("utf-8", "surrogateescape")
+            except UnicodeEncodeError:
+                raw = raw.encode("utf-8", "surrogatepass")
     elif isinstance(raw, memoryview):
         raw = raw.tobytes()
     else:
