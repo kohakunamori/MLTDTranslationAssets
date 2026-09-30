@@ -34,6 +34,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 from assets_generated_index import GeneratedStore
+from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
 
 
 def sha256_file(path: Path) -> str:
@@ -93,7 +94,7 @@ def logical_name(bundle: str) -> str:
 
 def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict]]:
     grouped: dict[str, list[dict]] = {}
-    seen: dict[tuple[str, str], str] = {}
+    seen: dict[tuple[str, str, str], str] = {}
     for path in sorted((root / "locales").rglob("*.jsonl")):
         with path.open(encoding="utf-8") as stream:
             for line_no, line in enumerate(stream, 1):
@@ -112,7 +113,10 @@ def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict
                 key = str(row.get("item_key", ""))
                 if not bundle or not key:
                     raise ValueError(f"accepted row lacks bundle/item_key at {path}:{line_no}")
-                identity = (logical_name(bundle), key)
+                # The same bundle/key may have different source text in
+                # different asset versions.  Keep each source-bound candidate;
+                # the current official bundle selects the matching one below.
+                identity = (logical_name(bundle), key, sha256_text(source))
                 prior = seen.get(identity)
                 if prior is not None and prior != translation:
                     raise ValueError(f"conflicting translation for {identity}")
@@ -129,6 +133,23 @@ def read_translation_rows(root: Path, asset_version: str) -> dict[str, list[dict
     if not grouped:
         raise ValueError("no accepted Assets translations were found")
     return grouped
+
+
+def select_rows_for_current_sources(
+    rows: list[dict], current_sources: dict[str, str]
+) -> list[dict]:
+    """Select only source-bound translations matching the current bundle."""
+    selected: dict[str, dict] = {}
+    for row in rows:
+        key = str(row["key"])
+        source = str(row["source"])
+        if current_sources.get(key) != source:
+            continue
+        prior = selected.get(key)
+        if prior is not None and prior["translation"] != row["translation"]:
+            raise ValueError(f"conflicting current-source translation for {key}")
+        selected[key] = row
+    return list(selected.values())
 
 
 def download(url: str, destination: Path, declared_size: int | None) -> None:
@@ -253,6 +274,21 @@ def main() -> int:
                    for row in selected.values()]
         for future in futures:
             future.result()
+    # Resolve cross-version rows against the downloaded official source before
+    # feeding the legacy overlay resolver.  This prevents an older accepted
+    # translation for the same bundle/key from conflicting with a newer source.
+    current_grouped: dict[str, list[dict]] = {}
+    for logical, rows in canonical_grouped.items():
+        remote = index[logical]["remote"]
+        _name, plain, _cipher = read_gtx(archive / "jp-android" / remote)
+        current_sources = dict(parse_records(plain))
+        selected_rows = select_rows_for_current_sources(rows, current_sources)
+        if selected_rows:
+            current_grouped[logical] = selected_rows
+    canonical_grouped = current_grouped
+    selected = {logical: index[logical] for logical in canonical_grouped}
+    if not selected:
+        raise ValueError("no accepted translations match the current official source")
     snapshot = work / "snapshot.json"
     write_snapshot(snapshot, version, index_path, selected)
     ledger = work / "translations.jsonl"
