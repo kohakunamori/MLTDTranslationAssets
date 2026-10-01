@@ -13,6 +13,10 @@ on:
         description: 'Optional official-bundle limit for a smoke run'
         required: false
         default: '0'
+      max_new_rows:
+        description: 'Accept an append larger than the default new-row cap (0 keeps the script default)'
+        required: false
+        default: '0'
 
 permissions:
   contents: write
@@ -86,6 +90,10 @@ jobs:
             bundle_limit='${{ inputs.max_bundles }}'
             if [ -n "$bundle_limit" ] && [ "$bundle_limit" != 0 ]; then
               args+=(--max-bundles "$bundle_limit")
+            fi
+            row_cap='${{ inputs.max_new_rows }}'
+            if [ -n "$row_cap" ] && [ "$row_cap" != 0 ]; then
+              args+=(--max-new-rows "$row_cap")
             fi
             python "${args[@]}"
           else

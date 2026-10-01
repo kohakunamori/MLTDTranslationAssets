@@ -20,6 +20,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from build_generated_release import download, load_official_index, load_version_manifest
 
+#: Refuse an automatic append larger than this. A version bump that genuinely
+#: adds thousands of lines needs an explicit --max-new-rows decision.
+DEFAULT_MAX_NEW_ROWS = 5000
+
 
 def locale_rows():
     for path in sorted((ROOT / "locales").rglob("*.jsonl")):
@@ -29,10 +33,60 @@ def locale_rows():
                     yield path, json.loads(line)
 
 
+def source_identity(bundle: str, item_key: str, source_sha256: str) -> tuple[str, str, str]:
+    """Identity of a source line, independent of the asset version.
+
+    An official source that the repository already represents in *any* asset
+    version is not new: the version bump alone must not make the whole
+    catalogue "new". Including ``asset_version`` here (the previous behaviour)
+    turned every upstream version step into an append of the full catalogue —
+    ~393k rows and an unbounded translation queue on 2026-10-01.
+    """
+    return (bundle, item_key, source_sha256)
+
+
+def collect_new_rows(catalogue_rows, existing, asset_version: str, client_version: str, now: str):
+    """Rows for source lines this repository does not already carry."""
+    seen = set(existing)
+    additions = []
+    for row in catalogue_rows:
+        bundle = str(row.get("bundle", ""))
+        key = str(row.get("key", ""))
+        source = str(row.get("source", ""))
+        sid = str(row.get("source_sha256", ""))
+        identity = source_identity(bundle, key, sid)
+        if not source or not key or not bundle or identity in seen:
+            continue
+        seen.add(identity)
+        additions.append({
+            "asset_version": asset_version,
+            "client_version": None,
+            "source_client_version": client_version,
+            "bundle": bundle, "item_key": key, "source_sha256": sid,
+            "ja": source, "zh": "", "status": "untranslated",
+            "translation_stage": "untranslated", "updated_at": now,
+        })
+    return additions
+
+
+def enforce_new_row_cap(additions, cap: int) -> None:
+    """Fail closed when a refresh would append more than ``cap`` rows.
+
+    A large append is either an upstream restructuring or the dedupe identity
+    regressing; both need a human decision, not an automatic commit.
+    """
+    if cap > 0 and len(additions) > cap:
+        raise SystemExit(
+            f"refusing to append {len(additions)} new rows (cap {cap}); "
+            "re-run with an explicit --max-new-rows to accept a large append"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-root", type=Path, default=ROOT / ".llm-official-work")
     parser.add_argument("--max-bundles", type=int, default=0)
+    parser.add_argument("--max-new-rows", type=int, default=DEFAULT_MAX_NEW_ROWS)
     args = parser.parse_args()
 
     version = load_version_manifest(ROOT / "manifests" / "asset-version.json")
@@ -42,7 +96,7 @@ def main() -> int:
         bundle = str(row.get("bundle", "")).strip()
         if bundle:
             known_bundles.add(bundle.casefold() if bundle.endswith(".unity3d") else (bundle + ".unity3d").casefold())
-        existing.add((str(row.get("asset_version", "")), bundle, str(row.get("item_key", "")), str(row.get("source_sha256", ""))))
+        existing.add(source_identity(bundle, str(row.get("item_key", "")), str(row.get("source_sha256", ""))))
 
     work = args.work_root.resolve()
     work.mkdir(parents=True, exist_ok=True)
@@ -76,30 +130,22 @@ def main() -> int:
     ], cwd=ROOT, check=True)
 
     output = ROOT / "locales" / "master" / f"official-{version['asset_version']}-untranslated.jsonl"
-    additions = []
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    for line in catalogue.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        bundle = str(row.get("bundle", ""))
-        key = str(row.get("key", ""))
-        source = str(row.get("source", ""))
-        sid = str(row.get("source_sha256", ""))
-        identity = (version["asset_version"], bundle, key, sid)
-        if not source or not key or identity in existing:
-            continue
-        additions.append({
-            "asset_version": version["asset_version"],
-            "client_version": None,
-            "source_client_version": version["client_version"],
-            "bundle": bundle, "item_key": key, "source_sha256": sid,
-            "ja": source, "zh": "", "status": "untranslated",
-            "translation_stage": "untranslated", "updated_at": now,
-        })
-        existing.add(identity)
+    catalogue_rows = [
+        json.loads(line)
+        for line in catalogue.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    additions = collect_new_rows(catalogue_rows, existing,
+                                 version["asset_version"], version["client_version"], now)
+    enforce_new_row_cap(additions, args.max_new_rows)
     if additions:
         output.parent.mkdir(parents=True, exist_ok=True)
+        # Append is idempotent once the identity ignores the asset version: a
+        # re-run finds every previously appended row in ``existing`` and adds
+        # nothing. Do not switch this to overwrite — the in-place LLM apply
+        # step stores pending translations in this same file, and truncating
+        # it would discard them.
         with output.open("a", encoding="utf-8", newline="\n") as stream:
             for row in additions:
                 stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
