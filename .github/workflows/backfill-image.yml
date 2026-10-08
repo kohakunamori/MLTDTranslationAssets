@@ -45,9 +45,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install imaging dependency
-        run: pip install --quiet pillow
-
       - name: Ensure image backfill queue schema
         run: |
           python - <<'PY'
@@ -120,6 +117,13 @@ jobs:
           print(json.dumps([{"id": r["id"], "task_id": r["task_id"], "upload_key": r["upload_key"]} for r in rows]))
           PY
           echo "queued=$(python -c "import json;print(len(json.load(open('work-queue.json'))))")" >> $GITHUB_OUTPUT
+
+      - name: Install imaging dependency
+        # Only the slicing steps need Pillow, and this workflow ticks every hour.
+        # An idle tick now costs the checkout plus two D1 queries, not an
+        # install; the queue listing above already decided there is work.
+        if: steps.queue.outputs.queued != '0'
+        run: pip install --quiet pillow
 
       - name: Restore queued uploads
         if: steps.queue.outputs.queued != '0'

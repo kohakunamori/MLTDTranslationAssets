@@ -122,10 +122,22 @@ jobs:
           fi
 
       - name: Collect untranslated rows
+        id: collect
         shell: bash
-        run: python scripts/llm_translate_untranslated.py collect --output .llm-queue.jsonl
+        run: |
+          set -euo pipefail
+          python scripts/llm_translate_untranslated.py collect --output .llm-queue.jsonl
+          # An empty queue is the normal case on a day with no new source rows.
+          # Everything expensive below is gated on this count, so a nightly run
+          # with nothing to translate costs seconds instead of re-verifying
+          # every tracked bundle.  Promotion and the commit still run: they also
+          # carry a version-manifest bump and drafts left over from earlier runs.
+          size=$(python -c 'import pathlib; print(sum(1 for line in pathlib.Path(".llm-queue.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()))')
+          echo "queue_size=$size" >> "$GITHUB_OUTPUT"
+          echo "Untranslated rows to translate: $size"
 
       - name: Prepare project prompt inputs
+        if: steps.collect.outputs.queue_size != '0'
         shell: bash
         run: |
           printf '%s\n' '{"schema_version":1,"speakers":{}}' > .llm-character-evidence.json
@@ -136,6 +148,7 @@ jobs:
         # code here and let the apply/commit steps publish what was accepted.
         # The summary step below still fails the run when nothing was accepted.
         id: translate
+        if: steps.collect.outputs.queue_size != '0'
         continue-on-error: true
         shell: bash
         run: |
@@ -171,7 +184,7 @@ jobs:
         # skipped when an earlier step really failed, so a broken workspace is
         # never turned into a commit.
         id: apply
-        if: success() || steps.translate.outcome == 'failure'
+        if: steps.collect.outputs.queue_size != '0' && (success() || steps.translate.outcome == 'failure')
         shell: bash
         run: |
           set -euo pipefail

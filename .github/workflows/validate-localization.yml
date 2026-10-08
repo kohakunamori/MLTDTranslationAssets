@@ -95,6 +95,7 @@ jobs:
             scripts/test_llm_translate_workflow.py \
             scripts/test_promote_merged_locales.py \
             scripts/test_build_generated_release.py \
+            scripts/test_should_build_release.py \
             scripts/test_assets_mirror.py \
             scripts/test_refresh_latest_official_catalogue.py \
             asset-server \

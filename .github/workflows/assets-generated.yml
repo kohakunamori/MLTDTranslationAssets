@@ -12,6 +12,12 @@ name: Build generated Assets
       - 'scripts/**'
       - 'schema/**'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rebuild even when the committed release already matches the current inputs'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -47,13 +53,40 @@ jobs:
               --after "$AFTER_SHA"
           fi
 
+      - name: Decide whether the release is already current
+        # The release is content-addressed and a pure function of `locales/`,
+        # `manifests/`, `pipelines/`, `schema/`, `images/`, `lyrics/` and the
+        # scripts that write the bundles.  Rebuilding identical inputs produces
+        # identical objects, so a push that only touches CI plumbing, tests or
+        # docs must not spend six to ten runner minutes.  The gate is fail-open:
+        # anything it cannot prove (no release, unreadable commit, dirty tree
+        # from the promotion step, a git error) answers build=true.
+        # Dispatch with force=true after changing the build procedure itself.
+        id: gate
+        env:
+          FORCE_BUILD: ${{ inputs.force || 'false' }}
+        run: |
+          set -euo pipefail
+          python scripts/should_build_release.py --force "$FORCE_BUILD" | tee .release-gate.json
+          build="$(python -c 'import json; print(str(json.load(open(".release-gate.json"))["build"]).lower())')"
+          reason="$(python -c 'import json; print(json.load(open(".release-gate.json"))["reason"])')"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          {
+            echo '### Generated release'
+            echo "- build: \`$build\`"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install asset pipeline dependencies
+        if: steps.gate.outputs.build == 'true'
         run: python -m pip install --disable-pip-version-check msgpack UnityPy Pillow pycryptodome
 
       - name: Validate translation source
+        if: steps.gate.outputs.build == 'true'
         run: python scripts/validate_repo.py
 
       - name: Build generated Unity3D release
+        if: steps.gate.outputs.build == 'true'
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
@@ -65,6 +98,7 @@ jobs:
             --ci-run-id "$GITHUB_RUN_ID"
 
       - name: Verify generated release
+        if: steps.gate.outputs.build == 'true'
         run: |
           ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
           python scripts/assets_generated_index.py verify \
@@ -72,6 +106,7 @@ jobs:
             --asset-version "$ASSET_VERSION"
 
       - name: Build portal resource manifest
+        if: steps.gate.outputs.build == 'true'
         run: |
           ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
           python scripts/build_portal_resource_manifest.py \
@@ -79,6 +114,7 @@ jobs:
             --output manifests/portal-resource-manifest.json
 
       - name: Commit reviewed translations and generated release
+        if: steps.gate.outputs.build == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
