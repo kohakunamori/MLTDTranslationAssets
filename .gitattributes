@@ -1,10 +1,14 @@
 # Deployment artifacts are uploaded verbatim to the NAS and hashed by
-# asset-server/generated-assets/deployed.json + test_closure.py, so their bytes
-# must survive a checkout unchanged: no EOL conversion, on any platform.
-asset-server/generated-assets/** -text
-asset-server/nginx-vhost.conf -text
-asset-server/Deploy-GeneratedAssets.ps1 -text
+# asset-server/generated-assets/deployed.json + test_closure.py, so a checkout
+# must reproduce their bytes exactly: force LF on both sides of the index.
+asset-server/generated-assets/** text eol=lf
+asset-server/nginx-vhost.conf text eol=lf
+asset-server/assets_route.py text eol=lf
+asset-server/Deploy-GeneratedAssets.ps1 text eol=lf
 
 # Shell wrappers that are copied to the NAS deployment directory as-is.
-asset-server/asset-version -text
-asset-server/switch-version.sh -text
+asset-server/asset-version text eol=lf
+asset-server/switch-version.sh text eol=lf
+
+# The mirror module is COPYed into the distributed image.
+scripts/assets_mirror.py text eol=lf

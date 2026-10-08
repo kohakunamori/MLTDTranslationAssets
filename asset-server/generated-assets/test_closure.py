@@ -10,12 +10,17 @@ silent drift fail.
 
 No network, no SSH, no docker: every assertion is a file-content contract plus the
 recorded hashes.
+
+Repository hashes are taken from the committed blob (`git cat-file blob HEAD:<path>`),
+not from the working tree, so the suite means the same thing on a CRLF Windows checkout
+and on a Linux CI checkout.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -25,6 +30,15 @@ CLOSURE = ROOT / "asset-server" / "generated-assets"
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def blob_sha256(relative: str) -> str:
+    """Hash the committed blob, so EOL normalisation cannot change the answer."""
+    data = subprocess.run(
+        ["git", "cat-file", "blob", f"HEAD:{relative}"],
+        cwd=ROOT, check=True, capture_output=True,
+    ).stdout
+    return hashlib.sha256(data).hexdigest()
 
 
 class DeploymentRecordTests(unittest.TestCase):
@@ -43,9 +57,9 @@ class DeploymentRecordTests(unittest.TestCase):
     def test_every_recorded_file_matches_its_repository_copy(self):
         for entry in self.record["files"]:
             with self.subTest(entry["nas_path"]):
-                source = ROOT / entry["repo_source"]
-                self.assertTrue(source.is_file(), f"missing repo source {entry['repo_source']}")
-                self.assertEqual(sha256(source), entry["repo_sha256"])
+                self.assertTrue((ROOT / entry["repo_source"]).is_file(),
+                                f"missing repo source {entry['repo_source']}")
+                self.assertEqual(blob_sha256(entry["repo_source"]), entry["repo_sha256"])
 
     def test_identical_files_really_are_identical(self):
         for entry in self.record["files"]:

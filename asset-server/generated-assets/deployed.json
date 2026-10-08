@@ -3,6 +3,7 @@
   "kind": "mltd-generated-assets-deployment-record",
   "observed_at": "2026-10-08T15:20:00Z",
   "observed_from": "read-only ssh probe of the NAS plus byte-compare of the copied files",
+  "hash_convention": "repo_sha256 is the repository blob (git cat-file blob HEAD:<repo_source>), i.e. the bytes a clean checkout deploys; deployed_sha256 is the file on the NAS.",
   "host_alias": "nas",
   "project_dir": "/vol1/1000/appdata/imas/mltd-generated-assets",
   "mirror_root": "/vol2/1000/imas-asset-archive/mltd/generated",
@@ -48,8 +49,9 @@
       "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/assets_route.py",
       "repo_source": "asset-server/assets_route.py",
       "deployed_sha256": "93603413e47546d3ec926fc12b2ebb39d3d8461e997a4186551f79b972dea07e",
-      "repo_sha256": "93603413e47546d3ec926fc12b2ebb39d3d8461e997a4186551f79b972dea07e",
-      "repo_matches_deployed": true
+      "repo_sha256": "34622996ebada89c383bc10481b1b2a44994922f52eeac8e3bc9d695e5c4484c",
+      "repo_matches_deployed": false,
+      "note": "Same module, different line endings: the deployed NAS copy is CRLF (229 CRLF, 24,369 B) while the repository blob is LF (24,140 B). Behaviour is identical for Python, and .gitattributes now pins LF, so the next -Apply of the deployment adapter converges it. Recorded rather than claimed identical."
     },
     {
       "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/scripts/assets_mirror.py",
@@ -57,7 +59,7 @@
       "deployed_sha256": "08c8212584b25e8373a3e279cda98f16257f5f6ca3b1e295617e3c507225f685",
       "repo_sha256": "1e39ebaa1eba89ab8a573265a4cb958fe57661afd8deb1c0dc08552fdaab5bc7",
       "repo_matches_deployed": false,
-      "note": "The deployed image was built from an older copy of the mirror module. The repository copy is newer and was verified compatible with the deployed sync_loop.py by a read-only probe (head enumeration plus a dry-run sync of 1077710 that wrote nothing); converging the NAS onto the repository copy is an explicit -Apply of the deployment adapter, not part of this record."
+      "note": "The deployed image was built from an older revision of the mirror module (LF, 73,831 B) than the repository copy (LF, 76,456 B). The repository copy was verified compatible with the deployed sync_loop.py by a read-only probe (head enumeration plus a dry-run sync of 1077710 that wrote nothing); converging the NAS onto the repository copy is an explicit -Apply of the deployment adapter, not part of this record."
     },
     {
       "nas_path": "/vol1/1000/appdata/imas/mltd-asset/asset-server/nginx-vhost.conf",
