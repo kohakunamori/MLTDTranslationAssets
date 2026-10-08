@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "mltd-generated-assets-deployment-record",
-  "observed_at": "2026-10-08T15:20:00Z",
+  "observed_at": "2026-10-08T16:45:00Z",
   "observed_from": "read-only ssh probe of the NAS plus byte-compare of the copied files",
   "hash_convention": "repo_sha256 is the repository blob (git cat-file blob HEAD:<repo_source>), i.e. the bytes a clean checkout deploys; deployed_sha256 is the file on the NAS.",
   "host_alias": "nas",
@@ -74,10 +74,12 @@
       "1077100",
       "1077600",
       "1077640",
-      "1077650"
+      "1077650",
+      "1077700",
+      "1077710"
     ],
-    "last_sync_completed_at": "2026-10-08T10:31:01Z",
-    "last_sync_head": "5a3f32fce3665f1e45d9151f72966b93492efea4",
+    "last_sync_completed_at": "2026-10-08T16:37:31Z",
+    "last_sync_head": "32d868c45cf534d2beeaa4db02d7089799b10b85",
     "versions_tracked_upstream": [
       "1077100",
       "1077600",
@@ -86,6 +88,24 @@
       "1077700",
       "1077710"
     ],
-    "note": "sync_loop.py enumerates generated/<digits> at the pinned head on every tick, so 1077700 and 1077710 are picked up by the next interval without any operator action."
+    "delivery": {
+      "asset_version": "1077710",
+      "source_commit": "2e07139629b2ed8df6d8d537e4ccc6feec514269",
+      "ci_run_id": "37803021789",
+      "sync_started_at": "2026-10-08T16:31:05Z",
+      "sync_completed_at": "2026-10-08T16:34:15Z",
+      "objects_downloaded": 6,
+      "bytes_downloaded": 41415743,
+      "objects_already_present": 11811,
+      "verified": true,
+      "public_checks": [
+        "/generated-assets/1077710/production/2018/Android/4f79de4fee93078d79d498058313fbe61efe7bbd.data -> 200, X-Asset-Source: translated",
+        "/generated-assets/1077710/production/2018/Android/ae6f65178599bdc6b1d203d3fdfd632c09ade759.unity3d -> 200, X-Asset-Source: translated, sha256 == manifest artifact_sha256",
+        "/cn/1077710/... -> 200, X-Asset-Source: translated",
+        "/1077710/... (official route) -> 404, the official archive is untouched"
+      ],
+      "content_proof": "The delivered cd_jp.gtx bundle was decrypted with pipelines/text/mltd_localize_gtx.py and the record for card_list_015siz0683_skillname_015siz equals the machine-translated zh accepted in locales/master/official-1077710-untranslated.jsonl."
+    },
+    "note": "sync_loop.py enumerates generated/<digits> at the pinned head on every tick. 1077700 and 1077710 were picked up by the tick that started 2026-10-08T16:31:05Z with no operator action; the 6 changed objects per version are the five GTX bundles carrying machine translations plus the rebuilt official index."
   }
 }
