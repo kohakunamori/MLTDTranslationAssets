@@ -31,6 +31,20 @@ services:
     image: local/imas-mltd-asset:20260914-static
     container_name: imas-mltd-asset-updater
     restart: unless-stopped
+    # 2026-10-08：本机 DNS 给 td-assets.bn765.com 返回的 Fastly 边缘
+    # （151.101.90.49）到本网的路径只有 ~40 KB/s，归档器 25 秒读 0 字节，1077710
+    # 反复卡死；同内容的其它边缘实测 5–7 MB/s（21.3 MB 索引 4.3 秒下完）。
+    # socket.create_connection 按顺序尝试，被墙/不可达的边缘会自动落到下一个。
+    # 需要重新挑边缘时：
+    #   for ip in 151.101.78.49 151.101.194.49 151.101.2.49 151.101.66.49 151.101.130.49; do
+    #     curl -s --resolve td-assets.bn765.com:443:$ip -o /dev/null \
+    #       -w "$ip %{speed_download}\n" --max-time 10 \
+    #       https://td-assets.bn765.com/1077710/production/2018/Android/4f79de4fee93078d79d498058313fbe61efe7bbd.data
+    #   done
+    extra_hosts:
+      - "td-assets.bn765.com:151.101.78.49"
+      - "td-assets.bn765.com:151.101.194.49"
+      - "td-assets.bn765.com:151.101.2.49"
     volumes:
       - ${MLTD_ARCHIVE_ROOT:-/vol2/1000/imas-asset-archive/mltd}:/data
     environment:
