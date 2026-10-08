@@ -32,7 +32,32 @@
 临时文件不会提交、不会写进工作区；日志和 PR 内容不包含 key。不要把本地
 `api-runtime.local.json`、API key、代理凭据或任何 provider token 提交到仓库。
 
-工作流可定时或手动触发。失败不会提交半成品；成功直接提交包含
-`llm_translated` 标记的结果到默认分支，不创建审核 PR。`status=pending` 仍表示
-该结果尚未被人工确认；维护者可以直接修改并改为 `accepted` /
-`human_translated`。没有待翻译内容时直接退出，不调用 provider。
+工作流可定时或手动触发。没有待翻译内容时直接退出，不调用 provider。
+
+## 增量下载官方 bundle
+
+`scripts/refresh_latest_official_catalogue.py` 不再每次重新下载全部约 11.8k 个官方
+bundle。官方 index 里的 `remote` 是内容寻址对象名，因此
+`manifests/official-bundle-index.json` 记录「上次已核验的 logical -> remote」：
+remote 未变的 bundle 本轮直接跳过，只下载真正变动或首次出现的 bundle，再对这批
+bundle 抽取源文。
+
+- 该 memo 只在**同一次运行产出的行被提交时**一起提交；运行中途失败则 memo 不推进，
+  下次重新核验，不会因为跳过下载而永久漏掉文本。
+- `--max-bundles` 截断只影响本轮下载范围，未检查但 remote 未变的条目仍保留在 memo 中。
+- 冷启动（首次运行、memo 丢失、`--full-rescan`）会重新核验全部 bundle，约 1 小时；
+  正常增量运行只需数分钟。
+- 手动触发时的 `full_rescan` 输入用于强制重新核验全部 bundle。
+
+## 失败处理
+
+- 少数条目耗尽所有 provider 重试（终态失败）不再丢弃已接受的结果：翻译步骤容忍非零
+  退出码，应用/提交继续执行，Run 保持绿色并输出 `::warning::` 标注。
+- 只有真正没有产出（失败条目 > 0 且接受条目 = 0）或前置步骤失败才会让 Run 变红，并
+  自动在 Issue 里登记/追评一条 `Auto-apply LLM translations failed`。
+- 每次运行都上传 `llm-translation-diagnostics` artifact，包含 `.llm-summary.json`、
+  `.llm-queue.jsonl`、`.llm-failed.jsonl`、`.llm-draft.jsonl`，保留 14 天。
+
+成功直接提交包含 `llm_translated` 标记的结果到默认分支，不创建审核 PR。
+`status=pending` 仍表示该结果尚未被人工确认；维护者可以直接修改并改为 `accepted` /
+`human_translated`。

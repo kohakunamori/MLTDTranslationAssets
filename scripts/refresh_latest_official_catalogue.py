@@ -5,6 +5,14 @@ Only logical bundles already represented by this repository are downloaded.
 This keeps the scheduled job bounded while still detecting new/changed GTX
 records in the current text surface.  The official archive remains temporary;
 only source text with ``untranslated`` status is committed.
+
+Downloads are incremental.  An official ``remote`` object name is
+content-addressed, so ``manifests/official-bundle-index.json`` memoises the
+remotes a *committed* run already verified: a daily run re-downloads only the
+bundles whose upstream object actually changed instead of all ~11.8k of them.
+The memo is rewritten in the same run that appends the rows it verified, and the
+workflow commits both together — a run that dies before publishing leaves the
+memo untouched and the next run re-verifies what it lost.
 """
 from __future__ import annotations
 
@@ -12,7 +20,6 @@ import argparse
 import json
 import subprocess
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,6 +30,10 @@ from build_generated_release import download, load_official_index, load_version_
 #: Refuse an automatic append larger than this. A version bump that genuinely
 #: adds thousands of lines needs an explicit --max-new-rows decision.
 DEFAULT_MAX_NEW_ROWS = 5000
+
+#: Verified-remote memo. ``--full-rescan`` ignores it for one run.
+BUNDLE_INDEX_SCHEMA_VERSION = 1
+DEFAULT_BUNDLE_INDEX = ROOT / "manifests" / "official-bundle-index.json"
 
 
 def locale_rows():
@@ -82,11 +93,86 @@ def enforce_new_row_cap(additions, cap: int) -> None:
         )
 
 
+def load_bundle_index(path: Path) -> dict[str, str]:
+    """Read the verified ``logical -> remote`` memo.
+
+    A missing, unreadable or unknown-schema memo only costs downloads, never
+    correctness: it degrades to a full verification instead of failing the run.
+    """
+    if not path.is_file():
+        return {}
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"warning: ignoring unreadable bundle index {path}: {exc}", file=sys.stderr)
+        return {}
+    if not isinstance(document, dict) or document.get("schema_version") != BUNDLE_INDEX_SCHEMA_VERSION:
+        print(f"warning: ignoring bundle index {path} with unknown schema", file=sys.stderr)
+        return {}
+    bundles = document.get("bundles")
+    if not isinstance(bundles, dict):
+        return {}
+    return {
+        logical: remote
+        for logical, remote in bundles.items()
+        if isinstance(logical, str) and isinstance(remote, str) and remote.endswith(".unity3d")
+    }
+
+
+def plan_bundle_downloads(index: dict, verified: dict[str, str], full_rescan: bool = False):
+    """Split the tracked official bundles into ``(download, reused)``.
+
+    A bundle is reused when the memo records the same content-addressed remote:
+    an identical object cannot carry source text the repository has not seen.
+    """
+    to_download: dict[str, dict] = {}
+    reused: dict[str, dict] = {}
+    for logical, row in index.items():
+        if not full_rescan and verified.get(logical) == row["remote"]:
+            reused[logical] = row
+        else:
+            to_download[logical] = row
+    return to_download, reused
+
+
+def next_bundle_index(index: dict, verified: dict[str, str], downloaded: dict) -> dict[str, str]:
+    """Memo for the next run, containing only remotes that are still valid.
+
+    ``downloaded`` are the bundles this run verified itself.  Everything else
+    keeps its previous entry only while the official remote hash is unchanged —
+    a bundle skipped by ``--max-bundles`` therefore stays memoised, while a
+    changed or vanished remote is dropped and re-downloaded next run.
+    """
+    bundles: dict[str, str] = {}
+    for logical, row in sorted(index.items()):
+        remote = str(row["remote"])
+        if logical in downloaded or verified.get(logical) == remote:
+            bundles[logical] = remote
+    return bundles
+
+
+def write_bundle_index(path: Path, bundles: dict[str, str]) -> None:
+    """Write the memo deterministically so an unchanged run produces no diff."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document = {"schema_version": BUNDLE_INDEX_SCHEMA_VERSION,
+                "bundles": dict(sorted(bundles.items()))}
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-root", type=Path, default=ROOT / ".llm-official-work")
     parser.add_argument("--max-bundles", type=int, default=0)
     parser.add_argument("--max-new-rows", type=int, default=DEFAULT_MAX_NEW_ROWS)
+    parser.add_argument("--bundle-index", type=Path, default=DEFAULT_BUNDLE_INDEX,
+                        help="verified remote memo (logical -> content-addressed remote)")
+    parser.add_argument("--full-rescan", action="store_true",
+                        help="ignore the memo and re-download every tracked bundle")
     args = parser.parse_args()
 
     version = load_version_manifest(ROOT / "manifests" / "asset-version.json")
@@ -112,46 +198,61 @@ def main() -> int:
     if not selected:
         raise SystemExit("no known text bundles matched the official index")
 
-    archive = work / "archive"
-    for row in selected.values():
-        destination = archive / "jp-android" / row["remote"]
-        download(f"{version['asset_root']}/{row['remote']}", destination, row["declared_size"])
-    snapshot = work / "snapshot.json"
-    snapshot.write_text(json.dumps({
-        "complete": True, "scope": "jp-android", "asset_index": str(index_path),
-        "upstream_root": version["asset_root"],
-        "objects": [{"logical": logical, **row} for logical, row in sorted(selected.items())],
-    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    catalogue = work / "catalogue.jsonl"
-    subprocess.run([
-        sys.executable, str(ROOT / "pipelines/text/mltd_localization_pipeline.py"),
-        "extract-snapshot", "--snapshot", str(snapshot), "--archive-root", str(archive),
-        "--output", str(catalogue), "--workers", "8",
-    ], cwd=ROOT, check=True)
+    verified = load_bundle_index(args.bundle_index)
+    to_download, reused = plan_bundle_downloads(selected, verified, args.full_rescan)
 
     output = ROOT / "locales" / "master" / f"official-{version['asset_version']}-untranslated.jsonl"
-    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    catalogue_rows = [
-        json.loads(line)
-        for line in catalogue.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-    additions = collect_new_rows(catalogue_rows, existing,
-                                 version["asset_version"], version["client_version"], now)
-    enforce_new_row_cap(additions, args.max_new_rows)
-    if additions:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        # Append is idempotent once the identity ignores the asset version: a
-        # re-run finds every previously appended row in ``existing`` and adds
-        # nothing. Do not switch this to overwrite — the in-place LLM apply
-        # step stores pending translations in this same file, and truncating
-        # it would discard them.
-        with output.open("a", encoding="utf-8", newline="\n") as stream:
-            for row in additions:
-                stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+    additions: list[dict] = []
+    if to_download:
+        archive = work / "archive"
+        for row in to_download.values():
+            destination = archive / "jp-android" / row["remote"]
+            download(f"{version['asset_root']}/{row['remote']}", destination, row["declared_size"])
+        snapshot = work / "snapshot.json"
+        snapshot.write_text(json.dumps({
+            "complete": True, "scope": "jp-android", "asset_index": str(index_path),
+            "upstream_root": version["asset_root"],
+            "objects": [{"logical": logical, **row} for logical, row in sorted(to_download.items())],
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        catalogue = work / "catalogue.jsonl"
+        subprocess.run([
+            sys.executable, str(ROOT / "pipelines/text/mltd_localization_pipeline.py"),
+            "extract-snapshot", "--snapshot", str(snapshot), "--archive-root", str(archive),
+            "--output", str(catalogue), "--workers", "8",
+        ], cwd=ROOT, check=True)
+
+        now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        catalogue_rows = [
+            json.loads(line)
+            for line in catalogue.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        additions = collect_new_rows(catalogue_rows, existing,
+                                     version["asset_version"], version["client_version"], now)
+        enforce_new_row_cap(additions, args.max_new_rows)
+        if additions:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            # Append is idempotent once the identity ignores the asset version: a
+            # re-run finds every previously appended row in ``existing`` and adds
+            # nothing. Do not switch this to overwrite — the in-place LLM apply
+            # step stores pending translations in this same file, and truncating
+            # it would discard them.
+            with output.open("a", encoding="utf-8", newline="\n") as stream:
+                for row in additions:
+                    stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+    bundles = next_bundle_index(index, verified, to_download)
+    write_bundle_index(args.bundle_index, bundles)
+
     print(json.dumps({"asset_version": version["asset_version"],
-                      "matched_bundles": len(selected), "new_rows": len(additions),
-                      "output": str(output) if additions else None}, ensure_ascii=False))
+                      "matched_bundles": len(selected),
+                      "downloaded_bundles": len(to_download),
+                      "reused_bundles": len(reused),
+                      "downloaded_bytes": sum(int(row["declared_size"]) for row in to_download.values()),
+                      "new_rows": len(additions),
+                      "output": str(output) if additions else None,
+                      "bundle_index": str(args.bundle_index),
+                      "bundle_index_entries": len(bundles)}, ensure_ascii=False))
     return 0
 
 
