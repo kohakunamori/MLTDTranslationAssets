@@ -77,7 +77,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install test dependencies
-        run: python -m pip install --disable-pip-version-check pyyaml msgpack UnityPy Pillow pycryptodome jsonschema
+        run: python -m pip install --disable-pip-version-check pytest pyyaml msgpack UnityPy Pillow pycryptodome jsonschema
 
       - name: Run the offline suites that gate publishing
         # scripts/test_assets_generated_index.py keeps one known-red migration
