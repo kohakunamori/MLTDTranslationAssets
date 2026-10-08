@@ -1,0 +1,660 @@
+# Assets-channel generated release workflow (MLTDTranslationAssets layout).
+#
+# THIS FILE IS NOT ENABLED HERE.  It is a working template, not a running
+# workflow, because some of its inputs do not exist in this repository's current
+# environment.  Read "External-blocked" before enabling anything.
+#
+# In the Assets repository the toolchain lives under `pipelines/` (that
+# repository's layout).  THIS repository keeps the same two programs at
+# tools/mltd_image_localization/ and passes them explicitly
+# (`--image-entry`/`--image-audit`) when it runs the entry point against a
+# staging tree; the paths written in this file are the Assets-repository ones.
+#
+# External-blocked (state this honestly, do not paper over it)
+# -----------------------------------------------------------
+# 1. There is no runner attached to this repository: mltd-current has no
+#    `.github/workflows/*.yml` that has ever executed, and the only sibling
+#    template (`private-client-build-arm64.yml.example`) documents the same
+#    gap.  Nothing here has been run on a real GitHub runner.
+# 2. GitHub-hosted runners have NOT been verified against the official baseline
+#    host `td-assets.bn765.com` -- that network is not this machine's, and a
+#    local result does not transfer.  NOTE (2026-09-29 probe, evidence in
+#    build/runs/text-localization/9.0.200/manifest-field-unification-20260929/
+#    official-host-probe.txt): the host DOES serve this frozen cohort to the
+#    local egress -- a real object path returns HTTP 200 (124,583 bytes), while a
+#    DIRECTORY path returns 403.  The 403 is the Google Cloud Storage backend
+#    refusing a listing, not an egress block, so the project's earlier
+#    "403 => IP blocked" reading is wrong for directory URLs.  Nothing here is
+#    relaxed: the fetch step below is still fail-closed, an HTTP 403 is a hard
+#    failure, never a silent skip, and it names the remedy it can offer (the
+#    MLTD_ASSET_ROOT override) rather than asserting a cause.
+# 3. The Unity3D write-back toolchain IS in this repository's commit contract
+#    (text-side materializers under scripts/, the source-bound Texture2D
+#    injector tools/mltd_image_localization/inject_reviewed_textures.py and its
+#    independent re-audit tools/mltd_image_localization/verify_bundle_repack.py),
+#    and the single entry point fans out to every surface
+#    (scripts/materialize_generated_release.py, step 10). What is still missing
+#    is the image surface's *input*: the reviewed install manifest (and the
+#    reviewed candidate PNGs it points at) exists only as a build-run artifact
+#    under work/, outside the commit contract, so this checkout cannot supply
+#    it. Step 9 therefore fails closed with that input named -- it no longer
+#    duplicates a "produce the bundles" step, which is step 10's job -- and the
+#    entry point reports the image surface not_implemented for the same reason.
+# 4. The entry point's input root must carry the accepted release ledger
+#    (<input-root>/ledgers/*.jsonl, or an explicit --translated-ledger) with
+#    release_gate=accepted rows, as produced by build_translation_release_ledger.py.
+#    No step of this workflow produces or fetches it yet, and the checkout's
+#    locales/ is not it: the entry point never reads that directory on this
+#    path. A checkout without a ledger is refused before anything is written;
+#    the input channel is still to be wired.
+# 5. 本次发布所用的 store 写者是**调用方输入**，不由本 checkout 提供。step 10
+#    与 step 11 用同一对参数：ASSETS_WRITER_ROOT（产品写者仓库
+#    MLTDTranslationAssets 的 checkout，其 `scripts/assets_generated_index.py`
+#    即写者）与 ASSETS_WRITER_PIN（该文件的**原始字节 SHA-256**，不是 Git
+#    commit id）。两者必须同时给出；缺失或只给一个时在写入前中止。workflow
+#    不会在运行时对 checkout 现算"可信 pin"，不会回退到兄弟路径或环境默认，
+#    也不会下载/checkout 写者：未经验证的来源正是 pin 要拒绝的东西。step 11
+#    再读同一对参数，因此复验针对的就是 step 10 发布所用字节。
+#
+# How to enable
+# -------------
+# * Public repo: keep the file name as-is (`.example`) and treat it as
+#   documentation, or delete it.  A public repo cannot run it without publishing
+#   the official baseline fetch (which needs the egress path above) and the
+#   write-back toolchain.
+# * Owner/private repo: rename to `.github/workflows/assets-generated.yml`
+#   inside the MLTDTranslationAssets repository (this file matches that repo's
+#   layout: `locales/`, `lyrics/`, `manifests/`, `pipelines/`, `scripts/`),
+#   commit it on the default branch, then dispatch it once manually to prove the
+#   baseline fetch and the toolchain before trusting the push trigger.
+#
+# Contract this workflow implements (full design: docs/ASSETS_GENERATED_CI.md)
+# ---------------------------------------------------------------------------
+# * Versions are INDEPENDENT AXES.  `asset_version` (assets) is read from the
+#   default branch HEAD (`manifests/asset-version.json`); the client version is
+#   recorded separately and never concatenated.  Combined identities such as
+#   `9.0.200+1077100` are refused by the single entry point step 10 calls
+#   (`scripts/materialize_generated_release.py`), which runs the same
+#   `scripts/assets_generated_index.py` validators.
+# * ONE entry point builds the release.  Step 10 invokes
+#   `scripts/materialize_generated_release.py` and never assembles the entry
+#   list itself; it then re-reads that run's machine-readable report and
+#   requires `build_status == "success"` and `generated_written == true` before
+#   the pipeline may touch `generated/` again.  A surface that produced nothing
+#   publishable fails the job closed, and a failed run leaves an existing
+#   successful build byte-identical.
+# * Manual and automatic runs execute THE SAME JOB.  There are no
+#   `asset_version` / `source_commit` dispatch inputs on purpose: a version that
+#   can be typed by hand is a version that can drift from the branch.
+# * `generated/` (content-addressed store + per-version manifests) is the ONLY
+#   thing this workflow writes to git.  Any failure means: no commit, no change
+#   to `generated/`.
+# * Only `reuse_status in {exact, verified-compatible}` and
+#   `translation_status in {accepted, modified, reused}` may be published;
+#   everything else is reported with a reason and excluded.
+# * Bot commits end with `[skip ci]` so the push they create cannot retrigger
+#   this workflow, plus a belt-and-braces job guard below.
+# * Step 10 and step 11 read the run's report back from `work/` on purpose: it
+#   lives outside `generated/`, so a report is never itself a published
+#   artifact, and the `python - "$code" <<'PY'` blocks below carry no `${{ }}`
+#   interpolation at all (nothing a branch could contain reaches the shell).
+
+name: Assets Generated Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'locales/**'
+      - 'lyrics/**'
+      - 'manifests/images.manifest.json'
+      - 'pipelines/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # One release writer at a time; never cancel a half-finished publication.
+  group: assets-generated-release
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate and publish generated/
+    runs-on: ubuntu-latest
+    # Belt and braces for [skip ci]: GitHub honours the marker for push events,
+    # but workflow_dispatch is never skipped, and a bot commit that still ran
+    # would publish an empty diff. Refuse both cases explicitly.
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip ci]')
+            && !contains(github.event.head_commit.message || '', '[ci skip]')
+            && !contains(github.event.head_commit.message || '', '[skip actions]') }}
+    steps:
+      - name: 1. Checkout the default branch (full history for commit ids)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: 2. Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 3. Install the media dependency
+        run: python -m pip install --quiet --disable-pip-version-check pillow
+
+      - name: 4. Identify the version axes from HEAD (never from an input)
+        id: identity
+        run: |
+          set -euo pipefail
+          # NOTE ON INDENTATION: inside a `run: |` block the closing here-document
+          # marker must sit at the block's own indentation (GitHub strips exactly
+          # that much before bash sees the script, leaving the marker at column
+          # 0). A marker written further left would end the YAML block scalar
+          # instead, and a marker written further right is not recognised by bash
+          # for a plain `<<` heredoc. This matches the repository's already
+          # tracked localization workflows.
+          python - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+
+          head = subprocess.run(["git", "rev-parse", "HEAD"], check=True,
+                                capture_output=True, text=True).stdout.strip()
+          doc = json.loads(Path("manifests/asset-version.json").read_text(encoding="utf-8"))
+          asset_version = str(doc.get("asset_version") or "")
+          client_version = str(doc.get("client_version") or "")
+          index_name = str(doc.get("index_name") or "")
+          if not re.fullmatch(r"[0-9]+", asset_version):
+              raise SystemExit(f"asset_version {asset_version!r} is not digits only")
+          for marker in ("+", "-assets-"):
+              if marker in asset_version or marker in client_version:
+                  raise SystemExit("combined client+assets identity is forbidden: "
+                                   f"{client_version!r} / {asset_version!r}")
+          if not re.fullmatch(r"[0-9]+(\.[0-9]+)*", client_version):
+              raise SystemExit(f"client_version {client_version!r} is malformed")
+          if not index_name:
+              raise SystemExit("manifests/asset-version.json has no index_name")
+          out = Path(os.environ["GITHUB_OUTPUT"])
+          with out.open("a", encoding="utf-8") as handle:
+              handle.write(f"asset_version={asset_version}\n")
+              handle.write(f"client_version={client_version}\n")
+              handle.write(f"index_name={index_name}\n")
+              handle.write(f"commit={head}\n")
+          print(f"asset_version={asset_version} client_version={client_version} "
+                f"index={index_name} commit={head}")
+          PY
+
+      - name: 5. Fetch the official baseline index (fail-closed, no silent skip)
+        env:
+          # Set this only when this network has no path to the public host (e.g.
+          # a runner that must egress through a proxy). It is NOT a workaround
+          # for a 403: the host serves real object paths, and a 403 on a
+          # directory URL is the storage backend refusing a listing (header
+          # note 2).
+          MLTD_ASSET_ROOT: ${{ vars.MLTD_ASSET_ROOT || 'https://td-assets.bn765.com' }}
+        run: |
+          set -euo pipefail
+          AV='${{ steps.identity.outputs.asset_version }}'
+          IDX='${{ steps.identity.outputs.index_name }}'
+          URL="${MLTD_ASSET_ROOT}/${AV}/production/2018/Android/${IDX}"
+          mkdir -p work/baseline
+          OUT="work/baseline/${IDX}"
+          echo "GET ${URL}"
+          set +e
+          code=$(curl --silent --show-error --location --retry 3 --retry-delay 5 \
+                      --connect-timeout 20 --max-time 300 \
+                      --output "${OUT}" --write-out '%{http_code}' "${URL}")
+          set -e
+          if [ "${code}" != "200" ]; then
+            cat <<EOF >&2
+          FAIL: the official baseline is unreachable (HTTP ${code}).
+          URL: ${URL}
+          This workflow is fail-closed on purpose: it will not generate a release
+          from a missing or partial baseline, and it will not substitute a mirror
+          silently. This code is not a diagnosis: a 403 is what a storage
+          backend returns when it refuses access, and this project has already
+          misread such a 403 once (header note 2) -- verify with a real object
+          path before concluding anything. If the runner truly has no path to
+          this host, rerun behind a verified egress (repository variable
+          MLTD_ASSET_ROOT).
+          Nothing was written to generated/.
+          EOF
+            exit 1
+          fi
+          test -s "${OUT}" || { echo "FAIL: baseline index is empty" >&2; exit 1; }
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          index = next(p for p in Path("work/baseline").iterdir() if p.name != "baseline.json")
+          digest = hashlib.sha256(index.read_bytes()).hexdigest()
+          Path("work/baseline/baseline.json").write_text(
+              json.dumps({"source": index.name, "sha256": digest,
+                          "bytes": index.stat().st_size}, indent=2) + "\n", encoding="utf-8")
+          print(f"baseline {index.name} sha256={digest} bytes={index.stat().st_size}")
+          PY
+
+      - name: 6. Validate text and image sources
+        run: |
+          set -euo pipefail
+          python scripts/validate_repo.py
+
+      - name: 7. Check image geometry (same aspect ratio, higher resolution is fine)
+        run: |
+          set -euo pipefail
+          # Exact integer aspect equality and the "never smaller" rule are the SAME
+          # contract the portal enforces at upload time
+          # (web/translation-portal/src/image_ratio.js:
+          # checkAspectRatio exact equality, resolution_below_original). The
+          # portal is the UX layer and CI is the release gate; if the two
+          # disagree, an image the contributor was told was fine fails here (or
+          # worse, an image the portal rejected slips through).  Keep them equal.
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          from PIL import Image
+
+          RATIO_TOLERANCE = 0.005  # retired compatibility label; not a permission to stretch
+
+          manifest = json.loads(Path("manifests/images.manifest.json").read_text(encoding="utf-8"))
+          failures = []
+          for row in manifest["images"]:
+              declared = row["dimensions"]
+              src = Path(row["original"]["relative_path"])
+              if not src.is_file():
+                  failures.append(f"{row['id']}: missing source {src}")
+                  continue
+              with Image.open(src) as image:
+                  width, height = image.size
+              if (width, height) == (declared["width"], declared["height"]):
+                  continue
+              # Higher resolution is accepted and step 8 scales it down to the
+              # in-game size. A SMALLER upload is refused: it has already lost
+              # detail that no later step can recover, so there is nothing to
+              # scale back up. (This is not a ban on CI downscaling -- that is
+              # exactly what step 8 does -- only on downscaled *contributions*.)
+              if width < declared["width"] or height < declared["height"]:
+                  failures.append(f"{row['id']}: uploaded {width}x{height} is smaller than "
+                                  f"the declared {declared['width']}x{declared['height']}")
+                  continue
+              want = declared["width"] / declared["height"]
+              got = width / height
+              if width * declared["height"] != declared["width"] * height:
+                  failures.append(f"{row['id']}: aspect {got:.4f} != declared {want:.4f} "
+                                  f"({width}x{height} vs {declared['width']}x{declared['height']})")
+          if failures:
+              print("FAIL: image geometry is not publishable:", file=sys.stderr)
+              for line in failures:
+                  print(" -", line, file=sys.stderr)
+              raise SystemExit(1)
+          print(f"geometry OK: {len(manifest['images'])} image(s), same aspect ratio "
+                "(exact aspect, higher resolution accepted, never smaller)")
+          PY
+
+      - name: 8. Scale localized images to the in-game size
+        run: |
+          set -euo pipefail
+          # The repository's existing normalizer: an aspect-ratio gate plus a
+          # whole-image LANCZOS resize to the declared in-game size, preserving
+          # the source alpha geometry. Same aspect ratio, higher resolution in.
+          python pipelines/image/build_mltd_image25_normalized.py
+
+      - name: 9. Require the reviewed image inputs (fail-closed, before step 10)
+        env:
+          # The reviewed cohort: a JSONL of reviewed Texture2D locators, produced
+          # from the image review pipeline. Neither it nor the candidate PNGs it
+          # points at are in this repository's commit contract today, so this
+          # variable is how the runner supplies them; `--image-original-root`
+          # resolves relative original_png values inside the manifest. These are
+          # paths to files this workflow does NOT produce or fetch, which is why
+          # the header's external-blocked note names them.
+          MLTD_IMAGE_INSTALL_MANIFEST: ${{ vars.MLTD_IMAGE_INSTALL_MANIFEST }}
+          MLTD_IMAGE_ORIGINAL_ROOT: ${{ vars.MLTD_IMAGE_ORIGINAL_ROOT }}
+        run: |
+          set -euo pipefail
+          # This step does NOT produce bundles: step 10 owns production, and two
+          # producers would mean two different byte streams claiming one release.
+          # What it does is answer the one question step 10 cannot answer
+          # cleanly: is the reviewed image metadata actually present? The
+          # injector's --preflight-context is read-only (it writes nothing, not
+          # even --out) and reports every source it consulted, so a missing
+          # cohort is reported as missing metadata with a path, instead of as a
+          # failed bundle injection.
+          INJECTOR="pipelines/image/inject_reviewed_textures.py"
+          if [ ! -f "${INJECTOR}" ]; then
+            echo "FAIL: the Unity3D write-back injector is not where this repository keeps it." >&2
+            echo "Expected: ${INJECTOR} plus pipelines/image/verify_bundle_repack.py as the" >&2
+            echo "independent re-audit (the same two programs live at" >&2
+            echo "tools/mltd_image_localization/ in mltd-current). Both are in the commit" >&2
+            echo "contract; if they moved, update the entry point's --image-entry/--image-audit" >&2
+            echo "and this step together." >&2
+            echo "Nothing was written to generated/." >&2
+            exit 1
+          fi
+          mkdir -p work/image-preflight
+          CONTEXT=work/image-preflight-context.json
+          set +e
+          # The injector reads the reviewed cohort from this flag and from
+          # nothing else -- no environment variable, no repository-relative
+          # default (the work/ default is deliberately gone). So the flag is
+          # passed UNCONDITIONALLY, even when the variable is unset or empty:
+          # an omitted flag is an argparse error (exit 2, usage text, no
+          # document), while an empty value reaches the injector's own
+          # resolution, which refuses it (exit 1) and prints the read-only
+          # context document naming the source it consulted. Only the second
+          # outcome is the one the `code != 0` branch below documents, so do
+          # not restore a `${VAR:+...}` guard here.
+          python "${INJECTOR}" --preflight-context --out work/image-preflight \
+            --report work/image-inject-report.json \
+            --install-manifest "${MLTD_IMAGE_INSTALL_MANIFEST:-}" \
+            ${MLTD_IMAGE_ORIGINAL_ROOT:+--original-root "${MLTD_IMAGE_ORIGINAL_ROOT}"} \
+            > "${CONTEXT}"
+          code=$?
+          set -e
+          if [ "${code}" != "0" ]; then
+            cat <<'EOF' >&2
+          FAIL: the image surface has no reviewed inputs in this checkout.
+          The source-bound Texture2D injector and its re-audit are committed, but the
+          reviewed install manifest (and the candidate PNGs it points at) is not: it
+          lives in a build run under work/, which the repository does not commit, so
+          this workflow cannot obtain it.
+
+          Supply it through the repository variables step 9 reads
+          (MLTD_IMAGE_INSTALL_MANIFEST, MLTD_IMAGE_ORIGINAL_ROOT), or deliver it to
+          this repository as a committed input. There is deliberately no fallback to
+          the entry point's work/ default: a checkout that cannot name its reviewed
+          cohort must not publish un-backfilled images.
+
+          The document above names every source that was consulted.
+          Nothing was written to generated/.
+          EOF
+            exit 1
+          fi
+          python - "${CONTEXT}" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          context = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if not context.get("manifest") or not context.get("manifest_sha256"):
+              raise SystemExit("FAIL: the image input context names no install manifest: "
+                               + json.dumps(context, ensure_ascii=False))
+          counts = context.get("manifest_counts") or {}
+          print("image inputs OK: manifest={manifest} sha256={sha} rows={rows} bundles={bundles}".
+                format(manifest=context["manifest"], sha=context["manifest_sha256"][:16],
+                       rows=counts.get("rows"), bundles=counts.get("bundles")))
+          PY
+
+      - name: 10. Materialize the release through the single entry point
+        env:
+          AV: ${{ steps.identity.outputs.asset_version }}
+          CLIENT: ${{ steps.identity.outputs.client_version }}
+          COMMIT: ${{ steps.identity.outputs.commit }}
+          # Same inputs step 9 proved; the entry point passes them to the
+          # injector and pins the manifest SHA it reports onto the injector's own
+          # argv, so the cohort the audit checks is the one step 9 named.
+          MLTD_IMAGE_INSTALL_MANIFEST: ${{ vars.MLTD_IMAGE_INSTALL_MANIFEST }}
+          MLTD_IMAGE_ORIGINAL_ROOT: ${{ vars.MLTD_IMAGE_ORIGINAL_ROOT }}
+          # 本次发布所用的 store 写者（header note 5）。调用方提供产品写者仓库的
+          # checkout 与其 scripts/assets_generated_index.py 的原始字节 SHA-256——
+          # 绝不是 Git commit id，也绝不是本 workflow 现场 hash 出来的值。step 11
+          # 读同样的两个变量，因此复验针对本 step 所指定的同一份字节。
+          ASSETS_WRITER_ROOT: ${{ vars.ASSETS_WRITER_ROOT }}
+          ASSETS_WRITER_PIN: ${{ vars.ASSETS_WRITER_PIN }}
+        run: |
+          set -euo pipefail
+          # ONE entry point materialises every surface, re-checks each staged
+          # bundle's SHA-256, admits only publishable statuses, writes the
+          # content-addressed store and re-hashes it. This step must NOT build
+          # the entry list itself: a second code path that assembles entries is
+          # exactly the "no unified entry point" gap this step closes.
+          #
+          # --input-root carries the accepted release ledger
+          # (<input-root>/ledgers/*.jsonl or --translated-ledger, repeatable).
+          # HEAD's locales/ alone are not that ledger -- their rows carry no
+          # release_gate -- so a checkout without one is refused before anything
+          # is written (see the header's external-blocked note 4).
+          # --output-root is "." because the store root is <output-root>/generated
+          # and step 12 commits exactly `generated`.
+          #
+          # This step drives ALL THREE surfaces, including the image injector and
+          # its independent re-audit: the reviewed manifest step 9 proved is
+          # passed explicitly (never left to the injector's work/ default), the
+          # injector's run report is fed to verify_bundle_repack.py, and a failed
+          # audit fails this step. There is no second producer anywhere in this
+          # file.
+          #
+          # 运行身份是 runner 自己的记录，job 缺它就不继续。`: "${VAR:?}"` 即使在
+          # `set +e` 下也会退出 shell，而裸的 `$GITHUB_RUN_ID` 会被 `set +e`
+          # 悄悄变成空串——那样看起来成功的运行其实没有身份。
+          #
+          # 图片输入同样必须给出，理由相同：一个点不出自己 cohort 的 run 必须
+          # 在这里失败，而不是只发文本表面（入口本会报 image not_implemented 并
+          # 拒绝；这里让原因更明确）。
+          set +e
+          : "${GITHUB_RUN_ID:?must run on a GitHub runner: the run identity is the runner's, never an input}"
+          : "${GITHUB_RUN_ATTEMPT:?must run on a GitHub runner: the run identity is the runner's, never an input}"
+          : "${MLTD_IMAGE_INSTALL_MANIFEST:?the image surface needs its reviewed install manifest; step 9 proved one resolves, so this must be set}"
+          # 写者来源是一对参数（header note 5）。在入口之前就显式拒绝半对：只给
+          # 其一时入口自己也会拒绝，但在这里点名能把失败停在调用方可控的输入上。
+          # 两者互不推导，也不来自分支或磁盘上的任何东西。
+          : "${ASSETS_WRITER_ROOT:?本次运行必须点名它所发布所用的产品写者 checkout}"
+          : "${ASSETS_WRITER_PIN:?本次运行必须固定写者文件 scripts/assets_generated_index.py 的原始字节 SHA-256}"
+          # --no-prune-orphans 显式关闭候选事务内的孤儿清理：本 workflow 不做任何
+          # 自动 GC。入口的默认是清理（prune_orphans=True），所以必须显式关闭，
+          # 否则"step 11 不 prune"只是把清理留在了 step 10 的事务里。
+          # 由 runner 记录，绝不手输。
+          python scripts/materialize_generated_release.py \
+            --asset-version "${AV}" \
+            --source-client-version "${CLIENT}" \
+            --source-commit "${COMMIT}" \
+            --translation-commit "${COMMIT}" \
+            --generated-commit "${COMMIT}" \
+            --ci-run-id "${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}" \
+            --assets-writer-root "${ASSETS_WRITER_ROOT}" \
+            --assets-writer-pin "${ASSETS_WRITER_PIN}" \
+            --no-prune-orphans \
+            --input-root . \
+            --output-root . \
+            --repository-root . \
+            --image-install-manifest "${MLTD_IMAGE_INSTALL_MANIFEST}" \
+            ${MLTD_IMAGE_ORIGINAL_ROOT:+--image-original-root "${MLTD_IMAGE_ORIGINAL_ROOT}"} \
+            --report work/generated-build-report.json
+          code=$?
+          set -e
+          # 在任何判断之前先读回报告：一个"什么都没写却 exit 0"的 run 也必须
+          # 停住流水线。AV 是 step 4 从 HEAD 读出的身份，必须与报告里的
+          # asset_version 严格一致——否则一个发布 1077101 的 run 会冒充本 job 的
+          # 1077100。写者对被重新经**同一个**中央 resolver 解析，且报告的
+          # writer_source 必须是一个 kind=pinned / verified=true / sha256==pin 的
+          # 字典；缺字段、非 pinned、false 或错 pin 一律 fail closed。
+          python - "$code" "${ASSETS_WRITER_ROOT}" "${ASSETS_WRITER_PIN}" "${AV}" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          code = int(sys.argv[1])
+          writer_root, writer_pin, caller_av = sys.argv[2], sys.argv[3], sys.argv[4]
+          report_path = Path("work/generated-build-report.json")
+          if not report_path.is_file():
+              raise SystemExit(f"FAIL: no machine-readable report at {report_path}; "
+                               f"the entry point exited {code}")
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          print("kind={kind} schema_version={schema} mode={mode} build_status={status} "
+                "generated_written={written}".format(
+                    kind=report.get("kind"), schema=report.get("schema_version"),
+                    mode=report.get("mode"), status=report.get("build_status"),
+                    written=report.get("generated_written")))
+          for surface in report.get("surfaces") or []:
+              print(" surface {name}: {status} - {reason}".format(
+                  name=surface.get("surface"), status=surface.get("build_status"),
+                  reason=surface.get("reason")))
+          if report.get("kind") != "mltd-generated-release-materialize-report":
+              raise SystemExit(f"FAIL: unexpected report kind {report.get('kind')!r}")
+          if report.get("build_status") != "success" or report.get("generated_written") is not True:
+              raise SystemExit(f"FAIL: build_status={report.get('build_status')!r} "
+                               f"generated_written={report.get('generated_written')!r}: "
+                               f"{report.get('failure_reason')}")
+          # 版本身份必须与 step 4 从 HEAD 读出的 AV 一致。
+          if not caller_av:
+              raise SystemExit("FAIL: no caller asset_version; refusing an unidentifiable release")
+          if str(report.get("asset_version")) != str(caller_av):
+              raise SystemExit(f"FAIL: the report published asset_version "
+                               f"{report.get('asset_version')!r}, but this run is {caller_av!r}")
+          store = report.get("store") or {}
+          if store.get("verify_ok") is not True:
+              raise SystemExit("FAIL: the store was written but did not re-verify: "
+                               f"{store.get('verify_failures')}")
+          # 本 workflow 不做任何自动 GC：候选事务的孤儿清理必须已显式关闭。
+          # 缺 transaction 字段（正常成功报告一定带）按 fail closed 处理。
+          transaction = store.get("transaction")
+          if not isinstance(transaction, dict):
+              raise SystemExit("FAIL: the report proves no staged-store transaction: "
+                               f"{transaction!r}")
+          if transaction.get("pruned_orphans") is not False:
+              raise SystemExit("FAIL: the candidate transaction pruned orphans "
+                               f"(pruned_orphans={transaction.get('pruned_orphans')!r}); this "
+                               "workflow does not garbage-collect the store, so the run must "
+                               "pass --no-prune-orphans")
+          if transaction.get("staged") is not True or transaction.get("promoted") is not True:
+              raise SystemExit("FAIL: the report does not prove a staged-and-promoted release: "
+                               f"{transaction!r}")
+          # 只在所有报告 gate 之后：重新解析调用方点名的写者，并把它与报告声明的
+          # 写者严格对比。不加载第二套 loader；require_pair=True 下 module 参数
+          # 不会被使用，传 None 即可（不改中央 API）。
+          sys.path.insert(0, str(Path.cwd()))
+          from scripts.materialize_generated_release import RefusedInput, resolve_writer_source
+          if not writer_root or not writer_pin:
+              raise SystemExit(
+                  "FAIL: --assets-writer-root and --assets-writer-pin are a pair and must both "
+                  "be supplied; refusing to publish through an unnamed writer")
+          try:
+              source = resolve_writer_source(None, writer_root=Path(writer_root),
+                                             writer_pin=writer_pin, require_pair=True)
+          except RefusedInput as exc:
+              raise SystemExit(f"FAIL: the pinned writer source was refused: {exc}")
+          if source.kind != "pinned" or source.module_sha256 != writer_pin:
+              raise SystemExit("FAIL: the entry point did not resolve the writer this step pinned")
+          declared = report.get("writer_source")
+          if not isinstance(declared, dict):
+              raise SystemExit(f"FAIL: the report has no writer_source record: {declared!r}")
+          if declared.get("kind") != "pinned" or declared.get("verified") is not True:
+              raise SystemExit(f"FAIL: the report did not publish through a pinned, verified "
+                               f"writer source: {declared!r}")
+          if declared.get("sha256") != writer_pin:
+              raise SystemExit(f"FAIL: the report names writer source {declared.get('sha256')!r}, "
+                               f"but this step pinned {writer_pin!r}")
+          print(f"writer source: pinned {source.module_path} sha256={source.module_sha256}")
+          print(f"release materialised: asset_version={report.get('asset_version')} "
+                f"entries={store.get('accepted')}")
+          PY
+          if [ "${code}" != "0" ]; then
+            echo "FAIL: materialize_generated_release.py exited ${code}; generated/ was not published" >&2
+            exit "${code}"
+          fi
+
+      - name: 11. Re-verify the published release through the pinned writer
+        env:
+          AV: ${{ steps.identity.outputs.asset_version }}
+          # 与 step 10 发布所用完全相同的一对参数（header note 5）。step 11 不发现
+          # 也不重新推导写者，它重读调用方输入，因此复验针对 step 10 点名的字节。
+          ASSETS_WRITER_ROOT: ${{ vars.ASSETS_WRITER_ROOT }}
+          ASSETS_WRITER_PIN: ${{ vars.ASSETS_WRITER_PIN }}
+        run: |
+          set -euo pipefail
+          # 在任何 store 读/写之前失败：无法重新哈希的发布不是发布。本 step 不做
+          # prune，本 workflow 也不做任何自动 GC（见 docs/ASSETS_GENERATED_CI.md
+          # §6/§7）：step 10 的候选事务已用 --no-prune-orphans 关闭清理，这里再
+          # 对活的 `generated/` 做事务外清扫正是要删除的破坏性命令。
+          #
+          # 在 step 10 自身 gate 之外再加一道：step 10 已在切换前处理候选树，本
+          # step 仍从磁盘重读报告，除非报告证明本次 run 真的写出
+          # （generated_written 为真）、复验过（verify_ok 为真）、并经 store 自身的
+          # staged-store 事务提升（staged/promoted 为真，pruned_orphans 为假），否则
+          # 根本不跑。store 只能作为本次 run 自己发布的后果被复验。
+          python - "${ASSETS_WRITER_ROOT}" "${ASSETS_WRITER_PIN}" "${AV}" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          writer_root, writer_pin, caller_av = sys.argv[1], sys.argv[2], sys.argv[3]
+          report_path = Path("work/generated-build-report.json")
+          if not report_path.is_file():
+              raise SystemExit("FAIL: refusing to re-verify: step 10 left no report at "
+                               f"{report_path}, so no verified publication is proven")
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          if report.get("build_status") != "success" or report.get("generated_written") is not True:
+              raise SystemExit("FAIL: refusing to re-verify: the step-10 report says "
+                               f"build_status={report.get('build_status')!r} "
+                               f"generated_written={report.get('generated_written')!r}")
+          if not caller_av or str(report.get("asset_version")) != str(caller_av):
+              raise SystemExit(f"FAIL: refusing to re-verify: the report published "
+                               f"{report.get('asset_version')!r}, but this run is {caller_av!r}")
+          store = report.get("store") or {}
+          if store.get("verify_ok") is not True:
+              raise SystemExit("FAIL: refusing to re-verify: the store did not re-verify: "
+                               f"{store.get('verify_failures')}")
+          transaction = store.get("transaction")
+          if not isinstance(transaction, dict):
+              raise SystemExit("FAIL: refusing to re-verify: the step-10 report proves no "
+                               f"staged-store transaction: {transaction!r}")
+          if transaction.get("staged") is not True or transaction.get("promoted") is not True:
+              raise SystemExit("FAIL: refusing to re-verify: the step-10 report does not prove a "
+                               f"staged-store promotion: {transaction!r}")
+          if transaction.get("pruned_orphans") is not False:
+              raise SystemExit("FAIL: refusing to re-verify: the candidate transaction pruned "
+                               f"orphans (pruned_orphans={transaction.get('pruned_orphans')!r}); "
+                               "this workflow does not garbage-collect the store")
+          # 只在所有报告 gate 之后，且只经调用方点名的写者：解析与 step 10 相同的
+          # 一对参数，再用该模块自己的 verify API 重新哈希该版本。缺/错 pin，或写者
+          # 字节已变，都在任何 store 读之前拒绝。require_pair=True 下 module 参数
+          # 不会被使用，传 None 即可（不改中央 API），也不加载第二套 loader。
+          sys.path.insert(0, str(Path.cwd()))
+          from scripts.materialize_generated_release import RefusedInput, resolve_writer_source
+          if not writer_root or not writer_pin:
+              raise SystemExit(
+                  "FAIL: ASSETS_WRITER_ROOT and ASSETS_WRITER_PIN are a pair and must both be "
+                  "supplied; refusing to re-verify through an unnamed writer")
+          try:
+              source = resolve_writer_source(None, writer_root=Path(writer_root),
+                                             writer_pin=writer_pin, require_pair=True)
+          except RefusedInput as exc:
+              raise SystemExit(f"FAIL: the pinned writer source was refused: {exc}")
+          if source.kind != "pinned" or source.module_sha256 != writer_pin:
+              raise SystemExit("FAIL: re-verification did not resolve the pinned writer")
+          declared = report.get("writer_source")
+          if not isinstance(declared, dict):
+              raise SystemExit(f"FAIL: refusing to re-verify: the report has no writer_source "
+                               f"record: {declared!r}")
+          if declared.get("kind") != "pinned" or declared.get("verified") is not True \
+                  or declared.get("sha256") != writer_pin:
+              raise SystemExit("FAIL: refusing to re-verify: the report did not publish through "
+                               f"the pinned writer this run named: {declared!r}")
+          asset_version = str(report.get("asset_version") or "")
+          store_obj = source.module.GeneratedStore(Path("generated"))
+          verify = store_obj.verify_release(asset_version)
+          if verify.ok is not True:
+              raise SystemExit(f"FAIL: the published release {asset_version} did not re-verify via "
+                               f"the pinned writer: {verify.failures}")
+          print(f"re-verified: asset_version={asset_version} objects={verify.checked_objects} "
+                f"via pinned {source.module_path}")
+          PY
+
+      - name: 12. Publish the store (the ONLY git write)
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EXPECTED_SOURCE_COMMIT: ${{ steps.identity.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          local_head=$(git rev-parse HEAD)
+          remote_head=$(git ls-remote --exit-code origin "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$local_head" != "$EXPECTED_SOURCE_COMMIT" ] || [ "$remote_head" != "$EXPECTED_SOURCE_COMMIT" ]; then
+            echo "FAIL: default-branch HEAD changed; refusing stale generated publication" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add generated
+          if git diff --cached --quiet -- generated; then
+            echo "generated/ is unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(generated): publish assets release ${{ steps.identity.outputs.asset_version }} [skip ci]"
+          git push origin "HEAD:refs/heads/$DEFAULT_BRANCH"

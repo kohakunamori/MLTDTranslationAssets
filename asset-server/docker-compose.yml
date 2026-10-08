@@ -1,0 +1,87 @@
+# MLTD 资产服务（本仓自足部署模板；候选，未部署）
+#
+# 与主仓 mltd-current/asset-server/docker-compose.yml 的 build 段完全同形：
+#   context 相对本 compose 文件（asset-server/）解析，因此 ``..`` = **本仓根**，
+#   即闭包源码的唯一来源仓库。主仓副本的同样写法 ``..`` 指向主仓；闭包迁入本仓后
+#   同一写法就自足，不需要把 compose 移到仓库根，也不依赖任何兄弟仓库。
+# 三个服务的镜像、卷、环境变量、命令与 fail-fast 语义（ASSETS_MIRROR_VERSIONS
+# 缺失即拒绝启动）与主仓逐一对应。上线切换需单写者窗口，本文件不做任何指向。
+name: imas-mltd-asset
+
+services:
+  mltd-asset-tools:
+    profiles: ["tools"]
+    image: local/imas-mltd-asset:20260914-static
+    volumes:
+      - ${MLTD_ARCHIVE_ROOT:-/vol2/1000/imas-asset-archive/mltd}:/data
+    environment:
+      PYTHONUNBUFFERED: "1"
+      HTTP_PROXY: "${MLTD_ARCHIVE_PROXY:-}"
+      HTTPS_PROXY: "${MLTD_ARCHIVE_PROXY:-}"
+      NO_PROXY: "127.0.0.1,localhost,192.168.0.0/16"
+    pids_limit: 512
+    mem_limit: 2g
+    entrypoint: ["python"]
+    command: ["tools/versioned_assets.py", "--help"]
+
+  mltd-asset-updater:
+    build:
+      context: ..
+      dockerfile: asset-server/Dockerfile
+    image: local/imas-mltd-asset:20260914-static
+    container_name: imas-mltd-asset-updater
+    restart: unless-stopped
+    volumes:
+      - ${MLTD_ARCHIVE_ROOT:-/vol2/1000/imas-asset-archive/mltd}:/data
+    environment:
+      PYTHONUNBUFFERED: "1"
+      ARCHIVE_POLL_SECONDS: "${MLTD_ARCHIVE_POLL_SECONDS:-21600}"
+      ARCHIVE_WORKERS: "${MLTD_ARCHIVE_WORKERS:-256}"
+      ARCHIVE_MIN_FREE_GIB: "${MLTD_ARCHIVE_MIN_FREE_GIB:-80}"
+      ARCHIVE_AUTO_ACTIVATE: "${MLTD_ARCHIVE_AUTO_ACTIVATE:-0}"
+    pids_limit: 512
+    mem_limit: 2g
+    cpus: 4.0
+    entrypoint: ["python", "tools/archive_controller.py"]
+    command:
+      - --root
+      - /data
+      - --timeout
+      - "60"
+      - watch
+      - --poll-seconds
+      - "${MLTD_ARCHIVE_POLL_SECONDS:-21600}"
+      - --workers
+      - "${MLTD_ARCHIVE_WORKERS:-256}"
+      - --min-free-gib
+      - "${MLTD_ARCHIVE_MIN_FREE_GIB:-80}"
+      - --auto-activate
+      - "${MLTD_ARCHIVE_AUTO_ACTIVATE:-0}"
+
+  mltd-assets-mirror:
+    build:
+      context: ..
+      dockerfile: asset-server/Dockerfile
+    image: local/imas-mltd-asset:20260914-static
+    container_name: imas-mltd-assets-mirror
+    restart: unless-stopped
+    volumes:
+      - ${MLTD_ARCHIVE_ROOT:-/vol2/1000/imas-asset-archive/mltd}:/data
+    environment:
+      PYTHONUNBUFFERED: "1"
+      ASSETS_MIRROR_POLL_SECONDS: "${ASSETS_MIRROR_POLL_SECONDS:-21600}"
+      ASSETS_MIRROR_VERSIONS: "${ASSETS_MIRROR_VERSIONS:?请设置 ASSETS_MIRROR_VERSIONS 为要镜像的数字 asset_version 列表（逗号分隔），例如 1077100,1077600}"
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 2.0
+    entrypoint: ["python", "scripts/assets_mirror.py"]
+    # 只镜像显式列出的版本：不跟随 “latest”、不写 current.json、不删除任何版本。
+    # 上线新 asset_version 是运维动作（改 ASSETS_MIRROR_VERSIONS 后 up -d）。
+    command:
+      - --root
+      - /data/generated
+      - watch
+      - --interval
+      - "${ASSETS_MIRROR_POLL_SECONDS:-21600}"
+      - --asset-version
+      - "${ASSETS_MIRROR_VERSIONS:?请设置 ASSETS_MIRROR_VERSIONS 为要镜像的数字 asset_version 列表（逗号分隔），例如 1077100,1077600}"

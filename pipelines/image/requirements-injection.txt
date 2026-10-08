@@ -1,0 +1,7 @@
+# 图像注入工具运行时依赖（inject_reviewed_textures.py / verify_bundle_repack.py）。
+# 版本为本机 Python 3.13.6 下运行 CLI/契约测试所记录的精确版本，仅证明 source/CLI 闭合，
+# 非真实 Unity repack 验证（9.0.200 夹具均为合成）。
+# pytest 是独立的 test-time 依赖，不在此列，另行显式安装（见 README）。
+numpy==2.1.2
+Pillow==11.0.0
+UnityPy==1.10.18

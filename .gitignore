@@ -10,3 +10,4 @@ node_modules/
 .vscode/
 d1-contributions-sync/
 work/
+/local-data/

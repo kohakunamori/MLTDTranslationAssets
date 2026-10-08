@@ -1,0 +1,362 @@
+{
+  "stream": "text-localization",
+  "run_id": "repo-retirement-assets-orchestration-20261003",
+  "status": "local candidate; not public approval",
+  "version": "JP 9.0.200",
+  "abi": "arm64",
+  "frozen_assets": "1077100",
+  "source_root": "D:\\Project\\mltd-current",
+  "product_root": "D:\\Project\\_MLTDTranslationAssets",
+  "research_root": "D:\\Project\\_MLTDTranslationAssets\\research-tools",
+  "finite_copy_source_count": 13,
+  "finite_target_count": 19,
+  "planned_targets": [
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\materialize_generated_release.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\localization_version_identity.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\materialize_event_unit_90200.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\materialize_mld_90200.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\build_fontrender_overlay.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\build_translation_release_ledger.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\mltd_translation_quality.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\mltd_translation_release_gate.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\extract_fontrender_localization.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\build_character_voice_evidence.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\archive\\scripts\\test_materialize_generated_release.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\archive\\.github\\workflows\\assets-generated.yml.example",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\archive\\docs\\ASSETS_GENERATED_CI.md",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\README.md",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\migration-inventory.json",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\__init__.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\test_research_orchestration.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\tools\\mltd_image_localization\\inject_reviewed_textures.py",
+    "D:\\Project\\_MLTDTranslationAssets\\research-tools\\tools\\mltd_image_localization\\verify_bundle_repack.py"
+  ],
+  "sources": [
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\materialize_generated_release.py",
+      "source_raw_sha256": "a2ce526847076bd47ad940e66fff39e831015ac3a252b0526ce65fcf4374c142",
+      "source_bytes": 91307,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\materialize_generated_release.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\materialize_generated_release.py",
+      "target_before": "absent",
+      "target_raw_sha256": "a2ce526847076bd47ad940e66fff39e831015ac3a252b0526ce65fcf4374c142",
+      "classification": "research-maintenance-source",
+      "adaptation": "raw-byte copy"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\localization_version_identity.py",
+      "source_raw_sha256": "6678f071dbf5931688280cee845b30155cc58d8aed4e0179b9c9f5bd6ed7c3cf",
+      "source_bytes": 3895,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\localization_version_identity.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\localization_version_identity.py",
+      "target_before": "absent",
+      "target_raw_sha256": "6678f071dbf5931688280cee845b30155cc58d8aed4e0179b9c9f5bd6ed7c3cf",
+      "classification": "research-maintenance-source",
+      "adaptation": "raw-byte copy"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\materialize_event_unit_90200.py",
+      "source_raw_sha256": "48bb0de39747835e59fc5678db06cf716bff44d60cc4b8b6306815ef72487ead",
+      "source_bytes": 29944,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\materialize_event_unit_90200.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\materialize_event_unit_90200.py",
+      "target_before": "absent",
+      "target_raw_sha256": "efa9971e8792fa86cb23510f5d4466f8ed230e47fa47a829621a0f11b3fdf5b7",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\materialize_mld_90200.py",
+      "source_raw_sha256": "0934e316662806eae0e81549d9f6616629837d355f8a9815048b4db800f5f57e",
+      "source_bytes": 29766,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\materialize_mld_90200.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\materialize_mld_90200.py",
+      "target_before": "absent",
+      "target_raw_sha256": "da5389fb56e101d5f4916560a8ee1f34be34144bdde1dc0081104329a2fa72f1",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\build_fontrender_overlay.py",
+      "source_raw_sha256": "d89adb428a846c06d534bfc24f674ff170fe056e13c348573ff4132369b9cc7f",
+      "source_bytes": 11985,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\build_fontrender_overlay.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\build_fontrender_overlay.py",
+      "target_before": "absent",
+      "target_raw_sha256": "9d0aea3c2e0753e9e40a31d5b73103d35951a7005e1e24c13a7eaca0a6d8bc5a",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\build_translation_release_ledger.py",
+      "source_raw_sha256": "3ea92624a9d49e071f1f5edc000657906ef540f0dca3c4a8c86c74233e16494d",
+      "source_bytes": 32524,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\build_translation_release_ledger.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\build_translation_release_ledger.py",
+      "target_before": "absent",
+      "target_raw_sha256": "843001e3d04ad9ee493c5ad0e55d7247be272168695ae8294b794c630f75160a",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\mltd_translation_quality.py",
+      "source_raw_sha256": "e31d0db9710d8cdf0fa0ca68d6972eb72207f5e6935178336b765174fc56b172",
+      "source_bytes": 24008,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\mltd_translation_quality.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\mltd_translation_quality.py",
+      "target_before": "absent",
+      "target_raw_sha256": "460db9d12773063c2d6b1f31fb925ae76ee751c16c8605db13d7a955be403ec4",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\mltd_translation_release_gate.py",
+      "source_raw_sha256": "1c113036c01d32a71e00dd661abbcffc133338728a6fdb670a11fc15145fb6e3",
+      "source_bytes": 9077,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\mltd_translation_release_gate.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\mltd_translation_release_gate.py",
+      "target_before": "absent",
+      "target_raw_sha256": "892bfce2d25c8a872e682f26059393d00d1537152805f31962274a34472db1fb",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\extract_fontrender_localization.py",
+      "source_raw_sha256": "664405d5c6742c5480ce24d38611dd4f151a029d815322ef0304862cf285a6be",
+      "source_bytes": 17376,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\extract_fontrender_localization.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\extract_fontrender_localization.py",
+      "target_before": "absent",
+      "target_raw_sha256": "645ee0f57fc30f6044e96fa0ccc4150f1671c4ccd4e34f17191f9d2609a1bb84",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\build_character_voice_evidence.py",
+      "source_raw_sha256": "081dd478d339b09ad816df5454f1c07f2af623f8e40c342727904829daee6d49",
+      "source_bytes": 10705,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\build_character_voice_evidence.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\build_character_voice_evidence.py",
+      "target_before": "absent",
+      "target_raw_sha256": "637a1d819ecbe62096f3399aa145faaa66f0961806c1501f2ff19162221826e4",
+      "classification": "research-maintenance-source",
+      "adaptation": "reuse product pipelines.text.mltd_localize_gtx imports"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\scripts\\test_materialize_generated_release.py",
+      "source_raw_sha256": "c86c29a05d6b232e1187924b863969440ff1ab8599194bcbb84bc483b43203b7",
+      "source_bytes": 118610,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\scripts\\test_materialize_generated_release.py",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\archive\\scripts\\test_materialize_generated_release.py",
+      "target_before": "absent",
+      "target_raw_sha256": "c86c29a05d6b232e1187924b863969440ff1ab8599194bcbb84bc483b43203b7",
+      "classification": "archive-not-active",
+      "adaptation": "raw-byte copy"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\.github\\workflows\\assets-generated.yml.example",
+      "source_raw_sha256": "b24f46c370534439cd72d67dfecac26fb97270d82f7a00c14c02b84c4d9e4ad8",
+      "source_bytes": 40572,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\.github\\workflows\\assets-generated.yml.example",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\archive\\.github\\workflows\\assets-generated.yml.example",
+      "target_before": "absent",
+      "target_raw_sha256": "b24f46c370534439cd72d67dfecac26fb97270d82f7a00c14c02b84c4d9e4ad8",
+      "classification": "archive-not-active",
+      "adaptation": "raw-byte copy"
+    },
+    {
+      "source": "D:\\Project\\mltd-current\\docs\\ASSETS_GENERATED_CI.md",
+      "source_raw_sha256": "0a0fcc8a56c3a986856ecccf455cb8876e33457d56670934c2cf5d2b5d220cdc",
+      "source_bytes": 23127,
+      "before_snapshot": "D:\\Project\\mltd-current\\work\\agents\\text-localization\\repo-retirement-assets-orchestration-20261003\\before-source\\docs\\ASSETS_GENERATED_CI.md",
+      "target": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\archive\\docs\\ASSETS_GENERATED_CI.md",
+      "target_before": "absent",
+      "target_raw_sha256": "0a0fcc8a56c3a986856ecccf455cb8876e33457d56670934c2cf5d2b5d220cdc",
+      "classification": "archive-not-active",
+      "adaptation": "raw-byte copy"
+    }
+  ],
+  "product_references": [
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\scripts\\assets_generated_index.py",
+      "raw_sha256": "7e8ec73ec5285d7216193dc39a7aac7211ee3bac735f22a5dca6ffa5eb5b3bed",
+      "bytes": 118216,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\scripts\\assets_mirror.py",
+      "raw_sha256": "1e39ebaa1eba89ab8a573265a4cb958fe57661afd8deb1c0dc08552fdaab5bc7",
+      "bytes": 76456,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\scripts\\build_generated_release.py",
+      "raw_sha256": "ee14509099c015de232ac440eb6d23dd11ca79656acdee3ea42c2a3837a31a8a",
+      "bytes": 19684,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\pipelines\\text\\mltd_localize_gtx.py",
+      "raw_sha256": "58d442ce6ad33ece9a743d2283a42d3d9901e996ef11a99eaee1311ba7263c17",
+      "bytes": 20810,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\pipelines\\text\\__init__.py",
+      "raw_sha256": "2a8e675cce7531ddd648815b63d68c968ae6fdc466bebffa45ee533e50bfb940",
+      "bytes": 40,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\pipelines\\image\\inject_reviewed_textures.py",
+      "raw_sha256": "907d9d7445c578df17ea81ec5dbd7ec007b3627d214f4f11279680283d14ead9",
+      "bytes": 30999,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\pipelines\\image\\verify_bundle_repack.py",
+      "raw_sha256": "bdc513b5e4ce41cbe080115654a55126f24e380175c2c54141f0070a11f88d0c",
+      "bytes": 11920,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\pipelines\\image\\__init__.py",
+      "raw_sha256": "6843530a2a2224caae3f35e897277a486a0d1cf61dc8040c5d665d8121d48b6b",
+      "bytes": 88,
+      "action": "reuse/read-only; never copied or modified",
+      "sha256_is_trusted_writer_pin": false
+    }
+  ],
+  "product_reference_scoped_git_status": " M scripts/assets_generated_index.py\n M scripts/build_generated_release.py\n?? pipelines/image/inject_reviewed_textures.py\n?? pipelines/image/verify_bundle_repack.py\n?? scripts/assets_mirror.py\n",
+  "excluded": [
+    "scripts/assets_generated_index.py (legacy writer; preserved at source)",
+    "scripts/assets_mirror.py (legacy mirror; preserved at source)",
+    "schemas (no copies)",
+    "scripts/mltd_localize_gtx.py (product implementation differs; preserved at source, no second implementation)",
+    "tools/mltd_image_localization/inject_reviewed_textures.py (product maintained implementation reused; old retained at source)",
+    "tools/mltd_image_localization/verify_bundle_repack.py (product maintained implementation reused; old retained at source)",
+    "scripts/probe_image_install_inputs.py (not present)",
+    "all data/private inputs and active CI"
+  ],
+  "before_target": "all planned targets verified absent; exclusive creation used",
+  "historical_implementation_exclusions": [
+    {
+      "path": "D:\\Project\\mltd-current\\scripts\\mltd_localize_gtx.py",
+      "raw_sha256": "130af3f86c2840f24e667a2aeea86192637e898130dcdcd167a44702e2a78a37",
+      "classification": "historical implementation preserved at source, not copied; product implementation reused"
+    },
+    {
+      "path": "D:\\Project\\mltd-current\\tools\\mltd_image_localization\\inject_reviewed_textures.py",
+      "raw_sha256": "e303c2bec6c0db56925381f7fdecea06cb1a56f4bad6171e98ae46ea674c9514",
+      "classification": "historical implementation preserved at source, not copied; product implementation reused"
+    },
+    {
+      "path": "D:\\Project\\mltd-current\\tools\\mltd_image_localization\\verify_bundle_repack.py",
+      "raw_sha256": "d48f880d39a9709c32e959516ca5e06309aafad58ae68b2e826394199a011231",
+      "classification": "historical implementation preserved at source, not copied; product implementation reused"
+    }
+  ],
+  "validation": {
+    "syntax": {
+      "path": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\repo-retirement-assets-orchestration-20261003\\syntax.json",
+      "raw_sha256": "df3b6e29209816adebf37d7146cd1c43eccfb0edc5153f0b18ca1cf1d6377b5b",
+      "ok": true,
+      "python_files": 15,
+      "attempt": 1
+    },
+    "help": {
+      "path": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\repo-retirement-assets-orchestration-20261003\\help.json",
+      "raw_sha256": "b59abdf31a34987a7728d5d4bab26883d83e41b36fd15292c914d34408a3ae03",
+      "ok": true,
+      "entries": 12,
+      "attempt": 1
+    },
+    "synthetic-tests": {
+      "path": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\repo-retirement-assets-orchestration-20261003\\synthetic-tests.json",
+      "raw_sha256": "ae4b6766bc85ee9ae6a946ee5660c7d3635712485dd157b46b755fdc71e788fd",
+      "exit_code": 0,
+      "tests": 6,
+      "attempt": 1,
+      "real_writer_loaded": false,
+      "trusted_pin_used": false
+    },
+    "source-closure": {
+      "path": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\repo-retirement-assets-orchestration-20261003\\source-closure.json",
+      "raw_sha256": "a78083af1bb5c11d4cb1efc2637dbb077442f17245b1223e51df2f98c6cc7fb0",
+      "basic_source_closure": true,
+      "unresolved_source_dependencies": [],
+      "full_runtime_or_cross_repo_closure": false
+    },
+    "preservation": {
+      "path": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\repo-retirement-assets-orchestration-20261003\\preservation.json",
+      "raw_sha256": "d59a58c3d9897d5ee9b73a864e6a4717baf80d9a50cc38aa1b1eda27d8ffddcb",
+      "unchanged_sources": 13,
+      "source_count": 13,
+      "unchanged_product_references": 8,
+      "product_reference_count": 8
+    },
+    "source-sensitive-literal-audit": {
+      "path": "D:\\Project\\mltd-current\\build\\runs\\text-localization\\9.0.200\\repo-retirement-assets-orchestration-20261003\\source-sensitive-literal-audit.json",
+      "raw_sha256": "4f588539786f7c01ec5911a017b3f0c3fdd1cdc264895d6e719cb239ca495724",
+      "source_files": 13,
+      "target_files": 18,
+      "matches": 0,
+      "public_permission": false
+    }
+  },
+  "target_generated_sources": [
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\README.md",
+      "raw_sha256": "ef64a6ec9463c226ba7f083a314b50a3e7a904c5ddcb85d8c346d4d5192d5742",
+      "bytes": 8911,
+      "before": "absent",
+      "classification": "new bounded research adapter/test/navigation"
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\__init__.py",
+      "raw_sha256": "8cc7df8b13e603625d7184bcb5f94f8293db8e9a3fc29db443a099a40908154b",
+      "bytes": 82,
+      "before": "absent",
+      "classification": "new bounded research adapter/test/navigation"
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\scripts\\test_research_orchestration.py",
+      "raw_sha256": "cddbc1e6b1f78cfaee3c1e05b008e8e98b9e7dd5afaa0c138cf4a3fed0a4333f",
+      "bytes": 6212,
+      "before": "absent",
+      "classification": "new bounded research adapter/test/navigation"
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\tools\\mltd_image_localization\\inject_reviewed_textures.py",
+      "raw_sha256": "72975698453b8e0ac50f4d9ecb7771fa7ef0e1e994044827e4c1ec36b5ab8bf9",
+      "bytes": 927,
+      "before": "absent",
+      "classification": "new bounded research adapter/test/navigation"
+    },
+    {
+      "path": "D:\\Project\\_MLTDTranslationAssets\\research-tools\\tools\\mltd_image_localization\\verify_bundle_repack.py",
+      "raw_sha256": "b55318cc6beb46f907e8b0a3a3f9e90b80e4d8ad0f53cac5226d763ecd8fe299",
+      "bytes": 659,
+      "before": "absent",
+      "classification": "new bounded research adapter/test/navigation"
+    }
+  ],
+  "source_closure": "basic public source closure only; production inputs external-blocked",
+  "issues_and_risk_acceptance": [
+    "Local candidate only; static scan is not public-distribution permission",
+    "No product pin supplied/auto-derived; no real writer or store acceptance claimed",
+    "Existing product pipeline behavior reused without editing business/Unity/image code",
+    "Missing quality map triggers inherited fallback; release QA equivalence is unverified",
+    "Archived full harness requires excluded legacy writer and is intentionally not run",
+    "Frozen data/path portability and private approved inputs require explicit target-owner decision",
+    "No active CI wiring, producer, generated/GC, network, commit/stage/push, deploy, NAS, port/device actions",
+    "Main-reported metadata: MLTD_ImageLocalization_20260919 Ready+Enabled with oldrepo reference; old execution entries not fully retired. Outer-task/docs handoff main-owned. No executor read of task argv/private inputs or scheduler operation."
+  ]
+}

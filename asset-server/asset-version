@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")"
+
+if [ "${1:-}" = "remote" ] && [ "${2:-}" = "pull" ]; then
+  if docker top imas-mltd-asset-updater 2>/dev/null | grep -Fq 'versioned_assets.py sync'; then
+    echo "MLTD updater is currently syncing an asset version; remote pull is refused to avoid concurrent archive writers." >&2
+    exit 75
+  fi
+fi
+
+exec docker compose --profile tools run --rm --no-deps   mltd-asset-tools tools/asset_version.py --root /data "$@"

@@ -1,5 +1,17 @@
 name: Auto Track Japanese Assets
 
+# 每日跟踪日版资源版本（Matsurihi API）。检测到新版本时：
+#   1. 把“离开的那一版”冻结成单一标签 assets-<version>（immutable：已存在且指向
+#      其他提交时直接失败，绝不移动）；该标签是后续 generated/<asset_version>/
+#      manifest.json 记录的 source_commit。
+#   2. 通过 PR 更新 manifests/asset-version.json —— 不再由 bot 直接合并到 main。
+#      此前 `gh pr merge --squash` 会绕过任何开启中的分支保护/审核要求；无论保护
+#      当前是否开启，bot 都不应自行合并，main 的推进保留给 owner/审查。
+#
+# 写路径全部绑定到 checkout 的固定提交：每个 job 都用 ref: ${{ github.sha }} 拉取，
+# 并在写操作前核对 git rev-parse HEAD 与 github.sha 一致，避免“用移动中的分支头
+# 冒充 source commit”。
+
 'on':
   schedule:
     # Run once daily at 16:00 UTC (01:00 JST / 00:00 CST)
@@ -13,113 +25,269 @@ name: Auto Track Japanese Assets
         type: boolean
 
 concurrency:
-  # The scheduled tracker mutates the asset-version tag/branch and opens a
-  # PR; a manual run must wait instead of racing the scheduled writer.
+  # 定时跟踪会推冻结标签与更新分支；手动运行排队等待，不与写者竞争。
   group: assets-track-jp-version
   cancel-in-progress: false
 
 jobs:
-  track:
-    name: Check New Asset Releases
+  resolve-target:
+    name: Resolve track target
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-
+      contents: read
+    outputs:
+      has_update: ${{ steps.check-version.outputs.has_update }}
+      current_version: ${{ steps.check-version.outputs.current_version }}
+      latest_version: ${{ steps.check-version.outputs.latest_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Bind the resolved commit to this checkout
+        run: |
+          set -euo pipefail
+          CHECKOUT_SHA="$(git rev-parse HEAD)"
+          if [ "$CHECKOUT_SHA" != "${{ github.sha }}" ]; then
+            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
+            echo "Every write below records this commit as the source commit; refusing to continue." >&2
+            exit 1
+          fi
+          echo "CHECKOUT_SHA=${CHECKOUT_SHA}" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Check Japanese Asset Version
+      - name: Check Japanese asset version
         id: check-version
         run: |
+          set -euo pipefail
           mkdir -p work
           set +e
           python scripts/track_jp_assets.py --check-only --output-json work/asset-report.json
           EXIT_CODE=$?
           set -e
-          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
-          if [ $EXIT_CODE -eq 10 ]; then
-            echo "has_update=true" >> $GITHUB_OUTPUT
-            LATEST_VER=$(python -c "import json; print(json.load(open('work/asset-report.json'))['latest_version'])")
-            CURRENT_VER=$(python -c "import json; print(json.load(open('work/asset-report.json'))['current_version'])")
-            echo "latest_version=$LATEST_VER" >> $GITHUB_OUTPUT
-            echo "current_version=$CURRENT_VER" >> $GITHUB_OUTPUT
-            echo "Found new asset version: $CURRENT_VER -> $LATEST_VER"
-          else
-            echo "has_update=false" >> $GITHUB_OUTPUT
-            echo "No new asset version detected."
+          echo "track_jp_assets --check-only exit=${EXIT_CODE}"
+          case "$EXIT_CODE" in
+            0)
+              # 0 = 已是最新，没有更新；这是唯一允许“无更新”的退出码。
+              echo "has_update=false" >> "$GITHUB_OUTPUT"
+              echo "No new asset version detected."
+              ;;
+            10)
+              # 10 = 检测到更新。报告文件缺失或解析失败必须 fail，不得当作无更新。
+              LATEST_VER=$(python -c "import json;print(json.load(open('work/asset-report.json'))['latest_version'])") \
+                || { echo "FAIL: work/asset-report.json missing or unparseable" >&2; exit 1; }
+              CURRENT_VER=$(python -c "import json;print(json.load(open('work/asset-report.json'))['current_version'])") \
+                || { echo "FAIL: work/asset-report.json missing or unparseable" >&2; exit 1; }
+              case "$LATEST_VER$CURRENT_VER" in
+                *[!0-9]*) echo "FAIL: non-numeric version in report (${CURRENT_VER} -> ${LATEST_VER})" >&2; exit 1 ;;
+              esac
+              if [ "$LATEST_VER" -le "$CURRENT_VER" ]; then
+                echo "FAIL: exit 10 but latest ${LATEST_VER} <= current ${CURRENT_VER}" >&2
+                exit 1
+              fi
+              echo "has_update=true" >> "$GITHUB_OUTPUT"
+              echo "latest_version=$LATEST_VER" >> "$GITHUB_OUTPUT"
+              echo "current_version=$CURRENT_VER" >> "$GITHUB_OUTPUT"
+              echo "Found new asset version: $CURRENT_VER -> $LATEST_VER"
+              ;;
+            *)
+              # 网络/API/解析等其他退出码：显式失败。旧版把任何非 10 都当作
+              # “无更新”，一次 API 故障会被静默记为成功。
+              echo "FAIL: track_jp_assets.py --check-only exited ${EXIT_CODE}; treating as failure, not as 'no update'." >&2
+              exit 1
+              ;;
+          esac
+
+  freeze:
+    name: Freeze outgoing asset version
+    needs: resolve-target
+    if: needs.resolve-target.outputs.has_update == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write  # 只用于推送冻结标签；不推分支、不建 PR
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Freeze the outgoing asset version tag
+        env:
+          OLD_VER: ${{ needs.resolve-target.outputs.current_version }}
+        run: |
+          set -euo pipefail
+          CHECKOUT_SHA="$(git rev-parse HEAD)"
+          if [ "$CHECKOUT_SHA" != "${{ github.sha }}" ]; then
+            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
+            exit 1
+          fi
+          TARGET="$CHECKOUT_SHA"
+
+          # 版本命名约定：`main` 始终跟随最新资源版本；离开的那一版用单一标签冻结，
+          # 供仍锁定旧版本的消费者复现。标签名是单轴纯数字版本，禁止复合串——
+          # Client 与 Assets 是两条独立发布轴（scripts/export_localization_for_github.py
+          # 的 validate_asset_axis 会拒绝复合版本）。
+          case "$OLD_VER" in
+            *"+"*|*client-*)
+              echo "FAIL: asset version '$OLD_VER' looks composite; refuse to tag it" >&2
+              exit 1
+              ;;
+          esac
+          case "$OLD_VER" in
+            ''|*[!0-9]*) echo "FAIL: current_version '$OLD_VER' is not numeric" >&2; exit 1 ;;
+          esac
+
+          TAG="assets-$OLD_VER"
+          echo "Freeze target: tag ${TAG} -> commit ${TARGET}"
+
+          # 先查远端状态，失败可见（旧版 `git tag -f ... || true` 会把本地打标失败
+          # 吞掉，再用 -f 强推覆盖远端标签）。
+          REMOTE_LINE="$(git ls-remote origin "refs/tags/${TAG}" || true)"
+          REMOTE_SHA="$(printf '%s\n' "$REMOTE_LINE" | awk '{print $1}' | head -n1)"
+
+          if [ -z "$REMOTE_SHA" ]; then
+            # 远端还没有这个标签：创建，且 source 显式写 TARGET，不依赖任何本地 ref。
+            git push origin "${TARGET}:refs/tags/${TAG}"
+            echo "Created freeze tag ${TAG} at ${TARGET}."
+            exit 0
           fi
 
-      - name: Freeze the outgoing asset version
-        if: steps.check-version.outputs.has_update == 'true'
+          if [ "$REMOTE_SHA" = "$TARGET" ]; then
+            echo "OK: tag ${TAG} already points at ${TARGET}; freeze is a no-op."
+            exit 0
+          fi
+
+          echo "FAIL: tag ${TAG} already exists at ${REMOTE_SHA}, but this run would freeze ${TARGET}." >&2
+          echo "Existing freeze tags are immutable: re-pointing one would silently change the" >&2
+          echo "source_commit that generated/<asset_version>/manifest.json records. No --force is used." >&2
+          exit 1
+
+  update-pr:
+    name: Update manifest and open PR
+    needs: resolve-target
+    if: needs.resolve-target.outputs.has_update == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write       # 推更新分支
+      pull-requests: write  # 创建/查找 PR（不合并）
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Update manifest and open pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_VER: ${{ needs.resolve-target.outputs.current_version }}
+          LATEST_VER: ${{ needs.resolve-target.outputs.latest_version }}
         run: |
-          OLD_VER="${{ steps.check-version.outputs.current_version }}"
-
-          # Version convention: `main` always carries the newest asset version.
-          # The state being left behind is frozen so an older version stays
-          # reproducible for anyone still pinned to it.
-          #
-          # The freeze point is a TAG, not a branch. The `assets-<version>` tag
-          # is a single-axis name: it identifies one frozen asset state, which
-          # is exactly what a later `generated/<asset_version>/manifest.json`
-          # records as its `source_commit`.
-          #
-          # This step used to ALSO push a `release/<client_version>+<asset_version>`
-          # branch. That has been removed on purpose: Client and Assets are
-          # independent release axes, and a branch name that concatenates them
-          # (`release/9.0.200+1077500`) is a composite version — the exact string
-          # the rest of the pipeline now refuses
-          # (`scripts/export_localization_for_github.py::validate_asset_axis`).
-          # Creating one here would manufacture a name the release tooling
-          # cannot read. If a composite branch is ever seen again, it is a bug
-          # in this workflow, not a valid release identity.
-          if [[ "$OLD_VER" == *"+"* || "$OLD_VER" == *"client-"* ]]; then
-            echo "FAIL: asset version '$OLD_VER' looks composite; refuse to tag it" >&2
+          set -euo pipefail
+          CHECKOUT_SHA="$(git rev-parse HEAD)"
+          if [ "$CHECKOUT_SHA" != "${{ github.sha }}" ]; then
+            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
             exit 1
           fi
 
-          TAG="assets-$OLD_VER"
-          git tag -f "$TAG" >/dev/null 2>&1 || true
-          git push -f origin "$TAG"
-          echo "Froze asset $OLD_VER as tag $TAG (no release branch: composite versions are forbidden)."
+          MANIFEST="manifests/asset-version.json"
+          BRANCH="chore/asset-update-${LATEST_VER}"
 
-      - name: Update Manifest and Create Pull Request
-        if: steps.check-version.outputs.has_update == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          LATEST_VER="${{ steps.check-version.outputs.latest_version }}"
-          CURRENT_VER="${{ steps.check-version.outputs.current_version }}"
-
-          # Update the version manifest
-          python scripts/track_jp_assets.py --update
-
-          # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          BRANCH_NAME="chore/asset-update-$LATEST_VER"
-          git checkout -b "$BRANCH_NAME"
-          git add manifests/asset-version.json
-          git commit -m "chore(assets): track new Japanese asset version $LATEST_VER"
-          git push -u origin "$BRANCH_NAME" --force
+          HEAD_VER=$(python -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
+            || { echo "FAIL: cannot read ${MANIFEST} at ${CHECKOUT_SHA}" >&2; exit 1; }
 
-          # Create PR
-          PR_TITLE="chore(assets): detect and track Japanese asset version $LATEST_VER"
-          PR_URL=$(gh pr create --title "$PR_TITLE" --body "Detected new Japanese asset version $LATEST_VER from Matsurihi API. Updated manifests/asset-version.json." --head "$BRANCH_NAME" --base main) || PR_URL=$(gh pr view "$BRANCH_NAME" --json url --jq .url)
+          # 幂等：checkout 的 manifest 已是目标版本则无事可做（重跑/取消重试都不制造空提交）。
+          if [ "$HEAD_VER" = "$LATEST_VER" ]; then
+            echo "Already tracking ${LATEST_VER} at ${CHECKOUT_SHA}; nothing to update."
+            exit 0
+          fi
+          if [ "$HEAD_VER" != "$CURRENT_VER" ]; then
+            echo "FAIL: checkout tracks ${HEAD_VER}, but the version check reported current ${CURRENT_VER}." >&2
+            exit 1
+          fi
+
+          python scripts/track_jp_assets.py --update
+          NEW_VER=$(python -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
+            || { echo "FAIL: ${MANIFEST} unreadable after --update" >&2; exit 1; }
+          if [ "$NEW_VER" != "$LATEST_VER" ]; then
+            echo "FAIL: --update wrote ${NEW_VER}, expected ${LATEST_VER}" >&2
+            exit 1
+          fi
+          if git diff --quiet -- "${MANIFEST}"; then
+            echo "Manifest content already matches ${LATEST_VER}; no commit needed."
+            exit 0
+          fi
+
+          git checkout -b "$BRANCH"
+          git add "$MANIFEST"
+          git commit -m "chore(assets): track new Japanese asset version ${LATEST_VER}"
+
+          # 推分支：一律不带 force（含重试）。远端已存在同名分支时绝不重写它——
+          # 该分支只可能是本 bot 上一次运行留下的等价更新（`last_synced_at` 每次
+          # 不同，内容重复无意义），直接复用；若它包含任何非本 bot 的单文件提交，
+          # 显式失败退出，避免覆盖他人工。
+          REMOTE_LINE="$(git ls-remote origin "refs/heads/${BRANCH}" || true)"
+          REMOTE_SHA="$(printf '%s\n' "$REMOTE_LINE" | awk '{print $1}' | head -n1)"
+
+          if [ -z "$REMOTE_SHA" ]; then
+            git push -u origin "HEAD:refs/heads/${BRANCH}"
+          else
+            git fetch --quiet --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
+            if git merge-base --is-ancestor "refs/remotes/origin/${BRANCH}" "${CHECKOUT_SHA}"; then
+              echo "Remote ${BRANCH} is already contained in ${CHECKOUT_SHA}; reusing it as-is."
+            else
+              EXTRA_COMMITS="$(git rev-list "refs/remotes/origin/${BRANCH}" --not "${CHECKOUT_SHA}" || true)"
+              for commit in $EXTRA_COMMITS; do
+                FILES="$(git diff-tree --no-commit-id --name-only -r "$commit")"
+                AUTHOR="$(git show -s --format='%an <%ae>' "$commit")"
+                if [ "$FILES" != "$MANIFEST" ] || \
+                   [ "$AUTHOR" != "github-actions[bot] <github-actions[bot]@users.noreply.github.com>" ]; then
+                  echo "FAIL: remote ${BRANCH} carries commit ${commit} (${AUTHOR}) touching [${FILES}]" >&2
+                  echo "Refusing to reuse a branch that is not purely this bot's single-file update." >&2
+                  exit 1
+                fi
+              done
+              echo "Reusing existing tracker branch ${BRANCH} at ${REMOTE_SHA} (no push, no rewrite)."
+            fi
+          fi
+
+          # 建档 PR（不合并）：main 的推进保留给 owner/审查。
+          PR_URL="$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url' 2>/dev/null || true)"
+          if [ -z "$PR_URL" ] && [ -n "$REMOTE_SHA" ]; then
+            # 分支已存在于远端：如果它与当前提交对 manifest 没有差异（例如已经被合并过），
+            # 就没有可开的 PR，直接结束。
+            if git diff --quiet "refs/remotes/origin/${BRANCH}" "${CHECKOUT_SHA}" -- "$MANIFEST"; then
+              echo "OK: ${BRANCH} adds no manifest change over ${CHECKOUT_SHA}; nothing to open."
+              exit 0
+            fi
+          fi
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr create \
+              --title "chore(assets): detect and track Japanese asset version ${LATEST_VER}" \
+              --body "Detected new Japanese asset version ${LATEST_VER} from Matsurihi API (source commit ${CHECKOUT_SHA}). Updated manifests/asset-version.json. Freeze tag for the outgoing version is handled by the freeze job." \
+              --head "$BRANCH" --base main)"
+          fi
           echo "PR: $PR_URL"
-
-          # The manifest is informational: it records which asset version the
-          # repository is tracking, and the validation workflow gates the diff.
-          # Merge it directly instead of leaving the detection stranded in an
-          # open PR nobody revisits. `main` always tracks the newest version.
-          gh pr merge "$PR_URL" --squash --delete-branch || echo "Auto-merge failed; merge $PR_URL manually"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### Asset version ${CURRENT_VER} -> ${LATEST_VER}"
+              echo "- source commit: \`${CHECKOUT_SHA}\`"
+              echo "- branch: \`${BRANCH}\`"
+              echo "- pull request (merge left to the owner): ${PR_URL}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

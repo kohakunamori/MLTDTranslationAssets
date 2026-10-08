@@ -86,6 +86,19 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 直接写入 `main` 并保留 `llm_translated` 标记，维护者可直接修正。构建或源校验
 失败时不会提交 `generated/`。
 
+## 配套资产服务（asset-server/，候选）
+
+`asset-server/` 是本仓**自足**的最小运行闭包（本仓内唯一 writer 的消费端）：
+
+- `assets_mirror.py`（本仓 `scripts/`）：把 `generated/` 的已发布版本显式同步到独立
+  mirror root（`objects/sha256/<digest>` + `published/<ver>/…`）；只同步，不激活、不清理
+  （`activate`/`prune` 是单独的显式动作）。
+- `assets_route.py`：只读 HTTP 分发（loopback），按 manifest 的 `runtime_path` /
+  `logical_path` 读取并逐请求复验对象字节。
+- `docker-compose.yml` / `Dockerfile`：三个服务的静态部署模板（候选，未部署）；构建
+  上下文为本仓根，不依赖任何兄弟仓库。运行与回归入口见
+  [`asset-server/README.md`](asset-server/README.md)。
+
 ## 许可证与致谢
 
 本仓库文本基于游戏日版文本翻译与整理，版权归 Bandai Namco Entertainment Inc. 所有。

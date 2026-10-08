@@ -10,8 +10,15 @@ publishes the resulting Unity3D files through the content-addressed store.
 Image inputs are intentionally optional until reviewed PNGs are present.  A
 missing image input is reported as ``blocked`` and never represented as a
 successful image artifact; text generation can still produce a valid release.
-Use ``--require-images`` when a release is required to contain the image
-surface as well.
+
+``--require-images`` is **not yet implementable**.  This builder has no image
+materialization/injector step and no independent image audit, so it cannot
+produce a release that contains the image surface.  A text-only release is
+never proof that images were produced: the mere presence of reviewed PNG inputs
+on disk is not an image artifact.  ``--require-images`` therefore fails closed
+immediately, before any version/input scan or side effect, instead of
+publishing a text-only release that is mislabelled as satisfying the image
+requirement.  The default (no flag) text path is unchanged.
 """
 from __future__ import annotations
 
@@ -275,14 +282,29 @@ def main() -> int:
     parser.add_argument("--ci-run-id", default=os.environ.get("GITHUB_RUN_ID"))
     parser.add_argument("--max-bundles", type=int, default=0,
                         help="test-only cap; production must leave this at zero")
-    parser.add_argument("--require-images", action="store_true")
+    parser.add_argument("--require-images", action="store_true",
+                        help="Fail closed: this builder cannot materialize/inject the image "
+                             "surface or audit it independently, so requiring images always "
+                             "refuses. The default text-only path is unaffected.")
     args = parser.parse_args()
     if not args.ci_run_id:
         raise ValueError("CI run identity is required; set GITHUB_RUN_ID or --ci-run-id")
+    # Fail closed before any version/input scan or side effect (work dirs,
+    # downloads, overlay subprocess, store publication).  This builder has no
+    # image materialization/injector step and no independent image audit, so a
+    # text-only release can never satisfy an image requirement.  The presence
+    # of reviewed PNG inputs on disk is not evidence that an image artifact was
+    # produced; publication must not proceed on that basis.
+    if args.require_images:
+        raise ValueError(
+            "--require-images is not implementable: this builder has no image "
+            "materialization/injector step and no independent image audit, so it cannot "
+            "produce a release containing the image surface. A text-only release is never "
+            "proof that images were produced, and reviewed PNG inputs on disk are not an "
+            "image artifact. Refusing to publish a text-only release mislabelled as "
+            "satisfying the image requirement.")
     version = load_version_manifest(args.version_manifest)
     images_ready = image_inputs_are_complete(ROOT)
-    if args.require_images and not images_ready:
-        raise ValueError("--require-images was requested but reviewed localized PNG inputs are incomplete")
     grouped = read_translation_rows(ROOT, version["asset_version"])
     work = args.work_root.resolve()
     work.mkdir(parents=True, exist_ok=True)

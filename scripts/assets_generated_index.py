@@ -859,6 +859,23 @@ class GeneratedStore:
 
         accepted, rejected = self._admit_entries(version, client_version, entries, base)
 
+        # 校验 runtime_path 的全批唯一性，且必须早于任何 put_object 写对象/发布文件
+        # 的动作：否则一次失败的 build 会先改变对象池，再在发布前才报错。一个客户端
+        # 路径只能映射到一个 logical_key，出现冲突时整个 build 失败且不落任何字节。
+        # （与主仓 :975-990 及 test_duplicate_runtime_path_fails_closed_before_any_store_change 一致）
+        runtime_paths: dict[str, str] = {}
+        for item in accepted:
+            runtime_path = item.get("runtime_path")
+            if runtime_path is None:
+                continue
+            prior = runtime_paths.get(runtime_path)
+            if prior is not None and prior != item["logical_key"]:
+                raise GeneratedStoreError(
+                    f"runtime_path {runtime_path!r} is used by both {prior!r} and "
+                    f"{item['logical_key']!r}; one client path cannot map ambiguously"
+                )
+            runtime_paths[runtime_path] = item["logical_key"]
+
         manifest_entries: list[dict[str, Any]] = []
         objects_written = 0
         objects_deduped = 0
@@ -878,19 +895,6 @@ class GeneratedStore:
                 "ci_run_id": run_id,
             }))
             manifest_entries[-1].pop("_artifact_abs", None)
-
-        runtime_paths: dict[str, str] = {}
-        for item in manifest_entries:
-            runtime_path = item.get("runtime_path")
-            if runtime_path is None:
-                continue
-            prior = runtime_paths.get(runtime_path)
-            if prior is not None and prior != item["logical_key"]:
-                raise GeneratedStoreError(
-                    f"runtime_path {runtime_path!r} is used by both {prior!r} and "
-                    f"{item['logical_key']!r}; one client path cannot map ambiguously"
-                )
-            runtime_paths[runtime_path] = item["logical_key"]
 
         manifest_entries.sort(key=lambda item: (item["logical_path"], item["logical_key"]))
         manifest = {

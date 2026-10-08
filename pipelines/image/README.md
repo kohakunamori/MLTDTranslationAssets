@@ -36,8 +36,10 @@ export OPENAI_API_KEY="your_api_key_here"
 | `preprocess_mltd_image25.py` | 提取并解析 Unity Sprite 图集，根据 Sprite 几何结构重组整幅原始画面 |
 | `run_mltd_image25_batch.py` | 批量调度 `gpt-image-2.5-sunburst` 进行图像去日文与简中重绘 |
 | `build_mltd_image25_review_gallery.py` | 生成用于人工审查的 Web HTML 对照画廊 (Original vs Localized) |
-| `stage_reviewed_images.py` | 将人工审核通过的 PNG 纹理重新切片并精准写回 Unity3D Bundle |
-| `audit_reconstructed_release.py` | 校验回填后的 Unity3D Bundle，确保 ASTC 纹理尺寸、哈希和平台一致性 |
+| `stage_reviewed_images.py` | 将离线人工审核 CSV 转为 **SHA 绑定的待装审批清单**（`--review-csv` 必填，`--work`/`--output` 选填）。**不修改、不创建 Unity3D Bundle**；每一行的 `review_status` 固定写 `approved_for_staging_not_installed`，且不会自动接受模型结果 |
+| `audit_reconstructed_release.py` | 安装**前**的镜像制备审计：校验冻结的重组图身份与全部生成 PNG 的尺寸/哈希/ROI 外像素，产出未审校 QA 清单与人工复核阻塞项；**不做任何 Unity 物化**，也不接受 non-PNG 源 |
+| `inject_reviewed_textures.py` | 源绑定注入器：把已人工审核的 PNG 真注入 UnityFS Texture2D，产出 repack 后的 Bundle 与 `inventory.json`（`--install-manifest` 必填；见 **§4.1**） |
+| `verify_bundle_repack.py` | 对上述注入 run 的**独立再审计**：读取报告的定位与 hash，独立重新比对源/输出对象和纹理（见 **§4.2**） |
 | `provider_config.py` | 统一的凭据安全管理、代理与超时重试配置模块 |
 
 ## 4. 运行示例
@@ -52,8 +54,62 @@ python run_mltd_image25_batch.py --input-dir /path/to/reconstructed --output-dir
 python build_mltd_image25_review_gallery.py --pairs /path/to/review_pairs.json --output gallery.html
 ```
 
-### 步骤 3：回填并通过质检
+### 步骤 3：暂存人工审批、注入与独立复核
+
 ```bash
-python stage_reviewed_images.py --approved-list approved.txt --target-bundles /path/to/bundles
-python audit_reconstructed_release.py --bundle-dir /path/to/bundles
+# (a) 把离线人工审核 CSV 转为 SHA 绑定的待装审批清单。
+#     只写清单，不触碰 Unity3D Bundle；--review-csv 必填。
+#     输出为 SHA 绑定的待装清单；--work/--output 仅为示例路径。
+python stage_reviewed_images.py --review-csv review.csv \
+    --work /path/to/review-work --output /path/to/staging/approved-for-staging.jsonl
+```
+
+注入器/审计器的输入**全部显式**（不读环境变量、无默认路径、不搜索同级目录）。以下示例按 runner 自身规则给出：`--original-root` 仅为相对 `original_png` 提供；`--report`/`--out`/`--audit` 均须显式。
+
+```bash
+# (b) 源绑定注入（此处仅示意参数；不要在此真跑 --all 注入）。
+python inject_reviewed_textures.py --all \
+    --install-manifest /path/to/reviewed-cohort.jsonl \
+    --original-root /path/to/originals \
+    --out /path/to/injection-out \
+    --report /path/to/injection-out/../image-inject-report.json
+
+# (c) 独立再审计同一 run（输出写到显式 --audit）。
+python verify_bundle_repack.py \
+    --report /path/to/image-inject-report.json \
+    --install-manifest /path/to/reviewed-cohort.jsonl \
+    --audit /path/to/independent-audit.json
+
+# (d) 只读预检：报告输入是否可解析（install manifest / SHA-256 / 行数、bundle 数、
+#     original root），不产出 bundle、不创建 --out/--report。缺元数据以“缺元数据”报出，
+#     而非被判为注入失败。
+python inject_reviewed_textures.py --preflight-context \
+    --install-manifest /path/to/reviewed-cohort.jsonl
+```
+
+以上各例中，(b)(c) 的真实运行模式**不要在本仓库未接入前执行**：注入器与审计器尚未接入 `assemble`/发布链，`audit_reconstructed_release.py` 仍是**安装前**审计（非 repack 后审计），旧的 `--approved-list`/`--target-bundles`/`--bundle-dir` 并不是这些工具的真实选项。
+
+
+
+> **重要（未接入，勿直接串联）：** `stage_reviewed_images.py` 产出标签为 `approved_for_staging_not_installed`，而注入器只接受用户审批标签 `user_approved_for_isolated_install_staging`；两者**不兼容**。本仓库**未实现**两者之间的 source-bound 桥接，也未自动改写 review 标签或把模型图改标为 accepted。因此**不能**把 (a) 的输出直接喂给 (b)。桥接需要一个有文档化用户审批步骤的 source-bound 转换，属未完成工作。
+
+
+
+> **未接入/边界声明：** 注入器/审计器**未**接入 `build_generated_release`（`--require-images` 仍按原样 fail-closed）；`assemble_frozen1077100_overlay.py` 尚未调用它们；旧 `tools/mltd_image_localization/` 消费方未切换、原工具未退役；两者**不含**任何 asset-version 权威证明（版本无关的 source/CLI 工具）。管道内**没有**根 `pyproject.toml` 与管道级 requirements，唯一的 `asset-server/requirements.txt` **不适用**于本模块的依赖。
+
+
+
+### 依赖与测试
+
+运行时依赖为 `inject_reviewed_textures.py`、`verify_bundle_repack.py` 与 `test_image_injection_contract.py` 三者共用的标准库之外库；`requirements-injection.txt` 仅列这三个（`numpy`/`Pillow`/`UnityPy`）。
+
+```bash
+# 安装运行时依赖（仅文档，未在此仓库执行）
+python -m pip install -r requirements-injection.txt
+
+# pytest 是独立的 test-time 依赖，不属运行时依赖，需单独显式安装
+python -m pip install pytest==8.4.2
+
+# 契约测试（用独立、明确的方式运行）
+python -m pytest -p no:cacheprovider test_image_injection_contract.py
 ```
