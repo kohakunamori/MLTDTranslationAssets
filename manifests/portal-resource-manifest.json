@@ -27688,10 +27688,10 @@
       "blocked": 0,
       "bundles": {
         "CD_jp.gtx": {
-          "pending": 283,
+          "pending": 295,
           "total": 25356,
           "translated": 25061,
-          "untranslated": 12
+          "untranslated": 0
         }
       },
       "description": "队长技、演出技能与专属介绍",
@@ -27700,13 +27700,13 @@
       "icon": "⚔️",
       "id": "card_skill",
       "name": "卡片技能与卡面档案",
-      "pending": 283,
+      "pending": 295,
       "reused": 0,
       "suggested": 0,
       "total": 25356,
       "translated": 25061,
       "unit": "句",
-      "untranslated": 12
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -48526,10 +48526,10 @@
       "blocked": 0,
       "bundles": {
         "MD_jp.gtx": {
-          "pending": 1251,
+          "pending": 1256,
           "total": 117315,
           "translated": 116056,
-          "untranslated": 8
+          "untranslated": 3
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -71116,13 +71116,13 @@
       "icon": "⚙️",
       "id": "system_ui",
       "name": "系统菜单与玩法规则",
-      "pending": 1251,
+      "pending": 1256,
       "reused": 0,
       "suggested": 0,
       "total": 175626,
       "translated": 174367,
       "unit": "句",
-      "untranslated": 8
+      "untranslated": 3
     },
     {
       "blocked": 0,
@@ -71159,10 +71159,10 @@
     },
     {
       "id": "card",
-      "pending": 285,
+      "pending": 297,
       "total": 83488,
       "translated": 83191,
-      "untranslated": 12
+      "untranslated": 0
     },
     {
       "id": "dialogue",
@@ -71180,40 +71180,40 @@
     },
     {
       "id": "system",
-      "pending": 1251,
+      "pending": 1256,
       "total": 175626,
       "translated": 174367,
-      "untranslated": 8
+      "untranslated": 3
     }
   ],
   "generated_at": "2026-10-08T13:12:29.624063+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1077710",
-    "assets_commit": "e1f3fdeaeba16952da01d2d7d562944b5b3e80fc",
+    "assets_commit": "32db3b0581894191c406427befeb9bd13b70dadb",
     "release_id": "assets-1077710",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "052e4e748889000c29a94d767bf43977ea8746ad9fc1a943604c958561c4edc1",
+    "source_manifest_sha256": "07fdaecf0c42891e0a655320d7411fe12b18e4b7e1f45e607cbcb72dc074187f",
     "status": "published",
     "updated_at": "2026-10-08T10:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "e1f3fdeaeba16952da01d2d7d562944b5b3e80fc",
+    "commit": "32db3b0581894191c406427befeb9bd13b70dadb",
     "generated_entry_count": 11817,
-    "generated_manifest_sha256": "052e4e748889000c29a94d767bf43977ea8746ad9fc1a943604c958561c4edc1",
+    "generated_manifest_sha256": "07fdaecf0c42891e0a655320d7411fe12b18e4b7e1f45e607cbcb72dc074187f",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "3d0a2adf47d7e6d88b76dc5ceba155c03cd446cae5718cf0e04fc45c016beb48",
+    "source_catalogue_sha256": "34087a3769fd4e408b4935c97129a58b7ce7d3df5f6b9a6a6c8fb0b3f2975e89",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
   "totals": {
     "blocked": 0,
-    "pending": 1916,
+    "pending": 1933,
     "reused": 0,
     "suggested": 0,
     "total": 393417,
     "translated": 391481,
-    "untranslated": 20
+    "untranslated": 3
   }
 }
