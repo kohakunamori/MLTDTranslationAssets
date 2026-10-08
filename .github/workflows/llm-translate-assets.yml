@@ -13,9 +13,19 @@ on:
         description: 'Optional official-bundle limit for a smoke run'
         required: false
         default: '0'
+      max_new_rows:
+        description: 'Accept an append larger than the default new-row cap (0 keeps the script default)'
+        required: false
+        default: '0'
+      full_rescan:
+        description: 'Ignore manifests/official-bundle-index.json and re-download every tracked bundle'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: assets-llm-translation
@@ -31,6 +41,9 @@ jobs:
     # gateway configured in configs/api-models.example.json. Only the API key
     # is imported from Actions secrets into an ephemeral runner-temp file.
     runs-on: ubuntu-latest
+    # A cold cache re-verifies every tracked bundle (~1 hour); the memo makes a
+    # normal run minutes. Anything past three hours is a hang, not progress.
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,10 +95,18 @@ jobs:
           set -euo pipefail
           has_update=$(python -c 'import json; print(str(json.load(open(".llm-asset-check.json"))["has_update"]).lower())')
           if [ "$has_update" = true ]; then
-            args=(scripts/refresh_latest_official_catalogue.py)
+            args=(scripts/refresh_latest_official_catalogue.py
+                  --bundle-index manifests/official-bundle-index.json)
             bundle_limit='${{ inputs.max_bundles }}'
             if [ -n "$bundle_limit" ] && [ "$bundle_limit" != 0 ]; then
               args+=(--max-bundles "$bundle_limit")
+            fi
+            row_cap='${{ inputs.max_new_rows }}'
+            if [ -n "$row_cap" ] && [ "$row_cap" != 0 ]; then
+              args+=(--max-new-rows "$row_cap")
+            fi
+            if [ '${{ inputs.full_rescan }}' = 'true' ]; then
+              args+=(--full-rescan)
             fi
             python "${args[@]}"
           else
@@ -102,6 +123,12 @@ jobs:
           printf '%s\n' '{"schema_version":1,"speakers":{}}' > .llm-character-evidence.json
 
       - name: Translate with the existing provider pool
+        # A handful of items always end up failing every provider attempt. That
+        # is not a reason to discard the ~99% that succeeded: tolerate the exit
+        # code here and let the apply/commit steps publish what was accepted.
+        # The summary step below still fails the run when nothing was accepted.
+        id: translate
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -132,6 +159,11 @@ jobs:
           python pipelines/text/translate_mltd_api_pool.py "${args[@]}"
 
       - name: Apply LLM translations
+        # Explicitly not gated on the tolerated translate failure above; still
+        # skipped when an earlier step really failed, so a broken workspace is
+        # never turned into a commit.
+        id: apply
+        if: success() || steps.translate.outcome == 'failure'
         shell: bash
         run: |
           set -euo pipefail
@@ -143,17 +175,24 @@ jobs:
           python scripts/validate_repo.py
 
       - name: Commit LLM translations to main
+        # Runs whenever the apply step itself validated, even if a few queue
+        # items failed terminally; never runs after a failed apply/validation.
+        if: success() || steps.apply.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$(git status --porcelain -- locales manifests/asset-version.json)" ]; then
+          paths=(locales manifests/asset-version.json)
+          if [ -f manifests/official-bundle-index.json ]; then
+            paths+=(manifests/official-bundle-index.json)
+          fi
+          if [ -z "$(git status --porcelain -- "${paths[@]}")" ]; then
             echo 'No changes to publish.'
             exit 0
           fi
           version=$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["asset_version"])')
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add locales manifests/asset-version.json
+          git add "${paths[@]}"
           git commit -m "ci(assets): apply LLM translations for asset $version"
 
           # Publish directly to main by policy. Never force-push: if another
@@ -171,3 +210,68 @@ jobs:
             git rebase origin/main
             python scripts/validate_repo.py
           done
+
+      - name: Upload translation diagnostics
+        # Always keep the evidence: the failed items and the accepted drafts are
+        # otherwise lost with the runner, which is what made the 2026-10 outage
+        # invisible.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-translation-diagnostics
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+          path: |
+            .llm-summary.json
+            .llm-failed.jsonl
+            .llm-draft.jsonl
+            .llm-queue.jsonl
+            .llm-asset-check.json
+
+      - name: Summarize translation outcome
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f .llm-summary.json ]; then
+            echo 'No translation summary was produced by this run.'
+            exit 0
+          fi
+          accepted=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("accepted", 0))')
+          failed=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("failed", 0))')
+          queue=0
+          if [ -f .llm-queue.jsonl ]; then queue=$(wc -l < .llm-queue.jsonl); fi
+          echo "accepted=$accepted failed=$failed queue=$queue"
+          if [ "$failed" -gt 0 ]; then
+            echo "::warning title=Partial LLM translation failures::$failed of $((accepted + failed)) items failed every provider attempt; the $accepted accepted rows were still published. Inspect the llm-translation-diagnostics artifact."
+          fi
+          # A total provider outage has to be loud, but a queue that only holds a
+          # few stubborn rows would otherwise fail - and open an issue - every
+          # single day. Healthy ~1.3k-row runs fail 0.5-1.5% of their items, so a
+          # failed count this high with nothing accepted means the pool is down;
+          # smaller leftovers stay a warning and are retried by the next run.
+          if [ "$accepted" -eq 0 ] && [ "$failed" -ge 50 ]; then
+            echo "::error title=LLM translation produced no accepted rows::$failed of $queue queued items failed and none were accepted; nothing was published."
+            exit 1
+          fi
+
+      - name: Report a real failure as a tracking issue
+        # Only genuine breakage reaches here: a partial QA failure is a warning,
+        # so a silently broken pipeline is visible instead of failing quietly.
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          title='Auto-apply LLM translations failed'
+          body=$(printf 'Workflow run: %s/%s/actions/runs/%s\n\nDownload the `llm-translation-diagnostics` artifact of that run for `.llm-summary.json`, `.llm-queue.jsonl` and `.llm-failed.jsonl`.\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          existing=$(gh issue list --state open --search "$title in:title" --limit 1 --json number --jq '.[0].number // empty' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body" || echo 'warning: could not comment on the tracking issue'
+            echo "Commented on open issue #$existing."
+          else
+            gh issue create --title "$title" --body "$body" || echo 'warning: could not create a tracking issue'
+          fi
