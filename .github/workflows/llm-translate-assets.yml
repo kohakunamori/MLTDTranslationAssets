@@ -22,10 +22,18 @@ on:
         required: false
         type: boolean
         default: false
+      publish_drafts:
+        description: 'Publish machine drafts to the generated build (set false to keep them pending for review)'
+        required: false
+        default: 'true'
 
 permissions:
   contents: write
   issues: write
+  # The generated build must be dispatched explicitly: a GITHUB_TOKEN push does
+  # not create workflow runs, and workflow_dispatch is one of the two events
+  # exempt from that suppression.
+  actions: write
 
 concurrency:
   group: assets-llm-translation
@@ -174,10 +182,37 @@ jobs:
           python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl
           python scripts/validate_repo.py
 
+      - name: Publish machine drafts for the generated build
+        # Machine output is admitted to generated/<asset_version>/ here, and only
+        # here: this step flips `pending` + `llm_translated` rows to
+        # `status=accepted` while KEEPING the `llm_translated` provenance.  The
+        # row is therefore admitted to the release without being relabelled as
+        # human-reviewed, and no row the machine did not write is touched.
+        # Disable per run with publish_drafts=false, or globally by setting the
+        # repository variable MLTD_PUBLISH_LLM_DRAFTS=false.
+        id: publish
+        if: >-
+          (success() || steps.apply.outcome == 'success') &&
+          inputs.publish_drafts != 'false' &&
+          vars.MLTD_PUBLISH_LLM_DRAFTS != 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/llm_translate_untranslated.py publish --dry-run
+          python scripts/llm_translate_untranslated.py publish | tee .llm-publish.json
+          # Promotion turns on the accepted-row protected-token gate, so the
+          # repository must be revalidated between promotion and the commit.
+          python scripts/validate_repo.py
+
       - name: Commit LLM translations to main
         # Runs whenever the apply step itself validated, even if a few queue
-        # items failed terminally; never runs after a failed apply/validation.
-        if: success() || steps.apply.outcome == 'success'
+        # items failed terminally; never runs after a failed apply or a failed
+        # promotion.  A failed promotion must not be committed as if the run's
+        # local state were the reviewed state.
+        id: commit
+        if: >-
+          (success() || steps.apply.outcome == 'success') &&
+          steps.publish.outcome != 'failure'
         shell: bash
         run: |
           set -euo pipefail
@@ -190,16 +225,26 @@ jobs:
             exit 0
           fi
           version=$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["asset_version"])')
+          promoted=0
+          if [ -f .llm-publish.json ]; then
+            promoted=$(python -c 'import json; print(json.load(open(".llm-publish.json"))["promoted"])')
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add "${paths[@]}"
-          git commit -m "ci(assets): apply LLM translations for asset $version"
+          if [ "$promoted" -gt 0 ]; then
+            git commit -m "ci(assets): apply and publish LLM drafts for asset $version" \
+                       -m "Machine drafts admitted to the generated build: $promoted row(s); translation_stage stays llm_translated."
+          else
+            git commit -m "ci(assets): apply LLM translations for asset $version"
+          fi
 
           # Publish directly to main by policy. Never force-push: if another
           # workflow advances main, rebase this generated commit and retry.
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then
               echo "Published LLM translations to main on attempt $attempt."
+              echo "published=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -210,6 +255,19 @@ jobs:
             git rebase origin/main
             python scripts/validate_repo.py
           done
+
+      - name: Trigger the generated Assets build
+        # Without this dispatch the freshly published rows would sit on main
+        # until some unrelated push happened to trigger assets-generated.yml:
+        # a GITHUB_TOKEN push never starts another workflow run.
+        if: steps.commit.outputs.published == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run assets-generated.yml --ref main
+          echo 'Dispatched assets-generated.yml on main.'
 
       - name: Upload translation diagnostics
         # Always keep the evidence: the failed items and the accepted drafts are
@@ -228,12 +286,21 @@ jobs:
             .llm-draft.jsonl
             .llm-queue.jsonl
             .llm-asset-check.json
+            .llm-publish.json
 
       - name: Summarize translation outcome
         if: always()
         shell: bash
         run: |
           set -euo pipefail
+          # The promotion runs even when this run's queue was empty, so report it
+          # before the translation summary's early exit.
+          if [ -f .llm-publish.json ]; then
+            promoted=$(python -c 'import json; print(json.load(open(".llm-publish.json"))["promoted"])')
+            echo "Machine drafts promoted to accepted: $promoted"
+          else
+            echo 'No machine-draft promotion ran in this run.'
+          fi
           if [ ! -f .llm-summary.json ]; then
             echo 'No translation summary was produced by this run.'
             exit 0

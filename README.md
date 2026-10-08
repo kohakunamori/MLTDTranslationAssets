@@ -61,12 +61,14 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 3. **安全隔离控制符**：客户端引擎使用 `|` 和 `^` 作为底层控制分隔符。**严禁在译文 `zh` 中输入半角 `|` 或 `^`**（可使用全角 `｜` 或 `＾`）。
 4. **状态说明**：
    - `untranslated`：待翻译条目，`zh` 为空字符串。
-   - `pending`：已生成初稿或机器翻译，等待人工审校。
-   - `accepted`：已通过人工质量审校、可进入构建的译文。
+   - `pending`：已生成初稿或机器翻译，尚未进入构建。
+   - `accepted`：允许进入 `generated/<asset_version>/` 构建的译文。
 
-`translation_stage`（新条目使用）进一步标记流程：`untranslated` →
-`llm_translated` → `human_translated`。LLM CI 的结果会自动提交到 `main`，但仍
-保留 `pending`，方便维护者审校；只有人工确认后才改为 `human_translated`。
+`status` 只回答「这一行能不能进构建」，**文本出处**由 `translation_stage` 记录：
+`untranslated` → `llm_translated` → `human_translated`。因此 `accepted` 有两种合法
+出处：`accepted + human_translated`（人工审校）与 `accepted + llm_translated`（机翻
+直接发布）。后者由 `scripts/llm_translate_untranslated.py publish` 产生，**不会**被
+改写成 `human_translated`，发布产物始终可追溯到「这段文字是机器产出的」。
 
 ## Web 翻译门户与在线协同
 
@@ -82,11 +84,21 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 4. 机器人把状态晋级和 `generated/` 一起提交回 `main`，提交带 `[skip ci]`，不会自触发循环；
 5. `sync-to-portal.yml` 随 `locales/` 变更同步 Portal 索引。
 
-普通协作翻译仍以 GitHub PR 合并作为审核入口；LLM CI 是例外：它会先把结果
-直接写入 `main` 并保留 `llm_translated` 标记，维护者可直接修正。构建或源校验
-失败时不会提交 `generated/`。
+定时 LLM 路径（`llm-translate-assets.yml`）走同一条构建链路，只是晋级与派发都是它
+自己做的：`apply`（写 `pending/llm_translated`）→ `publish`（晋级为 `accepted`，
+保留出处）→ 提交 `main` → `workflow_dispatch` 触发 `assets-generated.yml`。两条路径
+共用同一个 `generated/` writer，因此仍只有一个 writer。
 
-## 配套资产服务（asset-server/，候选）
+普通协作翻译仍以 GitHub PR 合并作为审核入口；LLM CI 是独立路径：它先把结果直接
+写入 `main` 并保留 `llm_translated` 标记，随后由 `llm_translate_untranslated.py
+publish` 把 `pending + llm_translated` 的行原地晋级为 `accepted`（出处仍是
+`llm_translated`），提交后用 `workflow_dispatch` 显式触发 `assets-generated.yml`
+——`GITHUB_TOKEN` 的 push 不会触发其他工作流，不派发的话新译文会一直等到某次无关
+推送才被构建。想回到「只人工审校」：把仓库变量 `MLTD_PUBLISH_LLM_DRAFTS` 设为
+`false`，或手动触发时传 `publish_drafts=false`。构建或源校验失败时不会提交
+`generated/`。
+
+## 配套资产服务（asset-server/）
 
 `asset-server/` 是本仓**自足**的最小运行闭包（本仓内唯一 writer 的消费端）：
 
@@ -95,7 +107,13 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
   （`activate`/`prune` 是单独的显式动作）。
 - `assets_route.py`：只读 HTTP 分发（loopback），按 manifest 的 `runtime_path` /
   `logical_path` 读取并逐请求复验对象字节。
-- `docker-compose.yml` / `Dockerfile`：三个服务的静态部署模板（候选，未部署）；构建
+- `generated-assets/`：NAS 上**已部署**的 generated 分发服务闭包
+  （`mltd-generated-assets` 只读路由 + `mltd-generated-assets-sync` 常驻同步）。
+  同步每 6 小时按 `main` HEAD 自动发现 `generated/<asset_version>/`，所以新版本不需要
+  任何人工登记；`deployed.json` 记录部署的 NAS 字节哈希，`test_closure.py` 离线钉住契约。
+- `nginx-vhost.conf`：共享 nginx（`on-demand-nginx:18443`）的项目 vhost 副本，含
+  `/generated-assets/<ver>/…` 与 `/cn/<ver>/…` 到 loopback resolver 的映射。
+- `docker-compose.yml` / `Dockerfile`：官方归档侧三个服务的静态部署模板；构建
   上下文为本仓根，不依赖任何兄弟仓库。运行与回归入口见
   [`asset-server/README.md`](asset-server/README.md)。
 

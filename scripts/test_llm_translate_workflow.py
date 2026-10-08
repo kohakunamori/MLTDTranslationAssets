@@ -86,6 +86,43 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
     def test_job_cannot_hang_forever(self):
         self.assertEqual(self.job["timeout-minutes"], 180)
 
+    def test_machine_drafts_are_admitted_by_one_explicit_step(self):
+        """C: machine output reaches generated/<ver>/ only through `publish`."""
+        names = [step.get("name") for step in self.job["steps"]]
+        self.assertLess(names.index("Apply LLM translations"), names.index("Publish machine drafts for the generated build"))
+        self.assertLess(names.index("Publish machine drafts for the generated build"), names.index("Commit LLM translations to main"))
+        publish = self.steps["Publish machine drafts for the generated build"]
+        self.assertEqual(publish["id"], "publish")
+        self.assertIn("scripts/llm_translate_untranslated.py publish", publish["run"])
+        self.assertIn("--dry-run", publish["run"])
+        # Promotion flips rows to accepted, which turns on the accepted-row
+        # token gate; the repository must be revalidated before the commit.
+        self.assertIn("python scripts/validate_repo.py", publish["run"])
+        commit = self.steps["Commit LLM translations to main"]
+        self.assertIn("steps.publish.outcome != 'failure'", commit["if"])
+
+    def test_the_generated_build_is_dispatched_explicitly(self):
+        """A GITHUB_TOKEN push never starts assets-generated.yml by itself."""
+        trigger = self.steps["Trigger the generated Assets build"]
+        self.assertEqual(trigger["if"], "steps.commit.outputs.published == 'true'")
+        self.assertIn("gh workflow run assets-generated.yml --ref main", trigger["run"])
+        commit = self.steps["Commit LLM translations to main"]["run"]
+        self.assertIn('published=true', commit)
+        self.assertIn("actions: write", self.text)
+
+    def test_publishing_can_be_switched_off_without_editing_code(self):
+        publish = self.steps["Publish machine drafts for the generated build"]
+        self.assertIn("inputs.publish_drafts != 'false'", publish["if"])
+        self.assertIn("vars.MLTD_PUBLISH_LLM_DRAFTS != 'false'", publish["if"])
+        triggers = self.workflow["on"] if "on" in self.workflow else self.workflow[True]
+        self.assertIn("publish_drafts", triggers["workflow_dispatch"]["inputs"])
+
+    def test_publish_evidence_is_kept_with_the_diagnostics(self):
+        upload = self.steps["Upload translation diagnostics"]["with"]["path"]
+        self.assertIn(".llm-publish.json", upload)
+        summary = self.steps["Summarize translation outcome"]["run"]
+        self.assertIn(".llm-publish.json", summary)
+
 
 if __name__ == "__main__":
     unittest.main()

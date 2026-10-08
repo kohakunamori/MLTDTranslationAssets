@@ -1,13 +1,18 @@
-# MLTD 资产服务（本仓自足闭包，候选）
+# MLTD 资产服务（本仓自足闭包）
 
 本目录是 MLTD 汉化 Assets 通道的**最小运行闭包**：镜像、CLI 与只读路由只依赖
 本仓（`D:\Project\_MLTDTranslationAssets`）内的源码，不依赖主仓 mltd-current、
 不依赖任何兄弟仓库或 `PYTHONPATH` 回退。
 
-> 状态：**候选（未部署）**。本仓仓内的 `generated/` 生成侧 CI（`assets-generated.yml`
-> → `scripts/build_generated_release.py`）是当前唯一的正式 writer；本目录只是它的
-> 消费/分发端。上线切换、NAS/D1 指向、单写者转移都需要单独的人工窗口，本目录不做任何
-> 生产切换。
+> 状态（2026-10-08 只读核对）：
+> - **已在生产运行的**：`generated-assets/` 的 `mltd-generated-assets`（loopback 只读路由
+>   `127.0.0.1:18765`）与 `mltd-generated-assets-sync`（每 6h 自动同步 `generated/`），
+>   经共享 `on-demand-nginx:18443` 以 `/generated-assets/<ver>/…` 对外提供；
+> - 本目录的官方归档侧模板（`docker-compose.yml` / `Dockerfile` 的
+>   `mltd-asset-updater`、`mltd-assets-mirror`）仍是**候选**，NAS 上跑的是归档镜像
+>   `local/imas-mltd-asset:20260914-static`；
+> - `generated/` 生成侧 CI（`assets-generated.yml` → `scripts/build_generated_release.py`）
+>   仍是唯一的正式 writer，本目录只是它的消费/分发端，不写 `generated/`。
 
 ## 组成
 
@@ -19,6 +24,9 @@
 | `asset-version` | 官方归档控制 wrapper（`tools/asset_version.py`，经 docker compose `tools` profile） |
 | `switch-version.sh` | 兼容 wrapper：`activate --version <v>` |
 | `requirements.txt` | `msgpack`、`requests` |
+| `generated-assets/` | NAS 已部署的 generated 分发闭包：`sync_loop.py`（自动发现版本）、`Dockerfile`、`docker-compose.yml`、`deployed.json`（部署字节哈希记录）、`test_closure.py`；详见该目录 README |
+| `nginx-vhost.conf` | 共享 nginx 的项目 vhost 副本（`/assets/`、`/cn/`、`/generated-assets/`） |
+| `Deploy-GeneratedAssets.ps1` | 项目侧部署/核对入口（默认只计划；`-Apply` 才收敛） |
 
 服务入口（compose）：
 
@@ -76,7 +84,6 @@ python scripts/assets_mirror.py --root /path/to/mirror watch --asset-version 107
 ```bash
 python -m pytest scripts/test_assets_mirror.py server/tests asset-server/ -q
 ```
-
 - `scripts/test_assets_mirror.py`：mirror 契约（显式版本 watch、activate/prune 分离、
   fail-closed、幂等、legacy shard 读取、producer 输出直通）。
 - `server/tests/`：store/materialize/controller/CLI 单元测试（自上游迁入，字节未改；

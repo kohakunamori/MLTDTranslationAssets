@@ -1,0 +1,10 @@
+# Deployment artifacts are uploaded verbatim to the NAS and hashed by
+# asset-server/generated-assets/deployed.json + test_closure.py, so their bytes
+# must survive a checkout unchanged: no EOL conversion, on any platform.
+asset-server/generated-assets/** -text
+asset-server/nginx-vhost.conf -text
+asset-server/Deploy-GeneratedAssets.ps1 -text
+
+# Shell wrappers that are copied to the NAS deployment directory as-is.
+asset-server/asset-version -text
+asset-server/switch-version.sh -text

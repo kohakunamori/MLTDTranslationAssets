@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "kind": "mltd-generated-assets-deployment-record",
+  "observed_at": "2026-10-08T15:20:00Z",
+  "observed_from": "read-only ssh probe of the NAS plus byte-compare of the copied files",
+  "host_alias": "nas",
+  "project_dir": "/vol1/1000/appdata/imas/mltd-generated-assets",
+  "mirror_root": "/vol2/1000/imas-asset-archive/mltd/generated",
+  "vhost_deploy_dir": "/vol1/1000/appdata/imas/mltd-asset/asset-server",
+  "image": "local/mltd-generated-assets:20260930",
+  "services": {
+    "generated-assets": {
+      "container": "mltd-generated-assets",
+      "command": "python /app/assets_route.py serve --root /data --bind 127.0.0.1 --port 18765 --official-root /official --official-base-url https://td-assets.bn765.com --official-cache-root /official-cache --legacy-overlay-root /official/cn-version",
+      "public_route": "https://mltd-asset.nyaneko.cn:18443/generated-assets/<asset_version>/<logical_path>"
+    },
+    "generated-assets-sync": {
+      "container": "mltd-generated-assets-sync",
+      "command": "python /app/sync_loop.py --root /data",
+      "interval_seconds": 21600,
+      "repository": "kohakunamori/MLTDTranslationAssets",
+      "branch": "main"
+    }
+  },
+  "files": [
+    {
+      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/sync_loop.py",
+      "repo_source": "asset-server/generated-assets/sync_loop.py",
+      "deployed_sha256": "bc8298ce33016237243dbdc51ad40c0b4ec152b88f428fd1034318a49e35b7cb",
+      "repo_sha256": "bc8298ce33016237243dbdc51ad40c0b4ec152b88f428fd1034318a49e35b7cb",
+      "repo_matches_deployed": true
+    },
+    {
+      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/Dockerfile",
+      "repo_source": "asset-server/generated-assets/Dockerfile",
+      "deployed_sha256": "85364ccd2cb7253bbed97c5714978449387133e224977b20e92c83a59dfb578c",
+      "repo_sha256": "85364ccd2cb7253bbed97c5714978449387133e224977b20e92c83a59dfb578c",
+      "repo_matches_deployed": true
+    },
+    {
+      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/docker-compose.yml",
+      "repo_source": "asset-server/generated-assets/docker-compose.yml",
+      "deployed_sha256": "5356b360c9040d7faad533e2b15031205f0def31726b10cee1f29e3653334814",
+      "repo_sha256": "5356b360c9040d7faad533e2b15031205f0def31726b10cee1f29e3653334814",
+      "repo_matches_deployed": true
+    },
+    {
+      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/assets_route.py",
+      "repo_source": "asset-server/assets_route.py",
+      "deployed_sha256": "93603413e47546d3ec926fc12b2ebb39d3d8461e997a4186551f79b972dea07e",
+      "repo_sha256": "93603413e47546d3ec926fc12b2ebb39d3d8461e997a4186551f79b972dea07e",
+      "repo_matches_deployed": true
+    },
+    {
+      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/scripts/assets_mirror.py",
+      "repo_source": "scripts/assets_mirror.py",
+      "deployed_sha256": "08c8212584b25e8373a3e279cda98f16257f5f6ca3b1e295617e3c507225f685",
+      "repo_sha256": "1e39ebaa1eba89ab8a573265a4cb958fe57661afd8deb1c0dc08552fdaab5bc7",
+      "repo_matches_deployed": false,
+      "note": "The deployed image was built from an older copy of the mirror module. The repository copy is newer and was verified compatible with the deployed sync_loop.py by a read-only probe (head enumeration plus a dry-run sync of 1077710 that wrote nothing); converging the NAS onto the repository copy is an explicit -Apply of the deployment adapter, not part of this record."
+    },
+    {
+      "nas_path": "/vol1/1000/appdata/imas/mltd-asset/asset-server/nginx-vhost.conf",
+      "repo_source": "asset-server/nginx-vhost.conf",
+      "deployed_sha256": "663b678ec1efe8a00804af447b426650036728d06a7653a769a53ce8198a2439",
+      "repo_sha256": "663b678ec1efe8a00804af447b426650036728d06a7653a769a53ce8198a2439",
+      "repo_matches_deployed": true
+    }
+  ],
+  "observed_release": {
+    "published_versions": [
+      "1077100",
+      "1077600",
+      "1077640",
+      "1077650"
+    ],
+    "last_sync_completed_at": "2026-10-08T10:31:01Z",
+    "last_sync_head": "5a3f32fce3665f1e45d9151f72966b93492efea4",
+    "versions_tracked_upstream": [
+      "1077100",
+      "1077600",
+      "1077640",
+      "1077650",
+      "1077700",
+      "1077710"
+    ],
+    "note": "sync_loop.py enumerates generated/<digits> at the pinned head on every tick, so 1077700 and 1077710 are picked up by the next interval without any operator action."
+  }
+}

@@ -36,6 +36,12 @@ RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 VALID_STATUSES = {"untranslated", "pending", "accepted"}
 VALID_TRANSLATION_STAGES = {"untranslated", "llm_translated", "human_translated"}
+# `status` answers one question only: may this row enter the generated build?
+# `translation_stage` carries the provenance, so `accepted` + `llm_translated`
+# is the deliberate machine-published state produced by
+# `scripts/llm_translate_untranslated.py publish`; only provenance-native
+# stages are admissible there.
+ACCEPTED_STAGES = {"llm_translated", "human_translated"}
 CATEGORIES = ("story", "card", "dialogue", "birth", "master")
 
 # Version identity. Client and Assets are independent release axes
@@ -158,8 +164,15 @@ def validate_locales(root: Path) -> dict[str, int]:
                         if status == "pending" and stage != "llm_translated":
                             print(f"ERROR: {jf}:{line_idx} pending row must have translation_stage=llm_translated", file=sys.stderr)
                             sys.exit(1)
-                        if status == "accepted" and stage != "human_translated":
-                            print(f"ERROR: {jf}:{line_idx} accepted row must have translation_stage=human_translated", file=sys.stderr)
+                        # An accepted row must declare where the text came from.
+                        # Machine output is admitted but never relabelled as
+                        # human-reviewed: the stage stays `llm_translated`.
+                        if status == "accepted" and stage not in ACCEPTED_STAGES:
+                            print(
+                                f"ERROR: {jf}:{line_idx} accepted row must have "
+                                f"translation_stage in {sorted(ACCEPTED_STAGES)}, got {stage!r}",
+                                file=sys.stderr,
+                            )
                             sys.exit(1)
                     counts[status] += 1
 

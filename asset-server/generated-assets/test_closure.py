@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""Offline contract for the deployed NAS `mltd-generated-assets` closure.
+
+The NAS writes generated releases into
+`/vol2/1000/imas-asset-archive/mltd/generated` and serves them read-only.  Until
+2026-10-08 the only copy of `sync_loop.py`, the image recipe and the compose file
+lived on the NAS itself, and the deployed nginx vhost had no repository copy at
+all; `deployed.json` and this suite make the deployed shape reviewable, and make
+silent drift fail.
+
+No network, no SSH, no docker: every assertion is a file-content contract plus the
+recorded hashes.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+CLOSURE = ROOT / "asset-server" / "generated-assets"
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class DeploymentRecordTests(unittest.TestCase):
+    """`deployed.json` must describe the deployed bytes, not a wish."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.record = json.loads((CLOSURE / "deployed.json").read_text(encoding="utf-8"))
+
+    def test_record_identity(self):
+        self.assertEqual(self.record["kind"], "mltd-generated-assets-deployment-record")
+        self.assertEqual(self.record["schema_version"], 1)
+        self.assertTrue(self.record["observed_at"])
+        self.assertEqual(self.record["host_alias"], "nas")
+
+    def test_every_recorded_file_matches_its_repository_copy(self):
+        for entry in self.record["files"]:
+            with self.subTest(entry["nas_path"]):
+                source = ROOT / entry["repo_source"]
+                self.assertTrue(source.is_file(), f"missing repo source {entry['repo_source']}")
+                self.assertEqual(sha256(source), entry["repo_sha256"])
+
+    def test_identical_files_really_are_identical(self):
+        for entry in self.record["files"]:
+            if not entry["repo_matches_deployed"]:
+                continue
+            with self.subTest(entry["nas_path"]):
+                self.assertEqual(entry["repo_sha256"], entry["deployed_sha256"])
+
+    def test_recorded_drift_is_real_drift(self):
+        """A `false` entry must carry both hashes and an explanation."""
+        drifted = [e for e in self.record["files"] if not e["repo_matches_deployed"]]
+        self.assertTrue(drifted, "the assets_mirror.py divergence must stay recorded")
+        for entry in drifted:
+            with self.subTest(entry["nas_path"]):
+                self.assertNotEqual(entry["repo_sha256"], entry["deployed_sha256"])
+                self.assertTrue(entry.get("note"), "drift needs an explanation")
+
+    def test_services_and_route_are_recorded(self):
+        services = self.record["services"]
+        self.assertIn("--bind 127.0.0.1 --port 18765", services["generated-assets"]["command"])
+        self.assertEqual(services["generated-assets-sync"]["interval_seconds"], 21600)
+        self.assertEqual(services["generated-assets-sync"]["repository"], "kohakunamori/MLTDTranslationAssets")
+
+
+class SyncLoopContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = (CLOSURE / "sync_loop.py").read_text(encoding="utf-8")
+
+    def test_no_current_pointer_is_ever_used(self):
+        self.assertNotIn("current.json", self.text)
+        self.assertIn('"current_pointer_used": False', self.text)
+        self.assertIn('"current_pointer_written": False', self.text)
+
+    def test_versions_are_discovered_from_the_generated_directory(self):
+        self.assertIn("/contents/generated?ref=", self.text)
+        self.assertIn("isdigit()", self.text)
+        self.assertIn('item.get("type") == "dir"', self.text)
+
+    def test_only_successful_builds_are_mirrored(self):
+        guard = self.text.index('manifest.get("build_status") != "success"')
+        sync = self.text.index("mirror.sync(asset_version, commit=head, dry_run=False)")
+        self.assertLess(guard, sync, "a refused build_status must be checked before the sync")
+
+    def test_single_writer_lock_is_non_blocking(self):
+        self.assertIn("fcntl.flock", self.text)
+        self.assertIn("LOCK_EX | fcntl.LOCK_NB", self.text)
+        self.assertIn("another generated-assets sync is already running", self.text)
+
+    def test_the_loop_keeps_running_after_a_failed_tick(self):
+        self.assertIn("keep the distributor alive; next poll retries", self.text)
+        self.assertIn("time.sleep(args.interval)", self.text)
+
+    def test_it_consumes_the_repository_mirror_module(self):
+        self.assertIn("from assets_mirror import", self.text)
+        for name in ("AssetVersionMirror", "GitHubAssetsSource", "ObjectPool",
+                     "AssetsMirrorError", "ManifestValidationError"):
+            self.assertIn(name, self.text)
+        # Two implementations would be a divergence risk.
+        self.assertNotIn("def sync(", self.text)
+
+
+class ImageAndComposeContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.dockerfile = (CLOSURE / "Dockerfile").read_text(encoding="utf-8")
+        cls.compose = (CLOSURE / "docker-compose.yml").read_text(encoding="utf-8")
+
+    def test_image_is_built_from_its_own_uploaded_context(self):
+        for copied in ("assets_route.py", "scripts", "sync_loop.py"):
+            self.assertIn(f"COPY {copied}", self.dockerfile)
+
+    def test_route_service_binds_loopback_only(self):
+        self.assertIn('"--bind", "127.0.0.1", "--port", "18765"', self.compose)
+        self.assertNotIn("0.0.0.0", self.compose)
+
+    def test_route_service_cannot_write_the_mirror(self):
+        route_block = self.compose.split("generated-assets-sync:")[0]
+        self.assertIn("/generated:/data:ro", route_block)
+        self.assertIn("read_only: true", route_block)
+        self.assertIn("no-new-privileges:true", route_block)
+
+    def test_official_fallback_is_explicit_and_outside_the_cas(self):
+        self.assertIn("--official-base-url", self.compose)
+        self.assertIn("--official-cache-root", self.compose)
+        self.assertIn("/generated-official-cache:/official-cache", self.compose)
+
+    def test_sync_service_is_the_only_writer_and_is_pinned_to_one_repository(self):
+        sync_block = self.compose.split("generated-assets-sync:")[1]
+        self.assertIn("/generated:/data", sync_block)
+        self.assertNotIn("/data:ro", sync_block)
+        self.assertIn("MLTD_ASSETS_REPOSITORY: kohakunamori/MLTDTranslationAssets", sync_block)
+        self.assertIn("MLTD_ASSETS_BRANCH: main", sync_block)
+        self.assertIn("MLTD_SYNC_INTERVAL", sync_block)
+        self.assertIn("restart: unless-stopped", sync_block)
+
+
+class VhostContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.vhost = (ROOT / "asset-server" / "nginx-vhost.conf").read_text(encoding="utf-8")
+
+    def _location(self, prefix: str) -> str:
+        start = self.vhost.index(f"location {prefix}")
+        rest = self.vhost[start + 1:]
+        end = rest.find("location ")
+        return self.vhost[start:] if end == -1 else self.vhost[start:start + 1 + end]
+
+    def test_generated_route_proxies_the_loopback_resolver(self):
+        block = self._location("^~ /generated-assets/")
+        self.assertIn("proxy_pass http://127.0.0.1:18765/assets/;", block)
+
+    def test_generated_route_is_read_only(self):
+        block = self._location("^~ /generated-assets/")
+        self.assertIn("limit_except GET HEAD", block)
+
+    def test_generated_route_carries_no_current_pointer(self):
+        block = self._location("^~ /generated-assets/")
+        self.assertNotIn("current", block)
+        self.assertNotIn("alias", block)
+
+    def test_official_namespaces_are_untouched(self):
+        self.assertIn("alias /srv/imas/mltd/current/;", self.vhost)
+        self.assertIn("alias /srv/imas/mltd/views/;", self.vhost)
+        native = re.search(r"location ~ \^/\(\[0-9\]\+\)/production/2018/Android/\(\.\+\)\$", self.vhost)
+        self.assertIsNotNone(native, "the native version route must stay")
+
+
+if __name__ == "__main__":
+    unittest.main()

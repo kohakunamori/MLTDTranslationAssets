@@ -9,16 +9,43 @@
   -> source_sha256 去重
   -> LLM 翻译
   -> pending + translation_stage=llm_translated
+  -> publish：accepted + translation_stage=llm_translated（出处不变）
   -> 自动提交默认分支
-  -> 人工检查/修正
-  -> accepted + translation_stage=human_translated
+  -> workflow_dispatch 触发 assets-generated.yml
   -> Assets CI 生成 Unity3D
+  -> 人工检查/修正；确认后 translation_stage 才改为 human_translated
 ```
 
-`untranslated`、`llm_translated`、`human_translated` 是翻译阶段；现有
-`status` 字段仍保持兼容：未翻译使用 `untranslated`，LLM 草稿使用
-`pending`，人工确认后使用 `accepted`。LLM 工作流不会覆盖 `accepted` 或已有
-`pending` 行。
+`untranslated`、`llm_translated`、`human_translated` 是翻译阶段；`status` 字段保持
+兼容：未翻译使用 `untranslated`，机器草稿未放行时使用 `pending`，允许进入构建时使用
+`accepted`。LLM 工作流不会覆盖 `accepted` 或已有 `pending` 行。
+
+## 机翻直接发布（`publish`）
+
+`scripts/llm_translate_untranslated.py publish` 是**唯一**把机器草稿放进
+`generated/<asset_version>/` 的入口，语义严格限定为：
+
+- 只处理 `status=pending` 且 `translation_stage=llm_translated` 且 `zh` 非空的行；
+- 逐行重验 `source_sha256 == SHA256(ja)`、译文的保留控制符与 `validate_translation`
+  的占位符约束，任一不过整轮拒绝，**先 dry-run 再落盘**；
+- 把 `status` 改为 `accepted`，**保留** `translation_stage=llm_translated`；
+- 不触碰 `human_translated`、已 `accepted`、`untranslated` 的行，未改动行逐字节保留；
+- 幂等：重复运行不会二次改写。
+
+`--draft <file>` 可把晋级范围限制在某一轮自己的产出（按 `source_sha256` 取交集）；
+不带该参数时晋级全部符合条件的行，这也是首次为某个已翻译版本补发布的方式。
+
+晋级前 CI 会先跑一次 `publish --dry-run`，晋级后再跑 `validate_repo.py`：因为
+`accepted` 行会额外触发受保护占位符校验，这道校验必须发生在提交之前。
+
+### 关闭与回退
+
+- 单次关闭：手动触发工作流时把 `publish_drafts` 设为 `false`。
+- 全局关闭：在仓库 Settings → Variables 里把 `MLTD_PUBLISH_LLM_DRAFTS` 设为 `false`；
+  关掉后 LLM 结果仍会提交到 `main`，但停留在 `pending`，回到「仅人工审校」的旧行为。
+- 已发布的机翻回退：把对应行改回 `pending`（或直接修正译文后改为
+  `accepted + human_translated`）并推送 `main`，再触发 `assets-generated.yml`
+  重建；`generated/<asset_version>/` 会被整体替换，旧对象仍留在 CAS 池中。
 
 ## GitHub-hosted provider
 
@@ -58,8 +85,13 @@ bundle 抽取源文。
   残余失败只警告，由下一次运行重试——否则十几行顽固条目会天天开 issue。provider 整体
   不可用时队列会随未翻译行累积迅速越过门槛。
 - 每次运行都上传 `llm-translation-diagnostics` artifact，包含 `.llm-summary.json`、
-  `.llm-queue.jsonl`、`.llm-failed.jsonl`、`.llm-draft.jsonl`，保留 14 天。
+  `.llm-queue.jsonl`、`.llm-failed.jsonl`、`.llm-draft.jsonl`、`.llm-publish.json`，
+  保留 14 天。
+- `publish` 失败时不会提交任何东西：提交步骤显式排除 `steps.publish.outcome ==
+  'failure'`，避免把「本轮晋级失败」的工作区状态当成已审校状态推上去。
 
-成功直接提交包含 `llm_translated` 标记的结果到默认分支，不创建审核 PR。
-`status=pending` 仍表示该结果尚未被人工确认；维护者可以直接修改并改为 `accepted` /
-`human_translated`。
+成功直接提交包含 `llm_translated` 标记的结果到默认分支，不创建审核 PR；提交后用
+`gh workflow run assets-generated.yml --ref main` 触发构建（`GITHUB_TOKEN` 推送不会
+触发其他工作流，必须显式派发）。`status=pending` 仍表示该结果尚未放行进构建；
+`status=accepted + translation_stage=llm_translated` 表示它已经机翻发布但**未经人工
+审校**，维护者可以直接修改后把 `translation_stage` 改为 `human_translated`。
