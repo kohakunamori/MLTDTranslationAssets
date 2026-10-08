@@ -77,7 +77,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install test dependencies
-        run: python -m pip install --disable-pip-version-check pytest pyyaml msgpack UnityPy Pillow pycryptodome jsonschema
+        # Keep this list in sync with asset-server/requirements.txt: the
+        # regression suite imports requests.  Verified in a clean venv.
+        run: python -m pip install --disable-pip-version-check pytest pyyaml msgpack UnityPy Pillow pycryptodome jsonschema requests
 
       - name: Run the offline suites that gate publishing
         # scripts/test_assets_generated_index.py keeps one known-red migration
