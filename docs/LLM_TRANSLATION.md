@@ -32,6 +32,21 @@
 - 不触碰 `human_translated`、已 `accepted`、`untranslated` 的行，未改动行逐字节保留；
 - 幂等：重复运行不会二次改写。
 
+两条不变量保证机器产出永远踩不到 generated writer 的歧义闸门（同一
+`(bundle, item_key, source_sha256)` 出现两个不同译文的 `accepted` 行时，
+`build_generated_release.py` 会拒绝构建）：
+
+- **不制造**：若该 identity 已有 `accepted` 译文，草稿保持 `pending`（记入
+  `skipped_duplicate_source`）——同一段原文在发布里已有译法，再加一份只会引入歧义；
+- **自修复**：已 `accepted` 的机器行若与同源的另一份 `accepted` 译文冲突，会被降回
+  `pending`（记入 `demoted_conflicting_duplicates`，`zh` 与出处保留待人工处理）。
+  无 `translation_stage` 的历史行和 `human_translated` 行永不被降级；若冲突只发生在机器行
+  之间，保留版本号最小的那一份，结果稳定可复现。
+
+2026-10-08 首次机翻发布就是这样暴露问题的：`1077640` 的 4 行与 `1077500` 已有译文同源不同文，
+构建直接报 `conflicting current-source translation for birth_bdl2_001har_005_1000_001har`。
+修复后该轮自动降级这 4 行并正常构建。
+
 `--draft <file>` 可把晋级范围限制在某一轮自己的产出（按 `source_sha256` 取交集）；
 不带该参数时晋级全部符合条件的行，这也是首次为某个已翻译版本补发布的方式。
 
