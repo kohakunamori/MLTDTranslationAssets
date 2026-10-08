@@ -4,11 +4,13 @@ import base64
 import hashlib
 import io
 import json
+import sqlite3
 import tempfile
 import threading
 import unittest
 from contextlib import redirect_stdout
 from types import SimpleNamespace
+from unittest import mock
 
 import requests
 from pathlib import Path
@@ -22,7 +24,11 @@ class VersionedAssetStoreTests(unittest.TestCase):
     def make_store(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        return VersionedAssetStore(temp.name)
+        store = VersionedAssetStore(temp.name)
+        # The store pools its connections now, so it has to release them before
+        # the temporary directory can be removed (Windows keeps files locked).
+        self.addCleanup(store.close)
+        return store
 
     @staticmethod
     def headers():
@@ -274,6 +280,7 @@ class VersionedAssetStoreTests(unittest.TestCase):
         self.seed(store, "1077100", "jp-android", "a.bundle", content)
 
         readonly = VersionedAssetStore(store.root, read_only=True)
+        self.addCleanup(readonly.close)
         row = readonly.lookup("1077100", "jp-android", "a.bundle")
         self.assertEqual(row["size"], len(content))
         with self.assertRaises(PermissionError):
@@ -540,6 +547,294 @@ class VersionedAssetStoreTests(unittest.TestCase):
             self.assertEqual(response.status, 206)
             self.assertEqual(response.read(), content[3:8])
             self.assertEqual(response.headers["Content-Range"], "bytes 3-7/16")
+
+
+class StoreConnectionPoolingTests(unittest.TestCase):
+    """A connection per store call cost ~1.9 MB of page reads on the NAS index.
+
+    Measured 2026-10-08 against the live 1.9 GB index + 124 MB WAL: 500 per-asset
+    lookups (the old find_md5_reuse path) read 965 MB, while one batch read of the
+    same table costs 47.6 MB.  These tests pin the pooling that removes it.
+    """
+
+    def make_root(self) -> Path:
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        return Path(temp.name)
+
+    def make_store(self) -> VersionedAssetStore:
+        store = VersionedAssetStore(self.make_root())
+        self.addCleanup(store.close)
+        store.ensure_version(
+            "1077100",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        return store
+
+    @staticmethod
+    def count_connects():
+        """Patch sqlite3.connect and return the list of connections made."""
+        connects = []
+        real_connect = sqlite3.connect
+
+        def counting(*args, **kwargs):
+            connects.append(args)
+            return real_connect(*args, **kwargs)
+
+        patcher = mock.patch.object(sqlite3, "connect", counting)
+        patcher.start()
+        return connects, patcher
+
+    def test_writer_connection_is_created_once(self):
+        store = self.make_store()  # construction already pooled the writer
+        connects, patcher = self.count_connects()
+        try:
+            for _ in range(25):
+                store.version("1077100", "jp-android")
+        finally:
+            patcher.stop()
+        self.assertEqual(connects, [])
+
+    def test_read_only_store_reuses_one_reader_per_thread(self):
+        root = self.make_root()
+        writer = VersionedAssetStore(root)
+        self.addCleanup(writer.close)
+        writer.ensure_version(
+            "1077100",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        store = VersionedAssetStore(root, read_only=True)
+        self.addCleanup(store.close)
+        connects, patcher = self.count_connects()
+        try:
+            for _ in range(20):
+                store.version("1077100", "jp-android")
+            self.assertEqual(len(connects), 1)
+            worker = threading.Thread(
+                target=lambda: [store.version("1077100", "jp-android") for _ in range(5)]
+            )
+            worker.start()
+            worker.join()
+        finally:
+            patcher.stop()
+        self.assertEqual(len(connects), 2)
+
+    def test_worker_threads_share_the_writer_connection(self):
+        store = self.make_store()
+        names = [f"asset_{index}.bundle" for index in range(8)]
+        store.register_names("1077100", "jp-android", names)
+        contents = {name: f"payload-{name}".encode() for name in names}
+
+        def bind(name):
+            content = contents[name]
+            store.bind_object(
+                "1077100",
+                "jp-android",
+                name,
+                sha256=hashlib.sha256(content).hexdigest(),
+                size=len(content),
+                status=200,
+                headers={"ETag": '"upstream"'},
+                content_md5=hashlib.md5(content).hexdigest(),
+            )
+
+        threads = [threading.Thread(target=bind, args=(name,)) for name in names]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        for name in names:
+            self.assertEqual(
+                store.lookup("1077100", "jp-android", name)["sha256"],
+                hashlib.sha256(contents[name]).hexdigest(),
+            )
+
+    def test_register_names_inserts_in_key_order(self):
+        """Unordered 168k-row registrations scattered one random page per row."""
+        store = self.make_store()
+        names = ["z.bundle", "a.bundle", "m/nested.bundle", "b.bundle"]
+        store.register_names("1077100", "jp-android", names)
+        with store.db() as conn:
+            inserted = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM entries WHERE version=? AND scope=? ORDER BY rowid",
+                    ("1077100", "jp-android"),
+                )
+            ]
+        self.assertEqual(inserted, sorted(names))
+
+    def test_pooled_connections_carry_the_tuning_pragmas(self):
+        store = self.make_store()
+        with store.db() as conn:
+            self.assertEqual(
+                conn.execute("PRAGMA cache_size").fetchone()[0],
+                -VersionedAssetStore.WRITER_CACHE_KIB,
+            )
+            self.assertEqual(conn.execute("PRAGMA temp_store").fetchone()[0], 2)  # MEMORY
+            self.assertEqual(conn.execute("PRAGMA busy_timeout").fetchone()[0], 120000)
+            self.assertIn(
+                conn.execute("PRAGMA mmap_size").fetchone()[0],
+                (0, VersionedAssetStore.MMAP_BYTES),
+            )
+        reader_store = VersionedAssetStore(store.root, read_only=True)
+        self.addCleanup(reader_store.close)
+        with reader_store.db() as reader:
+            self.assertEqual(
+                reader.execute("PRAGMA cache_size").fetchone()[0],
+                -VersionedAssetStore.READER_CACHE_KIB,
+            )
+
+
+class ChecksumIndexReuseTests(unittest.TestCase):
+    """Reuse must be a dict hit, not one indexed query per asset."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.store = VersionedAssetStore(temp.name)
+        self.addCleanup(self.store.close)
+        self.store.ensure_version(
+            "1077100",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        self.store.register_names("1077100", "jp-android", ["manifest.data"])
+        self.content = b"reusable asset bytes"
+        self.md5 = hashlib.md5(self.content).hexdigest()
+        digest = hashlib.sha256(self.content).hexdigest()
+        path = self.store.object_path(digest)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(self.content)
+        self.store.record_object_checksums([(digest, len(self.content), self.md5)])
+        self.digest = digest
+        self.client = Client(
+            self.store,
+            version="1077100",
+            scope="jp-android",
+            asset_root="https://example.invalid/assets",
+        )
+
+    def test_lookup_reads_the_checksum_table_once(self):
+        reads = []
+        real_index = self.store.object_checksum_index
+        self.store.object_checksum_index = lambda: (reads.append(1), real_index())[1]
+        self.store.object_by_md5 = lambda *args, **kwargs: self.fail(
+            "per-asset checksum query is back"
+        )
+        for _ in range(20):
+            candidate = self.client.find_md5_reuse(self.md5, len(self.content))
+            self.assertEqual(candidate["sha256"], self.digest)
+            self.assertEqual(candidate["source_version"], "checksum-cache")
+        self.assertEqual(len(reads), 1)
+
+    def test_missing_object_and_size_mismatch_do_not_reuse(self):
+        self.assertIsNone(self.client.find_md5_reuse(self.md5, len(self.content) + 1))
+        self.store.object_path(self.digest).unlink()
+        self.assertIsNone(self.client.find_md5_reuse(self.md5, len(self.content)))
+
+    def test_cache_availability_uses_the_memory_index(self):
+        self.store.has_object_checksums = lambda: self.fail("per-call cache probe is back")
+        self.assertTrue(self.client.checksum_cache_available())
+        self.assertTrue(self.client.checksum_cache_available())
+
+    def test_freshly_learned_checksum_is_usable_without_a_reread(self):
+        reads = []
+        real_index = self.store.object_checksum_index
+        self.store.object_checksum_index = lambda: (reads.append(1), real_index())[1]
+        self.client.find_md5_reuse(self.md5, len(self.content))
+
+        other = b"a second asset learned from the network"
+        other_md5 = hashlib.md5(other).hexdigest()
+        other_sha = hashlib.sha256(other).hexdigest()
+        self.store.object_path(other_sha).write_bytes(other)
+        self.client.remember_checksum(other_md5, len(other), other_sha)
+
+        candidate = self.client.find_md5_reuse(other_md5, len(other))
+        self.assertEqual(candidate["sha256"], other_sha)
+        self.assertEqual(len(reads), 1)
+
+    def test_a_fresh_client_sees_objects_bound_by_the_store(self):
+        """bind_object is what persists the md5, so a new client must reuse it."""
+        new = b"third asset bound without the client"
+        new_md5 = hashlib.md5(new).hexdigest()
+        new_sha = hashlib.sha256(new).hexdigest()
+        self.store.register_names("1077100", "jp-android", ["bound.bundle"])
+        self.store.object_path(new_sha).write_bytes(new)
+        self.store.bind_object(
+            "1077100",
+            "jp-android",
+            "bound.bundle",
+            sha256=new_sha,
+            size=len(new),
+            status=200,
+            headers={"ETag": '"upstream"'},
+            content_md5=new_md5,
+        )
+        fresh = Client(
+            self.store,
+            version="1077100",
+            scope="jp-android",
+            asset_root="https://example.invalid/assets",
+        )
+        candidate = fresh.find_md5_reuse(new_md5, len(new))
+        self.assertEqual(candidate["sha256"], new_sha)
+        self.assertEqual(candidate["source_version"], "checksum-cache")
+
+
+    def test_a_populated_checksum_index_skips_the_etag_hint_scan(self):
+        """The hint scan is a full pass over `entries`; a miss must not pay for it."""
+        self.store.reuse_etag_hints = lambda *args, **kwargs: self.fail(
+            "legacy ETag hint scan is back on the hot path"
+        )
+        self.assertEqual(
+            self.client.find_md5_reuse(hashlib.md5(b"genuinely new").hexdigest(), 4),
+            None,
+        )
+
+    def test_legacy_store_without_checksums_still_uses_etag_hints(self):
+        """A store built before object_checksums must keep working."""
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        store = VersionedAssetStore(temp.name)
+        self.addCleanup(store.close)
+        content = b"legacy object without a checksum row"
+        md5 = hashlib.md5(content).hexdigest()
+        sha256 = hashlib.sha256(content).hexdigest()
+        store.ensure_version(
+            "1077100",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        store.register_names("1077100", "jp-android", ["a.bundle"])
+        store.object_path(sha256).write_bytes(content)
+        store.bind_object(
+            "1077100",
+            "jp-android",
+            "a.bundle",
+            sha256=sha256,
+            size=len(content),
+            status=200,
+            headers={"ETag": '"' + md5 + '"'},
+        )
+        with store.db() as conn:
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM object_checksums").fetchone()[0], 0
+            )
+        client = Client(
+            store,
+            version="1077200",
+            scope="jp-android",
+            asset_root="https://example.invalid/assets",
+        )
+        candidate = client.find_md5_reuse(md5, len(content))
+        self.assertEqual(candidate["sha256"], sha256)
 
 
 if __name__ == "__main__":

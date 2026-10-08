@@ -51,6 +51,9 @@ class StaticMaterializeTests(unittest.TestCase):
             view = Path(temp) / "views" / version / scope / "dir" / "a.unity3d"
             self.assertTrue(view.is_file())
             self.assertTrue(os.path.samefile(source, view))
+            # The store pools its SQLite connections, so they must be released
+            # before TemporaryDirectory can delete index.sqlite3 (Windows lock).
+            store.close()
 
 
     def test_materialize_rejects_same_size_corrupt_cas_object(self):
@@ -88,6 +91,7 @@ class StaticMaterializeTests(unittest.TestCase):
                 materialize(SimpleNamespace(
                     root=Path(temp), version=version, scope=scope, replace=False
                 ))
+            store.close()
 
     @staticmethod
     def _write_part(store, version, scope, name, payload):

@@ -98,6 +98,8 @@ class Client:
         self._reuse_hints: dict[str, list[dict]] | None = None
         self._reuse_hints_lock = threading.Lock()
         self._has_checksum_cache: bool | None = None
+        self._checksum_index: dict[tuple[str, int], str] | None = None
+        self._checksum_index_lock = threading.Lock()
         self._verified_md5: dict[str, str] = {}
         self._verified_md5_lock = threading.Lock()
         self._reuse_hash_slots = threading.Semaphore(16)
@@ -138,14 +140,37 @@ class Client:
             self._reuse_hints = hints
             return hints
 
-    def checksum_cache_available(self) -> bool:
-        cached = self._has_checksum_cache
+    def checksum_index(self) -> dict[tuple[str, int], str]:
+        """Map every stored (md5, size) to its CAS object, read once per client.
+
+        Reuse used to ask the store for one (md5, size) row per asset.  On the
+        NAS index that lookup cost ~1.9 MB of random page reads and ~48 ms, so an
+        11.8k-asset sync burned tens of GB and tens of minutes before its first
+        transfer.  One batch read of the checksum table is ~48 MB and turns every
+        later lookup into a dict hit.
+        """
+        cached = self._checksum_index
         if cached is not None:
             return cached
-        with self._reuse_hints_lock:
-            if self._has_checksum_cache is None:
-                self._has_checksum_cache = self.store.has_object_checksums()
-            return bool(self._has_checksum_cache)
+        with self._checksum_index_lock:
+            if self._checksum_index is None:
+                self._checksum_index = {
+                    (str(md5).lower(), int(size)): str(sha256)
+                    for sha256, (size, md5) in self.store.object_checksum_index().items()
+                }
+            return self._checksum_index
+
+    def remember_checksum(self, md5: str, size: int, sha256: str) -> None:
+        """Record a freshly learned identity so this process reuses it at once."""
+        index = self._checksum_index
+        if index is not None:
+            index[(str(md5).lower(), int(size))] = str(sha256)
+        self._has_checksum_cache = True
+
+    def checksum_cache_available(self) -> bool:
+        if self._has_checksum_cache:
+            return True
+        return bool(self.checksum_index())
 
     def verified_candidate_md5(self, candidate: dict) -> str | None:
         sha256 = str(candidate["sha256"])
@@ -166,12 +191,29 @@ class Client:
         return actual
 
     def find_md5_reuse(self, md5: str, size: int) -> dict | None:
-        known = self.store.object_by_md5(md5, size)
-        if known is not None:
-            return known | {"source_version": "checksum-cache"}
+        md5 = str(md5).lower()
+        size = int(size)
+        index = self.checksum_index()
+        sha256 = index.get((md5, size))
+        if sha256 is not None:
+            source = self.store.object_path(sha256)
+            if source.is_file() and source.stat().st_size == size:
+                return {
+                    "sha256": sha256,
+                    "size": size,
+                    "md5": md5,
+                    "source_version": "checksum-cache",
+                }
+
+        if index:
+            # The checksum table covers the store, so a miss is genuinely new
+            # content.  Falling through to the ETag hints costs a full scan of
+            # `entries` (3M rows / 2 GB on the NAS, measured at 65 s per call),
+            # and that path only exists for stores built before object_checksums.
+            return None
 
         for candidate in self.reuse_hints().get(md5, []):
-            if int(candidate["size"]) != int(size):
+            if int(candidate["size"]) != size:
                 continue
             if self.verified_candidate_md5(candidate) != md5:
                 continue
@@ -235,7 +277,7 @@ class Client:
                 headers=response.headers,
                 content_md5=md5,
             )
-            self._has_checksum_cache = True
+            self.remember_checksum(md5, size, sha256)
             part.unlink(missing_ok=True)
             source.chmod(0o644)
             return {
@@ -345,7 +387,7 @@ class Client:
                             headers=response.headers,
                             content_md5=content_md5,
                         )
-                        self._has_checksum_cache = True
+                        self.remember_checksum(content_md5, size, digest)
                         return {
                             "name": name,
                             "status": "downloaded",
@@ -456,7 +498,7 @@ class Client:
                     headers=last_headers,
                     content_md5=content_md5,
                 )
-                self._has_checksum_cache = True
+                self.remember_checksum(content_md5, size, digest)
                 return {
                     "name": name,
                     "status": "downloaded",
