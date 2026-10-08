@@ -27688,9 +27688,9 @@
       "blocked": 0,
       "bundles": {
         "CD_jp.gtx": {
-          "pending": 295,
+          "pending": 3,
           "total": 25356,
-          "translated": 25061,
+          "translated": 25353,
           "untranslated": 0
         }
       },
@@ -27700,11 +27700,11 @@
       "icon": "⚔️",
       "id": "card_skill",
       "name": "卡片技能与卡面档案",
-      "pending": 295,
+      "pending": 3,
       "reused": 0,
       "suggested": 0,
       "total": 25356,
-      "translated": 25061,
+      "translated": 25353,
       "unit": "句",
       "untranslated": 0
     },
@@ -46864,9 +46864,9 @@
       "blocked": 0,
       "bundles": {
         "ST_jp.gtx": {
-          "pending": 17,
+          "pending": 0,
           "total": 2200,
-          "translated": 2183,
+          "translated": 2200,
           "untranslated": 0
         }
       },
@@ -46876,11 +46876,11 @@
       "icon": "📖",
       "id": "main_commu",
       "name": "主线剧情故事",
-      "pending": 17,
+      "pending": 0,
       "reused": 0,
       "suggested": 0,
       "total": 2200,
-      "translated": 2183,
+      "translated": 2200,
       "unit": "句",
       "untranslated": 0
     },
@@ -46888,9 +46888,9 @@
       "blocked": 0,
       "bundles": {
         "MB_jp.gtx": {
-          "pending": 155,
+          "pending": 5,
           "total": 9928,
-          "translated": 9773,
+          "translated": 9923,
           "untranslated": 0
         }
       },
@@ -46900,11 +46900,11 @@
       "icon": "📝",
       "id": "message_board",
       "name": "剧场白板日常留言",
-      "pending": 155,
+      "pending": 5,
       "reused": 0,
       "suggested": 0,
       "total": 9928,
-      "translated": 9773,
+      "translated": 9923,
       "unit": "句",
       "untranslated": 0
     },
@@ -48526,10 +48526,10 @@
       "blocked": 0,
       "bundles": {
         "MD_jp.gtx": {
-          "pending": 1256,
+          "pending": 18,
           "total": 117315,
-          "translated": 116056,
-          "untranslated": 3
+          "translated": 117297,
+          "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -71116,21 +71116,21 @@
       "icon": "⚙️",
       "id": "system_ui",
       "name": "系统菜单与玩法规则",
-      "pending": 1256,
+      "pending": 18,
       "reused": 0,
       "suggested": 0,
       "total": 175626,
-      "translated": 174367,
+      "translated": 175608,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 0
     },
     {
       "blocked": 0,
       "bundles": {
         "CM_jp.gtx": {
-          "pending": 203,
+          "pending": 70,
           "total": 26497,
-          "translated": 26294,
+          "translated": 26427,
           "untranslated": 0
         }
       },
@@ -71140,11 +71140,11 @@
       "icon": "🏢",
       "id": "theater_comm",
       "name": "剧场工作互动对话",
-      "pending": 203,
+      "pending": 70,
       "reused": 0,
       "suggested": 0,
       "total": 26497,
-      "translated": 26294,
+      "translated": 26427,
       "unit": "句",
       "untranslated": 0
     }
@@ -71159,61 +71159,61 @@
     },
     {
       "id": "card",
-      "pending": 297,
+      "pending": 5,
       "total": 83488,
-      "translated": 83191,
+      "translated": 83483,
       "untranslated": 0
     },
     {
       "id": "dialogue",
-      "pending": 358,
+      "pending": 75,
       "total": 37431,
-      "translated": 37073,
+      "translated": 37356,
       "untranslated": 0
     },
     {
       "id": "story",
-      "pending": 18,
+      "pending": 1,
       "total": 90221,
-      "translated": 90203,
+      "translated": 90220,
       "untranslated": 0
     },
     {
       "id": "system",
-      "pending": 1256,
+      "pending": 18,
       "total": 175626,
-      "translated": 174367,
-      "untranslated": 3
+      "translated": 175608,
+      "untranslated": 0
     }
   ],
   "generated_at": "2026-10-08T13:12:29.624063+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1077710",
-    "assets_commit": "32db3b0581894191c406427befeb9bd13b70dadb",
+    "assets_commit": "2e07139629b2ed8df6d8d537e4ccc6feec514269",
     "release_id": "assets-1077710",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "07fdaecf0c42891e0a655320d7411fe12b18e4b7e1f45e607cbcb72dc074187f",
+    "source_manifest_sha256": "e041f864461ba3be06ef2e510a028ce4e9b6c1a16f9bf4663f2d6a1238f78139",
     "status": "published",
     "updated_at": "2026-10-08T10:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "32db3b0581894191c406427befeb9bd13b70dadb",
+    "commit": "2e07139629b2ed8df6d8d537e4ccc6feec514269",
     "generated_entry_count": 11817,
-    "generated_manifest_sha256": "07fdaecf0c42891e0a655320d7411fe12b18e4b7e1f45e607cbcb72dc074187f",
+    "generated_manifest_sha256": "e041f864461ba3be06ef2e510a028ce4e9b6c1a16f9bf4663f2d6a1238f78139",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "34087a3769fd4e408b4935c97129a58b7ce7d3df5f6b9a6a6c8fb0b3f2975e89",
+    "source_catalogue_sha256": "910f7d366e4bce44a3a92e7439006bb9f589f7c1fae53b46b1123159ab5472b2",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
   "totals": {
     "blocked": 0,
-    "pending": 1933,
+    "pending": 103,
     "reused": 0,
     "suggested": 0,
     "total": 393417,
-    "translated": 391481,
-    "untranslated": 3
+    "translated": 393314,
+    "untranslated": 0
   }
 }
