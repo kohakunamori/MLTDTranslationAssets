@@ -149,19 +149,80 @@ def _draft_source_ids(path: Path) -> set[str]:
     return wanted
 
 
+def _identity(row: dict[str, Any]) -> tuple[str, str, str]:
+    """The generated writer's own identity for a row: bundle, key, source text."""
+    bundle = str(row.get("bundle", ""))
+    logical = bundle if bundle.endswith(".unity3d") else bundle + ".unity3d"
+    return (logical, str(row.get("item_key", "")), str(row.get("source_sha256", "")).lower())
+
+
+def _translation_token(value: str) -> bytes:
+    return hashlib.sha256(value.encode("utf-8")).digest()
+
+
+def _accepted_index(files: list[Path]) -> tuple[dict, set, dict, dict]:
+    """Compact, streaming index of every accepted row.
+
+    Returns (first translation token per identity, identities with more than one
+    accepted translation, oldest human/legacy version per identity, oldest
+    machine version per identity).  Only the token is kept per identity, so the
+    index stays small on a 390k-row repository.
+    """
+    first: dict[tuple[str, str, str], bytes] = {}
+    conflicting: set[tuple[str, str, str]] = set()
+    human_version: dict[tuple[str, str, str], int] = {}
+    machine_version: dict[tuple[str, str, str], int] = {}
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            translation = str(row.get("zh", ""))
+            if row.get("status") != "accepted" or not translation:
+                continue
+            key = _identity(row)
+            token = _translation_token(translation)
+            prior = first.get(key)
+            if prior is None:
+                first[key] = token
+            elif prior != token:
+                conflicting.add(key)
+            version = int(str(row.get("asset_version") or "0") or "0")
+            # A missing stage is legacy curated text: never demote it.
+            if row.get("translation_stage") == "llm_translated":
+                machine_version[key] = min(version, machine_version.get(key, version))
+            else:
+                human_version[key] = min(version, human_version.get(key, version))
+    return first, conflicting, human_version, machine_version
+
+
 def publish(args: argparse.Namespace) -> int:
     """Admit machine drafts to the generated build without relabelling them.
 
-    Only ``pending`` rows whose ``translation_stage`` says the LLM wrote them
-    are promoted.  ``--draft`` narrows the promotion to one run's own output;
-    without it every eligible row is promoted, which is what makes a first
-    backfill of an already-translated asset_version possible.
+    Two invariants keep the generated writer's ambiguity gate unreachable from
+    machine output:
+
+    * a row is never promoted when the same (bundle, key, source_sha256)
+      already has an accepted translation -- the release already ships that
+      source text, so a second accepted wording would only be ambiguous;
+    * an accepted machine row that duplicates another accepted wording of the
+      same source text is demoted back to ``pending`` (repair).  Legacy rows
+      without a stage and human rows are never demoted.
+
+    ``--draft`` narrows the promotion to one run's own output; without it every
+    eligible row is promoted, which is what makes a first backfill of an
+    already-translated asset_version possible.
     """
     wanted = _draft_source_ids(args.draft) if args.draft is not None else None
+    files = sorted((ROOT / "locales").rglob("*.jsonl"))
+    accepted, conflicting, human_version, machine_version = _accepted_index(files)
+
     promoted = 0
-    files = 0
+    demoted = 0
+    skipped = 0
+    untouched_files = 0
     versions: dict[str, int] = {}
-    for path in sorted((ROOT / "locales").rglob("*.jsonl")):
+    for path in files:
         original = path.read_text(encoding="utf-8")
         changed = False
         lines = []
@@ -170,40 +231,60 @@ def publish(args: argparse.Namespace) -> int:
                 lines.append(line)
                 continue
             row: dict[str, Any] = json.loads(line)
-            if (
-                row.get("status") != "pending"
-                or row.get("translation_stage") != "llm_translated"
-                or not str(row.get("zh", ""))
-            ):
+            stage = row.get("translation_stage")
+            translation = str(row.get("zh", ""))
+            sid = str(row.get("source_sha256", ""))
+            asset_version = str(row.get("asset_version"))
+
+            # Repair: a machine row that duplicates another accepted wording.
+            if row.get("status") == "accepted" and stage == "llm_translated" and _identity(row) in conflicting:
+                keep = False
+                if _identity(row) not in human_version:
+                    keep = int(str(row.get("asset_version") or "0") or "0") == machine_version.get(_identity(row))
+                if not keep:
+                    row["status"] = "pending"
+                    changed = True
+                    demoted += 1
+                    lines.append(json.dumps(row, ensure_ascii=False, separators=(",", ":")))
+                    continue
+
+            if row.get("status") != "pending" or stage != "llm_translated" or not translation:
                 # Untouched lineage (human_translated, accepted, untranslated,
                 # or a machine row without text) stays byte-for-byte identical.
                 lines.append(line)
                 continue
-            sid = str(row.get("source_sha256", ""))
             if wanted is not None and sid not in wanted:
                 lines.append(line)
                 continue
+            if _identity(row) in accepted:
+                # The same source text already has an accepted translation:
+                # promoting this draft would create a second one.
+                skipped += 1
+                lines.append(line)
+                continue
             source = str(row.get("ja", ""))
-            translation = str(row.get("zh", ""))
             if not source or sid != sha256_text(source):
                 raise SystemExit(f"source identity mismatch at {path}: refusing to publish {sid}")
             if "|" in translation or "^" in translation:
                 raise SystemExit(f"LLM output contains reserved delimiter for {sid}")
             validate_translation(source, translation)
             row["status"] = "accepted"
+            accepted[_identity(row)] = _translation_token(translation)
             # Deliberately not rewritten to human_translated: the release must
             # keep saying that this text is machine output.
             changed = True
             promoted += 1
-            versions[str(row.get("asset_version"))] = versions.get(str(row.get("asset_version")), 0) + 1
+            versions[asset_version] = versions.get(asset_version, 0) + 1
             lines.append(json.dumps(row, ensure_ascii=False, separators=(",", ":")))
         if changed:
-            files += 1
+            untouched_files += 1
             if not args.dry_run:
                 path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({
         "promoted": promoted,
-        "files": files,
+        "demoted_conflicting_duplicates": demoted,
+        "skipped_duplicate_source": skipped,
+        "files": untouched_files,
         "asset_versions": dict(sorted(versions.items())),
         "dry_run": bool(args.dry_run),
         "stage": "llm_translated",

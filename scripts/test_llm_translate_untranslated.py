@@ -133,5 +133,89 @@ class LlmPublishTests(unittest.TestCase):
                 self._publish(root)
 
 
+class LlmPublishAmbiguityTests(unittest.TestCase):
+    """The generated writer refuses two accepted wordings of one source text.
+
+    Machine promotion must therefore never create that state, and must repair it
+    when a previous run created it (observed 2026-10-08: four 1077640 rows
+    duplicated 1077500 wording for `birth_bdl2_001har_005_jp.gtx` and aborted
+    `build_generated_release.py`).
+    """
+
+    SOURCE = "さくらがきれいだね♪"
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.locale = self.root / "locales" / "master" / "x.jsonl"
+        self.locale.parent.mkdir(parents=True)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _row(self, *, zh, status, stage, version, item_key="k"):
+        row = _row(self.SOURCE, item_key=item_key, zh=zh, status=status, version=version)
+        if stage is not None:
+            row["translation_stage"] = stage
+        return row
+
+    def _publish(self, **kwargs):
+        args = type("Args", (), {"draft": kwargs.get("draft"), "dry_run": kwargs.get("dry_run", False)})()
+        with patch.object(tool, "ROOT", self.root):
+            return tool.publish(args)
+
+    def test_promotion_is_skipped_when_the_source_already_has_an_accepted_wording(self):
+        _write(self.locale, [
+            self._row(zh="樱花真漂亮♪", status="accepted", stage=None, version="1077500"),
+            self._row(zh="樱花开得真美♪", status="pending", stage="llm_translated", version="1077640"),
+        ])
+        self._publish()
+        rows = _read(self.locale)
+        self.assertEqual([r["status"] for r in rows], ["accepted", "pending"])
+        self.assertEqual(rows[0]["zh"], "樱花真漂亮♪")
+
+    def test_a_conflicting_machine_duplicate_is_demoted(self):
+        _write(self.locale, [
+            self._row(zh="樱花真漂亮♪", status="accepted", stage=None, version="1077500"),
+            self._row(zh="樱花开得真美♪", status="accepted", stage="llm_translated", version="1077640"),
+        ])
+        self._publish()
+        rows = _read(self.locale)
+        self.assertEqual([r["status"] for r in rows], ["accepted", "pending"])
+        self.assertEqual(rows[1]["translation_stage"], "llm_translated")
+        self.assertEqual(rows[1]["zh"], "樱花开得真美♪", "the machine draft is kept for review")
+
+    def test_the_oldest_machine_wording_wins_when_no_human_row_exists(self):
+        _write(self.locale, [
+            self._row(zh="樱花真漂亮♪", status="accepted", stage="llm_translated", version="1077100"),
+            self._row(zh="樱花开得真美♪", status="accepted", stage="llm_translated", version="1077640"),
+        ])
+        self._publish()
+        rows = _read(self.locale)
+        self.assertEqual([r["status"] for r in rows], ["accepted", "pending"])
+
+    def test_human_and_legacy_rows_are_never_demoted(self):
+        _write(self.locale, [
+            self._row(zh="樱花真漂亮♪", status="accepted", stage=None, version="1077500"),
+            self._row(zh="樱花真美♪", status="accepted", stage="human_translated", version="1077600"),
+        ])
+        self._publish()
+        rows = _read(self.locale)
+        self.assertEqual([r["status"] for r in rows], ["accepted", "accepted"])
+
+    def test_a_conflict_free_repository_is_left_alone(self):
+        _write(self.locale, [
+            self._row(zh="樱花真漂亮♪", status="accepted", stage=None, version="1077500"),
+            _row("またね♪", item_key="other", zh="再见♪", status="pending",
+                 stage="llm_translated", version="1077710"),
+        ])
+        before = self.locale.read_text(encoding="utf-8")
+        self._publish()
+        after = _read(self.locale)
+        self.assertEqual(after[0]["status"], "accepted")
+        self.assertEqual(after[1]["status"], "accepted", "an unrelated machine draft is promoted")
+        self.assertNotEqual(before, self.locale.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
