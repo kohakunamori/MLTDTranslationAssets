@@ -63,7 +63,9 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
 
     def test_only_real_breakage_fails_the_run_and_reports_an_issue(self):
         summary = self.steps["Summarize translation outcome"]["run"]
-        self.assertIn('"$accepted" -eq 0', summary)          # nothing accepted -> red
+        self.assertIn('"$accepted" -eq 0', summary)          # nothing accepted ...
+        self.assertIn('"$failed" -ge 50', summary)           # ... on a real queue -> red
+        self.assertIn('queue=$(wc -l < .llm-queue.jsonl)', summary)
         self.assertIn("::warning", summary)                  # partial failure -> warning only
         report = self.steps["Report a real failure as a tracking issue"]
         self.assertEqual(report["if"], "failure()")

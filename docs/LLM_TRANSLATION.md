@@ -53,8 +53,10 @@ bundle 抽取源文。
 
 - 少数条目耗尽所有 provider 重试（终态失败）不再丢弃已接受的结果：翻译步骤容忍非零
   退出码，应用/提交继续执行，Run 保持绿色并输出 `::warning::` 标注。
-- 只有真正没有产出（失败条目 > 0 且接受条目 = 0）或前置步骤失败才会让 Run 变红，并
-  自动在 Issue 里登记/追评一条 `Auto-apply LLM translations failed`。
+- 只有真正没有产出（接受条目 = 0 且失败条目 ≥ 50）或前置步骤失败才会让 Run 变红，并
+  自动在 Issue 里登记/追评一条 `Auto-apply LLM translations failed`。数量少于一门槛的
+  残余失败只警告，由下一次运行重试——否则十几行顽固条目会天天开 issue。provider 整体
+  不可用时队列会随未翻译行累积迅速越过门槛。
 - 每次运行都上传 `llm-translation-diagnostics` artifact，包含 `.llm-summary.json`、
   `.llm-queue.jsonl`、`.llm-failed.jsonl`、`.llm-draft.jsonl`，保留 14 天。
 

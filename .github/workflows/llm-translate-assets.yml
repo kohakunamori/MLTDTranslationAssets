@@ -240,12 +240,19 @@ jobs:
           fi
           accepted=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("accepted", 0))')
           failed=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("failed", 0))')
-          echo "accepted=$accepted failed=$failed"
+          queue=0
+          if [ -f .llm-queue.jsonl ]; then queue=$(wc -l < .llm-queue.jsonl); fi
+          echo "accepted=$accepted failed=$failed queue=$queue"
           if [ "$failed" -gt 0 ]; then
             echo "::warning title=Partial LLM translation failures::$failed of $((accepted + failed)) items failed every provider attempt; the $accepted accepted rows were still published. Inspect the llm-translation-diagnostics artifact."
           fi
-          if [ "$failed" -gt 0 ] && [ "$accepted" -eq 0 ]; then
-            echo "::error title=LLM translation produced no accepted rows::$failed items failed and none were accepted; nothing was published."
+          # A total provider outage has to be loud, but a queue that only holds a
+          # few stubborn rows would otherwise fail - and open an issue - every
+          # single day. Healthy ~1.3k-row runs fail 0.5-1.5% of their items, so a
+          # failed count this high with nothing accepted means the pool is down;
+          # smaller leftovers stay a warning and are retried by the next run.
+          if [ "$accepted" -eq 0 ] && [ "$failed" -ge 50 ]; then
+            echo "::error title=LLM translation produced no accepted rows::$failed of $queue queued items failed and none were accepted; nothing was published."
             exit 1
           fi
 
