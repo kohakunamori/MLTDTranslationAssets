@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -363,6 +362,39 @@ def reconcile_manifest(
     return control
 
 
+def discover_latest_with_retries(
+    root: Path,
+    api: str,
+    asset_root_template: str,
+    scope: str,
+    timeout: float,
+    *,
+    attempts: int = 3,
+    delay: float = 5.0,
+) -> tuple[dict, dict]:
+    """Discover the latest version, retrying a flaky TLS handshake.
+
+    The endpoint sits behind Cloudflare and the NAS resolves it to IPv6 only;
+    measured runs returned 200 in 1.2 s, 200 in 5.0 s and then a TLS handshake
+    timeout, so one attempt per six-hour poll can silently skip a new version.
+    """
+    last_error: Exception | None = None
+    for attempt in range(1, max(1, attempts) + 1):
+        try:
+            return discover_latest(root, api, asset_root_template, scope, timeout)
+        except Exception as exc:  # noqa: BLE001 - any failure is retryable here
+            last_error = exc
+            if attempt < attempts:
+                print(
+                    f"discovery attempt {attempt}/{attempts} failed "
+                    f"({type(exc).__name__}: {exc}); retrying in {delay:.0f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                time.sleep(delay)
+    raise last_error if last_error is not None else RuntimeError("discovery failed")
+
+
 def watch_cycle(
     root: Path,
     *,
@@ -376,15 +408,19 @@ def watch_cycle(
     durable: bool,
     minimum_free_bytes: int,
     auto_activate: bool,
+    discovery_attempts: int = 3,
+    discovery_retry_delay: float = 5.0,
 ) -> tuple[dict, str | None]:
     discovery_error: str | None = None
     try:
-        control, _release = discover_latest(
+        control, _release = discover_latest_with_retries(
             root,
             version_api,
             asset_root_template,
             scope,
             discovery_timeout,
+            attempts=discovery_attempts,
+            delay=discovery_retry_delay,
         )
     except Exception as exc:
         discovery_error = f"{type(exc).__name__}: {exc}"
@@ -464,6 +500,16 @@ def main() -> int:
         help=(
             "compact the index between cycles once its freelist passes this size "
             "(0 disables); a fragmented store added ~2 minutes to every sync"
+        ),
+    )
+    watch.add_argument(
+        "--discovery-attempts",
+        type=int,
+        default=3,
+        help=(
+            "attempts per cycle for the version API; it is behind Cloudflare and "
+            "measured single attempts do time out, which would delay a new "
+            "version by a whole poll interval"
         ),
     )
     watch.add_argument("--auto-activate", choices=("0", "1"), default="0")
@@ -622,6 +668,7 @@ def main() -> int:
                     durable=args.durable,
                     minimum_free_bytes=int(args.min_free_gib * 1024**3),
                     auto_activate=args.auto_activate == "1",
+                    discovery_attempts=max(1, int(args.discovery_attempts)),
                 )
                 vacuum_error: str | None = None
                 if args.vacuum_min_freelist_mb > 0:

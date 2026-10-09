@@ -145,10 +145,66 @@ class ArchiveControllerTests(unittest.TestCase):
                     durable=False,
                     minimum_free_bytes=0,
                     auto_activate=False,
+                    discovery_retry_delay=0,
                 )
             self.assertIs(result, control)
             self.assertIn("TimeoutError", discovery_error)
             reconcile.assert_called_once()
+
+    def test_discovery_retries_a_flaky_endpoint_before_giving_up(self):
+        release = {"version": "1077720", "scope": "jp-android"}
+        control = {"schema_version": 1, "releases": {}}
+        calls = {"n": 0}
+
+        def flaky(*_args, **_kwargs):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise TimeoutError("handshake operation timed out")
+            return control, release
+
+        with patch.object(controller, "discover_latest", side_effect=flaky):
+            found, discovered = controller.discover_latest_with_retries(
+                Path("."), "https://example.invalid/latest", "https://a.invalid/{version}",
+                "jp-android", 1, attempts=3, delay=0,
+            )
+        self.assertEqual(calls["n"], 3)
+        self.assertIs(found, control)
+        self.assertEqual(discovered["version"], "1077720")
+
+    def test_watch_cycle_retries_discovery_and_reports_only_a_total_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            control = {"schema_version": 1, "active_version": None, "releases": {}}
+            calls = {"n": 0}
+
+            def flaky(*_args, **_kwargs):
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise TimeoutError("handshake operation timed out")
+                return control, {"version": "1077720"}
+
+            with (
+                patch.object(controller, "discover_latest", side_effect=flaky),
+                patch.object(controller, "reconcile_manifest", return_value=control),
+            ):
+                _result, discovery_error = controller.watch_cycle(
+                    root,
+                    version_api="https://example.invalid/latest",
+                    asset_root_template="https://assets.invalid/{version}",
+                    scope="jp-android",
+                    discovery_timeout=1,
+                    workers=4,
+                    archive_timeout=2,
+                    proxy=None,
+                    durable=False,
+                    minimum_free_bytes=0,
+                    auto_activate=False,
+                    discovery_attempts=3,
+                    discovery_retry_delay=0,
+                )
+            # A single flaky attempt must not surface as a discovery error.
+            self.assertEqual(calls["n"], 2)
+            self.assertIsNone(discovery_error)
 
     def test_merge_release_defaults_to_retained(self):
         control = controller.empty_control("https://example.invalid")
