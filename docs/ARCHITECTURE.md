@@ -366,7 +366,7 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | 文件 | 行数 | 状态 |
 | --- | ---: | --- |
 | `locales/master/official-1077710-untranslated.jsonl` | 1,833 | `pending` 1,830 + `untranslated` 3；`llm_translated` 1,830；5 个 bundle（`MD_jp` / `CD_jp` / `MB_jp` / `CM_jp` / `ST_jp`）**全部为既有 bundle** |
-| `locales/master/official-1077640-untranslated.jsonl` | 4 | 全部 `pending` |
+| `locales/master/official-1077640-untranslated.jsonl` | ~~4~~ 0 | 已删除：4 行全是同 `(bundle, item_key, source_sha256)` 的重复行，`locales/birth/birth_bdl2_001har_005_jp.gtx.jsonl` 里已有 `accepted` 译文。收集时那些 accepted 行还不存在（追加是幂等的，identity 不含 `asset_version`），属于历史顺序造成的重复；复核后维持已发布措辞，删除重复草稿。 |
 
 即：自动链路**确实端到端跑通**，但作用面是「已跟踪 bundle 的增量新文本」，**不是「新资源面的发现」**。
 
