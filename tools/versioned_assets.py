@@ -619,29 +619,33 @@ def sync(args) -> int:
 
     publish_progress(force=True)
     if selected:
-        with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-            futures = {
-                pool.submit(client.fetch, name, force=args.force): name
-                for name in selected
-            }
-            for future in as_completed(futures):
-                name = futures[future]
-                try:
-                    result = future.result()
-                    if result["status"] == "downloaded":
-                        downloaded += 1
-                    elif result["status"] == "reused":
-                        reused += 1
-                    else:
-                        cached += 1
-                    processed_bytes += int(result.get("size") or 0)
-                    if args.verbose:
-                        print(f"{result['status']:10} {result['size']:12d} {name}", flush=True)
-                except Exception as exc:
-                    failed += 1
-                    failures.append({"name": name, "error": str(exc)})
-                    print(f"FAILED {name}: {exc}", file=sys.stderr, flush=True)
-                publish_progress()
+        # 168k short bind transactions: hold WAL autocheckpoints until the pool is
+        # done, otherwise every commit also writes dirty pages back into the 2 GB
+        # index at random offsets and the pool crawls at ~4 objects per second.
+        with store.bulk_writes():
+            with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+                futures = {
+                    pool.submit(client.fetch, name, force=args.force): name
+                    for name in selected
+                }
+                for future in as_completed(futures):
+                    name = futures[future]
+                    try:
+                        result = future.result()
+                        if result["status"] == "downloaded":
+                            downloaded += 1
+                        elif result["status"] == "reused":
+                            reused += 1
+                        else:
+                            cached += 1
+                        processed_bytes += int(result.get("size") or 0)
+                        if args.verbose:
+                            print(f"{result['status']:10} {result['size']:12d} {name}", flush=True)
+                    except Exception as exc:
+                        failed += 1
+                        failures.append({"name": name, "error": str(exc)})
+                        print(f"FAILED {name}: {exc}", file=sys.stderr, flush=True)
+                    publish_progress()
 
     stats = store.stats(args.version, args.scope)
     complete = failed == 0 and stats["missing"] == 0

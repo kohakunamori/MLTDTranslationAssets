@@ -729,6 +729,29 @@ class StoreConnectionPoolingTests(unittest.TestCase):
                 1,
             )
 
+    def test_bulk_writes_hold_the_checkpoint_and_restore_it(self):
+        store = self.make_store()
+        with store.write_db() as conn:
+            default = conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0]
+        self.assertGreater(default, 0)
+        with store.bulk_writes():
+            with store.write_db() as conn:
+                self.assertEqual(
+                    conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0], 0
+                )
+        with store.write_db() as conn:
+            self.assertEqual(
+                conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0], default
+            )
+
+    def test_bulk_writes_are_rejected_on_a_read_only_store(self):
+        store = self.make_store()
+        reader_store = VersionedAssetStore(store.root, read_only=True)
+        self.addCleanup(reader_store.close)
+        with self.assertRaises(PermissionError):
+            with reader_store.bulk_writes():
+                pass
+
     def test_writes_are_rejected_on_a_read_only_store(self):
         store = self.make_store()
         reader_store = VersionedAssetStore(store.root, read_only=True)

@@ -166,6 +166,31 @@ class VersionedAssetStore:
                 conn.rollback()
                 raise
 
+    @contextmanager
+    def bulk_writes(self):
+        """Hold WAL checkpoints while many small transactions are written.
+
+        A sync binds ~168k objects one short transaction at a time.  With the
+        default autocheckpoint (every 1000 pages of WAL) each of those commits
+        also wrote dirty pages back into the 2 GB index at random offsets: the
+        serialized bind cost 260 ms, the pool ran at 4 objects per second with
+        255 of 256 threads waiting on the write lock, and the process read ~17
+        MB/s while binding.  Checkpointing once at the end instead keeps the
+        dirty pages in the writer cache and the WAL append-only.
+        """
+        self.require_write()
+        with self._write_lock:
+            conn = self._writer()
+            previous = conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0]
+            conn.execute("PRAGMA wal_autocheckpoint=0")
+        try:
+            yield
+        finally:
+            with self._write_lock:
+                conn = self._writer()
+                conn.execute(f"PRAGMA wal_autocheckpoint={int(previous)}")
+                conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
+
     def _init_db(self):
         # Journal mode is a database-level setting.  Set it once during
         # initialization; doing this on every worker connection takes an
