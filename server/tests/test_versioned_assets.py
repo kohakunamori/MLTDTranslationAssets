@@ -729,15 +729,17 @@ class StoreConnectionPoolingTests(unittest.TestCase):
                 1,
             )
 
-    def test_bulk_writes_hold_the_checkpoint_and_restore_it(self):
+    def test_bulk_writes_raise_the_checkpoint_threshold_and_restore_it(self):
         store = self.make_store()
         with store.write_db() as conn:
             default = conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0]
         self.assertGreater(default, 0)
+        self.assertLess(default, VersionedAssetStore.BULK_AUTOCHECKPOINT_PAGES)
         with store.bulk_writes():
             with store.write_db() as conn:
                 self.assertEqual(
-                    conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0], 0
+                    conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0],
+                    VersionedAssetStore.BULK_AUTOCHECKPOINT_PAGES,
                 )
         with store.write_db() as conn:
             self.assertEqual(

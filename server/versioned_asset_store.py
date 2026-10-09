@@ -37,6 +37,12 @@ class VersionedAssetStore:
     READER_CACHE_KIB = 8192
     WRITER_CACHE_KIB = 131072
     MMAP_BYTES = 268435456
+    # Autocheckpoint threshold (in 4 KB pages) used while bulk-binding.  The
+    # default 1000 (4 MB) checkpointed on nearly every bind; disabling it
+    # entirely let the WAL grow past 500 MB and the pool collapsed again, so the
+    # threshold is raised instead of removed: 10000 pages keeps the WAL near 40
+    # MB while cutting checkpoint frequency by an order of magnitude.
+    BULK_AUTOCHECKPOINT_PAGES = 10000
 
     def __init__(self, root: str | os.PathLike[str], *, read_only: bool = False):
         self.root = Path(root).resolve()
@@ -168,21 +174,23 @@ class VersionedAssetStore:
 
     @contextmanager
     def bulk_writes(self):
-        """Hold WAL checkpoints while many small transactions are written.
+        """Raise the WAL autocheckpoint threshold while many small transactions land.
 
         A sync binds ~168k objects one short transaction at a time.  With the
         default autocheckpoint (every 1000 pages of WAL) each of those commits
         also wrote dirty pages back into the 2 GB index at random offsets: the
-        serialized bind cost 260 ms, the pool ran at 4 objects per second with
+        serialized bind cost 260 ms, the pool ran at 3.8 objects per second with
         255 of 256 threads waiting on the write lock, and the process read ~17
-        MB/s while binding.  Checkpointing once at the end instead keeps the
-        dirty pages in the writer cache and the WAL append-only.
+        MB/s while binding.  Disabling checkpoints entirely is worse -- the WAL
+        passed 500 MB and the pool collapsed to 4 objects/s again -- so the
+        threshold is raised to BULK_AUTOCHECKPOINT_PAGES and restored, with one
+        final PASSIVE checkpoint, when the bulk phase ends.
         """
         self.require_write()
         with self._write_lock:
             conn = self._writer()
             previous = conn.execute("PRAGMA wal_autocheckpoint").fetchone()[0]
-            conn.execute("PRAGMA wal_autocheckpoint=0")
+            conn.execute(f"PRAGMA wal_autocheckpoint={int(self.BULK_AUTOCHECKPOINT_PAGES)}")
         try:
             yield
         finally:
