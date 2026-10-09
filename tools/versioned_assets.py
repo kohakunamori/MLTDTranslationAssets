@@ -47,6 +47,12 @@ DEFAULT_BIND_BATCH = 2000
 # 20k makes consecutive batches walk forwards through the entries pages instead of
 # scattering writes over the whole 168k-row version.
 DEFAULT_BIND_WINDOW = 20000
+# Compact the index once the freelist passes this: the measured break-even is far
+# below it (a 216,700-page freelist cost every sync ~2 minutes; VACUUM takes ~3.5
+# minutes), and after a VACUUM the freelist is zero, so an idle controller checks
+# this on every cycle without ever doing redundant work.
+DEFAULT_VACUUM_MIN_FREELIST_MB = 200.0
+DEFAULT_VACUUM_MIN_FREELIST_BYTES = int(DEFAULT_VACUUM_MIN_FREELIST_MB * 1024 * 1024)
 
 
 def etag_md5_hint(value: str | None) -> str | None:
@@ -1190,6 +1196,80 @@ def serve(args) -> int:
     return 0
 
 
+def vacuum_store(
+    root: str | os.PathLike[str],
+    *,
+    if_needed: bool = False,
+    min_freelist_bytes: int = DEFAULT_VACUUM_MIN_FREELIST_BYTES,
+    dry_run: bool = False,
+) -> dict:
+    """Compact the index, optionally only when fragmentation has built up.
+
+    Binding rewrites a version's ~168k rows in place, so after a few versions the
+    rows are no longer contiguous and the "scan this version" query in `stats()`
+    degrades into one random page read per row: measured 50-108 s per sync against
+    0.8 s after a VACUUM.  This is the maintenance action for that, and it is
+    deliberately not part of store construction or `_init_db`.
+    """
+    db_path = Path(root) / "index.sqlite3"
+    before = index_health(db_path)
+    if before is None:
+        return {"vacuum": "absent", "changed": False}
+    if if_needed and before["freelist_bytes"] < int(min_freelist_bytes):
+        return {
+            "vacuum": "skipped",
+            "changed": False,
+            "reason": (
+                f"freelist {before['freelist_bytes']} bytes below threshold "
+                f"{int(min_freelist_bytes)}"
+            ),
+            **before,
+        }
+    if dry_run:
+        return {"vacuum": "planned", "changed": False, "dry_run": True, **before}
+
+    started = time.time()
+    # A dedicated connection: VACUUM needs the whole database to itself, and the
+    # pooled writer may still hold a page cache or a read mark from earlier work.
+    conn = sqlite3.connect(db_path, timeout=3600)
+    try:
+        conn.execute("PRAGMA busy_timeout=3600000")
+        checkpoint = tuple(conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone())
+        conn.execute("VACUUM")
+    finally:
+        conn.close()
+    after = index_health(db_path) or before
+    return {
+        "vacuum": "done",
+        "changed": True,
+        "seconds": round(time.time() - started, 1),
+        "wal_checkpoint": list(checkpoint),
+        "before": before,
+        "after": after,
+    }
+
+
+def index_health(db_path: Path) -> dict | None:
+    """Size, page count and freelist of an index database, or None when absent."""
+    if not Path(db_path).exists():
+        return None
+    conn = sqlite3.connect(f"file:{Path(db_path).as_posix()}?mode=ro", uri=True, timeout=60)
+    try:
+        conn.execute("PRAGMA busy_timeout=60000")
+        page_count = int(conn.execute("PRAGMA page_count").fetchone()[0])
+        page_size = int(conn.execute("PRAGMA page_size").fetchone()[0])
+        freelist = int(conn.execute("PRAGMA freelist_count").fetchone()[0])
+    finally:
+        conn.close()
+    return {
+        "bytes": Path(db_path).stat().st_size,
+        "page_count": page_count,
+        "page_size": page_size,
+        "freelist_pages": freelist,
+        "freelist_bytes": freelist * page_size,
+    }
+
+
 def maintenance(args) -> int:
     """One-off index repairs that must not run on the store's startup path.
 
@@ -1199,6 +1279,21 @@ def maintenance(args) -> int:
     """
     store = VersionedAssetStore(args.root)
     try:
+        if getattr(args, "vacuum", False):
+            print(
+                json.dumps(
+                    vacuum_store(
+                        args.root,
+                        if_needed=bool(getattr(args, "if_needed", False)),
+                        min_freelist_bytes=int(
+                            float(getattr(args, "min_freelist_mb", 0) or 0) * 1024 * 1024
+                        ),
+                        dry_run=bool(args.dry_run),
+                    )
+                ),
+                flush=True,
+            )
+            return 0
         with store.db() as conn:
             present = [
                 name
@@ -1349,11 +1444,33 @@ def main() -> int:
             "and estimates"
         ),
     )
+    maintenance_p.add_argument(
+        "--vacuum",
+        action="store_true",
+        help=(
+            "compact the index (wal_checkpoint(TRUNCATE) + VACUUM); in-place binds "
+            "fragment the version's rows and cost every later sync ~2 minutes"
+        ),
+    )
+    maintenance_p.add_argument(
+        "--if-needed",
+        dest="if_needed",
+        action="store_true",
+        help="with --vacuum, only compact when the freelist exceeds --min-freelist-mb",
+    )
+    maintenance_p.add_argument(
+        "--min-freelist-mb",
+        type=float,
+        default=DEFAULT_VACUUM_MIN_FREELIST_MB,
+        help="freelist threshold for --if-needed",
+    )
     maintenance_p.add_argument("--dry-run", action="store_true")
     maintenance_p.set_defaults(func=maintenance)
 
     args = ap.parse_args()
-    if args.command == "maintenance" and not args.drop_unused_entry_indexes:
+    if args.command == "maintenance" and not (
+        args.drop_unused_entry_indexes or args.vacuum
+    ):
         args.dry_run = True
     try:
         return args.func(args)

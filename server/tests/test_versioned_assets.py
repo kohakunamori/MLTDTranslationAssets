@@ -6,6 +6,7 @@ import io
 import json
 import re
 import sqlite3
+import sys
 import tempfile
 import threading
 import unittest
@@ -23,12 +24,14 @@ from server.versioned_asset_store import (
     VersionConflict,
     VersionedAssetStore,
 )
-from tools import versioned_assets
+from tools import archive_controller, versioned_assets
 from tools.versioned_assets import (
     Client,
     VersionedAssetHTTPServer,
+    index_health,
     maintenance,
     sync,
+    vacuum_store,
     verify,
 )
 
@@ -1335,6 +1338,114 @@ class SyncWindowTests(unittest.TestCase):
         self.assertEqual(
             store.stats("1077100", "jp-android")["mapped"], len(self.NAMES) + 1
         )
+
+
+class VacuumMaintenanceTests(unittest.TestCase):
+    """Compaction is a maintenance action, gated by measured fragmentation."""
+
+    def make_store(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        store = VersionedAssetStore(temp.name)
+        self.addCleanup(store.close)
+        return store
+
+    def fragment(self, store, rows: int = 400) -> None:
+        """Leave a real freelist behind: insert rows, then delete them."""
+        store.ensure_version(
+            "9999999",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        names = [f"frag_{index:04d}.bundle" for index in range(rows)]
+        store.register_names("9999999", "jp-android", names)
+        store.bind_objects(
+            "9999999",
+            "jp-android",
+            [BindBatchTests.row(name) for name in names],
+        )
+        with store.write_db() as conn:
+            conn.execute("DELETE FROM entries WHERE version='9999999'")
+            conn.execute("DELETE FROM versions WHERE version='9999999'")
+        # Fold the WAL into the main file so a read-only connection (and
+        # index_health) sees the real page count and freelist.
+        with store.write_db() as conn:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+    def test_a_missing_database_is_reported_not_created(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.assertEqual(vacuum_store(temp.name), {"vacuum": "absent", "changed": False})
+        self.assertFalse((Path(temp.name) / "index.sqlite3").exists())
+
+    def test_if_needed_skips_a_healthy_store(self):
+        store = self.make_store()
+        report = vacuum_store(store.root, if_needed=True, min_freelist_bytes=1)
+        self.assertEqual(report["vacuum"], "skipped")
+        self.assertFalse(report["changed"])
+        self.assertIn("below threshold", report["reason"])
+        self.assertIn("freelist_pages", report)
+
+    def test_dry_run_reports_without_compacting(self):
+        store = self.make_store()
+        self.fragment(store)
+        before = index_health(Path(store.root) / "index.sqlite3")
+        self.assertGreater(before["freelist_pages"], 0)
+        report = vacuum_store(store.root, dry_run=True)
+        self.assertEqual(report["vacuum"], "planned")
+        self.assertEqual(report["freelist_pages"], before["freelist_pages"])
+        self.assertEqual(
+            index_health(Path(store.root) / "index.sqlite3")["freelist_pages"],
+            before["freelist_pages"],
+        )
+
+    def test_vacuum_reclaims_the_freelist_and_keeps_the_data(self):
+        store = self.make_store()
+        names = ["a.bundle", "b.bundle", "c.bundle"]
+        store.ensure_version(
+            "1077100",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        store.register_names("1077100", "jp-android", names)
+        store.bind_objects(
+            "1077100", "jp-android", [BindBatchTests.row(name) for name in names]
+        )
+        self.fragment(store)
+        before = index_health(Path(store.root) / "index.sqlite3")
+        self.assertGreater(before["freelist_pages"], 0)
+
+        report = vacuum_store(store.root, if_needed=True, min_freelist_bytes=1)
+
+        self.assertEqual(report["vacuum"], "done")
+        self.assertTrue(report["changed"])
+        self.assertEqual(report["after"]["freelist_pages"], 0)
+        # Compaction shrinks the page count; the file itself is truncated when the
+        # last connection closes, so compare pages rather than bytes here.
+        self.assertLess(report["after"]["page_count"], before["page_count"])
+        self.assertEqual(list(report["wal_checkpoint"]), [0, 0, 0])
+        # Data survives compaction.
+        self.assertEqual(
+            store.stats("1077100", "jp-android")["mapped"], len(names)
+        )
+        self.assertIsNotNone(store.lookup("1077100", "jp-android", "a.bundle")["sha256"])
+
+    def test_the_controller_runs_the_gated_maintenance_between_cycles(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        calls: list[list[str]] = []
+        with mock.patch.object(archive_controller, "run_checked", calls.append):
+            archive_controller.maintain_store(Path(temp.name), min_freelist_mb=150.0)
+        self.assertEqual(len(calls), 1)
+        argv = calls[0]
+        self.assertEqual(argv[0], sys.executable)
+        self.assertIn("maintenance", argv)
+        self.assertIn("--vacuum", argv)
+        self.assertIn("--if-needed", argv)
+        self.assertEqual(argv[argv.index("--min-freelist-mb") + 1], "150.0")
+        self.assertEqual(argv[argv.index("--root") + 1], temp.name)
 
 
 if __name__ == "__main__":

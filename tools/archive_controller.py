@@ -239,6 +239,21 @@ def activate_release(root: Path, release: dict) -> None:
     ])
 
 
+def maintain_store(root: Path, *, min_freelist_mb: float) -> None:
+    """Compact the index when in-place binds have fragmented it.
+
+    Runs between watch cycles, i.e. with no sync/verify/materialize child alive and
+    nothing holding the writer.  `--if-needed` makes it a no-op unless the freelist
+    is above the threshold, so a healthy store costs one `PRAGMA` per cycle.
+    """
+    run_checked([
+        sys.executable, str(REPO / "tools" / "versioned_assets.py"),
+        "maintenance", "--root", str(root),
+        "--vacuum", "--if-needed",
+        "--min-freelist-mb", str(min_freelist_mb),
+    ])
+
+
 def require_free_space(root: Path, minimum_free_bytes: int) -> None:
     stat = os.statvfs(root)
     free = stat.f_bavail * stat.f_frsize
@@ -442,6 +457,15 @@ def main() -> int:
     watch.add_argument("--proxy")
     watch.add_argument("--durable", action="store_true")
     watch.add_argument("--min-free-gib", type=float, default=80.0)
+    watch.add_argument(
+        "--vacuum-min-freelist-mb",
+        type=float,
+        default=200.0,
+        help=(
+            "compact the index between cycles once its freelist passes this size "
+            "(0 disables); a fragmented store added ~2 minutes to every sync"
+        ),
+    )
     watch.add_argument("--auto-activate", choices=("0", "1"), default="0")
 
     args = ap.parse_args()
@@ -599,9 +623,18 @@ def main() -> int:
                     minimum_free_bytes=int(args.min_free_gib * 1024**3),
                     auto_activate=args.auto_activate == "1",
                 )
+                vacuum_error: str | None = None
+                if args.vacuum_min_freelist_mb > 0:
+                    # Between cycles, so no archive child is running.  A failure
+                    # here must not stop archiving.
+                    try:
+                        maintain_store(root, min_freelist_mb=args.vacuum_min_freelist_mb)
+                    except Exception as exc:
+                        vacuum_error = f"{type(exc).__name__}: {exc}"
                 print(json.dumps({
                     "watch": "ok",
                     "discovery_error": discovery_error,
+                    "vacuum_error": vacuum_error,
                     "active_version": control.get("active_version"),
                     "retained_versions": [
                         version
