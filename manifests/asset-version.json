@@ -1,9 +1,9 @@
 {
   "client_version": "9.0.200",
-  "asset_version": 1077720,
-  "last_synced_at": "2026-10-09T09:13:38.032546+00:00",
+  "asset_version": 1077730,
+  "last_synced_at": "2026-10-09T20:35:05.376889+00:00",
   "matsurihi_api": "https://api.matsurihi.me/api/mltd/v2/version/assets",
   "asset_root": "https://td-assets.bn765.com/{version}/production/2018/Android",
-  "index_name": "ea623f17681ba8d65c8fc62f4713e297791f7f56.data",
-  "remote_updated_at": "2026-10-09T12:00:00+09:00"
+  "index_name": "2c184e89efb391a79b504ebcf7b6b0d7070ec151.data",
+  "remote_updated_at": "2026-10-10T00:00:00+09:00"
 }
