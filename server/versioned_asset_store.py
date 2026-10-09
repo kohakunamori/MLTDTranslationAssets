@@ -18,6 +18,15 @@ class VersionConflict(RuntimeError):
     pass
 
 
+# Legacy index from an earlier schema.  Nothing in this tree queries it, but it
+# still charges a random insert into a multi-million-entry index for every name
+# of every version, so `versioned_assets.py maintenance --drop-legacy-entry-index`
+# removes it.  It is deliberately absent from `_init_db`: on the live 2 GB NAS
+# database that DDL reads tens of GB and runs for tens of minutes, which blocked
+# every sync behind it.
+LEGACY_ENTRY_INDEX = "idx_entries_scope_name_version"
+
+
 class VersionedAssetStore:
     # One fresh sqlite3 connection per store call used to cost ~1.9 MB of random
     # page reads and ~48 ms on the NAS index (1.9 GB main file plus a 124 MB WAL

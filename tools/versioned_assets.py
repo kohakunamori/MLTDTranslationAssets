@@ -9,6 +9,7 @@ import json
 import mimetypes
 import os
 import re
+import sqlite3
 import sys
 import threading
 import time
@@ -24,7 +25,11 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from server.asset_archive import parse_manifest_objects, safe_relative_name  # noqa: E402
-from server.versioned_asset_store import VersionConflict, VersionedAssetStore  # noqa: E402
+from server.versioned_asset_store import (  # noqa: E402
+    LEGACY_ENTRY_INDEX,
+    VersionConflict,
+    VersionedAssetStore,
+)
 
 
 CONTENT_RANGE_RE = re.compile(r"^bytes\s+(\d+)-(\d+)/(\d+|\*)$", re.IGNORECASE)
@@ -1094,6 +1099,69 @@ def serve(args) -> int:
     return 0
 
 
+def maintenance(args) -> int:
+    """One-off index repairs that must not run on the store's startup path.
+
+    Dropping the legacy entry index reads tens of GB and runs for tens of minutes
+    on the live NAS database, so it is an explicit, dry-runnable action instead of
+    something `VersionedAssetStore.__init__` does to every sync.
+    """
+    store = VersionedAssetStore(args.root)
+    try:
+        with store.db() as conn:
+            present = (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
+                    (LEGACY_ENTRY_INDEX,),
+                ).fetchone()
+                is not None
+            )
+        if not present:
+            print(
+                json.dumps({"legacy_entry_index": "absent", "changed": False}),
+                flush=True,
+            )
+            return 0
+        if args.dry_run:
+            index_bytes = None
+            with store.db() as conn:
+                try:
+                    index_bytes = conn.execute(
+                        "SELECT COALESCE(SUM(pgsize), 0) FROM dbstat WHERE name=?",
+                        (LEGACY_ENTRY_INDEX,),
+                    ).fetchone()[0]
+                except sqlite3.OperationalError:
+                    index_bytes = None
+            print(
+                json.dumps(
+                    {
+                        "legacy_entry_index": "present",
+                        "changed": False,
+                        "dry_run": True,
+                        "index_bytes": index_bytes,
+                    }
+                ),
+                flush=True,
+            )
+            return 0
+        started = time.time()
+        with store.db() as conn:
+            conn.execute(f"DROP INDEX {LEGACY_ENTRY_INDEX}")
+        print(
+            json.dumps(
+                {
+                    "legacy_entry_index": "dropped",
+                    "changed": True,
+                    "seconds": round(time.time() - started, 1),
+                }
+            ),
+            flush=True,
+        )
+    finally:
+        store.close()
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="command", required=True)
@@ -1156,7 +1224,19 @@ def main() -> int:
     serve_p.add_argument("--timeout", type=float, default=60.0)
     serve_p.set_defaults(func=serve)
 
+    maintenance_p = sub.add_parser("maintenance")
+    maintenance_p.add_argument("--root", required=True)
+    maintenance_p.add_argument(
+        "--drop-legacy-entry-index",
+        action="store_true",
+        help=f"drop {LEGACY_ENTRY_INDEX}; without it this only reports and estimates",
+    )
+    maintenance_p.add_argument("--dry-run", action="store_true")
+    maintenance_p.set_defaults(func=maintenance)
+
     args = ap.parse_args()
+    if args.command == "maintenance" and not args.drop_legacy_entry_index:
+        args.dry_run = True
     try:
         return args.func(args)
     except VersionConflict as exc:

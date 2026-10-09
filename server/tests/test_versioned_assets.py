@@ -16,8 +16,12 @@ import requests
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from server.versioned_asset_store import VersionConflict, VersionedAssetStore
-from tools.versioned_assets import Client, VersionedAssetHTTPServer, verify
+from server.versioned_asset_store import (
+    LEGACY_ENTRY_INDEX,
+    VersionConflict,
+    VersionedAssetStore,
+)
+from tools.versioned_assets import Client, VersionedAssetHTTPServer, maintenance, verify
 
 
 class VersionedAssetStoreTests(unittest.TestCase):
@@ -835,6 +839,80 @@ class ChecksumIndexReuseTests(unittest.TestCase):
         )
         candidate = client.find_md5_reuse(md5, len(content))
         self.assertEqual(candidate["sha256"], sha256)
+
+
+class MaintenanceCommandTests(unittest.TestCase):
+    """The legacy index is removed deliberately, never from store construction."""
+
+    def make_store(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        store = VersionedAssetStore(temp.name)
+        self.addCleanup(store.close)
+        return store
+
+    def make_store_with_legacy_index(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        store = VersionedAssetStore(temp.name)
+        self.addCleanup(store.close)
+        with store.db() as conn:
+            conn.execute(
+                f"CREATE INDEX {LEGACY_ENTRY_INDEX} ON entries(scope,name,version)"
+            )
+        return store
+
+    def index_present(self, store) -> bool:
+        with store.db() as conn:
+            return (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
+                    (LEGACY_ENTRY_INDEX,),
+                ).fetchone()
+                is not None
+            )
+
+    def test_a_store_without_the_legacy_index_reports_nothing_to_do(self):
+        store = self.make_store()
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            code = maintenance(SimpleNamespace(root=str(store.root), dry_run=False))
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            json.loads(buffer.getvalue().strip()),
+            {"legacy_entry_index": "absent", "changed": False},
+        )
+
+    def test_dry_run_measures_without_dropping(self):
+        store = self.make_store_with_legacy_index()
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            code = maintenance(SimpleNamespace(root=str(store.root), dry_run=True))
+        payload = json.loads(buffer.getvalue().strip())
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["legacy_entry_index"], "present")
+        self.assertFalse(payload["changed"])
+        self.assertTrue(payload["dry_run"])
+        self.assertIn("index_bytes", payload)
+        self.assertTrue(self.index_present(store))
+
+    def test_dropping_is_idempotent(self):
+        store = self.make_store_with_legacy_index()
+        first = io.StringIO()
+        with redirect_stdout(first):
+            maintenance(SimpleNamespace(root=str(store.root), dry_run=False))
+        payload = json.loads(first.getvalue().strip())
+        self.assertEqual(payload["legacy_entry_index"], "dropped")
+        self.assertTrue(payload["changed"])
+        self.assertFalse(self.index_present(store))
+
+        second = io.StringIO()
+        with redirect_stdout(second):
+            maintenance(SimpleNamespace(root=str(store.root), dry_run=False))
+        self.assertEqual(
+            json.loads(second.getvalue().strip()),
+            {"legacy_entry_index": "absent", "changed": False},
+        )
 
 
 if __name__ == "__main__":
