@@ -190,6 +190,14 @@ class VersionedAssetStore:
                 CREATE INDEX IF NOT EXISTS idx_entries_sha256 ON entries(sha256);
                 CREATE INDEX IF NOT EXISTS idx_entries_verify_cover
                     ON entries(version,scope,sha256,size);
+                -- `idx_entries_scope_name_version` is a legacy index from an earlier
+                -- schema: no query in this tree uses it (lookups go through the
+                -- primary key or the verify-cover index), yet it charges one random
+                -- insert into a multi-million-entry index for every name of every
+                -- version.  It is NOT dropped here: on the live 2 GB NAS database the
+                -- DDL ran for 12+ minutes inside store construction without writing a
+                -- single page (see deploy/nas-imas-assets/README.md), so its removal
+                -- belongs in a measured maintenance window, not on the startup path.
                 CREATE TABLE IF NOT EXISTS object_checksums (
                     sha256 TEXT PRIMARY KEY,
                     size INTEGER NOT NULL,
