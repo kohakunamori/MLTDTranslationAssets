@@ -741,8 +741,16 @@ class VersionedAssetStore:
             ).fetchone()
             unique = conn.execute(
                 """
-                SELECT COUNT(DISTINCT sha256)
-                FROM entries WHERE version=? AND scope=? AND sha256 IS NOT NULL
+                -- COUNT(DISTINCT sha256) here plans as an index search plus a
+                -- temp b-tree and reads sha256 from the table row by row: 52 s for
+                -- a 168k-object version on the NAS pool, i.e. ~2 minutes added to
+                -- every sync.  The GROUP BY form answers the same question in
+                -- 0.16 s.  Do not "simplify" it back.
+                SELECT COUNT(*) FROM (
+                    SELECT sha256 FROM entries
+                    WHERE version=? AND scope=? AND sha256 IS NOT NULL
+                    GROUP BY sha256
+                )
                 """,
                 (version, scope),
             ).fetchone()[0]

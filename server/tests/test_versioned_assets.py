@@ -4,6 +4,7 @@ import base64
 import hashlib
 import io
 import json
+import re
 import sqlite3
 import tempfile
 import threading
@@ -685,6 +686,43 @@ class StoreConnectionPoolingTests(unittest.TestCase):
                 )
             ]
         self.assertEqual(inserted, sorted(names))
+
+    def test_stats_avoids_the_slow_distinct_count_plan(self):
+        """COUNT(DISTINCT sha256) reads the table row by row: 52 s per version."""
+        store = self.make_store()
+        store.register_names("1077100", "jp-android", ["a.bundle", "b.bundle"])
+        statements: list[str] = []
+        real_db = store.db
+
+        class Recorder:
+            def __init__(self, conn):
+                self._conn = conn
+
+            def execute(self, sql, *args):
+                statements.append(" ".join(sql.split()))
+                return self._conn.execute(sql, *args)
+
+            def __getattr__(self, item):
+                return getattr(self._conn, item)
+
+        @contextmanager
+        def recording_db():
+            with real_db() as conn:
+                yield Recorder(conn)
+
+        with mock.patch.object(store, "db", recording_db):
+            stats = store.stats("1077100", "jp-android")
+
+        self.assertEqual(stats["registered"], 2)
+        self.assertEqual(stats["unique_objects"], 0)
+        self.assertFalse(
+            [
+                sql
+                for sql in statements
+                if "COUNT(DISTINCT" in re.sub(r"--[^\n]*", "", sql).upper()
+            ],
+            "stats() must not run COUNT(DISTINCT sha256)",
+        )
 
     def test_pooled_connections_carry_the_tuning_pragmas(self):
         store = self.make_store()
