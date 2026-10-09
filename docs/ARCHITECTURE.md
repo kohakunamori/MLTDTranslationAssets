@@ -224,7 +224,8 @@ flowchart TB
 
 - `promote_merged_locales.py`：`source_sha256` 必须与 `sha256(ja)` 一致，否则拒绝晋级；只处理 diff 内 `status ∈ {pending, untranslated}` 且 `zh` 非空的行，diff 外的行永不触碰。
   - `--sweep` 处理**全仓**而不是 diff：早于本工具合入的行永远不会经过 diff 路径，会一直停在 `pending`。sweep 同样拒绝两类行：`translation_stage ∈ {llm_translated, machine_translated, llm_draft}` 的机器草稿（除非显式 `--allow-machine-drafts`），以及**占位符与源不一致**的行——晋级即发布，而 `validate_repo.py` 只在 `accepted` 行上检查占位符，放进去会让门禁在 CI 里失败。
-  - 现网实测（2026-10-09）：103 个 `pending` 行里 **99 行占位符与源不一致**（如 `card_blst_044miz0154_1006_044miz` 的译文缺 `{$P$}`），只有 4 行（`1077640` 的 `llm_translated` 草稿）能过门禁。这 99 行需要先按源补回占位符才能晋级。
+  - 现网实测（2026-10-09）：103 个 `pending` 行里 **99 行占位符与源不一致**，只有 4 行（`1077640` 的 `llm_translated` 草稿）能过门禁。这 99 行已修复：67 行是译文本身没问题、只是标签/格式符与源不符（漏掉 `{$P$}`、源写 `<size=14>` 而译文写 `<size=16>`、源写 `{0}` 而译文写 `{0:D4}`、译文多出源没有的 `{0}`），保留措辞只归一化占位符，由 sweep 晋级为 `accepted`；另外 32 行的 `zh` 其实对应**更早的 `ja`**（源文改了而译文被沿用，占位符不一致只是症状），重新翻译并标 `translation_stage=llm_translated`，由 `llm_translate_untranslated.py publish` 发布（与 `Auto-apply LLM translations` 工作流同一条路径）。修复只动 `zh`/`status`/`translation_stage`，`ja` 与 `source_sha256` 逐字节不变。
+  - `publish` 会跳过「同一 `(bundle, item_key, source_sha256)` 已有 `accepted` 译文」的行（`skipped_duplicate_source`），所以 `1077640` 那 4 行草稿不会被它提升，保持 `pending`。
 - `validate_repo.py`：schema/必需键、`asset_version` 纯数字、`client_version is None`、禁 `base_version`、源哈希复验、保留分隔符 `|`/`^` 拦截、`accepted` 行占位符一致性；**先于** build 运行。
 - `build_generated_release.py`：构建失败不创建、不覆盖 `generated/<asset_version>/`。
 - `assets_generated_index.py verify`：逐对象重新哈希后才允许提交。
