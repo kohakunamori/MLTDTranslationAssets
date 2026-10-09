@@ -82,6 +82,38 @@ docker run -d --name mltd-drop-index --entrypoint python \
 `idx_entries_verify_cover` 1024.8 s（读 25 GB），删完 `freelist` 回收 ~857 MB
 （`quick_check` 仍为 `ok`，解析器只读视图目录/`manifest.json`，不看 `entries`）。
 
+## 数据库需要定期 VACUUM
+
+绑定是**原地 UPDATE**，每个版本都给同一个版本的 168k 行做一次改写，加上索引删除留下的
+空闲页，`entries` 的行很快就不再连续：`stats()` 里那条「扫一遍该版本的行」的查询会退化成
+**每行一次随机页读**。现网实测（1077720）：
+
+| | 维护前 | `VACUUM` 后 |
+| --- | --- | --- |
+| `page_count` / `freelist` | 535,823 / 216,700 | 297,572 / **0** |
+| 文件大小 | 2093 MB | **1162 MB** |
+| `store.stats()` | ~50–108 s | **0.82 s** |
+| `sync` 固定开销（500 条 smoke） | 159 s | **0.735 s** |
+
+`VACUUM` 现网耗时 **203.8 s**，`quick_check` 仍为 `ok`。它只阻塞归档工具（updater 必须停），
+对外分发走 nginx `alias` 直读 `views/`，不受影响。碎片会随版本继续累积，所以这不是一次性
+操作——`sync` 的固定开销再次抬头（或 `freelist` 又到几百 MB）时重跑即可。
+
+```bash
+cd /vol1/1000/appdata/imas/mltd-asset/asset-server && docker compose stop mltd-asset-updater
+docker run --rm --entrypoint python -v /vol2/1000/imas-asset-archive/mltd:/data \
+  local/imas-mltd-asset:20260914-static -c "
+import sqlite3, time, os
+con = sqlite3.connect('/data/index.sqlite3', timeout=3600); con.execute('PRAGMA busy_timeout=3600000')
+con.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+t = time.time(); con.execute('VACUUM'); print('vacuum %.1fs' % (time.time() - t))
+print('page_count=%d freelist=%d size=%.0fMB' % (con.execute('PRAGMA page_count').fetchone()[0],
+      con.execute('PRAGMA freelist_count').fetchone()[0], os.path.getsize('/data/index.sqlite3')/1048576))
+print('quick_check:', con.execute('PRAGMA quick_check').fetchone()[0])
+"
+docker compose start mltd-asset-updater
+```
+
 部署提醒：本地镜像换了 tag 不变时，`docker compose up -d` 和 **`docker compose start`
 都不会重建容器**（后者会继续用旧容器里的旧代码，`_init_db` 会把删掉的索引建回来）。
 必须 `docker compose up -d --force-recreate mltd-asset-updater`，并用
