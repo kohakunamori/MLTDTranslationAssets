@@ -37,28 +37,33 @@
 
 ## 归档绑定阶段的性能约定
 
-一个版本要绑定 ~168,390 个对象，绑定阶段曾是整条同步链的瓶颈（实测 3.8 → 19 → 21 对象/秒），
-三处约定把它压到分钟级，改动这些代码前请先读本节：
+一个版本要绑定 ~168,390 个对象，绑定阶段曾是整条同步链的瓶颈（实测 3.8 → 19 → 21 对象/秒；
+1077720 这一版全流程 `duration_seconds: 1155`）。先记住结论：**这一阶段受限于归档池的小随机
+写，不是 SQLite**——同样 4,000 条绑定在 tmpfs 里只要 0.06–0.10 s（40,912–67,394 对象/秒），
+在池子上要 33–1080 s。因此所有优化都围绕「减少写出去的页数」：
 
 - `sync` 把下载/复用池拆成「并行 `Client.resolve()` + 主线程批量落库」：worker 只做探测、
-  跨版本复用判定与 CAS 发布（`commit_part`），**不写库**；主线程按 `--bind-batch`（默认 512）
-  收集载荷并调用 `VersionedAssetStore.bind_objects()`。`fetch()` 仍是「resolve + 立刻 bind」的
-  单对象封装，`serve`/`verify`/一次性调用不受影响。
+  跨版本复用判定与 CAS 发布（`commit_part`），**不写库**；`fetch()` 仍是「resolve + 立刻 bind」
+  的单对象封装，`serve`/`verify`/一次性调用不受影响。
+- 落库顺序按主键递增：work list 先排序，按 `--bind-window`（默认 20000）分窗口并行解析，
+  **整窗收齐后排序**再按 `--bind-batch`（默认 2000）连续下发。**不要**按完成顺序切批：下一批
+  会重新弄脏上一批刚写过的叶子页（实测 ~18.7 KB 物理写/行 vs 排序窗口 ~5.4 KB/行；tmpfs 里
+  40,912 vs 67,394 对象/秒）。`SyncWindowTests` 在 `bind_objects` 真正执行的 UPDATE 顺序上
+  钉住这条不变式。
 - `bind_objects()` 在**一个事务**里按主键顺序 `executemany` UPDATE（外加同事务的 checksum
-  UPSERT）。逐对象一个事务时，同一批叶子页会被不同对象反复弄脏，每次 WAL checkpoint 又把它们
-  随机写回 2 GB 主库：实测**每个对象 35 KB 物理写**（一个版本 ~5.9 GB），而池子的随机写只有
-  ~1 MB/s —— 这才是「~105 分钟」的来源。排序后每个页只写一次。
+  UPSERT）。逐对象一个事务时每个对象要付 35 KB 物理写（一版 ~5.9 GB），而池子随机写只有
+  ~1 MB/s —— 这才是「~105 分钟」的来源。
 - `entries` 上**没有二级索引**（`UNUSED_ENTRY_INDEXES`）。绑定会改写 `sha256`，而每个以内容
   哈希为键的索引都意味着「每行一次随机叶子页写」（多百万条目的索引），这正是批量排序之后
   仍然只有 ~34 对象/秒的原因。三个索引在本树中都没有查询使用者（`object_by_md5()` 读
   `object_checksums`；`stats()` 的 DISTINCT 走主键前缀）。`_init_db` 不再创建它们，
   已有库用下面的维护命令清理。
 - 绑定期 `bulk_writes()` 把 WAL autocheckpoint 阈值抬到 `BULK_AUTOCHECKPOINT_PAGES`
-  （10000 页 / 40 MB）。**注意**：并发只读连接会一直握着读标记，PASSIVE checkpoint 无法回收
-  WAL，因此 WAL 可能长期停在阈值之上；索引 DDL 之类的大事务更容易把它推到几百 MB，之后每次
-  commit 都要做一次巨额 checkpoint，速率会掉回 ~20 对象/秒。遇到这种情况先停 updater 跑
-  `PRAGMA wal_checkpoint(TRUNCATE)`（实测 310 MB → 0，0.1–30 s），并保持
-  `journal_size_limit` 生效。
+  （10000 页 / 40 MB），写连接另设 `JOURNAL_SIZE_LIMIT`（64 MB）。**注意**：并发只读连接会一直
+  握着读标记，PASSIVE checkpoint 无法回收 WAL，因此 WAL 可能长期停在阈值之上；索引 DDL 之类
+  的大事务更容易把它推到几百 MB（实测 310–673 MB），之后每次 commit 都要做一次巨额
+  checkpoint，速率会掉回 ~20 对象/秒。遇到这种情况先停 updater 跑
+  `PRAGMA wal_checkpoint(TRUNCATE)`（实测 310 MB → 0，0.1–30 s）。
 
 一次性索引维护（**不要**放进 store 构造路径：在现网 2 GB 库上它会读几十 GB、跑十几分钟，
 并阻塞每一次 sync）：
