@@ -18,13 +18,25 @@ class VersionConflict(RuntimeError):
     pass
 
 
-# Legacy index from an earlier schema.  Nothing in this tree queries it, but it
-# still charges a random insert into a multi-million-entry index for every name
-# of every version, so `versioned_assets.py maintenance --drop-legacy-entry-index`
-# removes it.  It is deliberately absent from `_init_db`: on the live 2 GB NAS
-# database that DDL reads tens of GB and runs for tens of minutes, which blocked
-# every sync behind it.
-LEGACY_ENTRY_INDEX = "idx_entries_scope_name_version"
+# Indexes on `entries` that no query in this tree uses.  They are pure write
+# amplification for a bulk bind: binding changes `sha256`, so SQLite removes and
+# re-inserts an entry in each of them, and those keys are content hashes -- a
+# random leaf page of a multi-million-entry index for every one of a version's
+# ~168k objects.  That is what kept the bind phase at ~34 objects/s even after the
+# updates themselves were sorted into batches:
+#   idx_entries_scope_name_version -- legacy; nothing queries it
+#   idx_entries_sha256            -- object_by_md5() reads object_checksums
+#   idx_entries_verify_cover      -- stats()'s DISTINCT scan uses the primary key
+# `versioned_assets.py maintenance --drop-unused-entry-indexes` removes them and
+# `_init_db` no longer creates them (dropping them from `_init_db` itself would put
+# a multi-minute DDL on every sync's startup path).
+UNUSED_ENTRY_INDEXES = (
+    "idx_entries_scope_name_version",
+    "idx_entries_sha256",
+    "idx_entries_verify_cover",
+)
+# Kept as the name the maintenance CLI and the deployment docs already use.
+LEGACY_ENTRY_INDEX = UNUSED_ENTRY_INDEXES[0]
 
 
 class VersionedAssetStore:
@@ -240,17 +252,10 @@ class VersionedAssetStore:
                     FOREIGN KEY (version, scope)
                         REFERENCES versions(version, scope) ON DELETE CASCADE
                 );
-                CREATE INDEX IF NOT EXISTS idx_entries_sha256 ON entries(sha256);
-                CREATE INDEX IF NOT EXISTS idx_entries_verify_cover
-                    ON entries(version,scope,sha256,size);
-                -- `idx_entries_scope_name_version` is a legacy index from an earlier
-                -- schema: no query in this tree uses it (lookups go through the
-                -- primary key or the verify-cover index), yet it charges one random
-                -- insert into a multi-million-entry index for every name of every
-                -- version.  It is NOT dropped here: on the live 2 GB NAS database the
-                -- DDL ran for 12+ minutes inside store construction without writing a
-                -- single page (see deploy/nas-imas-assets/README.md), so its removal
-                -- belongs in a measured maintenance window, not on the startup path.
+                -- No secondary indexes on `entries`: see UNUSED_ENTRY_INDEXES.  A
+                -- bulk bind rewrites sha256 for ~168k rows, and each hash-keyed
+                -- index turns that into a random leaf page write; the primary key
+                -- plus a name-sorted batch keeps every page sequential instead.
                 CREATE TABLE IF NOT EXISTS object_checksums (
                     sha256 TEXT PRIMARY KEY,
                     size INTEGER NOT NULL,

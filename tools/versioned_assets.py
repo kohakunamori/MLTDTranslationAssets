@@ -27,6 +27,7 @@ if str(REPO) not in sys.path:
 from server.asset_archive import parse_manifest_objects, safe_relative_name  # noqa: E402
 from server.versioned_asset_store import (  # noqa: E402
     LEGACY_ENTRY_INDEX,
+    UNUSED_ENTRY_INDEXES,
     VersionConflict,
     VersionedAssetStore,
 )
@@ -1173,40 +1174,42 @@ def serve(args) -> int:
 def maintenance(args) -> int:
     """One-off index repairs that must not run on the store's startup path.
 
-    Dropping the legacy entry index reads tens of GB and runs for tens of minutes
+    Dropping a multi-hundred-megabyte index reads tens of GB and runs for minutes
     on the live NAS database, so it is an explicit, dry-runnable action instead of
     something `VersionedAssetStore.__init__` does to every sync.
     """
     store = VersionedAssetStore(args.root)
     try:
         with store.db() as conn:
-            present = (
-                conn.execute(
+            present = [
+                name
+                for name in UNUSED_ENTRY_INDEXES
+                if conn.execute(
                     "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
-                    (LEGACY_ENTRY_INDEX,),
+                    (name,),
                 ).fetchone()
-                is not None
-            )
+            ]
         if not present:
             print(
-                json.dumps({"legacy_entry_index": "absent", "changed": False}),
+                json.dumps({"unused_entry_indexes": "absent", "changed": False}),
                 flush=True,
             )
             return 0
         if args.dry_run:
-            index_bytes = None
+            index_bytes: dict[str, int | None] = {}
             with store.db() as conn:
-                try:
-                    index_bytes = conn.execute(
-                        "SELECT COALESCE(SUM(pgsize), 0) FROM dbstat WHERE name=?",
-                        (LEGACY_ENTRY_INDEX,),
-                    ).fetchone()[0]
-                except sqlite3.OperationalError:
-                    index_bytes = None
+                for name in present:
+                    try:
+                        index_bytes[name] = conn.execute(
+                            "SELECT COALESCE(SUM(pgsize), 0) FROM dbstat WHERE name=?",
+                            (name,),
+                        ).fetchone()[0]
+                    except sqlite3.OperationalError:
+                        index_bytes[name] = None
             print(
                 json.dumps(
                     {
-                        "legacy_entry_index": "present",
+                        "unused_entry_indexes": present,
                         "changed": False,
                         "dry_run": True,
                         "index_bytes": index_bytes,
@@ -1217,11 +1220,12 @@ def maintenance(args) -> int:
             return 0
         started = time.time()
         with store.write_db() as conn:
-            conn.execute(f"DROP INDEX {LEGACY_ENTRY_INDEX}")
+            for name in present:
+                conn.execute(f"DROP INDEX {name}")
         print(
             json.dumps(
                 {
-                    "legacy_entry_index": "dropped",
+                    "unused_entry_indexes": present,
                     "changed": True,
                     "seconds": round(time.time() - started, 1),
                 }
@@ -1307,15 +1311,21 @@ def main() -> int:
     maintenance_p = sub.add_parser("maintenance")
     maintenance_p.add_argument("--root", required=True)
     maintenance_p.add_argument(
+        "--drop-unused-entry-indexes",
         "--drop-legacy-entry-index",
+        dest="drop_unused_entry_indexes",
         action="store_true",
-        help=f"drop {LEGACY_ENTRY_INDEX}; without it this only reports and estimates",
+        help=(
+            "drop the `entries` indexes nothing queries "
+            f"({', '.join(UNUSED_ENTRY_INDEXES)}); without it this only reports "
+            "and estimates"
+        ),
     )
     maintenance_p.add_argument("--dry-run", action="store_true")
     maintenance_p.set_defaults(func=maintenance)
 
     args = ap.parse_args()
-    if args.command == "maintenance" and not args.drop_legacy_entry_index:
+    if args.command == "maintenance" and not args.drop_unused_entry_indexes:
         args.dry_run = True
     try:
         return args.func(args)

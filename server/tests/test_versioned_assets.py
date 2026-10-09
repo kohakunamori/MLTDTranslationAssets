@@ -18,6 +18,7 @@ from urllib.request import Request, urlopen
 
 from server.versioned_asset_store import (
     LEGACY_ENTRY_INDEX,
+    UNUSED_ENTRY_INDEXES,
     VersionConflict,
     VersionedAssetStore,
 )
@@ -911,7 +912,7 @@ class ChecksumIndexReuseTests(unittest.TestCase):
 
 
 class MaintenanceCommandTests(unittest.TestCase):
-    """The legacy index is removed deliberately, never from store construction."""
+    """Unused entry indexes are removed deliberately, never at store startup."""
 
     def make_store(self):
         temp = tempfile.TemporaryDirectory()
@@ -920,28 +921,29 @@ class MaintenanceCommandTests(unittest.TestCase):
         self.addCleanup(store.close)
         return store
 
-    def make_store_with_legacy_index(self):
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        store = VersionedAssetStore(temp.name)
-        self.addCleanup(store.close)
+    def make_store_with_unused_indexes(self):
+        store = self.make_store()
         with store.write_db() as conn:
-            conn.execute(
-                f"CREATE INDEX {LEGACY_ENTRY_INDEX} ON entries(scope,name,version)"
-            )
+            for name in UNUSED_ENTRY_INDEXES:
+                conn.execute(f"CREATE INDEX {name} ON entries(scope,name,version)")
         return store
 
-    def index_present(self, store) -> bool:
+    def index_names(self, store) -> set[str]:
         with store.db() as conn:
-            return (
-                conn.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
-                    (LEGACY_ENTRY_INDEX,),
-                ).fetchone()
-                is not None
-            )
+            return {
+                row[0]
+                for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            }
 
-    def test_a_store_without_the_legacy_index_reports_nothing_to_do(self):
+    def test_a_fresh_store_creates_no_unused_entry_indexes(self):
+        store = self.make_store()
+        names = self.index_names(store)
+        for unused in UNUSED_ENTRY_INDEXES:
+            self.assertNotIn(unused, names)
+        # the checksum lookup index is still needed
+        self.assertIn("idx_object_checksums_md5_size", names)
+
+    def test_a_store_without_the_indexes_reports_nothing_to_do(self):
         store = self.make_store()
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -949,38 +951,42 @@ class MaintenanceCommandTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(
             json.loads(buffer.getvalue().strip()),
-            {"legacy_entry_index": "absent", "changed": False},
+            {"unused_entry_indexes": "absent", "changed": False},
         )
 
     def test_dry_run_measures_without_dropping(self):
-        store = self.make_store_with_legacy_index()
+        store = self.make_store_with_unused_indexes()
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             code = maintenance(SimpleNamespace(root=str(store.root), dry_run=True))
         payload = json.loads(buffer.getvalue().strip())
         self.assertEqual(code, 0)
-        self.assertEqual(payload["legacy_entry_index"], "present")
+        self.assertEqual(sorted(payload["unused_entry_indexes"]), sorted(UNUSED_ENTRY_INDEXES))
         self.assertFalse(payload["changed"])
         self.assertTrue(payload["dry_run"])
-        self.assertIn("index_bytes", payload)
-        self.assertTrue(self.index_present(store))
+        self.assertEqual(
+            sorted(payload["index_bytes"]), sorted(UNUSED_ENTRY_INDEXES)
+        )
+        for unused in UNUSED_ENTRY_INDEXES:
+            self.assertIn(unused, self.index_names(store))
 
     def test_dropping_is_idempotent(self):
-        store = self.make_store_with_legacy_index()
+        store = self.make_store_with_unused_indexes()
         first = io.StringIO()
         with redirect_stdout(first):
             maintenance(SimpleNamespace(root=str(store.root), dry_run=False))
         payload = json.loads(first.getvalue().strip())
-        self.assertEqual(payload["legacy_entry_index"], "dropped")
+        self.assertEqual(sorted(payload["unused_entry_indexes"]), sorted(UNUSED_ENTRY_INDEXES))
         self.assertTrue(payload["changed"])
-        self.assertFalse(self.index_present(store))
+        for unused in UNUSED_ENTRY_INDEXES:
+            self.assertNotIn(unused, self.index_names(store))
 
         second = io.StringIO()
         with redirect_stdout(second):
             maintenance(SimpleNamespace(root=str(store.root), dry_run=False))
         self.assertEqual(
             json.loads(second.getvalue().strip()),
-            {"legacy_entry_index": "absent", "changed": False},
+            {"unused_entry_indexes": "absent", "changed": False},
         )
 
 
