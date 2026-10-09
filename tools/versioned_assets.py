@@ -1145,7 +1145,7 @@ def maintenance(args) -> int:
             )
             return 0
         started = time.time()
-        with store.db() as conn:
+        with store.write_db() as conn:
             conn.execute(f"DROP INDEX {LEGACY_ENTRY_INDEX}")
         print(
             json.dumps(

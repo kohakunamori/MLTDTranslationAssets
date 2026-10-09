@@ -591,15 +591,21 @@ class StoreConnectionPoolingTests(unittest.TestCase):
         patcher.start()
         return connects, patcher
 
-    def test_writer_connection_is_created_once(self):
+    def test_readers_and_writer_are_each_created_once(self):
         store = self.make_store()  # construction already pooled the writer
         connects, patcher = self.count_connects()
         try:
             for _ in range(25):
                 store.version("1077100", "jp-android")
+            readers = len(connects)
+            for _ in range(25):
+                store.mark_complete("1077100", "jp-android", True)
         finally:
             patcher.stop()
-        self.assertEqual(connects, [])
+        # One lazily created reader for this thread, and no further connections:
+        # writes reuse the writer pooled at construction.
+        self.assertEqual(readers, 1)
+        self.assertEqual(len(connects), 1)
 
     def test_read_only_store_reuses_one_reader_per_thread(self):
         root = self.make_root()
@@ -674,7 +680,7 @@ class StoreConnectionPoolingTests(unittest.TestCase):
 
     def test_pooled_connections_carry_the_tuning_pragmas(self):
         store = self.make_store()
-        with store.db() as conn:
+        with store.write_db() as conn:
             self.assertEqual(
                 conn.execute("PRAGMA cache_size").fetchone()[0],
                 -VersionedAssetStore.WRITER_CACHE_KIB,
@@ -685,6 +691,11 @@ class StoreConnectionPoolingTests(unittest.TestCase):
                 conn.execute("PRAGMA mmap_size").fetchone()[0],
                 (0, VersionedAssetStore.MMAP_BYTES),
             )
+        with store.db() as reader:
+            self.assertEqual(
+                reader.execute("PRAGMA cache_size").fetchone()[0],
+                -VersionedAssetStore.READER_CACHE_KIB,
+            )
         reader_store = VersionedAssetStore(store.root, read_only=True)
         self.addCleanup(reader_store.close)
         with reader_store.db() as reader:
@@ -692,6 +703,39 @@ class StoreConnectionPoolingTests(unittest.TestCase):
                 reader.execute("PRAGMA cache_size").fetchone()[0],
                 -VersionedAssetStore.READER_CACHE_KIB,
             )
+
+    def test_reads_use_their_own_connection_while_a_write_is_open(self):
+        """Readers must not queue behind the writer: 256 workers depend on it."""
+        store = self.make_store()
+        with store.write_db() as writer:
+            writer.execute(
+                "INSERT INTO versions(version,scope,asset_root,manifest_name,created_at,updated_at)"
+                " VALUES('9999999','jp-android','https://example.invalid/a','m.data',0,0)"
+            )
+            with store.db() as reader:
+                self.assertIsNot(reader, writer)
+                # The uncommitted row is invisible, and the read did not block.
+                self.assertEqual(
+                    reader.execute(
+                        "SELECT COUNT(*) FROM versions WHERE version='9999999'"
+                    ).fetchone()[0],
+                    0,
+                )
+        with store.db() as reader:
+            self.assertEqual(
+                reader.execute(
+                    "SELECT COUNT(*) FROM versions WHERE version='9999999'"
+                ).fetchone()[0],
+                1,
+            )
+
+    def test_writes_are_rejected_on_a_read_only_store(self):
+        store = self.make_store()
+        reader_store = VersionedAssetStore(store.root, read_only=True)
+        self.addCleanup(reader_store.close)
+        with self.assertRaises(PermissionError):
+            with reader_store.write_db():
+                pass
 
 
 class ChecksumIndexReuseTests(unittest.TestCase):
@@ -856,7 +900,7 @@ class MaintenanceCommandTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         store = VersionedAssetStore(temp.name)
         self.addCleanup(store.close)
-        with store.db() as conn:
+        with store.write_db() as conn:
             conn.execute(
                 f"CREATE INDEX {LEGACY_ENTRY_INDEX} ON entries(scope,name,version)"
             )

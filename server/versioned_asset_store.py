@@ -142,10 +142,21 @@ class VersionedAssetStore:
 
     @contextmanager
     def db(self):
-        if self.read_only:
-            yield self._reader()
-            return
+        """Read view: each thread uses its own read-only connection, unlocked.
 
+        Reads must never queue behind the writer.  An archive sync runs 256
+        worker threads, each of which looks an entry up before it binds it, and a
+        single writer connection guarded by one lock made every one of those
+        lookups wait for the transaction in flight -- measured at 4 bound objects
+        per second with 132 of 256 threads parked in `db()` waiting for a commit
+        that was checkpointing the WAL.
+        """
+        yield self._reader()
+
+    @contextmanager
+    def write_db(self):
+        """Write view: one connection shared by all threads, serialized."""
+        self.require_write()
         conn = self._writer()
         with self._write_lock:
             try:
@@ -165,7 +176,7 @@ class VersionedAssetStore:
             conn.execute("PRAGMA journal_mode=WAL")
         finally:
             conn.close()
-        with self.db() as conn:
+        with self.write_db() as conn:
             conn.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS versions (
@@ -276,7 +287,7 @@ class VersionedAssetStore:
         version, scope = self.normalize_identity(version, scope)
         manifest_name = safe_relative_name(manifest_name)
         now = time.time()
-        with self.db() as conn:
+        with self.write_db() as conn:
             row = conn.execute(
                 "SELECT asset_root,manifest_name,manifest_sha256 FROM versions WHERE version=? AND scope=?",
                 (version, scope),
@@ -334,7 +345,7 @@ class VersionedAssetStore:
         # index at tens of MB/s of reads and tens of minutes.  Sorting makes the
         # new keys append sequentially in all of them instead.
         rows.sort()
-        with self.db() as conn:
+        with self.write_db() as conn:
             conn.executemany(
                 "INSERT OR IGNORE INTO entries(version,scope,name) VALUES(?,?,?)",
                 rows,
@@ -474,11 +485,10 @@ class VersionedAssetStore:
             normalized.append((sha256, int(size), md5, now))
         if not normalized:
             return
-        with self._write_lock:
-            with self.db() as conn:
-                conn.executemany(
-                    """
-                    INSERT INTO object_checksums(sha256,size,md5,verified_at)
+        with self.write_db() as conn:
+            conn.executemany(
+                """
+                INSERT INTO object_checksums(sha256,size,md5,verified_at)
                     VALUES(?,?,?,?)
                     ON CONFLICT(sha256) DO UPDATE SET
                         size=excluded.size,
@@ -505,40 +515,39 @@ class VersionedAssetStore:
         name = safe_relative_name(name)
         get = headers.get if headers is not None else lambda _k: None
         # SQLite permits many readers but one writer.  Archive workers publish
-        # CAS bytes in parallel, then serialize only this short metadata update.
-        with self._write_lock:
-            with self.db() as conn:
-                cursor = conn.execute(
+        # CAS bytes in parallel; only this short metadata update is serialized.
+        with self.write_db() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE entries SET
+                    sha256=?,size=?,status=?,content_type=?,etag=?,last_modified=?,
+                    cache_control=?,fetched_at=?
+                WHERE version=? AND scope=? AND name=?
+                """,
+                (
+                    sha256.lower(), int(size), int(status), get("Content-Type"),
+                    get("ETag"), get("Last-Modified"), get("Cache-Control"), time.time(),
+                    version, scope, name,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise KeyError(f"asset not registered for {version}/{scope}: {name}")
+            if content_md5 is not None:
+                md5 = str(content_md5).lower()
+                if len(md5) != 32:
+                    raise ValueError("content_md5 must contain 32 hex characters")
+                int(md5, 16)
+                conn.execute(
                     """
-                    UPDATE entries SET
-                        sha256=?,size=?,status=?,content_type=?,etag=?,last_modified=?,
-                        cache_control=?,fetched_at=?
-                    WHERE version=? AND scope=? AND name=?
+                    INSERT INTO object_checksums(sha256,size,md5,verified_at)
+                    VALUES(?,?,?,?)
+                    ON CONFLICT(sha256) DO UPDATE SET
+                        size=excluded.size,
+                        md5=excluded.md5,
+                        verified_at=excluded.verified_at
                     """,
-                    (
-                        sha256.lower(), int(size), int(status), get("Content-Type"),
-                        get("ETag"), get("Last-Modified"), get("Cache-Control"), time.time(),
-                        version, scope, name,
-                    ),
+                    (sha256.lower(), int(size), md5, time.time()),
                 )
-                if cursor.rowcount != 1:
-                    raise KeyError(f"asset not registered for {version}/{scope}: {name}")
-                if content_md5 is not None:
-                    md5 = str(content_md5).lower()
-                    if len(md5) != 32:
-                        raise ValueError("content_md5 must contain 32 hex characters")
-                    int(md5, 16)
-                    conn.execute(
-                        """
-                        INSERT INTO object_checksums(sha256,size,md5,verified_at)
-                        VALUES(?,?,?,?)
-                        ON CONFLICT(sha256) DO UPDATE SET
-                            size=excluded.size,
-                            md5=excluded.md5,
-                            verified_at=excluded.verified_at
-                        """,
-                        (sha256.lower(), int(size), md5, time.time()),
-                    )
 
     def commit_part(self, part: Path, sha256: str) -> Path:
         """Publish one verified temp file into CAS without ever overwriting an object."""
@@ -591,7 +600,7 @@ class VersionedAssetStore:
     def mark_complete(self, version: str, scope: str, complete: bool):
         self.require_write()
         version, scope = self.normalize_identity(version, scope)
-        with self.db() as conn:
+        with self.write_db() as conn:
             conn.execute(
                 "UPDATE versions SET complete=?,updated_at=? WHERE version=? AND scope=?",
                 (1 if complete else 0, time.time(), version, scope),
