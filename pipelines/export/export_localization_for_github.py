@@ -579,10 +579,6 @@ def export_images_manifest(
                             "asset_name": f"tex_{restored_sha[:16]}.png",
                             "url_template": f"https://github.com/{{owner}}/{{repo}}/releases/download/v1.0.0-assets/tex_{restored_sha[:16]}.png",
                         },
-                        "cloudflare_r2": {
-                            "key": f"images/{restored_sha}.png",
-                            "url_template": f"https://pub-mltd-assets.nyaneko.cn/images/{restored_sha}.png",
-                        },
                     },
                     "review_status": row.get("review_status", "accepted"),
                 })
@@ -594,7 +590,7 @@ def export_images_manifest(
         "storage_architecture": {
             "text_in_repo": True,
             "binary_in_repo": False,
-            "distribution_providers": ["GitHub Release Assets", "Cloudflare R2"],
+            "distribution_providers": ["GitHub Release Assets"],
         },
         "counts": {
             "total_images": len(items),
@@ -921,10 +917,10 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
    - `pending`：已生成初稿或机器翻译，等待人工审校。
    - `accepted`：已通过质量审校的正式译文。
 
-## Web 翻译门户与在线协同
+## 译文查阅站与在线协同
 
-您可以通过社区翻译门户直接在线认领翻译与审校：
-- **Web 门户**：https://mltd-translate.nyaneko.cn
+您可以通过社区门户直接查阅现有译文（只读静态站，认领/审校走 PR）：
+- **Web 门户**：https://kohakunamori.github.io/MLTDTranslationPortal/
 - **提交 PR**：欢迎在 GitHub 直接提交 Pull Request，CI 机器人将对每一行的数据完整性进行自动化检测。
 
 ## 许可证与致谢
@@ -1210,7 +1206,7 @@ def export_all(
 - **歌词与曲目**:
   - {lyrics_counts['total_songs']} 首歌曲分轨，{lyrics_counts['total_slots']} 个歌词槽，已翻译 {lyrics_counts['translated_slots']} 槽（纯英文保留不翻 {lyrics_counts.get('english_bypass_slots', 0)} 槽）。
 - **贴图 Manifest**:
-  - {images_counts['total_images']} 张贴图索引，支持 GitHub Release Assets / Cloudflare R2。
+  - {images_counts['total_images']} 张贴图索引，支持 GitHub Release Assets。
 - **名词表**:
   - 90 个项目固定术语 + 52 名偶像名录。
 {f'''## 2. APK 内置面（独立仓库）

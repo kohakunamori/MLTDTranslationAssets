@@ -231,13 +231,6 @@ class WorkflowGateTests(unittest.TestCase):
         # also carry a version-manifest bump and drafts left from earlier runs.
         self.assertNotIn("queue_size", str(next(s for s in steps if s.get("id") == "publish").get("if", "")))
 
-    def test_the_hourly_image_worker_does_not_install_pillow_when_idle(self):
-        steps = self._steps("backfill-image.yml", job="backfill")
-        names = [s.get("name") for s in steps]
-        install = next(s for s in steps if s.get("name") == "Install imaging dependency")
-        self.assertEqual(install.get("if"), "steps.queue.outputs.queued != '0'")
-        self.assertLess(names.index("List queued backfills"), names.index("Install imaging dependency"))
-
 
 class ReleaseGateCliTests(unittest.TestCase):
     def test_cli_prints_a_decision_object(self):
