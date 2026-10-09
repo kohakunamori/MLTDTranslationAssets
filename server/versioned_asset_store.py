@@ -55,6 +55,11 @@ class VersionedAssetStore:
     # threshold is raised instead of removed: 10000 pages keeps the WAL near 40
     # MB while cutting checkpoint frequency by an order of magnitude.
     BULK_AUTOCHECKPOINT_PAGES = 10000
+    # Cap left behind by a checkpoint.  Dropping an index wrote a 310 MB WAL; the
+    # file kept that size as a high-water mark, so every later commit check-pointed
+    # a huge backlog and reads had to consult the matching wal-index.  64 MB is
+    # comfortably above the 40 MB bulk threshold.
+    JOURNAL_SIZE_LIMIT = 67108864
 
     def __init__(self, root: str | os.PathLike[str], *, read_only: bool = False):
         self.root = Path(root).resolve()
@@ -130,6 +135,13 @@ class VersionedAssetStore:
                     # publication, so a crash can at worst lose a small tail of
                     # bindings that the idempotent sync repairs.
                     conn.execute("PRAGMA synchronous=NORMAL")
+                    # A big maintenance transaction (dropping an index) leaves a
+                    # multi-hundred-megabyte WAL behind.  Without a size limit the
+                    # file keeps that high-water mark forever, every later commit
+                    # has to checkpoint that backlog, and the bind phase crawls back
+                    # down to ~20 objects/s.  Cap the file so it is truncated after
+                    # a checkpoint instead of staying huge.
+                    conn.execute(f"PRAGMA journal_size_limit={int(self.JOURNAL_SIZE_LIMIT)}")
                     self._write_conn = conn
         return conn
 

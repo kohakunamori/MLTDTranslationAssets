@@ -35,6 +35,54 @@
 - `mltd-asset-updater` → `tools/archive_controller.py watch`
 - `mltd-asset-tools` → `tools/versioned_assets.py`（按需 run）
 
+## 归档绑定阶段的性能约定
+
+一个版本要绑定 ~168,390 个对象，绑定阶段曾是整条同步链的瓶颈（实测 3.8 → 19 → 21 对象/秒），
+三处约定把它压到分钟级，改动这些代码前请先读本节：
+
+- `sync` 把下载/复用池拆成「并行 `Client.resolve()` + 主线程批量落库」：worker 只做探测、
+  跨版本复用判定与 CAS 发布（`commit_part`），**不写库**；主线程按 `--bind-batch`（默认 512）
+  收集载荷并调用 `VersionedAssetStore.bind_objects()`。`fetch()` 仍是「resolve + 立刻 bind」的
+  单对象封装，`serve`/`verify`/一次性调用不受影响。
+- `bind_objects()` 在**一个事务**里按主键顺序 `executemany` UPDATE（外加同事务的 checksum
+  UPSERT）。逐对象一个事务时，同一批叶子页会被不同对象反复弄脏，每次 WAL checkpoint 又把它们
+  随机写回 2 GB 主库：实测**每个对象 35 KB 物理写**（一个版本 ~5.9 GB），而池子的随机写只有
+  ~1 MB/s —— 这才是「~105 分钟」的来源。排序后每个页只写一次。
+- `entries` 上**没有二级索引**（`UNUSED_ENTRY_INDEXES`）。绑定会改写 `sha256`，而每个以内容
+  哈希为键的索引都意味着「每行一次随机叶子页写」（多百万条目的索引），这正是批量排序之后
+  仍然只有 ~34 对象/秒的原因。三个索引在本树中都没有查询使用者（`object_by_md5()` 读
+  `object_checksums`；`stats()` 的 DISTINCT 走主键前缀）。`_init_db` 不再创建它们，
+  已有库用下面的维护命令清理。
+- 绑定期 `bulk_writes()` 把 WAL autocheckpoint 阈值抬到 `BULK_AUTOCHECKPOINT_PAGES`
+  （10000 页 / 40 MB）。**注意**：并发只读连接会一直握着读标记，PASSIVE checkpoint 无法回收
+  WAL，因此 WAL 可能长期停在阈值之上；索引 DDL 之类的大事务更容易把它推到几百 MB，之后每次
+  commit 都要做一次巨额 checkpoint，速率会掉回 ~20 对象/秒。遇到这种情况先停 updater 跑
+  `PRAGMA wal_checkpoint(TRUNCATE)`（实测 310 MB → 0，0.1–30 s），并保持
+  `journal_size_limit` 生效。
+
+一次性索引维护（**不要**放进 store 构造路径：在现网 2 GB 库上它会读几十 GB、跑十几分钟，
+并阻塞每一次 sync）：
+
+```bash
+docker run --rm --entrypoint python -v /vol2/1000/imas-asset-archive/mltd:/data \
+  local/imas-mltd-asset:20260914-static \
+  /app/tools/versioned_assets.py maintenance --root /data            # 只看，不删（dry run）
+docker run -d --name mltd-drop-index --entrypoint python \
+  -v /vol2/1000/imas-asset-archive/mltd:/data \
+  local/imas-mltd-asset:20260914-static \
+  /app/tools/versioned_assets.py maintenance --root /data --drop-unused-entry-indexes
+```
+
+现网实测：`idx_entries_scope_name_version` 150.4 s、`idx_entries_sha256` +
+`idx_entries_verify_cover` 1024.8 s（读 25 GB），删完 `freelist` 回收 ~857 MB
+（`quick_check` 仍为 `ok`，解析器只读视图目录/`manifest.json`，不看 `entries`）。
+
+部署提醒：本地镜像换了 tag 不变时，`docker compose up -d` 和 **`docker compose start`
+都不会重建容器**（后者会继续用旧容器里的旧代码，`_init_db` 会把删掉的索引建回来）。
+必须 `docker compose up -d --force-recreate mltd-asset-updater`，并用
+`docker inspect imas-mltd-asset-updater --format '{{.Image}}'` 与
+`docker images --no-trunc local/imas-mltd-asset:20260914-static` 核对镜像 ID。
+
 ## 闭包清单（镜像只装这些）
 
 `Dockerfile` 逐文件 COPY（不整树）：

@@ -37,10 +37,16 @@ CONTENT_RANGE_RE = re.compile(r"^bytes\s+(\d+)-(\d+)/(\d+|\*)$", re.IGNORECASE)
 MD5_ETAG_RE = re.compile(r'^["\']?([0-9a-fA-F]{32})["\']?$')
 MAX_RESUME_SEGMENTS = 64
 MAX_FETCH_FAILURES = 3
-# Bindings per sorted transaction in `sync`.  With ~100 entries per 4 KB leaf page
-# a 512-row batch spans a handful of pages, so each page is written once per batch
-# instead of once per object.
-DEFAULT_BIND_BATCH = 512
+# Bindings per sorted transaction in `sync`.  The bind phase is bound by the pool's
+# random 4 KB writes, not by SQLite: the same 4,000 bindings take 0.1 s in tmpfs but
+# 33-1080 s on the archive pool.  Each row costs ~7.5 KB of WAL at 512 rows per
+# transaction and ~3.3 KB at 2000, so the default is on the larger side.
+DEFAULT_BIND_BATCH = 2000
+# Names resolved in parallel per round.  Completions arrive in random order, so a
+# batch is only name-ordered across the window it is collected from: a window of
+# 20k makes consecutive batches walk forwards through the entries pages instead of
+# scattering writes over the whole 168k-row version.
+DEFAULT_BIND_WINDOW = 20000
 
 
 def etag_md5_hint(value: str | None) -> str | None:
@@ -620,6 +626,10 @@ def sync(args) -> int:
         selected = selected[: max(0, args.limit)]
     if args.manifest_only:
         selected = []
+    # Publish in primary-key order: completed probes arrive in whatever order the
+    # pool finishes them, so sorting here is what lets each batch walk the entries
+    # leaf pages forwards instead of scattering writes across the whole version.
+    selected = sorted(selected)
 
     downloaded = cached = reused = failed = 0
     processed_bytes = int(manifest_row.get("size") or 0)
@@ -656,20 +666,29 @@ def sync(args) -> int:
 
     publish_progress(force=True)
     bind_batch = max(1, int(getattr(args, "bind_batch", 0) or DEFAULT_BIND_BATCH))
+    bind_window = max(bind_batch, int(getattr(args, "bind_window", 0) or DEFAULT_BIND_WINDOW))
 
     def flush_binds(pending: list[tuple[str, dict]]) -> None:
-        """Apply one sorted batch of bindings, naming any object that fails."""
+        """Apply one window of bindings as sorted, contiguous batches.
+
+        Sorting the window (not each completion batch) is what keeps the batches
+        contiguous: a batch flushed in completion order re-dirties the leaf pages
+        the previous batch just wrote, which on this pool costs ~18 KB of physical
+        writes per row instead of ~3 KB.
+        """
         if not pending:
             return
-        rows = [{"name": name, **payload} for name, payload in pending]
-        pending.clear()
-        try:
-            store.bind_objects(args.version, args.scope, rows)
-            return
-        except Exception as exc:
-            # A batch is all-or-nothing, so fall back to one transaction per
-            # object to keep `failures` naming the objects that really failed.
-            print(f"batch bind failed ({exc}); retrying per object", file=sys.stderr, flush=True)
+        pending.sort(key=lambda item: item[0])
+        while pending:
+            chunk, pending[:] = pending[:bind_batch], pending[bind_batch:]
+            rows = [{"name": name, **payload} for name, payload in chunk]
+            try:
+                store.bind_objects(args.version, args.scope, rows)
+                continue
+            except Exception as exc:
+                # A batch is all-or-nothing, so fall back to one transaction per
+                # object to keep `failures` naming the objects that really failed.
+                print(f"batch bind failed ({exc}); retrying per object", file=sys.stderr, flush=True)
             for row in rows:
                 try:
                     store.bind_objects(args.version, args.scope, [row])
@@ -685,35 +704,35 @@ def sync(args) -> int:
         # index at random offsets and the pool crawls at ~4 objects per second.
         with store.bulk_writes():
             with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-                futures = {
-                    pool.submit(client.resolve, name, force=args.force): name
-                    for name in selected
-                }
-                pending: list[tuple[str, dict]] = []
-                for future in as_completed(futures):
-                    name = futures[future]
-                    try:
-                        result = future.result()
-                        payload = result.pop("bind", None)
-                        if payload is not None:
-                            pending.append((result["name"], payload))
-                        if result["status"] == "downloaded":
-                            downloaded += 1
-                        elif result["status"] == "reused":
-                            reused += 1
-                        else:
-                            cached += 1
-                        processed_bytes += int(result.get("size") or 0)
-                        if args.verbose:
-                            print(f"{result['status']:10} {result['size']:12d} {name}", flush=True)
-                    except Exception as exc:
-                        failed += 1
-                        failures.append({"name": name, "error": str(exc)})
-                        print(f"FAILED {name}: {exc}", file=sys.stderr, flush=True)
-                    if len(pending) >= bind_batch:
-                        flush_binds(pending)
-                    publish_progress()
-                flush_binds(pending)
+                for start in range(0, len(selected), bind_window):
+                    window = selected[start : start + bind_window]
+                    futures = {
+                        pool.submit(client.resolve, name, force=args.force): name
+                        for name in window
+                    }
+                    pending: list[tuple[str, dict]] = []
+                    for future in as_completed(futures):
+                        name = futures[future]
+                        try:
+                            result = future.result()
+                            payload = result.pop("bind", None)
+                            if payload is not None:
+                                pending.append((result["name"], payload))
+                            if result["status"] == "downloaded":
+                                downloaded += 1
+                            elif result["status"] == "reused":
+                                reused += 1
+                            else:
+                                cached += 1
+                            processed_bytes += int(result.get("size") or 0)
+                            if args.verbose:
+                                print(f"{result['status']:10} {result['size']:12d} {name}", flush=True)
+                        except Exception as exc:
+                            failed += 1
+                            failures.append({"name": name, "error": str(exc)})
+                            print(f"FAILED {name}: {exc}", file=sys.stderr, flush=True)
+                        publish_progress()
+                    flush_binds(pending)
 
     stats = store.stats(args.version, args.scope)
     complete = failed == 0 and stats["missing"] == 0
@@ -1267,6 +1286,15 @@ def main() -> int:
         help=(
             "bindings applied per sorted transaction; larger batches write each "
             "leaf page fewer times, smaller ones bound the WAL"
+        ),
+    )
+    sync_p.add_argument(
+        "--bind-window",
+        type=int,
+        default=DEFAULT_BIND_WINDOW,
+        help=(
+            "names resolved per pool round, and therefore the span a sorted apply "
+            "can be in primary-key order over"
         ),
     )
     sync_p.add_argument("--verbose", action="store_true")

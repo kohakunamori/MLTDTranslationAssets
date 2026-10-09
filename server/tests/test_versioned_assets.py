@@ -22,7 +22,14 @@ from server.versioned_asset_store import (
     VersionConflict,
     VersionedAssetStore,
 )
-from tools.versioned_assets import Client, VersionedAssetHTTPServer, maintenance, verify
+from tools import versioned_assets
+from tools.versioned_assets import (
+    Client,
+    VersionedAssetHTTPServer,
+    maintenance,
+    sync,
+    verify,
+)
 
 
 class VersionedAssetStoreTests(unittest.TestCase):
@@ -688,6 +695,10 @@ class StoreConnectionPoolingTests(unittest.TestCase):
             )
             self.assertEqual(conn.execute("PRAGMA temp_store").fetchone()[0], 2)  # MEMORY
             self.assertEqual(conn.execute("PRAGMA busy_timeout").fetchone()[0], 120000)
+            self.assertEqual(
+                conn.execute("PRAGMA journal_size_limit").fetchone()[0],
+                VersionedAssetStore.JOURNAL_SIZE_LIMIT,
+            )
             self.assertIn(
                 conn.execute("PRAGMA mmap_size").fetchone()[0],
                 (0, VersionedAssetStore.MMAP_BYTES),
@@ -1171,6 +1182,120 @@ class BindBatchTests(unittest.TestCase):
         self.assertNotIn("bind", fetched)
         self.assertEqual(
             store.lookup("1077340", "jp-android", "new.bundle")["sha256"], digest
+        )
+
+
+class SyncWindowTests(unittest.TestCase):
+    """`sync` resolves in parallel but publishes in primary-key order."""
+
+    NAMES = ["z.bundle", "m.bundle", "a.bundle", "q.bundle", "b.bundle"]
+
+    def test_sync_publishes_each_window_in_name_order(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        recorded: list[str] = []
+        real_write_db = VersionedAssetStore.write_db
+
+        class Recorder:
+            def __init__(self, conn):
+                self._conn = conn
+
+            def executemany(self, sql, params):
+                if "UPDATE entries" in sql:
+                    recorded.extend(param[-1] for param in params)
+                return self._conn.executemany(sql, params)
+
+            def __getattr__(self, item):
+                return getattr(self._conn, item)
+
+        @contextmanager
+        def recording_write_db(self):
+            with real_write_db(self) as conn:
+                yield Recorder(conn)
+
+        manifest_bytes = b"manifest"
+
+        class FakeClient:
+            def __init__(self, store, **kwargs):
+                self.store = store
+                self.version = kwargs["version"]
+                self.scope = kwargs["scope"]
+
+            def fetch(self, name, *, force=False):
+                digest = hashlib.sha256(manifest_bytes).hexdigest()
+                self.store.object_path(digest).write_bytes(manifest_bytes)
+                self.store.bind_object(
+                    self.version,
+                    self.scope,
+                    name,
+                    sha256=digest,
+                    size=len(manifest_bytes),
+                    status=200,
+                    headers={"ETag": '"manifest"'},
+                )
+                return {"name": name, "status": "downloaded", "size": len(manifest_bytes),
+                        "sha256": digest}
+
+            def resolve(self, name, *, force=False):
+                # Completions arrive in reverse order; the publish order must not.
+                payload = {
+                    "sha256": hashlib.sha256(name.encode()).hexdigest(),
+                    "size": len(name),
+                    "status": 200,
+                    "content_type": None,
+                    "etag": None,
+                    "last_modified": None,
+                    "cache_control": None,
+                    "content_md5": None,
+                }
+                return {"name": name, "status": "reused", "size": len(name),
+                        "sha256": payload["sha256"], "bind": payload}
+
+        args = SimpleNamespace(
+            root=temp.name,
+            version="1077100",
+            scope="jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest="manifest.data",
+            proxy=None,
+            timeout=1,
+            durable=False,
+            refresh_manifest=True,
+            contains=None,
+            limit=None,
+            manifest_only=False,
+            force=False,
+            workers=4,
+            verbose=False,
+            bind_batch=2,
+            bind_window=3,
+        )
+        output = io.StringIO()
+        with mock.patch.object(versioned_assets, "Client", FakeClient), mock.patch.object(
+            versioned_assets,
+            "parse_manifest_objects",
+            lambda _data: list(self.NAMES),
+        ), mock.patch.object(
+            VersionedAssetStore, "write_db", recording_write_db
+        ), redirect_stdout(output):
+            rc = sync(args)
+
+        report = json.loads(output.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertEqual(report["reused"], len(self.NAMES))
+        self.assertEqual(report["failed"], 0)
+        self.assertTrue(report["complete"])
+        # Every UPDATE that `bind_objects` executed is in ascending name order, so
+        # batches of 2 walk forwards through the entries pages even though the pool
+        # completed them in reverse.
+        self.assertEqual(
+            [name for name in recorded if name != "manifest.data"], sorted(self.NAMES)
+        )
+        store = VersionedAssetStore(temp.name, read_only=True)
+        self.addCleanup(store.close)
+        # the five objects plus the manifest row
+        self.assertEqual(
+            store.stats("1077100", "jp-android")["mapped"], len(self.NAMES) + 1
         )
 
 
