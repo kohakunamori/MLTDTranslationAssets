@@ -8,7 +8,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from types import SimpleNamespace
 from unittest import mock
 
@@ -981,6 +981,190 @@ class MaintenanceCommandTests(unittest.TestCase):
         self.assertEqual(
             json.loads(second.getvalue().strip()),
             {"legacy_entry_index": "absent", "changed": False},
+        )
+
+
+class BindBatchTests(unittest.TestCase):
+    """Binds are applied as one transaction sorted by primary key."""
+
+    def make_store(self, version: str = "1077100", names=("a.bundle",)):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        store = VersionedAssetStore(temp.name)
+        self.addCleanup(store.close)
+        store.ensure_version(
+            version,
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        store.register_names(version, "jp-android", ["manifest.data", *names])
+        return store
+
+    @staticmethod
+    def row(name: str, **overrides) -> dict:
+        content = b"payload:" + name.encode()
+        row = {
+            "name": name,
+            "sha256": hashlib.sha256(content).hexdigest(),
+            "size": len(content),
+            "status": 200,
+            "content_type": "application/octet-stream",
+            "etag": '"' + hashlib.md5(content).hexdigest() + '"',
+            "last_modified": "Wed, 01 Jan 2025 00:00:00 GMT",
+            "cache_control": "public, max-age=60",
+            "content_md5": hashlib.md5(content).hexdigest(),
+        }
+        row.update(overrides)
+        return row
+
+    def test_a_batch_stores_the_same_fields_as_one_object_binds(self):
+        names = [f"asset_{index:02d}.bundle" for index in range(6)]
+        store = self.make_store(names=names)
+        rows = [self.row(name) for name in names]
+        for row in rows[:3]:
+            store.bind_object(
+                "1077100",
+                "jp-android",
+                row["name"],
+                sha256=row["sha256"],
+                size=row["size"],
+                status=row["status"],
+                headers={
+                    "Content-Type": row["content_type"],
+                    "ETag": row["etag"],
+                    "Last-Modified": row["last_modified"],
+                    "Cache-Control": row["cache_control"],
+                },
+                content_md5=row["content_md5"],
+            )
+        self.assertEqual(store.bind_objects("1077100", "jp-android", rows[3:]), 3)
+
+        for row in rows:
+            stored = store.lookup("1077100", "jp-android", row["name"])
+            for field in ("sha256", "size", "status", "content_type", "etag",
+                          "last_modified", "cache_control"):
+                self.assertEqual(stored[field], row[field], field)
+            self.assertIsNotNone(stored["fetched_at"])
+        with store.db() as conn:
+            cached = {
+                row[0]: (row[1], row[2])
+                for row in conn.execute("SELECT sha256,size,md5 FROM object_checksums")
+            }
+        for row in rows:
+            self.assertEqual(cached[row["sha256"]], (row["size"], row["content_md5"]))
+
+    def test_a_batch_is_one_transaction_sorted_by_name(self):
+        store = self.make_store(names=["a.bundle", "b.bundle", "c.bundle"])
+        recorded: list[tuple[str, list[str]]] = []
+        real_write_db = store.write_db
+
+        class Recorder:
+            def __init__(self, conn):
+                self._conn = conn
+
+            def executemany(self, sql, params):
+                recorded.append((sql.split()[0].upper(), [param[-1] for param in params]))
+                return self._conn.executemany(sql, params)
+
+            def __getattr__(self, item):
+                return getattr(self._conn, item)
+
+        @contextmanager
+        def recording_write_db():
+            with real_write_db() as conn:
+                yield Recorder(conn)
+
+        with mock.patch.object(store, "write_db", recording_write_db):
+            store.bind_objects(
+                "1077100",
+                "jp-android",
+                [self.row(name) for name in ("c.bundle", "a.bundle", "b.bundle")],
+            )
+
+        # One UPDATE and one checksum upsert, i.e. a single transaction, and the
+        # updates arrive in primary-key order.
+        self.assertEqual([statement for statement, _ in recorded], ["UPDATE", "INSERT"])
+        self.assertEqual(recorded[0][1], ["a.bundle", "b.bundle", "c.bundle"])
+
+    def test_an_empty_batch_writes_nothing(self):
+        store = self.make_store()
+        self.assertEqual(store.bind_objects("1077100", "jp-android", []), 0)
+
+    def test_an_unregistered_name_rolls_the_whole_batch_back(self):
+        store = self.make_store(names=["a.bundle", "b.bundle"])
+        with self.assertRaises(KeyError) as raised:
+            store.bind_objects(
+                "1077100",
+                "jp-android",
+                [self.row("a.bundle"), self.row("missing.bundle")],
+            )
+        self.assertIn("missing.bundle", str(raised.exception))
+        self.assertIsNone(store.lookup("1077100", "jp-android", "a.bundle")["sha256"])
+        with store.db() as conn:
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM object_checksums").fetchone()[0], 0
+            )
+
+    def test_resolve_defers_the_bind_that_fetch_applies(self):
+        store = self.make_store(names=["old.bundle"])
+        content = b"unchanged"
+        digest = hashlib.sha256(content).hexdigest()
+        part = store.part_path("1077100", "jp-android", "old.bundle")
+        part.write_bytes(content)
+        store.commit_part(part, digest)
+        store.bind_object(
+            "1077100",
+            "jp-android",
+            "old.bundle",
+            sha256=digest,
+            size=len(content),
+            status=200,
+            headers={"ETag": '"' + hashlib.md5(content).hexdigest() + '"'},
+            content_md5=hashlib.md5(content).hexdigest(),
+        )
+        store.ensure_version(
+            "1077340",
+            "jp-android",
+            asset_root="https://example.invalid/assets",
+            manifest_name="manifest.data",
+        )
+        store.register_names("1077340", "jp-android", ["manifest.data", "new.bundle"])
+
+        class FakeResponse:
+            status_code = 206
+            headers = {
+                "Content-Range": "bytes 0-0/%d" % len(content),
+                "X-Goog-Hash": "md5=" + base64.b64encode(hashlib.md5(content).digest()).decode(),
+                "ETag": '"' + hashlib.md5(content).hexdigest() + '"',
+                "Cache-Control": "public",
+            }
+
+            def close(self):
+                pass
+
+        class FakeSession:
+            def get(self, url, *, headers, stream, timeout):
+                return FakeResponse()
+
+        client = Client(
+            store,
+            version="1077340",
+            scope="jp-android",
+            asset_root="https://example.invalid/assets",
+            timeout=1,
+        )
+        client.session = lambda: FakeSession()
+
+        resolved = client.resolve("new.bundle")
+        self.assertEqual(resolved["status"], "reused")
+        self.assertEqual(resolved["bind"]["sha256"], digest)
+        self.assertIsNone(store.lookup("1077340", "jp-android", "new.bundle")["sha256"])
+
+        fetched = client.fetch("new.bundle")
+        self.assertNotIn("bind", fetched)
+        self.assertEqual(
+            store.lookup("1077340", "jp-android", "new.bundle")["sha256"], digest
         )
 
 

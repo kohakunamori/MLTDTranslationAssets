@@ -543,34 +543,88 @@ class VersionedAssetStore:
         headers,
         content_md5: str | None = None,
     ):
+        get = headers.get if headers is not None else lambda _k: None
+        self.bind_objects(
+            version,
+            scope,
+            [
+                {
+                    "name": name,
+                    "sha256": sha256,
+                    "size": size,
+                    "status": status,
+                    "content_type": get("Content-Type"),
+                    "etag": get("ETag"),
+                    "last_modified": get("Last-Modified"),
+                    "cache_control": get("Cache-Control"),
+                    "content_md5": content_md5,
+                }
+            ],
+        )
+
+    def bind_objects(self, version: str, scope: str, rows: Iterable[dict]) -> int:
+        """Bind many objects in one transaction, sorted by primary key.
+
+        Binding an archived version is ~168k objects.  One transaction per object
+        dirties the same leaf pages over and over, and every WAL checkpoint writes
+        them back into the 2 GB index at random offsets: measured at ~35 KB of
+        physical writes per object -- ~5.9 GB for one version -- against a pool
+        that does ~1 MB/s of random writes, which is what made the phase take over
+        an hour.  Applying the batch in primary-key order walks those leaf pages
+        once and writes each page once.
+        """
         self.require_write()
         version, scope = self.normalize_identity(version, scope)
-        name = safe_relative_name(name)
-        get = headers.get if headers is not None else lambda _k: None
-        # SQLite permits many readers but one writer.  Archive workers publish
-        # CAS bytes in parallel; only this short metadata update is serialized.
+        now = time.time()
+        prepared: list[tuple] = []
+        checksums: list[tuple] = []
+        for row in rows:
+            name = safe_relative_name(row["name"])
+            sha256 = str(row["sha256"]).lower()
+            size = int(row["size"])
+            content_md5 = row.get("content_md5")
+            if content_md5 is not None:
+                md5 = str(content_md5).lower()
+                if len(md5) != 32:
+                    raise ValueError("content_md5 must contain 32 hex characters")
+                int(md5, 16)
+                checksums.append((sha256, size, md5, now))
+            prepared.append(
+                (
+                    sha256,
+                    size,
+                    int(row["status"]),
+                    row.get("content_type"),
+                    row.get("etag"),
+                    row.get("last_modified"),
+                    row.get("cache_control"),
+                    now,
+                    version,
+                    scope,
+                    name,
+                )
+            )
+        if not prepared:
+            return 0
+        prepared.sort(key=lambda item: item[-1])
         with self.write_db() as conn:
-            cursor = conn.execute(
+            before = conn.total_changes
+            conn.executemany(
                 """
                 UPDATE entries SET
                     sha256=?,size=?,status=?,content_type=?,etag=?,last_modified=?,
                     cache_control=?,fetched_at=?
                 WHERE version=? AND scope=? AND name=?
                 """,
-                (
-                    sha256.lower(), int(size), int(status), get("Content-Type"),
-                    get("ETag"), get("Last-Modified"), get("Cache-Control"), time.time(),
-                    version, scope, name,
-                ),
+                prepared,
             )
-            if cursor.rowcount != 1:
-                raise KeyError(f"asset not registered for {version}/{scope}: {name}")
-            if content_md5 is not None:
-                md5 = str(content_md5).lower()
-                if len(md5) != 32:
-                    raise ValueError("content_md5 must contain 32 hex characters")
-                int(md5, 16)
-                conn.execute(
+            if conn.total_changes - before != len(prepared):
+                raise KeyError(
+                    f"assets not registered for {version}/{scope}: "
+                    f"{self._unregistered_names(conn, version, scope, [row[-1] for row in prepared])}"
+                )
+            if checksums:
+                conn.executemany(
                     """
                     INSERT INTO object_checksums(sha256,size,md5,verified_at)
                     VALUES(?,?,?,?)
@@ -579,8 +633,26 @@ class VersionedAssetStore:
                         md5=excluded.md5,
                         verified_at=excluded.verified_at
                     """,
-                    (sha256.lower(), int(size), md5, time.time()),
+                    checksums,
                 )
+        return len(prepared)
+
+    @staticmethod
+    def _unregistered_names(conn, version: str, scope: str, names: list[str]) -> list[str]:
+        """Name the rows a batch update missed, for the per-object fallback."""
+        found: set[str] = set()
+        for offset in range(0, len(names), 400):
+            chunk = names[offset : offset + 400]
+            placeholders = ",".join("?" * len(chunk))
+            found.update(
+                row[0]
+                for row in conn.execute(
+                    f"SELECT name FROM entries WHERE version=? AND scope=? "
+                    f"AND name IN ({placeholders})",
+                    (version, scope, *chunk),
+                )
+            )
+        return [name for name in names if name not in found][:10]
 
     def commit_part(self, part: Path, sha256: str) -> Path:
         """Publish one verified temp file into CAS without ever overwriting an object."""

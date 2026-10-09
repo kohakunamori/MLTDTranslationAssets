@@ -36,6 +36,10 @@ CONTENT_RANGE_RE = re.compile(r"^bytes\s+(\d+)-(\d+)/(\d+|\*)$", re.IGNORECASE)
 MD5_ETAG_RE = re.compile(r'^["\']?([0-9a-fA-F]{32})["\']?$')
 MAX_RESUME_SEGMENTS = 64
 MAX_FETCH_FAILURES = 3
+# Bindings per sorted transaction in `sync`.  With ~100 entries per 4 KB leaf page
+# a 512-row batch spans a handful of pages, so each page is written once per batch
+# instead of once per object.
+DEFAULT_BIND_BATCH = 512
 
 
 def etag_md5_hint(value: str | None) -> str | None:
@@ -272,10 +276,7 @@ class Client:
             source = self.store.object_path(sha256)
             if not source.is_file() or source.stat().st_size != size:
                 return None, probe
-            self.store.bind_object(
-                self.version,
-                self.scope,
-                name,
+            payload = self.bind_payload(
                 sha256=sha256,
                 size=size,
                 status=206,
@@ -292,6 +293,7 @@ class Client:
                 "sha256": sha256,
                 "content_md5": md5,
                 "source_version": str(candidate.get("version") or candidate.get("source_version")),
+                "bind": payload,
             }, probe
         finally:
             response.close()
@@ -317,7 +319,45 @@ class Client:
                 f"download MD5 mismatch: expected={authoritative_md5} actual={content_md5}"
             )
 
+    @staticmethod
+    def bind_payload(
+        *, sha256: str, size: int, status: int, headers, content_md5: str | None = None
+    ) -> dict:
+        """Metadata for one object, ready for VersionedAssetStore.bind_objects."""
+        get = headers.get if headers is not None else (lambda _k: None)
+        return {
+            "sha256": str(sha256).lower(),
+            "size": int(size),
+            "status": int(status),
+            "content_type": get("Content-Type"),
+            "etag": get("ETag"),
+            "last_modified": get("Last-Modified"),
+            "cache_control": get("Cache-Control"),
+            "content_md5": None if content_md5 is None else str(content_md5).lower(),
+        }
+
     def fetch(self, name: str, *, force: bool = False) -> dict:
+        """Resolve one object and bind it immediately.
+
+        The sync pool uses `resolve` and batches the binds instead; this wrapper
+        keeps the one-object contract for serve/verify/one-off callers.
+        """
+        result = self.resolve(name, force=force)
+        payload = result.pop("bind", None)
+        if payload is not None:
+            self.store.bind_objects(
+                self.version, self.scope, [{"name": result["name"], **payload}]
+            )
+        return result
+
+    def resolve(self, name: str, *, force: bool = False) -> dict:
+        """Probe, download or reuse one object without touching the index.
+
+        Returns the fetch result plus a `bind` payload when the caller still has
+        to publish the metadata.  Publishing is deferred so an archive sync can
+        apply thousands of bindings in one sorted transaction (see
+        VersionedAssetStore.bind_objects).
+        """
         name = safe_relative_name(name)
         row = self.store.lookup(self.version, self.scope, name)
         if row is None:
@@ -382,10 +422,7 @@ class Client:
                         destination = self.store.commit_part(part, digest)
                         if destination.stat().st_size != size:
                             raise IOError("content-addressed destination size mismatch")
-                        self.store.bind_object(
-                            self.version,
-                            self.scope,
-                            name,
+                        payload = self.bind_payload(
                             sha256=digest,
                             size=size,
                             status=206,
@@ -398,6 +435,7 @@ class Client:
                             "status": "downloaded",
                             "size": size,
                             "sha256": digest,
+                            "bind": payload,
                         }
                     part.unlink(missing_ok=True)
                     failures += 1
@@ -493,10 +531,7 @@ class Client:
                 destination = self.store.commit_part(part, digest)
                 if destination.stat().st_size != size:
                     raise IOError("content-addressed destination size mismatch")
-                self.store.bind_object(
-                    self.version,
-                    self.scope,
-                    name,
+                payload = self.bind_payload(
                     sha256=digest,
                     size=size,
                     status=last_status,
@@ -509,6 +544,7 @@ class Client:
                     "status": "downloaded",
                     "size": size,
                     "sha256": digest,
+                    "bind": payload,
                 }
 
             except requests.RequestException as exc:
@@ -618,6 +654,30 @@ def sync(args) -> int:
         last_progress = now
 
     publish_progress(force=True)
+    bind_batch = max(1, int(getattr(args, "bind_batch", 0) or DEFAULT_BIND_BATCH))
+
+    def flush_binds(pending: list[tuple[str, dict]]) -> None:
+        """Apply one sorted batch of bindings, naming any object that fails."""
+        if not pending:
+            return
+        rows = [{"name": name, **payload} for name, payload in pending]
+        pending.clear()
+        try:
+            store.bind_objects(args.version, args.scope, rows)
+            return
+        except Exception as exc:
+            # A batch is all-or-nothing, so fall back to one transaction per
+            # object to keep `failures` naming the objects that really failed.
+            print(f"batch bind failed ({exc}); retrying per object", file=sys.stderr, flush=True)
+            for row in rows:
+                try:
+                    store.bind_objects(args.version, args.scope, [row])
+                except Exception as row_exc:
+                    nonlocal failed
+                    failed += 1
+                    failures.append({"name": row["name"], "error": str(row_exc)})
+                    print(f"FAILED {row['name']}: {row_exc}", file=sys.stderr, flush=True)
+
     if selected:
         # 168k short bind transactions: hold WAL autocheckpoints until the pool is
         # done, otherwise every commit also writes dirty pages back into the 2 GB
@@ -625,13 +685,17 @@ def sync(args) -> int:
         with store.bulk_writes():
             with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
                 futures = {
-                    pool.submit(client.fetch, name, force=args.force): name
+                    pool.submit(client.resolve, name, force=args.force): name
                     for name in selected
                 }
+                pending: list[tuple[str, dict]] = []
                 for future in as_completed(futures):
                     name = futures[future]
                     try:
                         result = future.result()
+                        payload = result.pop("bind", None)
+                        if payload is not None:
+                            pending.append((result["name"], payload))
                         if result["status"] == "downloaded":
                             downloaded += 1
                         elif result["status"] == "reused":
@@ -645,7 +709,10 @@ def sync(args) -> int:
                         failed += 1
                         failures.append({"name": name, "error": str(exc)})
                         print(f"FAILED {name}: {exc}", file=sys.stderr, flush=True)
+                    if len(pending) >= bind_batch:
+                        flush_binds(pending)
                     publish_progress()
+                flush_binds(pending)
 
     stats = store.stats(args.version, args.scope)
     complete = failed == 0 and stats["missing"] == 0
@@ -1189,6 +1256,15 @@ def main() -> int:
     sync_p.add_argument("--manifest-only", action="store_true")
     sync_p.add_argument("--contains")
     sync_p.add_argument("--limit", type=int)
+    sync_p.add_argument(
+        "--bind-batch",
+        type=int,
+        default=DEFAULT_BIND_BATCH,
+        help=(
+            "bindings applied per sorted transaction; larger batches write each "
+            "leaf page fewer times, smaller ones bound the WAL"
+        ),
+    )
     sync_p.add_argument("--verbose", action="store_true")
     sync_p.set_defaults(func=sync)
 
