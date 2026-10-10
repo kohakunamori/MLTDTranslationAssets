@@ -13,6 +13,7 @@ from pathlib import Path
 import preprocess_reconstructed as stage
 import internal_texture_image25 as atlas
 import run_mltd_internal_image25 as edit
+import provider_config
 
 WORK=atlas.WORK
 PRE=stage.PRE
@@ -68,7 +69,7 @@ def progress_state(evidence,quality):
  if old and old["inventory"]!=len(evidence["tasks"]):
   raise ValueError("Prior progress inventory differs; reconcile before restarting")
  return {"schema_version":1,"status":"running","inventory":len(evidence["tasks"]),
-         "model":"gpt-image-2.5-sunburst","quality":quality,
+         "model":provider_config.load_config()["image_provider"]["model"],"quality":quality,
          "auto_skipped_unique":evidence["auto_skipped_unique"],
          "duplicate_objects":evidence["duplicate_objects"],
          "manual_layout_exceptions":len(evidence["manual_layout_exceptions"]),

@@ -15,19 +15,48 @@ import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
+from threading import Lock
+from time import monotonic, sleep
 
 CONFIG_PATH=Path(__file__).with_name("config.json")
 DEFAULTS={
  "image_provider":{"base_url":"http://127.0.0.1:15721/v1","mode":"images_edits",
-  "model":"gpt-image-2.5-sunburst","api_key":"","api_key_env":"CLIPROXY_API_KEY",
+  "model":"imas-trans-image","api_key":"","api_key_env":"CLIPROXY_API_KEY",
   "require_api_key":False,"quality":"high","size":"auto","output_format":"png",
-  "timeout_seconds":330,"legacy_controller_model":"gpt-5.6-luna"},
+  "timeout_seconds":330,"min_request_interval_seconds":60,
+  "legacy_controller_model":"gpt-5.6-luna"},
  "vision":{"base_url":"","model":"gpt-5.6-luna","timeout_seconds":220},
  "network":{"http_proxy":"","https_proxy":"","no_proxy":"localhost,127.0.0.1,::1",
   "trust_env_proxy":False,"proxy_localhost":False},
  "retry":{"http":1}
 }
 PNG_SIGNATURE=b"\x89PNG\r\n\x1a\n"
+
+# The upstream image service enforces a requests-per-minute ceiling, so image
+# edits leave this client at most once per min_request_interval_seconds.  The
+# gate is process-global: extra threads queue behind it instead of stacking
+# calls, which is why callers must also stay serial.
+_IMAGE_REQUEST_GATE=Lock()
+_last_image_request_at=0.0
+
+
+def throttle_image_request(config:dict)->float:
+ """Block until the next image edit may start; return the seconds slept.
+
+ This is the single pacing point for image generation.  It never applies to
+ vision/classification calls, which are not the rate-limited surface.
+ """
+ global _last_image_request_at
+ interval=float(config["image_provider"].get("min_request_interval_seconds",60.0))
+ if interval<=0:return 0.0
+ with _IMAGE_REQUEST_GATE:
+  now=monotonic()
+  wait=_last_image_request_at+interval-now
+  if wait>0:
+   sleep(wait)
+   now=monotonic()
+  _last_image_request_at=now
+  return max(0.0,wait)
 
 
 def _url(value:str,field:str,allow_empty:bool=False)->str:
@@ -72,6 +101,9 @@ def load_config(path:Path|None=None)->dict:
   raise ValueError("image_provider.size must be auto or WIDTHxHEIGHT")
  if not isinstance(image["timeout_seconds"],int) or not 10<=image["timeout_seconds"]<=1200:
   raise ValueError("image_provider.timeout_seconds must be 10..1200")
+ interval=image["min_request_interval_seconds"]
+ if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not 0<=float(interval)<=3600:
+  raise ValueError("image_provider.min_request_interval_seconds must be 0..3600 seconds")
  if not isinstance(vision["timeout_seconds"],int) or not 10<=vision["timeout_seconds"]<=1200:
   raise ValueError("vision.timeout_seconds must be 10..1200")
  if not isinstance(image["api_key"],str):
@@ -146,6 +178,7 @@ def direct_edit(config:dict,source:bytes,prompt:str,
  image=config["image_provider"]
  if image["mode"]!="images_edits":
   raise ValueError("direct_edit requires image_provider.mode=images_edits")
+ throttle_image_request(config)
  if not source.startswith(PNG_SIGNATURE):
   raise ValueError("The reconstructed source is not a PNG")
  boundary="mltd-image-"+uuid.uuid4().hex
@@ -184,6 +217,7 @@ def legacy_responses(config:dict,source:bytes,prompt:str,
                      quality:str|None=None,timeout:int|None=None)->tuple[bytes,dict]:
  image=config["image_provider"]
  if image["mode"]!="legacy_responses":raise ValueError("legacy mode is not configured")
+ throttle_image_request(config)
  uri="data:image/png;base64,"+base64.b64encode(source).decode("ascii")
  payload={"model":image["legacy_controller_model"],
    "input":[{"role":"user","content":[{"type":"input_text","text":prompt},
@@ -231,6 +265,7 @@ def inspect(config:dict)->dict:
          "vision_model":config["vision"]["model"],
          "quality":image["quality"],"size":image["size"],"output_format":image["output_format"],
          "timeout_seconds":image["timeout_seconds"],
+         "min_request_interval_seconds":image["min_request_interval_seconds"],
          "api_key_env":image["api_key_env"],"api_key_present":bool(api_key(config)),
          "http_proxy_configured":bool(config["network"]["http_proxy"]),
          "https_proxy_configured":bool(config["network"]["https_proxy"]),

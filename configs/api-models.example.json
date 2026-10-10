@@ -9,7 +9,7 @@
     "base_url": "https://cpa.nyaneko.cn/v1",
     "api_protocol": "responses",
     "api_key_env": "MLTD_API_KEY",
-    "concurrency": 10,
+    "concurrency": 5,
     "request_params": {
       "prompt_cache_key": "mltd-zhcn-system",
       "prompt_cache_options": {
@@ -18,6 +18,6 @@
     }
   },
   "models": {
-    "gemini": "gemini-3.8-flash-high"
+    "imas-trans": "imas-trans"
   }
 }

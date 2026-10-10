@@ -12,3 +12,8 @@ asset-server/switch-version.sh text eol=lf
 
 # The mirror module is COPYed into the distributed image.
 scripts/assets_mirror.py text eol=lf
+
+# Image overlay bundles are byte-exact deployment artifacts.  They are served
+# verbatim and re-hashed against overlay-manifest.json, so no checkout may
+# normalise or re-encode them.
+image-overlay/** -text

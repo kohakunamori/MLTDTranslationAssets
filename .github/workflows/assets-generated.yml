@@ -90,12 +90,32 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
+          set -euo pipefail
           SOURCE_COMMIT="$(git rev-parse HEAD)"
+          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
+          image_args=()
+          OVERLAY_MANIFEST="image-overlay/${ASSET_VERSION}/overlay-manifest.json"
+          if [ -f "$OVERLAY_MANIFEST" ]; then
+            # An audited overlay exists for exactly this asset version, so the
+            # image surface ships with the text surface in one release: same
+            # catalogue, one writer, one push.
+            INDEX_NAME="$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['client_manifest_name'])" "$OVERLAY_MANIFEST")"
+            image_args+=(
+              --require-images
+              --image-overlay-manifest "$OVERLAY_MANIFEST"
+              --image-overlay-root "image-overlay/${ASSET_VERSION}/jp-android"
+              --image-index "image-overlay/${ASSET_VERSION}/jp-android/${INDEX_NAME}"
+            )
+            echo "Image overlay found for ${ASSET_VERSION}; publishing the image surface."
+          else
+            echo "No image overlay for ${ASSET_VERSION}; publishing the text surface only."
+          fi
           python scripts/build_generated_release.py \
             --source-commit "$SOURCE_COMMIT" \
             --translation-commit "$SOURCE_COMMIT" \
             --generated-commit "$SOURCE_COMMIT" \
-            --ci-run-id "$GITHUB_RUN_ID"
+            --ci-run-id "$GITHUB_RUN_ID" \
+            "${image_args[@]}"
 
       - name: Verify generated release
         if: steps.gate.outputs.build == 'true'

@@ -4,7 +4,7 @@
 
 ## 1. 架构与模型规范
 
-- **图像生成与编辑模型**：`gpt-image-2.5-sunburst`（通过 `images_edits` 端点，支持透明通道与高保真文字重绘）
+- **图像生成与编辑模型**：`imas-trans-image`（通过 `images_edits` 端点，支持透明通道与高保真文字重绘）。调用是**串行**的，且两次请求之间至少间隔 `image_provider.min_request_interval_seconds`（默认 60 秒，即每分钟 1 次），以贴合上游的 RPM 限制；这个节流在 `provider_config.throttle_image_request()` 里实现，与线程数无关。
 - **视觉审校与布局识别模型**：`gpt-5.6-luna`（用于识别多 Sprite 布局、文本区域分类与质量检测）
 - **底层纹理编码**：ASTC (Adaptive Scalable Texture Compression) 与 RGB24/RGBA32，保持 UnityFS 资源包非目标像素完全不变。
 
@@ -25,7 +25,7 @@ export OPENAI_API_KEY="your_api_key_here"
 
 ### `config.example.json` 字段说明
 - `image_provider.base_url`: 上游代理网关地址（默认 `http://127.0.0.1:15721/v1` 或兼容 OpenAI images 接口的端点）
-- `image_provider.model`: 固定为 `gpt-image-2.5-sunburst`
+- `image_provider.model`: 固定为 `imas-trans-image`
 - `image_provider.api_key_env`: 读取 API 密钥的环境变量名（默认 `CLIPROXY_API_KEY`）
 - `vision.model`: 固定为 `gpt-5.6-luna`
 
@@ -34,13 +34,27 @@ export OPENAI_API_KEY="your_api_key_here"
 | 脚本 | 功能说明 |
 |---|---|
 | `preprocess_mltd_image25.py` | 提取并解析 Unity Sprite 图集，根据 Sprite 几何结构重组整幅原始画面 |
-| `run_mltd_image25_batch.py` | 批量调度 `gpt-image-2.5-sunburst` 进行图像去日文与简中重绘 |
+| `run_mltd_image25_batch.py` | 批量调度 `imas-trans-image` 进行图像去日文与简中重绘（`--workers` 固定为 1，串行） |
 | `build_mltd_image25_review_gallery.py` | 生成用于人工审查的 Web HTML 对照画廊 (Original vs Localized) |
 | `stage_reviewed_images.py` | 将离线人工审核 CSV 转为 **SHA 绑定的待装审批清单**（`--review-csv` 必填，`--work`/`--output` 选填）。**不修改、不创建 Unity3D Bundle**；每一行的 `review_status` 固定写 `approved_for_staging_not_installed`，且不会自动接受模型结果 |
+| `auto_approve_reconstructed.py` | 自动放行：把审计通过的候选转成可注入的 install manifest（`review_status=auto_approved_no_human_signoff`）。审计有任何 error、有被上游拒绝的图、或有失败任务即拒绝；不是人工 CSV 的替代品，而是它的无人值守对应物 |
 | `audit_reconstructed_release.py` | 安装**前**的镜像制备审计：校验冻结的重组图身份与全部生成 PNG 的尺寸/哈希/ROI 外像素，产出未审校 QA 清单与人工复核阻塞项；**不做任何 Unity 物化**，也不接受 non-PNG 源 |
 | `inject_reviewed_textures.py` | 源绑定注入器：把已人工审核的 PNG 真注入 UnityFS Texture2D，产出 repack 后的 Bundle 与 `inventory.json`（`--install-manifest` 必填；见 **§4.1**） |
 | `verify_bundle_repack.py` | 对上述注入 run 的**独立再审计**：读取报告的定位与 hash，独立重新比对源/输出对象和纹理（见 **§4.2**） |
 | `provider_config.py` | 统一的凭据安全管理、代理与超时重试配置模块 |
+
+## 3.1 自动闸门（无人签字路径）
+
+`inject_reviewed_textures.py` 接受两种来源标签：人工批准
+`user_approved_for_isolated_install_staging`，以及自动闸门标签
+`auto_approved_no_human_signoff`。后者只应在独立审计
+（`audit_reconstructed_release.py`）通过之后写入，因此"自动"不等于"没检查"：
+所有 SHA、纹理几何与 roundtrip 校验照常执行，缺标签的行仍被拒绝。
+人工 CSV 路径（`stage_reviewed_images.py`）仍然保留，但不再是必经环节。
+
+`run_reconstructed_batch.py` 是生产入口：它串行调用图片模型，用
+`--max-seconds` 控制单次运行的时间预算，到点写出进度并干净退出（退出码 0），
+下一次运行从同一份 `reconstructed-preprocess/batch-progress.json` 继续。
 
 ## 4. 运行示例
 

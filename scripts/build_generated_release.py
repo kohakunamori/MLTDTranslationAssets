@@ -11,9 +11,9 @@ Image inputs are intentionally optional until reviewed PNGs are present.  A
 missing image input is reported as ``blocked`` and never represented as a
 successful image artifact; text generation can still produce a valid release.
 
-``--require-images`` is **not yet implementable**.  This builder has no image
+``--require-images`` requires a named, independently audited image overlay.  This builder has no image
 materialization/injector step and no independent image audit, so it cannot
-produce a release that contains the image surface.  A text-only release is
+produce an image surface from PNG inputs alone.  A text-only release is
 never proof that images were produced: the mere presence of reviewed PNG inputs
 on disk is not an image artifact.  ``--require-images`` therefore fails closed
 immediately, before any version/input scan or side effect, instead of
@@ -43,6 +43,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 from assets_generated_index import GeneratedStore
+import merge_image_overlay
 from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
 
 
@@ -282,6 +283,13 @@ def main() -> int:
     parser.add_argument("--ci-run-id", default=os.environ.get("GITHUB_RUN_ID"))
     parser.add_argument("--max-bundles", type=int, default=0,
                         help="test-only cap; production must leave this at zero")
+    parser.add_argument("--image-overlay-manifest", type=Path, default=None,
+                        help="image-overlay/<asset_version>/overlay-manifest.json; enables the image "
+                             "surface and merges its size patch into the published catalogue")
+    parser.add_argument("--image-overlay-root", type=Path, default=None,
+                        help="directory holding the overlay bundles (default: <manifest dir>/jp-android)")
+    parser.add_argument("--image-index", type=Path, default=None,
+                        help="catalogue shipped with the overlay: official sizes plus the image size patch")
     parser.add_argument("--require-images", action="store_true",
                         help="Fail closed: this builder cannot materialize/inject the image "
                              "surface or audit it independently, so requiring images always "
@@ -295,9 +303,9 @@ def main() -> int:
     # text-only release can never satisfy an image requirement.  The presence
     # of reviewed PNG inputs on disk is not evidence that an image artifact was
     # produced; publication must not proceed on that basis.
-    if args.require_images:
+    if args.require_images and args.image_overlay_manifest is None:
         raise ValueError(
-            "--require-images is not implementable: this builder has no image "
+            "--require-images needs --image-overlay-manifest (plus --image-index/--image-overlay-root): "
             "materialization/injector step and no independent image audit, so it cannot "
             "produce a release containing the image surface. A text-only release is never "
             "proof that images were produced, and reviewed PNG inputs on disk are not an "
@@ -364,6 +372,50 @@ def main() -> int:
                             version["asset_version"], version["client_version"],
                             index_name=version["index_name"], index_path=index_path)
     entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    image_bundles = 0
+    if args.image_overlay_manifest is not None:
+        overlay_manifest = args.image_overlay_manifest.resolve()
+        overlay_root = (args.image_overlay_root or overlay_manifest.parent / "jp-android").resolve()
+        image_index = (args.image_index or (overlay_root / version["index_name"])).resolve()
+        records = merge_image_overlay.load_overlay_manifest(overlay_manifest)
+        merged_table, text_patch_rows = merge_image_overlay.merge(
+            merge_image_overlay.load_catalogue(index_path),
+            merge_image_overlay.load_catalogue(image_index), records)
+        payload = msgpack.packb([merged_table], use_bin_type=True)
+        if msgpack.unpackb(payload, raw=False, strict_map_key=False) != [merged_table]:
+            raise ValueError("merged catalogue does not round-trip")
+        merged_index = work / f"merged-{version['index_name']}"
+        merged_index.write_bytes(payload)
+        image_entries = merge_image_overlay.build_entries(
+            records, overlay_root, version["asset_version"], version["client_version"])
+        image_bundles = len(image_entries)
+        # The client reads one declared size per runtime_path, so the catalogue
+        # carries both patches or neither: the pass-through official index entry
+        # is replaced by the merged catalogue, then the image bundles are added.
+        entries = [entry for entry in entries if entry["logical_key"] != "__official_asset_index__"]
+        entries.extend(image_entries)
+        merged_digest = sha256_file(merged_index)
+        entries.append({
+            "logical_key": "__official_asset_index__",
+            "logical_path": f"production/2018/Android/{version['index_name']}",
+            "runtime_path": f"production/2018/Android/{version['index_name']}",
+            "resource_kind": "other",
+            "channel": "assets",
+            "asset_version": version["asset_version"],
+            "client_version": None,
+            "source_client_version": version["client_version"],
+            "source_sha256": merged_digest,
+            "translated_sha256": merged_digest,
+            "reuse_status": "exact",
+            "translation_status": "reused",
+            "artifact_file": str(merged_index.resolve()),
+        })
+        entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
+                                encoding="utf-8")
+        print(json.dumps({"image_surface": "merged_into_release",
+                          "image_bundles": image_bundles,
+                          "text_patch_rows": text_patch_rows,
+                          "merged_index_sha256": merged_digest}, ensure_ascii=False))
     store = GeneratedStore(args.output_root.resolve())
     result = store.build_release(
         version["asset_version"], entries,
@@ -380,7 +432,9 @@ def main() -> int:
         "status": "success", "asset_version": version["asset_version"],
         "client_version": version["client_version"], "selected_bundles": len(selected),
         "generated_entries": len(entries), "generated_manifest": str(result.manifest_path),
-        "image_surface": "ready_for_injection" if images_ready else "blocked_missing_reviewed_inputs",
+        "image_surface": (f"published_{image_bundles}_bundles" if image_bundles else
+                          ("ready_for_injection" if images_ready
+                           else "blocked_missing_reviewed_inputs")),
         "official_index_sha256": sha256_file(index_path),
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))

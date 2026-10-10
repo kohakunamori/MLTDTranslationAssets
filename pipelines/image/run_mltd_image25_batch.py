@@ -15,8 +15,13 @@ ROOT=Path(__file__).resolve().parents[2]
 WORK=ROOT/"work/image-localization-25"
 MANIFEST=WORK/"manifest.jsonl"
 BASE="http://127.0.0.1:15721/v1/responses"
-TOOL_MODEL="gpt-image-2.5-sunburst"
-CONTROLLER="gpt-5.6-luna"
+def tool_model()->str:
+    """Image model actually used by the request, read from the live config.
+
+    The name is deliberately not hardcoded: a provider switch is a config edit,
+    and the model recorded in every report cannot disagree with the request.
+    """
+    return str(provider_config.load_config()["image_provider"]["model"])
 PROMPT=(
   "Edit the attached original MLTD game UI texture/atlas into Simplified Chinese. "
   "Replace ALL visible Japanese player-facing words and sentences with fluent Mainland Chinese, "
@@ -106,7 +111,7 @@ def process(row:dict,quality:str,timeout:int,stop:Event,lock:Lock)->dict:
     else:err="stopped after repeated provider failures"
     meta={"id":row["id"],"status":"failed_retryable" if not stop.is_set() else "blocked_provider",
           "attempts":attempt,"error":err,"elapsed_seconds":round(time.perf_counter()-t0,3),
-          "requested_image_model":TOOL_MODEL,"original":row["original"],"edited":row["edited"]}
+          "requested_image_model":tool_model(),"original":row["original"],"edited":row["edited"]}
     jsonwrite(mp,meta)
     return {"id":row["id"],"status":meta["status"],"error":err}
 def main()->int:
@@ -116,7 +121,7 @@ def main()->int:
     ap.add_argument("--quality",default="high",choices=["medium","high","xhigh","max"])
     ap.add_argument("--timeout",type=int,default=240)
     args=ap.parse_args()
-    if not 1<=args.workers<=2:raise ValueError("Use at most 2 workers while main translation runs")
+    if args.workers!=1:raise ValueError("Serial only: the image service allows one request per minute")
     rows=[json.loads(line) for line in MANIFEST.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not rows:raise ValueError("Empty workset")
     # A previous run sent every extracted Texture2D to GPT Image, including
@@ -147,7 +152,7 @@ def main()->int:
              "composite_jobs_separate":composite_count,
              "already_generated_in_selected":len(selected)-sum(not (WORK/r["edited"]).is_file() for r in selected),
              "submitted_this_run":len(pending),"generated_this_run":0,"failed_this_run":0,
-             "deferred_this_run":0,"model":TOOL_MODEL,"status":"running"}
+             "deferred_this_run":0,"model":tool_model(),"status":"running"}
     jsonwrite(WORK/"batch-progress.json",summary)
     print("BEGIN",json.dumps(summary,ensure_ascii=False),flush=True)
     # Workers are bounded to avoid disrupting the user's live translation pool.
