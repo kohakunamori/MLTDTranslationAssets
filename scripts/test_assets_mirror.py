@@ -12,7 +12,11 @@ import hashlib
 import json
 import os
 import tempfile
+import threading
+import time
 import unittest
+import urllib.error
+from unittest import mock
 from pathlib import Path
 
 import sys
@@ -21,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts import assets_mirror  # noqa: E402
 from scripts.assets_mirror import (  # noqa: E402
     ALLOWED_REUSE_STATUS,
     ALLOWED_TRANSLATION_STATUS,
@@ -37,6 +42,7 @@ from scripts.assets_mirror import (  # noqa: E402
     validate_manifest,
     verify_manifest_objects,
 )
+from scripts import release_reuse  # noqa: E402
 
 COMMIT_A = "a" * 40
 COMMIT_B = "b" * 40
@@ -123,6 +129,12 @@ class FakeSource:
         self.checksums: dict[tuple[str, str], str] = {}
         self.objects: dict[tuple[str, str], bytes] = {}
         self.object_requests: list[tuple[str, str]] = []
+        #: Set to make each object fetch overlap detectably; a parallel mirror
+        #: reaches ``max_in_flight`` > 1, a serial one never does.
+        self.object_delay = 0.0
+        self.in_flight = 0
+        self.max_in_flight = 0
+        self._in_flight_lock = threading.Lock()
         self.manifest_requests: list[tuple[str, str]] = []
         self.head_requests = 0
         self.rate_limit_on_objects = False
@@ -187,17 +199,26 @@ class FakeSource:
 
     def fetch_object(self, digest: str, commit: str) -> bytes:
         self.object_requests.append((digest, commit))
-        if self.rate_limit_on_objects:
-            raise RateLimitError(f"rate limited fetching object {digest}", status=429, retry_after="60")
-        key = (digest, commit)
-        if key not in self.objects:
-            raise AssetsMirrorError(f"no object {digest} at {commit}")
-        data = self.objects[key]
-        # Mirrors the real source: bytes are verified against the requested digest.
-        actual = sha256_hex(data)
-        if actual != digest:
-            raise ObjectDigestMismatch(digest, actual, origin=f"fake://{digest}")
-        return data
+        with self._in_flight_lock:
+            self.in_flight = getattr(self, "in_flight", 0) + 1
+            self.max_in_flight = max(getattr(self, "max_in_flight", 0), self.in_flight)
+        try:
+            if self.object_delay:
+                time.sleep(self.object_delay)
+            if self.rate_limit_on_objects:
+                raise RateLimitError(f"rate limited fetching object {digest}", status=429, retry_after="60")
+            key = (digest, commit)
+            if key not in self.objects:
+                raise AssetsMirrorError(f"no object {digest} at {commit}")
+            data = self.objects[key]
+            # Mirrors the real source: bytes are verified against the requested digest.
+            actual = sha256_hex(data)
+            if actual != digest:
+                raise ObjectDigestMismatch(digest, actual, origin=f"fake://{digest}")
+            return data
+        finally:
+            with self._in_flight_lock:
+                self.in_flight -= 1
 
 
 class MirrorTestCase(unittest.TestCase):
@@ -226,6 +247,229 @@ class MirrorTestCase(unittest.TestCase):
                     self.source.compare.setdefault(candidate, "identical")
                 else:
                     self.source.compare.setdefault(candidate, "ahead")
+
+
+class TestTransientFailuresAreRetried(MirrorTestCase):
+    """A proxy hiccup must not fail a whole tick.
+
+    Measured on the NAS: one tick had every version refused -- the first on a
+    dropped object connection, the rest on ``Connection refused`` from the LAN
+    proxy -- and nothing was published.  A transport failure is not a verdict on
+    the release, so it is retried; a 4xx and a wrong digest are verdicts, and
+    retrying those would either loop forever or fetch the same wrong bytes again.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.calls: list[str] = []
+        self.backoffs = mock.patch.object(assets_mirror, "OBJECT_FETCH_BACKOFFS", (0.0, 0.0, 0.0))
+        self.backoffs.start()
+        self.addCleanup(self.backoffs.stop)
+        self.source = GitHubAssetsSource(repo=REPO, branch="main", fetchImpl=self._fetch)
+        self.mirror = AssetVersionMirror(self.source, self.pool, self.root)
+
+    def _fetch(self, url, *, accept=None, timeout=60.0):
+        self.calls.append(url)
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return assets_mirror.FetchResponse(status=200, body=outcome, headers={})
+
+    def test_a_dropped_connection_is_retried_and_the_tick_survives(self) -> None:
+        self.outcomes = [urllib.error.URLError("connection reset"), b'{"ok":true}']
+        self.assertEqual(self.source._get("https://example.invalid/x").body, b'{"ok":true}')
+        self.assertEqual(len(self.calls), 2)
+
+    def test_a_five_hundred_is_retried(self) -> None:
+        self.outcomes = [assets_mirror.HttpError("boom", url="u", status=503), b"payload"]
+        self.assertEqual(self.source._get("https://example.invalid/x").body, b"payload")
+        self.assertEqual(len(self.calls), 2)
+
+    def test_a_four_zero_four_is_answered_immediately(self) -> None:
+        self.outcomes = [assets_mirror.HttpError("missing", url="u", status=404)]
+        with self.assertRaises(assets_mirror.HttpError):
+            self.source._get("https://example.invalid/x")
+        self.assertEqual(len(self.calls), 1, "a 404 must not be retried: it selects the legacy path")
+
+    def test_a_rate_limit_is_answered_immediately(self) -> None:
+        self.outcomes = [RateLimitError("slow down", status=429, retry_after="60")]
+        with self.assertRaises(RateLimitError):
+            self.source._get("https://example.invalid/x")
+        self.assertEqual(len(self.calls), 1, "hammering a rate limit makes it worse")
+
+    def test_a_persistent_transport_failure_gives_up_after_the_budget(self) -> None:
+        self.outcomes = [urllib.error.URLError("refused")] * 8
+        with self.assertRaises(assets_mirror.HttpError):
+            self.source._get("https://example.invalid/x")
+        self.assertEqual(len(self.calls), len(assets_mirror.OBJECT_FETCH_BACKOFFS) + 1)
+
+
+class TestObjectsAreFetchedInParallel(MirrorTestCase):
+    """One object is one HTTP request; the tick must not do them one at a time.
+
+    Measured on the NAS before this: 4.8 s per object, so a release that adds
+    lyrics and images (hundreds of new objects) took about an hour to mirror while
+    the same objects fetched through the local proxy answer in well under a
+    second.  Nothing about the mirror's contract changes with concurrency -- the
+    pool write stays in one thread and the first failure still publishes nothing --
+    so what these cases pin is that the concurrency is real and that the failure
+    behaviour survived it.
+    """
+
+    def _version_with(self, count: int) -> tuple[dict, dict[str, bytes]]:
+        entries, objects = [], {}
+        for index in range(count):
+            entry, data = make_entry(f"production/2018/Android/bundle{index}.unity3d",
+                                     f"bundle-{index}".encode())
+            entries.append(entry)
+            objects[entry["artifact_sha256"]] = data
+        return make_manifest(entries), objects
+
+    def test_many_objects_are_fetched_concurrently_and_exactly_once(self) -> None:
+        manifest, objects = self._version_with(12)
+        self.source.object_delay = 0.05
+        self.publish_related(manifest, objects)
+        mirror = AssetVersionMirror(self.source, self.pool, self.root, object_workers=6)
+        report = mirror.sync("1077100", dry_run=False)
+        self.assertEqual(report["sync_status"], "success")
+        self.assertEqual(report["downloaded"], len(objects))
+        self.assertGreater(self.source.max_in_flight, 1,
+                           "objects were fetched one at a time")
+        self.assertEqual(len(self.source.object_requests), len(objects),
+                         "an object must be requested exactly once")
+
+    def test_one_worker_still_mirrors_every_object(self) -> None:
+        manifest, objects = self._version_with(3)
+        self.publish_related(manifest, objects)
+        mirror = AssetVersionMirror(self.source, self.pool, self.root, object_workers=1)
+        self.assertEqual(mirror.sync("1077100", dry_run=False)["downloaded"], 3)
+        self.assertEqual(self.source.max_in_flight, 1)
+
+    def test_a_failed_object_still_publishes_nothing(self) -> None:
+        manifest, objects = self._version_with(4)
+        # Drop one object from the source: its fetch fails while others succeed.
+        missing = sorted(objects)[2]
+        del objects[missing]
+        self.source.publish(manifest, objects)
+        for field in ("source_commit", "translation_commit", "generated_commit"):
+            candidate = manifest.get(field)
+            if isinstance(candidate, str):
+                self.source.compare.setdefault(candidate, "identical")
+        mirror = AssetVersionMirror(self.source, self.pool, self.root, object_workers=4)
+        with self.assertRaises(AssetsMirrorError):
+            mirror.sync("1077100", dry_run=False)
+        # Fail-closed: no manifest, no checksums, no state for the version.
+        self.assertFalse(self.mirror.manifest_path("1077100").exists())
+        self.assertFalse(self.mirror.checksums_path("1077100").exists())
+        self.assertFalse(self.mirror.state_path("1077100").exists())
+
+    def test_worker_count_is_validated(self) -> None:
+        with self.assertRaises(AssetsMirrorError):
+            AssetVersionMirror(self.source, self.pool, self.root, object_workers=0)
+        with self.assertRaises(AssetsMirrorError):
+            AssetVersionMirror(self.source, self.pool, self.root, object_workers="many")
+
+    def test_the_deployed_loop_can_tune_workers_through_the_environment(self) -> None:
+        previous = os.environ.get("MLTD_MIRROR_OBJECT_WORKERS")
+        os.environ["MLTD_MIRROR_OBJECT_WORKERS"] = "3"
+        try:
+            self.assertEqual(
+                AssetVersionMirror(self.source, self.pool, self.root).object_workers, 3)
+        finally:
+            if previous is None:
+                os.environ.pop("MLTD_MIRROR_OBJECT_WORKERS", None)
+            else:
+                os.environ["MLTD_MIRROR_OBJECT_WORKERS"] = previous
+        os.environ["MLTD_MIRROR_OBJECT_WORKERS"] = "0"
+        try:
+            with self.assertRaises(AssetsMirrorError):
+                AssetVersionMirror(self.source, self.pool, self.root)
+        finally:
+            os.environ.pop("MLTD_MIRROR_OBJECT_WORKERS", None)
+
+
+class TestCarriedOverReleasesStillMirror(MirrorTestCase):
+    """A release that records what it carried over from the previous one still mirrors.
+
+    The release builder now writes a top-level ``reuse`` block (see
+    ``scripts/release_reuse.py``) and republishes a bundle whose bytes were already
+    published by an earlier release as an entry naming that object, rather than
+    uploading the bytes again.  Two things therefore have to hold for the NAS
+    distributor, and both are contract rather than convenience: the mirror's manifest
+    gate must accept the extra key, and a version must be able to publish an object it
+    did not itself produce.  ``validate_manifest`` rejects the whole version over one
+    unacceptable entry, so a refusal here would stop *every* translation from reaching
+    the NAS, not just the carried-over bundle.
+    """
+
+    def _reuse_block(self, *, scope: str = "regenerated") -> dict:
+        """Exactly what the builder records, built by the builder's own helper."""
+        return release_reuse.reuse_block(
+            index_sha256="6e" * 32,
+            resolution=release_reuse.Resolution(exact=394082),
+            scope=scope,
+        )[release_reuse.REUSE_KEY]
+
+    def test_an_older_release_object_can_be_published_by_a_later_version(self) -> None:
+        # The release that produced the bytes: one localized bundle.
+        entry, data = make_entry("production/2018/Android/cd_jp.gtx.unity3d", b"localized-cd-jp")
+        older = make_manifest([entry], asset_version="1077700")
+        self.publish_related(older, {entry["artifact_sha256"]: data})
+        self.assertEqual(self.mirror.sync("1077700", dry_run=False)["sync_status"], "success")
+
+        # A later release carries those bytes over: the entry names the object the
+        # earlier version published, and the version uploads no new object at all.
+        carried = dict(entry, asset_version="1077741", translation_status="modified")
+        manifest = make_manifest([carried], asset_version="1077741",
+                                 commit=COMMIT_B, reuse=self._reuse_block())
+        self.publish_related(manifest, {}, commit=COMMIT_B)
+        self.source.head = COMMIT_B
+        report = self.mirror.sync("1077741", dry_run=False)
+        self.assertEqual(report["sync_status"], "success")
+        self.assertEqual(report["downloaded"], 0)
+
+        resolved = self.mirror.resolve("1077741", "production/2018/Android/cd_jp.gtx.unity3d")
+        self.assertIsNotNone(resolved)
+        self.assertEqual(resolved.artifact_sha256, entry["artifact_sha256"])
+        self.assertEqual(Path(resolved.pool_path).read_bytes(), data)
+
+    def test_the_builders_reuse_block_is_not_a_validation_problem(self) -> None:
+        for scope in ("release", "regenerated"):
+            with self.subTest(scope=scope):
+                entry, _data = make_entry("production/2018/Android/cd_jp.gtx.unity3d", b"x")
+                manifest = make_manifest([entry], asset_version="1077741",
+                                         reuse=self._reuse_block(scope=scope))
+                self.assertEqual(
+                    validate_manifest(manifest, asset_version="1077741",
+                                      expected_head_commit=None), [])
+                # ...and the object gate the mirror runs next agrees.
+                result = verify_manifest_objects(manifest, self.pool,
+                                                 checksums_text=checksums_text_for(manifest))
+                self.assertEqual(result.problems, [])
+
+    def test_a_reused_entry_is_still_a_publishable_entry(self) -> None:
+        """The entry the builder writes for a carried-over bundle is publishable as-is."""
+        previous = {
+            "channel": "assets", "asset_version": "1077700", "client_version": None,
+            "logical_key": "cd_jp.gtx.unity3d",
+            "logical_path": "production/2018/Android/cd_jp.gtx.unity3d",
+            "runtime_path": "production/2018/Android/" + "ab" * 20 + ".unity3d",
+            "source_sha256": "11" * 32, "translated_sha256": "22" * 32,
+            "reuse_status": "exact", "translation_status": "modified",
+            # What the earlier release published for those bytes: this is the
+            # reference a carried-over entry reuses instead of a local file.
+            "artifact_sha256": "33" * 32,
+            "object_path": "objects/sha256/" + "33" * 32,
+        }
+        entry = release_reuse._reused_entry(
+            previous, "cd_jp.gtx.unity3d", "ab" * 20 + ".unity3d", "1077741")
+        # The published manifest carries no producer-only fields: what the builder
+        # writes is already the mirror's entry shape.
+        self.assertNotIn("artifact_file", entry)
+        manifest = make_manifest([entry], asset_version="1077741")
+        self.assertEqual(
+            validate_manifest(manifest, asset_version="1077741",
+                              expected_head_commit=None), [])
 
 
 # ---------------------------------------------------------------------------------------

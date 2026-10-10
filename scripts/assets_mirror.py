@@ -65,6 +65,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import concurrent.futures
 import binascii
 import hashlib
 import json
@@ -331,14 +332,44 @@ class GitHubAssetsSource:
     # -- primitives -------------------------------------------------------------------
 
     def _get(self, url: str) -> FetchResponse:
-        try:
-            return _raise_for_status(self.fetch(url), url)
-        except RateLimitError:
-            raise
-        except AssetsMirrorError:
-            raise
-        except Exception as exc:  # pragma: no cover - unexpected transport error
-            raise HttpError(f"transport error for {url}: {exc}", url=url) from exc
+        """One GET, retried a few times for a *transient* failure.
+
+        The deployed mirror reaches GitHub through a LAN proxy, and that proxy
+        drops connections now and then: measured on the NAS as an isolated
+        ``SSLEOFError`` under concurrent load, and as a burst of ``Connection
+        refused`` that failed a whole tick (every version refused, nothing
+        published) while the proxy restarted.  A dropped connection is not a
+        verdict on the content, so it is retried with a growing pause; the longest
+        pause is deliberate, because the failure mode being covered is "the proxy
+        is briefly away", not "the object is slow".
+
+        What is *not* retried matters just as much.  A 4xx is an answer -- 404
+        above all, because ``fetch_object`` uses it to select the legacy sharded
+        path, and 403/429, where the token or the rate limit is the problem and
+        hammering it would only make that worse.  A digest mismatch is a verdict
+        on the bytes, and the same wrong bytes would come back.
+        """
+        attempts = len(OBJECT_FETCH_BACKOFFS) + 1
+        last: HttpError | None = None
+        for attempt in range(attempts):
+            try:
+                return _raise_for_status(self.fetch(url), url)
+            except RateLimitError:
+                raise
+            except HttpError as exc:
+                # Status 0 is the fetcher's own "the transport failed" marker; 5xx
+                # is the server saying "later".  Any other status is a verdict.
+                if exc.status != 0 and exc.status < 500:
+                    raise
+                last = exc
+            except AssetsMirrorError:
+                raise
+            except Exception as exc:  # pragma: no cover - unexpected transport error
+                last = HttpError(f"transport error for {url}: {exc}", url=url)
+            if attempt < attempts - 1:
+                time.sleep(OBJECT_FETCH_BACKOFFS[attempt])
+        assert last is not None
+        raise last
 
     def _get_json(self, url: str) -> Any:
         response = self._get(url)
@@ -991,6 +1022,38 @@ def _read_json(path: Path) -> dict | None:
         raise SyncError(f"cannot read {path}: {exc}") from exc
 
 
+#: Pauses before retrying one GET whose transport failed: four attempts in all.
+#: The last pause is long on purpose -- the case being covered is a LAN proxy
+#: that has gone away and come back, not a slow object.
+OBJECT_FETCH_BACKOFFS = (2.0, 8.0, 30.0)
+
+
+#: Objects fetched at once by default: enough to hide the per-request round trip
+#: without opening a connection burst at the CDN.  The deployed loop overrides it
+#: through ``MLTD_MIRROR_OBJECT_WORKERS``.
+DEFAULT_OBJECT_WORKERS = 8
+
+
+def _require_object_workers(value: int) -> int:
+    try:
+        workers = int(value)
+    except (TypeError, ValueError) as exc:
+        raise AssetsMirrorError(f"object_workers must be an integer (got {value!r})") from exc
+    if workers < 1:
+        raise AssetsMirrorError(f"object_workers must be at least 1 (got {workers})")
+    return workers
+
+
+def _object_workers_from_env() -> int:
+    raw = (os.environ.get("MLTD_MIRROR_OBJECT_WORKERS") or "").strip()
+    if not raw:
+        return DEFAULT_OBJECT_WORKERS
+    try:
+        return _require_object_workers(int(raw))
+    except AssetsMirrorError as exc:
+        raise AssetsMirrorError(f"MLTD_MIRROR_OBJECT_WORKERS: {exc}") from exc
+
+
 class AssetVersionMirror:
     """Mirror one or more ``asset_version`` trees into ``<root>/published/<version>/``.
 
@@ -1000,10 +1063,20 @@ class AssetVersionMirror:
 
     def __init__(self, source: GitHubAssetsSource, pool: ObjectPool, root: str | os.PathLike[str],
                  *, compare_fetch: Fetcher | None = None,
-                 compare_repository: str | None = None) -> None:
+                 compare_repository: str | None = None,
+                 object_workers: int | None = None) -> None:
         self.source = source
         self.pool = pool
         self.root = Path(root)
+        # How many objects are fetched at once.  One object is one HTTP request
+        # and a release that adds lyrics or images adds hundreds of them, so this
+        # is the difference between a tick that takes a minute and a tick that
+        # takes an hour on the same link.  ``None`` reads the environment so the
+        # deployed loop can be tuned without editing the loop itself.
+        self.object_workers = (
+            _object_workers_from_env() if object_workers is None
+            else _require_object_workers(object_workers)
+        )
         # The provenance gate's transport is injectable here rather than inside
         # the producer, so the whole sync path (including the failure cases) is
         # testable offline and the mirror never needs the network to be proven
@@ -1286,14 +1359,32 @@ class AssetVersionMirror:
 
         downloaded = 0
         downloaded_bytes = 0
-        for entry in entries:
-            digest = entry["artifact_sha256"]
-            if self.pool.has(digest):
-                continue
-            data = self.source.fetch_object(digest, resolved_commit)
-            if self.pool.put_bytes(digest, data):
-                downloaded += 1
-                downloaded_bytes += len(data)
+        pending = [digest for digest in digests if not self.pool.has(digest)]
+        if pending:
+            # Fetch concurrently, write in this thread.  Every object is an
+            # independent content-addressed GET, so the only shared state is the
+            # pool, and keeping ``put_bytes`` here leaves its atomic rename and
+            # its "already present" answer exactly as they were.  The first
+            # failure still aborts the whole version before anything is
+            # published: the remaining requests are cancelled and the exception
+            # propagates out of ``sync``.
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=self.object_workers) as executor:
+                futures = {
+                    executor.submit(self.source.fetch_object, digest, resolved_commit): digest
+                    for digest in pending
+                }
+                try:
+                    for future in concurrent.futures.as_completed(futures):
+                        digest = futures[future]
+                        data = future.result()
+                        if self.pool.put_bytes(digest, data):
+                            downloaded += 1
+                            downloaded_bytes += len(data)
+                except BaseException:
+                    for future in futures:
+                        future.cancel()
+                    raise
 
         verification = verify_manifest_objects(manifest, self.pool, checksums_text=checksums_text)
         completed_at = _utc_now()
@@ -1449,12 +1540,17 @@ def _add_common_options(parser: argparse.ArgumentParser, *, suppress_defaults: b
                             help="mirror root holding objects/sha256/ and published/")
         parser.add_argument("--repo", default=argparse.SUPPRESS, help="source repository")
         parser.add_argument("--branch", default=argparse.SUPPRESS, help="source branch")
+        parser.add_argument("--object-workers", type=int, default=argparse.SUPPRESS,
+                            help="objects to fetch at once")
         return
     parser.add_argument("--root", default=os.environ.get("MLTD_MIRROR_ROOT", "."),
                         help="mirror root holding objects/sha256/ and published/ (env MLTD_MIRROR_ROOT)")
     parser.add_argument("--repo", default=DEFAULT_REPOSITORY, help="source repository")
     parser.add_argument("--branch", default=DEFAULT_BRANCH,
                         help="source branch (default branch of the assets repo)")
+    parser.add_argument("--object-workers", type=int, default=None,
+                        help="objects to fetch at once (default "
+                             f"{DEFAULT_OBJECT_WORKERS}, or MLTD_MIRROR_OBJECT_WORKERS)")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -1549,7 +1645,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(_normalized_argv(argv))
     root = Path(args.root)
     source = GitHubAssetsSource(repo=args.repo, branch=args.branch)
-    mirror = AssetVersionMirror(source, ObjectPool(root), root)
+    mirror = AssetVersionMirror(source, ObjectPool(root), root,
+                                object_workers=getattr(args, "object_workers", None))
 
     def emit(payload: dict) -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
