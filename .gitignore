@@ -11,3 +11,4 @@ node_modules/
 d1-contributions-sync/
 work/
 /local-data/
+.wrangler/

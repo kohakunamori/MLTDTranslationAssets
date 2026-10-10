@@ -1,0 +1,95 @@
+name: Deploy Cloudflare Gateway
+
+# Keeps the Cloudflare gateway in step with this repository.
+#
+# Why `workflow_run` and not `push`: the release commits that "Build generated
+# Assets" writes always carry `[skip ci]`, and GitHub suppresses push-triggered
+# workflows for exactly those commits.  A run that has *completed* still fires
+# this one, and by then main already contains the release commit.  A push that
+# only touches the gateway's own code is picked up by the `push` trigger below.
+on:
+  workflow_run:
+    workflows: ["Build generated Assets"]
+    types: [completed]
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'asset-server/cloudflare/**'
+      - '.github/workflows/cloudflare-gateway.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-gateway
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # The checkout pulls the content-addressed object pool (~660 MB) so that
+    # `build_index.py` can verify every object it indexes against its own
+    # SHA-256; that is the slow part of this job.
+    timeout-minutes: 30
+    steps:
+      - name: Check whether a Cloudflare token is configured
+        id: guard
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Gateway deploy skipped::CLOUDFLARE_API_TOKEN is not set, so the gateway was not updated. Add it (a token with the 'Edit Cloudflare Workers' permission) plus CLOUDFLARE_ACCOUNT_ID as repository secrets to let this workflow publish automatically."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout the release tree
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            .github
+            asset-server
+            manifests
+
+      - name: Add the generated release to the checkout
+        if: steps.guard.outputs.configured == 'true'
+        run: git sparse-checkout add generated
+
+      - name: Set up Python
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build the gateway table from the newest release
+        if: steps.guard.outputs.configured == 'true'
+        run: python asset-server/cloudflare/build_index.py --apply
+
+      - name: Deploy to Cloudflare
+        if: steps.guard.outputs.configured == 'true'
+        working-directory: asset-server/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy
+
+      - name: Verify the live gateway against this release
+        if: steps.guard.outputs.configured == 'true'
+        # Real HTTPS, byte-for-byte against the object pool that was just
+        # checked out: if the deploy did not take, this fails the run.
+        run: |
+          python -m pip install --quiet msgpack
+          python asset-server/cloudflare/check_gateway.py \
+            --base https://mltd-asset-cf.nyaneko.cn --samples 3
