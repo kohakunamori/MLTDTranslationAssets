@@ -37,6 +37,21 @@ def load_version_manifest() -> dict:
         except Exception as e:
             print(f"WARNING: Could not parse {VERSION_FILE}: {e}", file=sys.stderr)
     return {
+        # Capture provenance, NOT a version to keep in step with the game.
+        #
+        # The client axis and the assets axis are independent: the release
+        # identity is `asset_version` alone, and every published manifest records
+        # `client_version: null` with this value only as `source_client_version`
+        # (see `assets_generated_index.build_release`).  Combined identities such
+        # as `9.0.200+1077100` are rejected outright.
+        #
+        # So this number answers one question -- "which client were the rows in
+        # `locales/` extracted from?" -- and it must not be bumped when Square
+        # Enix ships a new client.  It changes when the text is re-extracted from
+        # a newer client, at which point the new rows carry the newer value and
+        # this fallback should follow them (2026-10-10: every one of the 395,673
+        # locale rows says 9.0.200, while client 9.0.300 was released that day --
+        # the rows are the authority, and they were right).
         "client_version": "9.0.200",
         "asset_version": 1077500,
         "last_synced_at": now_iso(),

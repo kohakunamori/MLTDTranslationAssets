@@ -429,19 +429,46 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 
 审计的边界要说清楚：抽查覆盖的是**包数/字节数占绝对多数**的家族（语音、图片、动画三类共 326 个签名 / 18,800 个包），按每个家族抽 1～12 个样本开箱看对象类型或文件头；剩下 17,583 个签名属于长尾（单个签名包数很少，多为历史版本或一次性资源），**没有逐一开箱**。它们仍照旧计入 `unclassified` 并在出现新签名时告警，只是不再有人为它们逐个判断，直到某个家族的数量增长到值得看一眼。
 
-### 8.3 图像面完全不自动
+### 8.3 图像面：成品进发布，生产仍离线
 
-| 环节 | 自动？ | 证据 |
+图像面要分成两件事看，混在一起就会得出「完全不自动」或「全自动」两种错结论：
+
+| 环节 | 自动？ | 证据（2026-10-10 实测） |
 | --- | --- | --- |
 | 发现新纹理 / 新图集 | ❌ | 无任何 CI 可达代码枚举 texture |
-| Sprite Atlas 重组 + 图像重绘 | ❌ | `pipelines/image/` 为离线人工流水线（`gpt-image-2.5-sunburst`） |
+| Sprite Atlas 重组 + 图像重绘 | ❌ | `pipelines/image/` 为离线人工流水线（`gpt-image-2.5-sunburst`），其注入器/审计器**未接入**发布链（该目录 README 自己声明） |
 | 视觉审校 | ❌ | `gpt-5.6-luna` + 人工，离线 |
-| 门户上传合成图 → CI 切回 512×512 纹理 | ❌ **已移除** | 原 `backfill-image.yml` 依赖门户 D1 队列与 R2 桶；门户静态化、Cloudflare 下线后整条链路（含 `scripts/restore/`）已删除，图片面只剩离线人工 |
-| 进入 `generated/` 发布 | ❌ | `build_generated_release.py --require-images` **无条件 raise**（源码明言「无图像物化/注入步骤，也无独立图像审计」），只在 manifest 写 `image_surface: blocked_missing_reviewed_inputs` 作为状态标记 |
+| 成品覆盖层随版本重新指向 | ✅ | `image-localize-assets.yml`（每日 04:23）产出 `image-overlay/<ver>/`；1077741 的覆盖层把 **1077720 那一轮的 231 个包**（`retargeted_from_asset_version=1077720`）重新指向当前官方字节，`original_sha256` 与 `translated_sha256` 逐包不同 |
+| 进入 `generated/` 发布 | ✅ | `assets-generated.yml` 带 `--require-images --image-overlay-manifest --image-overlay-root --image-index` 调用构建；覆盖层的 231 条记录与 `generated/1077741/manifest.json` 里的 231 条 texture 条目**逐一对上**（全为 `reuse_status=exact`、`translation_status=modified`） |
+| 已审图片是否都有归宿 | ✅ | `manifests/images.manifest.json` 的 **937 张**已审图（`user_approved_for_isolated_install_staging`）分布在 191 个包，**0 张文件缺失**，且全部落在上面 231 个包里 → 图片面无积压 |
 
-> **断点 2：CI 现在完全不碰图片。** 曾经的 `backfill-image.yml` 也只是「门户回填」——消费人已经在门户上传好的中文合成图，把它切回原纹理并发布，从不负责发现或重绘。随门户静态化与 Cloudflare 下线，这条链路已被整体删除，图片面只剩离线人工流水线。
+> **断点 2（已收窄）：CI 现在会发布图片成品，但仍不会生产图片。** 曾经的 `backfill-image.yml` 只是「门户回填」——消费人已经在门户上传好的中文合成图，把它切回原纹理并发布，从不负责发现或重绘；随门户静态化与 Cloudflare 下线，那条链路已被整体删除。现在的分工是：**生产（发现/重绘/审校）离线人工，成品（覆盖层合并/发布）自动化**。
 
-### 8.4 一句话结论
+> **口径不一致（待清理）：** `image-overlay/1077741/overlay-manifest.json` 自己写着 `status: staged_not_published`，但同一份文件里的 231 个包确实已被 CI 发布进 `generated/1077741/`。这个标签来自离线暂存工具的词表（"暂存工具尚未发布"），与"发布构建已合并"是两件事，读文档时不要被它误导。同一份文件里的 `real_client_verified: False` 与 `client_cache_cleared: False` 则是**真话**：见 8.5。
+
+### 8.4 三个面的交付状态（2026-10-10 实测）
+
+| 面 | 来源 | 自动化链路 | 1077741 已发布 | 积压 |
+| --- | --- | --- | ---: | ---: |
+| 文本 | `locales/` | LLM 翻译 → `pending`/`llm_translated` → 发布步骤提升为 `accepted` → 发布构建重打包 | 10,450 个文本包 | 未翻译 0 行 |
+| 歌词 | `lyrics/` | 同上 → `build_lyric_overlay.py` 写回 `scrobj_*` 的 `scenario[*].str` | **491 个歌词包 / 12,447 行** | 无中文的歌 0 首；13 行因模型返回不可用草稿被拒，留待下次 |
+| 图片 | `images/localized/`（937 张） | `image-localize-assets.yml` 产出覆盖层 → 发布构建合并（`--require-images` + 覆盖层三件套） | 231 个图片包（1,228 张纹理，全部 `exact` 复用） | 已审图片 0 张无归宿 |
+
+即：**目前不存在「只有源库、客户端拿不到」的翻译面**。三个面都进了 `generated/<version>/`，走同一个对象库（`generated/objects/sha256/`）与同一份发布清单。
+
+### 8.5 只能由真机确认的部分
+
+发布清单、字节哈希、逐槽回读能证明「包是对的」，**不能**证明「手机上看到的是新的」。以下三件事只能在手机上确认，文档与 CI 都无法替代：
+
+| 待确认 | 为什么 CI 证明不了 | 怎么确认 |
+| --- | --- | --- |
+| 歌词显示为中文 | CI 只能回读 bundle 内的 `str`，看不到客户端实际渲染 | 进曲目看歌词页；若仍是日文，先确认拿到的是新包 |
+| 图片显示为中文 | 同上；且覆盖层用「同名清单 + 同名资源名」策略，客户端可能命中旧缓存 | 清掉游戏缓存后再看；覆盖层自己的 `blocker` 字段就写了这一点 |
+| 客户端真的取到了新包 | 读取由 `asset-server` 的路由决定（按 `runtime_path`/`logical_path` 匹配，未命中则回退官方日文源），CI 不经过手机那条链路 | 有明确的版本号/字节大小变化，或直接对比首次进入的加载时间 |
+
+镜像侧还有一层时间差：NAS 镜像每 6 小时从 `main` 重新发现 `generated/<asset_version>/`，且 `activate` / `prune` 是需要显式触发的独立动作。刚发布完立刻去手机上验证，可能只是镜像还没切过去。
+
+### 8.6 一句话结论
 
 | 问题 | 答案 |
 | --- | --- |
@@ -450,7 +477,8 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | 会自动提取文本吗？ | 会 —— 家族匹配下载 + 抽 GTX 文本落 `untranslated` 行；歌词面另走 `refresh_lyrics_catalogue.py` 落 `lyrics/songs/*.jsonl` |
 | 会自动翻译吗？ | 会 —— LLM 池自动译为 `pending` / `llm_translated` 并直接提交 `main`，人工只负责改成 `accepted`；歌词同理 |
 | 歌词会进手机吗？ | 会 —— 发布构建调用 `build_lyric_overlay.py`，把有已采纳中文的歌写回 `scrobj_*` 包并随版本发布；未翻译的行保持官方日文 |
-| 会自动提取/翻译图片吗？ | **不会** —— 无自动发现，无自动重绘，无自动注入；CI 里已无任何图片步骤 |
+| 会自动提取/翻译图片吗？ | **不会**（生产离线）—— 无自动发现、无自动重绘、无自动审校；但**成品会进发布**：`image-localize-assets.yml` 产出的覆盖层由发布构建合并（见 8.3） |
+| 三个面都会随版本自动更新吗？ | 会 —— 文本/歌词由翻译与发布工作流，图片由 `image-localize-assets.yml` 每日重建覆盖层；三者都经同一次发布构建进入 `generated/<version>/` |
 
 ---
 
@@ -459,7 +487,7 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | 项 | 状态 |
 | --- | --- |
 | `research-tools/` | 中心编排**迁移候选**。`materialize_generated_release.py` 每个模式（含 preflight）都强制 `--assets-writer-root` + 独立审批的 `--assets-writer-pin`；缺任一即拒绝。未接入 CI、未部署、未用生产输入跑通。 |
-| `pipelines/image/` 注入器 | `stage_reviewed_images.py`（标签 `approved_for_staging_not_installed`）与 `inject_reviewed_textures.py`（只接受 `user_approved_for_isolated_install_staging`）**标签不兼容**，中间缺 source-bound 桥接；注入器/审计器**未接入** `build_generated_release`（`--require-images` 仍 fail-closed）。 |
+| `pipelines/image/` 注入器 | `stage_reviewed_images.py`（标签 `approved_for_staging_not_installed`）与 `inject_reviewed_textures.py`（只接受 `user_approved_for_isolated_install_staging`）**标签不兼容**，中间缺 source-bound 桥接；注入器/审计器**未接入** `build_generated_release`。注意区分：发布构建现在**会**发布图片面，但走的是 `image-localize-assets.yml` 产出的覆盖层（`--image-overlay-manifest` + `--image-index` + `--image-overlay-root`），与本目录的注入器无关；`--require-images` 只在**没给覆盖层清单**时 fail-closed。 |
 | 镜像与服务 | 只有 `asset-server/` 的 compose 模板，**没有任何 workflow 调用 `assets_mirror.py`**；生产切换（NAS 指向、单写者交接）未做。 |
 | `manifests/images.manifest.json` 的 `distribution` | 只保留 GitHub Release 的 `url_template`（2026-10-09 删除了失效的 `cloudflare_r2` 指针），但**没有 workflow 发布 GitHub Release**，只是外链指针。 |
 | `local-data/` | 117 GB 本地草稿（含历史 `build/`、`work/`、APK jadx 审计等），已 gitignore，非架构组成。 |
