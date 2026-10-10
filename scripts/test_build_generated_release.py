@@ -68,7 +68,8 @@ def _fabricate_overlay(_snapshot, _archive, _ledger, output, *_args, **_kwargs) 
     }]}), encoding="utf-8")
 
 
-def _fake_download(url: str, destination: Path, declared_size) -> None:
+def _fake_download(url: str, destination: Path, declared_size, content_key=None,
+                   cache_root=None) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.suffix == ".data":
         destination.write_bytes(msgpack.packb([{
@@ -76,6 +77,7 @@ def _fake_download(url: str, destination: Path, declared_size) -> None:
         }], use_bin_type=True))
     else:
         destination.write_bytes(b"bundle-bytes")
+    return "fetched"
 
 
 def _forbid(*_args, **_kwargs):
@@ -353,6 +355,101 @@ class GeneratedReleaseContracts(unittest.TestCase):
             catalog = next(e for e in entries if e["logical_key"] == "__official_asset_index__")
             self.assertEqual(catalog["runtime_path"], "production/2018/Android/index.data")
             self.assertEqual(catalog["translated_sha256"], build.sha256_file(index))
+
+
+class OfficialObjectCache(unittest.TestCase):
+    """A new asset version must reuse official bytes that did not change.
+
+    The CDN renames every object on every version, so a cache keyed by remote
+    name never survives a version bump.  These tests pin the replacement: the
+    cache is keyed on the catalogue's own fingerprint of the bytes.
+    """
+
+    class _Response:
+        def __init__(self, payload: bytes) -> None:
+            self._buffer = io.BytesIO(payload)
+
+        def read(self, size: int = -1) -> bytes:
+            return self._buffer.read(size)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc) -> bool:
+            return False
+
+    def test_reuses_cached_bytes_without_any_request(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            cache = root / "official-by-content"
+            cache.mkdir()
+            payload = b"official-bytes"
+            (cache / "fingerprint-a").write_bytes(payload)
+            destination = root / "archive" / "renamed-for-this-version.unity3d"
+            with mock.patch.object(build, "urlopen", side_effect=_forbid):
+                outcome = build.download("https://cdn/a", destination, len(payload),
+                                         "fingerprint-a", cache)
+            self.assertEqual(outcome, "reused")
+            self.assertEqual(destination.read_bytes(), payload)
+
+    def test_cache_entry_of_the_wrong_size_is_not_trusted(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            cache = root / "official-by-content"
+            cache.mkdir()
+            (cache / "fingerprint-a").write_bytes(b"stale-bytes")
+            payload = b"fresh-official-bytes"
+            destination = root / "archive" / "bundle.unity3d"
+            with mock.patch.object(build, "urlopen",
+                                   return_value=self._Response(payload)) as opener:
+                outcome = build.download("https://cdn/a", destination, len(payload),
+                                         "fingerprint-a", cache)
+            self.assertEqual(outcome, "fetched")
+            opener.assert_called_once()
+            self.assertEqual(destination.read_bytes(), payload)
+
+    def test_a_fetch_feeds_the_next_version(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            cache = root / "official-by-content"
+            payload = b"official-bytes"
+            destination = root / "archive" / "bundle.unity3d"
+            with mock.patch.object(build, "urlopen", return_value=self._Response(payload)):
+                self.assertEqual(
+                    build.download("https://cdn/a", destination, len(payload),
+                                   "fingerprint-a", cache),
+                    "fetched")
+            self.assertEqual((cache / "fingerprint-a").read_bytes(), payload)
+            # Next version: same bytes, same fingerprint, different remote name.
+            renamed = root / "archive-next" / "new-remote-name.unity3d"
+            with mock.patch.object(build, "urlopen", side_effect=_forbid):
+                self.assertEqual(
+                    build.download("https://cdn/b", renamed, len(payload),
+                                   "fingerprint-a", cache),
+                    "reused")
+            self.assertEqual(renamed.read_bytes(), payload)
+
+    def test_without_a_fingerprint_nothing_is_reused(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload = b"official-bytes"
+            destination = root / "archive" / "bundle.unity3d"
+            with mock.patch.object(build, "urlopen",
+                                   return_value=self._Response(payload)) as opener:
+                self.assertEqual(build.download("https://cdn/a", destination, len(payload)),
+                                 "fetched")
+            opener.assert_called_once()
+            self.assertFalse((root / "official-by-content").exists())
+
+    def test_a_short_response_still_fails_closed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            destination = root / "archive" / "bundle.unity3d"
+            with mock.patch.object(build, "urlopen", return_value=self._Response(b"short")):
+                with self.assertRaises(ValueError):
+                    build.download("https://cdn/a", destination, 999,
+                                   "fingerprint-a", root / "official-by-content")
+            self.assertFalse(destination.exists())
 
 
 if __name__ == "__main__":

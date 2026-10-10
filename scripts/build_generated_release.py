@@ -177,9 +177,34 @@ def select_rows_for_current_sources(
     return list(selected.values())
 
 
-def download(url: str, destination: Path, declared_size: int | None) -> None:
+def download(url: str, destination: Path, declared_size: int | None,
+             content_key: str | None = None,
+             cache_root: Path | None = None) -> str:
+    """Fetch one official object, reusing an earlier fetch of the same bytes.
+
+    The CDN renames every object on every asset version even when its bytes are
+    unchanged, so a cache keyed by remote name never survives a version bump:
+    the whole release is re-downloaded although almost none of it changed.  The
+    catalogue carries a fingerprint of each object's bytes that does survive the
+    rename, so keying the cache on it lets a new version reuse everything that
+    did not really change.  The fingerprint is only trusted here after being
+    checked against the declared size as well.
+
+    Returns "present", "reused" or "fetched" so a caller can report the split.
+    """
     if destination.is_file() and (declared_size is None or destination.stat().st_size == declared_size):
-        return
+        return "present"
+    cached = None
+    if content_key and cache_root is not None:
+        candidate = cache_root / content_key
+        if candidate.is_file() and (declared_size is None or candidate.stat().st_size == declared_size):
+            cached = candidate
+    if cached is not None:
+        # A copy, not a link: the archive is handed to the overlay writer, and a
+        # hard link would let an in-place rewrite corrupt the shared cache.
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(cached, destination)
+        return "reused"
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".part")
     request = Request(url, headers={"User-Agent": "MLTDTranslationAssets-generated/1"})
@@ -189,6 +214,16 @@ def download(url: str, destination: Path, declared_size: int | None) -> None:
         temporary.unlink(missing_ok=True)
         raise ValueError(f"official object size mismatch for {url}")
     temporary.replace(destination)
+    if content_key and cache_root is not None:
+        cached_target = cache_root / content_key
+        if not cached_target.is_file():
+            cached_target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                shutil.copy2(destination, cached_target)
+            except OSError:
+                # Another worker stored the same bytes first; that copy is fine.
+                pass
+    return "fetched"
 
 
 def write_snapshot(path: Path, version: dict, index_path: Path,
@@ -283,6 +318,9 @@ def main() -> int:
     parser.add_argument("--ci-run-id", default=os.environ.get("GITHUB_RUN_ID"))
     parser.add_argument("--max-bundles", type=int, default=0,
                         help="test-only cap; production must leave this at zero")
+    parser.add_argument("--official-cache", type=Path, default=None,
+                        help="directory keyed by the catalogue's content fingerprint; lets a new "
+                             "asset version reuse every official object whose bytes did not change")
     parser.add_argument("--image-overlay-manifest", type=Path, default=None,
                         help="image-overlay/<asset_version>/overlay-manifest.json; enables the image "
                              "surface and merges its size patch into the published catalogue")
@@ -333,14 +371,22 @@ def main() -> int:
     if args.max_bundles:
         selected = dict(list(sorted(selected.items()))[:args.max_bundles])
     archive = work / "archive"
+    official_cache = args.official_cache.resolve() if args.official_cache else None
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
         futures = [pool.submit(download,
                                 f"{version['asset_root']}/{row['remote']}",
                                 archive / "jp-android" / row["remote"],
-                                row["declared_size"])
+                                row["declared_size"],
+                                row.get("catalog_hash"),
+                                official_cache)
                    for row in selected.values()]
-        for future in futures:
-            future.result()
+        fetched = [future.result() for future in futures]
+    official_objects = {
+        "total": len(fetched),
+        "downloaded": sum(1 for outcome in fetched if outcome == "fetched"),
+        "reused_from_cache": sum(1 for outcome in fetched if outcome == "reused"),
+        "already_on_disk": sum(1 for outcome in fetched if outcome == "present"),
+    }
     # Resolve cross-version rows against the downloaded official source before
     # feeding the legacy overlay resolver.  This prevents an older accepted
     # translation for the same bundle/key from conflicting with a newer source.
@@ -436,6 +482,7 @@ def main() -> int:
                           ("ready_for_injection" if images_ready
                            else "blocked_missing_reviewed_inputs")),
         "official_index_sha256": sha256_file(index_path),
+        "official_objects": official_objects,
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0

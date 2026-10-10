@@ -85,6 +85,15 @@ jobs:
         if: steps.gate.outputs.build == 'true'
         run: python scripts/validate_repo.py
 
+      - name: Restore the official object cache
+        if: steps.gate.outputs.build == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .generated-work/official-by-content
+          key: official-by-content-${{ hashFiles('manifests/asset-version.json') }}
+          restore-keys: |
+            official-by-content-
+
       - name: Build generated Unity3D release
         if: steps.gate.outputs.build == 'true'
         env:
@@ -115,7 +124,16 @@ jobs:
             --translation-commit "$SOURCE_COMMIT" \
             --generated-commit "$SOURCE_COMMIT" \
             --ci-run-id "$GITHUB_RUN_ID" \
+            --official-cache .generated-work/official-by-content \
             "${image_args[@]}"
+
+      - name: Save the official object cache
+        if: always() && steps.gate.outputs.build == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .generated-work/official-by-content
+          key: official-by-content-${{ hashFiles('manifests/asset-version.json') }}
 
       - name: Verify generated release
         if: steps.gate.outputs.build == 'true'
