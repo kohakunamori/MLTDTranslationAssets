@@ -12,7 +12,10 @@ their own fixtures in temp directories and read none of it, so that job drops
 both trees (210 MB -> 11 MB).  A directory silently dropped from either list is
 a failed run at best and a check that quietly stopped looking at something at
 worst, so the split is pinned here: the test job may only carry a subset of the
-validator's list, and both keep the partial-clone filter and the wheel cache.
+validator's list, and both keep the partial-clone filter.  How the test job
+installs its dependencies (uv, cached) and how it spreads the suite over the
+runner's four vCPUs (worksteal, not loadfile) are pinned for the same reason:
+each was measured, and each is one edit away from silently going back.
 """
 from __future__ import annotations
 
@@ -87,12 +90,12 @@ class SparseCheckoutTests(unittest.TestCase):
                 self.assertEqual(self.step(job, "Checkout repository")["with"].get("filter"),
                                  "blob:none")
 
-    def test_the_regression_job_caches_the_wheels_it_installs(self):
-        setup = self.step("regression", "Set up Python")["with"]
-        self.assertEqual(setup.get("cache"), "pip")
-        self.assertEqual(setup.get("cache-dependency-path"), "requirements-ci.txt")
-        self.assertIn("-r requirements-ci.txt",
-                      self.step("regression", "Install test dependencies")["run"])
+    def test_the_regression_job_installs_through_the_cached_uv_setup(self):
+        uv = self.step("regression", "Set up uv")["with"]
+        self.assertEqual(uv.get("enable-cache"), True)
+        install = self.step("regression", "Install test dependencies")["run"]
+        self.assertIn("uv pip install --system", install)
+        self.assertIn("-r requirements-ci.txt", install)
 
     def test_the_requirement_file_still_covers_the_suite(self):
         packages = {
@@ -103,16 +106,20 @@ class SparseCheckoutTests(unittest.TestCase):
         self.assertTrue(REQUIRED_PACKAGES.issubset(packages),
                         f"requirements-ci.txt is missing {sorted(REQUIRED_PACKAGES - packages)}")
 
-    def test_the_suite_runs_on_four_workers_without_merging_files(self):
-        """Parallelism is only safe with ``--dist loadfile``.
+    def test_the_suite_spreads_single_tests_over_the_four_workers(self):
+        """``worksteal`` is what keeps the two slow files from owning the run.
 
-        Without it pytest may put two tests from the same file in different
-        processes, which is exactly what a module-level fixture or an in-process
-        HTTP server bound by one test file cannot survive.
+        The suite's cost sits in asset-server/test_service_e2e.py (5 tests of
+        ~3.6 s) and scripts/test_should_build_release.py (8 tests of ~2 s).  Under
+        the previous ``loadfile`` rule those two files filled two workers while
+        the other two idled: 27.6 s.  Handing the next pending test to whichever
+        worker is free measures 18.8 s, and the distribution is only safe because
+        no test depends on another one's state (see the workflow comment).
         """
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn("-n 4", run)
-        self.assertIn("--dist loadfile", run)
+        self.assertIn("--dist worksteal", run)
+        self.assertNotIn("--dist loadfile", run)
         self.assertIn("pytest-xdist", REQUIREMENTS.read_text(encoding="utf-8"))
 
 
