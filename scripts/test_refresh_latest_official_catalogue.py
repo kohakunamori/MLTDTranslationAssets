@@ -45,6 +45,26 @@ class RefreshCatalogueTests(unittest.TestCase):
         additions = tool.collect_new_rows(catalogue, set(), "3", "9.0.200", "now")
         self.assertEqual(len(additions), 1)
 
+    def test_a_typo_named_official_package_cannot_duplicate_rows(self):
+        """The official index really ships ``pecial_108_fc_01_jp.gtx`` (no ``s``).
+
+        Extraction reports the bundle's *internal* name, which is spelled
+        correctly, so all 38 of its rows collide with the rows already carried for
+        ``special_108_fc_01_jp.gtx`` and are dropped instead of being appended as a
+        second, conflicting copy.  Measured on asset 1077720: 1,570 extracted
+        candidates - 38 duplicates = the 1,532 rows that were appended.
+        """
+        existing = {tool.source_identity("special_108_fc_01_jp.gtx", "special_108_fc_01_title", "sha1")}
+        catalogue = [
+            # what read_snapshot_bundle() reports for the typo'd logical name
+            {"bundle": "special_108_fc_01_jp.gtx", "key": "special_108_fc_01_title",
+             "source": "しゅわしゅわに弾けたら", "source_sha256": "sha1"},
+            {"bundle": "special_108_fc_01_jp.gtx", "key": "special_108_fc_01_synopsis",
+             "source": "野外ライブ本番前", "source_sha256": "sha2"},
+        ]
+        additions = tool.collect_new_rows(catalogue, existing, "3", "9.0.200", "now")
+        self.assertEqual([row["item_key"] for row in additions], ["special_108_fc_01_synopsis"])
+
     def test_large_append_is_refused_by_default(self):
         catalogue = [
             {"bundle": "x.gtx", "key": f"k{i}", "source": f"文{i}", "source_sha256": f"s{i}"}
@@ -55,6 +75,54 @@ class RefreshCatalogueTests(unittest.TestCase):
             tool.enforce_new_row_cap(additions, 5)
         tool.enforce_new_row_cap(additions, 10)          # exactly at the cap: allowed
         tool.enforce_new_row_cap(additions, 0)           # 0 disables the cap
+
+
+class SelectBundlesTests(unittest.TestCase):
+    """Selection must look outward: a name nobody has seen still matches."""
+
+    def setUp(self):
+        self.registry = {
+            "schema_version": 1,
+            "families": [
+                {"id": "gtx_text", "pipeline": "gtx_text", "match": {"suffix": "_jp.gtx.unity3d"}},
+                {"id": "song_lyrics", "pipeline": "song_lyrics", "match": {"prefix": "scrobj_"}},
+            ],
+            "exclude": [],
+            "reviewed_unclassified": [],
+        }
+
+    def test_unseen_text_bundle_is_selected_and_reported(self):
+        index = {
+            "event_0448_story_01_jp.gtx.unity3d": bundle("aaa.unity3d", 7000),
+            "season_a_2023_001har_100_jp.gtx.unity3d": bundle("bbb.unity3d", 1100),
+        }
+        selected, discovered = tool.select_bundles(
+            index, {"season_a_2023_001har_100_jp.gtx.unity3d".casefold()}, self.registry
+        )
+        self.assertEqual(sorted(selected), ["event_0448_story_01_jp.gtx.unity3d",
+                                            "season_a_2023_001har_100_jp.gtx.unity3d"])
+        self.assertEqual(discovered, ["event_0448_story_01_jp.gtx.unity3d"])
+
+    def test_lyric_bundle_never_reaches_the_gtx_extractor(self):
+        index = {"scrobj_ittana.unity3d": bundle("ccc.unity3d", 139470)}
+        selected, discovered = tool.select_bundles(index, set(), self.registry)
+        self.assertEqual(selected, {})
+        self.assertEqual(discovered, [])
+
+    def test_unrelated_resources_stay_unselected(self):
+        index = {
+            "costume_icon_0001.unity3d": bundle("ddd.unity3d", 100),
+            "jacket_aftspt.unity3d": bundle("eee.unity3d", 100),
+        }
+        selected, discovered = tool.select_bundles(index, set(), self.registry)
+        self.assertEqual(selected, {})
+        self.assertEqual(discovered, [])
+
+    def test_known_bundle_matching_is_case_insensitive(self):
+        index = {"MD_jp.gtx.unity3d": bundle("fff.unity3d", 100)}
+        selected, discovered = tool.select_bundles(index, {"md_jp.gtx.unity3d"}, self.registry)
+        self.assertEqual(list(selected), ["MD_jp.gtx.unity3d"])
+        self.assertEqual(discovered, [])
 
 
 def bundle(remote: str, size: int = 10) -> dict:

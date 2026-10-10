@@ -121,12 +121,51 @@ jobs:
             echo 'Official asset version unchanged; skip bundle download.'
           fi
 
+      - name: Discover new localizable bundles
+        # The step that used to be missing.  The refresh above can only re-verify
+        # the bundles the repository already carries, so an official bundle that
+        # was never tracked -- a new event's story, a new song's lyrics -- stayed
+        # invisible forever.  This reads the index the refresh just downloaded and
+        # reports what is new, how big it is, and which resource families are
+        # entirely unseen; the inventory it writes is the baseline for the "new
+        # family" warning.  Exit 2 = a cap tripped: the run stops instead of
+        # pulling an unbounded batch (fail closed, same policy as the refresh).
+        shell: bash
+        run: |
+          set -euo pipefail
+          index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
+          if [ ! -f "$index" ]; then
+            echo "No official index at $index (no version update in this run); nothing to discover."
+            exit 0
+          fi
+          python scripts/discover_official_bundles.py \
+            --index "$index" \
+            --report .llm-discovery.json | tee .llm-discovery-summary.json
+
+      - name: Extract new song lyrics
+        # Song lyrics are a second source tree (lyrics/songs/*.jsonl).  Without
+        # this step a new song would be counted by the discovery above and then
+        # dropped: only text bundles had a refresh path.
+        shell: bash
+        run: |
+          set -euo pipefail
+          index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
+          if [ ! -f "$index" ]; then
+            echo "No official index at $index (no version update in this run); no new lyrics to extract."
+            exit 0
+          fi
+          python scripts/refresh_lyrics_catalogue.py --index "$index" | tee .llm-lyrics.json
+
       - name: Collect untranslated rows
+        # scope=all covers both source trees: the generated text release
+        # (locales/) and the song lyric library (lyrics/songs/).  English-bypass
+        # lyric lines are excluded by the collector, not translated and then
+        # discarded.
         id: collect
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/llm_translate_untranslated.py collect --output .llm-queue.jsonl
+          python scripts/llm_translate_untranslated.py collect --scope all --output .llm-queue.jsonl
           # An empty queue is the normal case on a day with no new source rows.
           # Everything expensive below is gated on this count, so a nightly run
           # with nothing to translate costs seconds instead of re-verifying
@@ -192,7 +231,7 @@ jobs:
             echo 'No draft output.'
             exit 0
           fi
-          python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl
+          python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl --scope all
           python scripts/validate_repo.py
 
       - name: Publish machine drafts for the generated build
@@ -213,6 +252,11 @@ jobs:
           set -euo pipefail
           python scripts/llm_translate_untranslated.py publish --dry-run
           python scripts/llm_translate_untranslated.py publish | tee .llm-publish.json
+          # Lyrics are promoted with the same provenance rule but a song-local
+          # agreement rule instead of the release-ambiguity gate: two wordings of
+          # the same line inside one song stay pending for a human.
+          python scripts/llm_translate_untranslated.py publish --scope lyrics --dry-run
+          python scripts/llm_translate_untranslated.py publish --scope lyrics | tee .llm-publish-lyrics.json
           # Promotion turns on the accepted-row protected-token gate, so the
           # repository must be revalidated between promotion and the commit.
           python scripts/validate_repo.py
@@ -229,9 +273,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          paths=(locales manifests/asset-version.json)
+          paths=(locales lyrics manifests/asset-version.json)
           if [ -f manifests/official-bundle-index.json ]; then
             paths+=(manifests/official-bundle-index.json)
+          fi
+          # The discovery baseline: only changes when the game introduces a new
+          # resource family, and that is exactly the event worth committing.
+          if [ -f manifests/official-asset-inventory.json ]; then
+            paths+=(manifests/official-asset-inventory.json)
           fi
           if [ -z "$(git status --porcelain -- "${paths[@]}")" ]; then
             echo 'No changes to publish.'
@@ -242,12 +291,16 @@ jobs:
           if [ -f .llm-publish.json ]; then
             promoted=$(python -c 'import json; print(json.load(open(".llm-publish.json"))["promoted"])')
           fi
+          lyric_promoted=0
+          if [ -f .llm-publish-lyrics.json ]; then
+            lyric_promoted=$(python -c 'import json; print(json.load(open(".llm-publish-lyrics.json"))["promoted"])')
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add "${paths[@]}"
-          if [ "$promoted" -gt 0 ]; then
+          if [ "$promoted" -gt 0 ] || [ "$lyric_promoted" -gt 0 ]; then
             git commit -m "ci(assets): apply and publish LLM drafts for asset $version" \
-                       -m "Machine drafts admitted to the generated build: $promoted row(s); translation_stage stays llm_translated."
+                       -m "Machine drafts admitted to the build: $promoted text row(s); song lyrics: $lyric_promoted row(s). translation_stage stays llm_translated."
           else
             git commit -m "ci(assets): apply LLM translations for asset $version"
           fi
@@ -300,6 +353,10 @@ jobs:
             .llm-queue.jsonl
             .llm-asset-check.json
             .llm-publish.json
+            .llm-publish-lyrics.json
+            .llm-discovery.json
+            .llm-discovery-summary.json
+            .llm-lyrics.json
 
       - name: Summarize translation outcome
         if: always()
@@ -313,6 +370,22 @@ jobs:
             echo "Machine drafts promoted to accepted: $promoted"
           else
             echo 'No machine-draft promotion ran in this run.'
+          fi
+          if [ -f .llm-publish-lyrics.json ]; then
+            lyric_promoted=$(python -c 'import json; print(json.load(open(".llm-publish-lyrics.json"))["promoted"])')
+            echo "Song lyric rows promoted to accepted: $lyric_promoted"
+          fi
+          # Discovery and lyric extraction are the two steps that used to be
+          # missing entirely; report them even on a night with nothing to do, so
+          # "the pipeline saw no new content" is distinguishable from "the
+          # pipeline never looked".
+          if [ -f .llm-discovery-summary.json ]; then
+            python -c 'import json; d=json.load(open(".llm-discovery-summary.json",encoding="utf-8")); l=d.get("localizable",{}); print("discovery: %s official bundles, %s new localizable (%s bytes), %s new resource families" % (d.get("official_bundles",0), len(l.get("new_bundles",[])), l.get("new_bytes",0), d.get("unclassified",{}).get("new_family_count",0)))'
+          else
+            echo 'Discovery did not run in this run.'
+          fi
+          if [ -f .llm-lyrics.json ]; then
+            python -c 'import json; d=json.load(open(".llm-lyrics.json",encoding="utf-8")); print("lyrics: new songs=%s changed=%s extracted=%s empty=%s failures=%s" % (len(d.get("new_songs",[])), len(d.get("changed_songs",[])), len(d.get("extracted",[])), len(d.get("empty",[])), len(d.get("failures",[]))))'
           fi
           if [ ! -f .llm-summary.json ]; then
             echo 'No translation summary was produced by this run.'

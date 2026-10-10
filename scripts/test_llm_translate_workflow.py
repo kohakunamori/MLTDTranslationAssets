@@ -86,6 +86,50 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
     def test_job_cannot_hang_forever(self):
         self.assertEqual(self.job["timeout-minutes"], 180)
 
+    def test_new_bundles_are_discovered_and_lyrics_extracted_before_translation(self):
+        """The steps that used to be missing, and their order.
+
+        The refresh can only re-verify tracked bundles, so a brand-new text or
+        lyric bundle was never downloaded.  Discovery must therefore come after
+        the refresh (it reads the index the refresh downloads) and before the
+        queue is collected, and lyric extraction must sit in the same window.
+        """
+        names = [step.get("name") for step in self.job["steps"]]
+        refresh = names.index("Extract new source rows from official latest assets")
+        discover = names.index("Discover new localizable bundles")
+        lyrics = names.index("Extract new song lyrics")
+        collect = names.index("Collect untranslated rows")
+        self.assertLess(refresh, discover)
+        self.assertLess(discover, collect)
+        self.assertLess(lyrics, collect)
+        discovery_run = self.steps["Discover new localizable bundles"]["run"]
+        self.assertIn("scripts/discover_official_bundles.py", discovery_run)
+        self.assertIn("--report .llm-discovery.json", discovery_run)
+        # A missing index means "no version update today", not a red run.
+        self.assertIn('if [ ! -f "$index" ]', discovery_run)
+        lyrics_run = self.steps["Extract new song lyrics"]["run"]
+        self.assertIn("scripts/refresh_lyrics_catalogue.py", lyrics_run)
+        self.assertIn('if [ ! -f "$index" ]', lyrics_run)
+
+    def test_the_queue_and_the_commit_cover_the_lyric_source_tree(self):
+        collect = self.steps["Collect untranslated rows"]["run"]
+        self.assertIn("--scope all", collect)
+        apply_step = self.steps["Apply LLM translations"]["run"]
+        self.assertIn("--scope all", apply_step)
+        publish = self.steps["Publish machine drafts for the generated build"]["run"]
+        self.assertIn("publish --scope lyrics", publish)
+        commit = self.steps["Commit LLM translations to main"]["run"]
+        self.assertIn("lyrics", commit)
+        self.assertIn("manifests/official-asset-inventory.json", commit)
+        upload = self.steps["Upload translation diagnostics"]["with"]["path"]
+        for name in (".llm-discovery.json", ".llm-lyrics.json", ".llm-publish-lyrics.json"):
+            self.assertIn(name, upload)
+
+    def test_discovery_and_lyric_extraction_are_reported_in_the_summary(self):
+        summary = self.steps["Summarize translation outcome"]["run"]
+        self.assertIn(".llm-discovery-summary.json", summary)
+        self.assertIn(".llm-lyrics.json", summary)
+
     def test_machine_drafts_are_admitted_by_one_explicit_step(self):
         """C: machine output reaches generated/<ver>/ only through `publish`."""
         names = [step.get("name") for step in self.job["steps"]]

@@ -13,6 +13,13 @@ llm_translated`` rows with a non-empty translation to ``status=accepted`` and
 carries the provenance of the text it ships.  It never touches rows the machine
 did not write, and it revalidates the source hash and the protected tokens of
 every row it admits.
+
+``--scope`` selects which source tree a run touches: ``locales`` (the generated
+text release), ``lyrics`` (``lyrics/songs/*.jsonl``, the song lyric library) or
+``all``.  The default stays ``locales`` so existing callers are unaffected.
+Lyric rows follow the same states as locale rows, with one genre-specific rule:
+a line whose Japanese is pure ASCII is left alone on purpose (the confirmed
+"English stays English" policy), so it is never queued and never promoted.
 """
 from __future__ import annotations
 
@@ -23,39 +30,84 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from pipelines.text.mltd_localize_gtx import validate_translation
+from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
+from pipelines.text.mltd_lyric_rules import is_english_bypass
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+SCOPES = ("locales", "lyrics", "all")
 
 
 def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def rows(root: Path):
-    for path in sorted((root / "locales").rglob("*.jsonl")):
+def scope_of(args: argparse.Namespace) -> str:
+    scope = str(getattr(args, "scope", "locales") or "locales")
+    if scope not in SCOPES:
+        raise SystemExit(f"unknown scope {scope!r}; expected one of {', '.join(SCOPES)}")
+    return scope
+
+
+def scope_paths(root: Path, scope: str) -> list[tuple[Path, str]]:
+    """``(file, kind)`` pairs a scope covers.
+
+    ``lyrics/all_lyrics.jsonl`` is deliberately excluded: it is derived from the
+    per-song files by ``mltd_localize_scrobj.rebuild_aggregate``, and writing a
+    translation into both would leave the two disagreeing.
+    """
+    pairs: list[tuple[Path, str]] = []
+    if scope in ("locales", "all"):
+        pairs += [(path, "locales") for path in sorted((root / "locales").rglob("*.jsonl"))]
+    if scope in ("lyrics", "all"):
+        pairs += [(path, "lyrics") for path in sorted((root / "lyrics" / "songs").glob("*.jsonl"))]
+    return pairs
+
+
+def row_scope_key(row: dict[str, Any]) -> str:
+    """Key identifying a row inside its bundle: item_key, else the lyric index."""
+    key = str(row.get("item_key", ""))
+    if key:
+        return key
+    index = row.get("index")
+    return "" if index is None else str(index)
+
+
+def _logical_bundle(row: dict[str, Any]) -> str:
+    bundle = str(row.get("bundle", ""))
+    return bundle if bundle.endswith(".unity3d") else bundle + ".unity3d"
+
+
+def rows(root: Path, scope: str = "locales"):
+    for path, kind in scope_paths(root, scope):
         with path.open(encoding="utf-8") as stream:
             for line_no, line in enumerate(stream, 1):
                 if not line.strip():
                     continue
                 value = json.loads(line)
-                yield path, line_no, value
+                yield path, line_no, value, kind
 
 
 def collect(args: argparse.Namespace) -> int:
+    scope = scope_of(args)
     wanted_version = str(args.asset_version or "").strip()
     output = args.output
     output.parent.mkdir(parents=True, exist_ok=True)
     count = 0
     seen: set[str] = set()
     with output.open("w", encoding="utf-8", newline="\n") as stream:
-        for path, line_no, row in rows(ROOT):
+        for path, line_no, row, kind in rows(ROOT, scope):
             if row.get("status") != "untranslated" or str(row.get("zh", "")):
                 continue
-            if wanted_version and str(row.get("asset_version")) != wanted_version:
-                continue
             source = str(row.get("ja", ""))
+            if kind == "lyrics" and is_english_bypass(source):
+                # Confirmed policy: a pure-English lyric line stays English
+                # ("english bypass").  Queueing it would spend tokens and then
+                # fight the policy on every run.
+                continue
+            if wanted_version and kind == "locales" and str(row.get("asset_version")) != wanted_version:
+                continue
             sid = str(row.get("source_sha256", ""))
             if not source or sid != sha256_text(source):
                 raise SystemExit(f"invalid source identity at {path}:{line_no}")
@@ -66,8 +118,8 @@ def collect(args: argparse.Namespace) -> int:
                 "source": source,
                 "source_sha256": sid,
                 "bundle": row.get("bundle", ""),
-                "key": row.get("item_key", ""),
-                "task": "ASSETS_TEXT",
+                "key": row_scope_key(row),
+                "task": "ASSETS_LYRICS" if kind == "lyrics" else "ASSETS_TEXT",
                 "asset_version": row.get("asset_version"),
                 "source_client_version": row.get("source_client_version"),
                 "translation": "",
@@ -75,13 +127,15 @@ def collect(args: argparse.Namespace) -> int:
             }, ensure_ascii=False, separators=(",", ":")) + "\n")
             count += 1
     print(json.dumps({"queue": str(output), "items": count,
+                      "scope": scope,
                       "asset_version": wanted_version or None}, ensure_ascii=False))
     return 0
 
 
 def apply(args: argparse.Namespace) -> int:
+    scope = scope_of(args)
     translations: dict[str, str] = {}
-    for line in args.draft.read_text(encoding="utf-8-sig").splitlines():
+    for line in jsonl_lines(args.draft.read_text(encoding="utf-8-sig")):
         if not line.strip():
             continue
         row = json.loads(line)
@@ -99,16 +153,16 @@ def apply(args: argparse.Namespace) -> int:
         translations[sid] = translation
 
     if not translations:
-        print(json.dumps({"updated": 0, "drafts": 0}, ensure_ascii=False))
+        print(json.dumps({"updated": 0, "drafts": 0, "scope": scope}, ensure_ascii=False))
         return 0
 
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     updated = 0
-    for path in sorted((ROOT / "locales").rglob("*.jsonl")):
+    for path, _kind in scope_paths(ROOT, scope):
         original = path.read_text(encoding="utf-8")
         changed = False
         lines = []
-        for line in original.splitlines():
+        for line in jsonl_lines(original):
             if not line.strip():
                 lines.append(line)
                 continue
@@ -132,14 +186,14 @@ def apply(args: argparse.Namespace) -> int:
         if changed:
             path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({"updated": updated, "drafts": len(translations),
-                      "stage": "llm_translated"}, ensure_ascii=False))
+                      "scope": scope, "stage": "llm_translated"}, ensure_ascii=False))
     return 0
 
 
 def _draft_source_ids(path: Path) -> set[str]:
     """Source identities carried by a draft file, for a bounded publish."""
     wanted: set[str] = set()
-    for line in path.read_text(encoding="utf-8-sig").splitlines():
+    for line in jsonl_lines(path.read_text(encoding="utf-8-sig")):
         if not line.strip():
             continue
         row = json.loads(line)
@@ -173,7 +227,7 @@ def _accepted_index(files: list[Path]) -> tuple[dict, set, dict, dict]:
     human_version: dict[tuple[str, str, str], int] = {}
     machine_version: dict[tuple[str, str, str], int] = {}
     for path in files:
-        for line in path.read_text(encoding="utf-8").splitlines():
+        for line in jsonl_lines(path.read_text(encoding="utf-8")):
             if not line.strip():
                 continue
             row = json.loads(line)
@@ -197,6 +251,17 @@ def _accepted_index(files: list[Path]) -> tuple[dict, set, dict, dict]:
 
 
 def publish(args: argparse.Namespace) -> int:
+    """Admit machine drafts to the build, per scope."""
+    scope = scope_of(args)
+    if scope == "locales":
+        return _publish_locales(args)
+    if scope == "lyrics":
+        return _publish_lyrics(args)
+    status = _publish_locales(args)
+    return _publish_lyrics(args) or status
+
+
+def _publish_locales(args: argparse.Namespace) -> int:
     """Admit machine drafts to the generated build without relabelling them.
 
     Two invariants keep the generated writer's ambiguity gate unreachable from
@@ -226,7 +291,7 @@ def publish(args: argparse.Namespace) -> int:
         original = path.read_text(encoding="utf-8")
         changed = False
         lines = []
-        for line in original.splitlines():
+        for line in jsonl_lines(original):
             if not line.strip():
                 lines.append(line)
                 continue
@@ -287,6 +352,82 @@ def publish(args: argparse.Namespace) -> int:
         "files": untouched_files,
         "asset_versions": dict(sorted(versions.items())),
         "dry_run": bool(args.dry_run),
+        "scope": "locales",
+        "stage": "llm_translated",
+    }, ensure_ascii=False, sort_keys=True))
+    return 0
+
+
+def _publish_lyrics(args: argparse.Namespace) -> int:
+    """Promote machine-translated lyric rows to ``accepted``.
+
+    Simpler than the locale promotion on purpose: a lyric row is not part of the
+    generated release, so there is no build ambiguity gate to protect.  The one
+    invariant worth enforcing is agreement -- the same Japanese line inside one
+    song must not end up with two different Chinese wordings, because the game
+    shows them as the same line.  If any two rows of one song disagree, all of
+    them stay ``pending`` for a human instead of the newest one winning.
+    """
+    wanted = _draft_source_ids(args.draft) if args.draft is not None else None
+    files = [path for path, _kind in scope_paths(ROOT, "lyrics")]
+
+    tokens: dict[tuple[str, str], set[bytes]] = {}
+    for path in files:
+        for line in jsonl_lines(path.read_text(encoding="utf-8")):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            translation = str(row.get("zh", ""))
+            if not translation:
+                continue
+            identity = (_logical_bundle(row), str(row.get("source_sha256", "")))
+            tokens.setdefault(identity, set()).add(_translation_token(translation))
+
+    promoted = 0
+    skipped_conflicting = 0
+    changed_files = 0
+    for path in files:
+        original = path.read_text(encoding="utf-8")
+        changed = False
+        lines = []
+        for line in jsonl_lines(original):
+            if not line.strip():
+                lines.append(line)
+                continue
+            row: dict[str, Any] = json.loads(line)
+            translation = str(row.get("zh", ""))
+            if row.get("status") != "pending" or row.get("translation_stage") != "llm_translated" or not translation:
+                lines.append(line)
+                continue
+            sid = str(row.get("source_sha256", ""))
+            if wanted is not None and sid not in wanted:
+                lines.append(line)
+                continue
+            identity = (_logical_bundle(row), sid)
+            if len(tokens.get(identity, set())) > 1:
+                skipped_conflicting += 1
+                lines.append(line)
+                continue
+            source = str(row.get("ja", ""))
+            if not source or sid != sha256_text(source):
+                raise SystemExit(f"source identity mismatch at {path}: refusing to publish {sid}")
+            if "|" in translation or "^" in translation:
+                raise SystemExit(f"LLM output contains reserved delimiter for {sid}")
+            validate_translation(source, translation)
+            row["status"] = "accepted"
+            changed = True
+            promoted += 1
+            lines.append(json.dumps(row, ensure_ascii=False, separators=(",", ":")))
+        if changed:
+            changed_files += 1
+            if not args.dry_run:
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    print(json.dumps({
+        "promoted": promoted,
+        "skipped_conflicting_wording": skipped_conflicting,
+        "files": changed_files,
+        "dry_run": bool(args.dry_run),
+        "scope": "lyrics",
         "stage": "llm_translated",
     }, ensure_ascii=False, sort_keys=True))
     return 0
@@ -298,9 +439,11 @@ def main() -> int:
     collect_parser = sub.add_parser("collect")
     collect_parser.add_argument("--output", type=Path, required=True)
     collect_parser.add_argument("--asset-version", default="")
+    collect_parser.add_argument("--scope", choices=SCOPES, default="locales")
     collect_parser.set_defaults(func=collect)
     apply_parser = sub.add_parser("apply")
     apply_parser.add_argument("--draft", type=Path, required=True)
+    apply_parser.add_argument("--scope", choices=SCOPES, default="locales")
     apply_parser.set_defaults(func=apply)
     publish_parser = sub.add_parser("publish")
     publish_parser.add_argument(
@@ -308,6 +451,12 @@ def main() -> int:
         type=Path,
         default=None,
         help="promote only the source identities present in this draft file",
+    )
+    publish_parser.add_argument(
+        "--scope",
+        choices=SCOPES,
+        default="locales",
+        help="which source tree to promote (default: the generated text release)",
     )
     publish_parser.add_argument(
         "--dry-run",

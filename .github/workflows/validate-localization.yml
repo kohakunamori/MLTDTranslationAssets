@@ -98,5 +98,11 @@ jobs:
             scripts/test_should_build_release.py \
             scripts/test_assets_mirror.py \
             scripts/test_refresh_latest_official_catalogue.py \
+            scripts/test_official_bundle_families.py \
+            scripts/test_discover_official_bundles.py \
+            scripts/test_refresh_lyrics_catalogue.py \
+            scripts/test_validate_repo_lyrics.py \
+            pipelines/text/test_mltd_localize_scrobj.py \
+            pipelines/text/test_mltd_lyric_rules.py \
             asset-server \
             server/tests

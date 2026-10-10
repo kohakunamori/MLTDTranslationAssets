@@ -233,7 +233,7 @@ def diagram_layers(path):
     y0 = ys[2]
     it_fill, it_edge = (C_SRC,), (E_SRC,)
     row([("locales/", "11,818 个 JSONL · 391,618 行\nmaster 2482 / story 3657 / card 2997\nbirth 1605 / dialogue 1077", 40),
-         ("lyrics/", "432 曲分轨 · 12,131 槽\nall_lyrics.jsonl", 30),
+         ("lyrics/", "491 曲分轨 · 13,729 槽\nall_lyrics.jsonl", 30),
          ("glossary/", "authoritative-terms\nidols.json（52 偶像）", 30),
          ("images/localized/", "937 张已审 PNG\nSHA-256 索引", 30),
          ("manifests/", "asset-version · bundle-index\nimages · portal-resource", 38),

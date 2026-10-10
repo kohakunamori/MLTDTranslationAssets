@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "mltd-localizable-bundle-families",
+  "description": "官方 assets 索引里哪些逻辑包属于「可汉化面」。discover_official_bundles.py 用它把索引里的包分成 localizable / unclassified；refresh_latest_official_catalogue.py 与 refresh_lyrics_catalogue.py 用它决定下载与抽取范围。新增一个面 = 在这里加一条 family，必须先确认回写链路存在。exclude 为永不纳入的官方自测包（scrobj_00test.unity3d 不含任何歌词行）。reviewed_unclassified 是「已人工抽查、确认不是可翻译文本面」的家族签名前缀，不再计入 unclassified 与「新资源类型」告警：ACB 音频（Criware @UTF 容器，语音）、fhout_event_*_story_*.json（动画曲线 + TextId 引用，正文在已覆盖的 gtx 里）、纯图片家族（Sprite/Texture2D，画面上文字来自已覆盖的主数据表）。抽查证据见 docs/ARCHITECTURE.md 的「未纳入面审计」表。",
+  "families": [
+    {
+      "id": "gtx_text",
+      "pipeline": "gtx_text",
+      "queue": "locales/master/official-<asset_version>-untranslated.jsonl",
+      "match": {
+        "suffix": "_jp.gtx.unity3d"
+      },
+      "reason": "游戏正文文本包：UnityFS 内的单个 GTX TextAsset，已由 pipelines/text 的 build-overlay 写入器回写，并进入 generated/<asset_version>/ 发布。"
+    },
+    {
+      "id": "song_lyrics",
+      "pipeline": "song_lyrics",
+      "queue": "lyrics/songs/<bundle>.jsonl",
+      "match": {
+        "prefix": "scrobj_"
+      },
+      "reason": "歌曲歌词包：MonoBehaviour 的 scenario[*].str。目前只落 lyrics/ 源库供门户与人工审校；回写进客户端资源面的注入器尚未接入。"
+    }
+  ],
+  "exclude": [
+    "scrobj_00test.unity3d"
+  ],
+  "reviewed_unclassified": [
+    "event_#_story_#.acb",
+    "event_#_story_intro.acb",
+    "event_#_story_chat.acb",
+    "card_episode_",
+    "card_list_",
+    "main_chat_",
+    "fhout_event_",
+    "blog",
+    "unit_list_intro_",
+    "event_#_info",
+    "event_#_#_info",
+    "event_unit_talk_chr_",
+    "tutorialinfo",
+    "igp_tutorial_info_",
+    "specialeventinfo",
+    "costumesalesinfo",
+    "pinkyringstonesalesinfo",
+    "titlebg_"
+  ]
+}

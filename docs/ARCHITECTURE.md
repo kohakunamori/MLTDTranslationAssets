@@ -41,7 +41,7 @@ flowchart TB
   subgraph L3["③ 源数据 / Source of truth（git 跟踪，PR 审核入口）"]
     direction LR
     S1["locales/<br/>11,818 JSONL"]
-    S2["lyrics/<br/>432 曲"]
+    S2["lyrics/<br/>491 曲"]
     S3["glossary/"]
     S4["images/localized/<br/>937 PNG"]
     S5["manifests/"]
@@ -174,10 +174,10 @@ flowchart TB
 | 目录 | 角色 | 跟踪文件 | 大小 | 主要 writer |
 | --- | --- | --- | ---: | --- |
 | `locales/` | 业务文本库（JSONL，单行精确定位） | 11,818 | 191 MB | PR / LLM CI / promote |
-| `lyrics/` | 432 曲双语对齐歌词 | 434 | 7.5 MB | 离线流水线 |
+| `lyrics/` | 491 曲双语对齐歌词 | 494 | 8.4 MB | `refresh_lyrics_catalogue.py` / LLM CI（publish --scope lyrics） |
 | `glossary/` | 权威术语（90）+ 52 偶像名录 | 2 | <0.1 MB | 离线流水线 |
 | `images/localized/` | 937 张已审贴图 PNG | 937 | 333 MB | 人工（离线审校后入库） |
-| `manifests/` | 版本、bundle 索引、贴图清单、门户清单 | 5 | 4.1 MB | CI |
+| `manifests/` | 版本、bundle 索引、家族注册表、家族签名基线、贴图清单、门户清单 | 7 | 4.5 MB | CI |
 | `schema/` | `entry.schema.json`、`assets-generated-manifest.schema.json` | 2 | <0.1 MB | 人工 |
 | `generated/` | 内容寻址生成物（5 个版本 + CAS） | 11,854 | 347 MB | `assets_generated_index.py` |
 | `pipelines/` | 文本/图像/导出流水线（离线） | 53 | 0.7 MB | 人工 |
@@ -208,7 +208,7 @@ flowchart TB
 | Workflow | 触发 | concurrency | 写入 | 密钥 |
 | --- | --- | --- | --- | --- |
 | `auto-track-jp-assets.yml` | `cron 0 16 * * *`、dispatch | `assets-track-jp-version` (不取消) | tag `assets-<ver>`、分支 + PR | `GITHUB_TOKEN` |
-| `llm-translate-assets.yml` | `cron 17 2 * * *`、dispatch | `assets-llm-translation` (不取消) | `locales/`、`asset-version.json`、`official-bundle-index.json` → `main` | `MLTD_LLM_API_KEY`、`GITHUB_TOKEN` |
+| `llm-translate-assets.yml` | `cron 17 2 * * *`、dispatch | `assets-llm-translation` (不取消) | `locales/`、`lyrics/`、`asset-version.json`、`official-bundle-index.json`、`official-asset-inventory.json` → `main` | `MLTD_LLM_API_KEY`、`GITHUB_TOKEN` |
 | `validate-localization.yml` | PR / push（paths 过滤） | `workflow-ref`（可取消） | 无（只读校验） | 无 |
 | `assets-generated.yml` | push `main`（paths 过滤）、dispatch | `assets-generated-main` (不取消) | `generated/`、`locales/`、`portal-resource-manifest.json` → `main` | 无 |
 
@@ -333,33 +333,53 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | --- | --- | --- |
 | 版本探测 | ✅ | `track_jp_assets.py --check-only`（exit 10 = 有新版本，其他退出码一律显式失败） |
 | 冻结旧版标签 | ✅ | tag `assets-<ver>`，不可移动 |
-| 下载官方基线 | ⚠️ **仅已跟踪 bundle** | `refresh_latest_official_catalogue.py` 先构造 `known_bundles`（来自 `locales/**/*.jsonl` 的 `bundle` 字段），再 `selected = {logical: row for logical, row in index.items() if logical.casefold() in known_bundles}` |
+| 下载官方基线 | ✅ 文本面用**家族匹配**选包 | `refresh_latest_official_catalogue.py` 先用 `official_bundle_families.select_bundles()` 按 `manifests/localizable-bundle-families.json` 的 family 从官方 index 选出可汉化包（不再从 `locales/**` 反推），再下载 remote 变了的那些 |
+| 新包发现 | ✅ | `discover_official_bundles.py`：报告「属于已声明 family 但仓库还没有」的包、字节数与**全新家族签名**；`manifests/official-asset-inventory.json` 是「新资源类型」告警的基线 |
+| 歌词面抽取 | ✅ | `refresh_lyrics_catalogue.py` + `pipelines/text/mltd_localize_scrobj.py`：`scrobj_*` 的 `scenario[*].str` → `lyrics/songs/<bundle>.jsonl`，内容寻址合并，然后重算 `all_lyrics.jsonl` / `lyrics_manifest.json` |
 | 归类 / 分类 | ⚠️ **仅展示层** | `build_portal_resource_manifest.py` 的 `CATEGORY_RULES`：按 bundle 名前缀落 15 个类别（`lyrics` / `event_chat` / `event_story` / `special_commu` / `main_commu` / `card_episode` / `card_blog` / `card_skill` / `theater_comm` / `message_board` / `live_result` / `login_bonus` / `birth_live` / `birth_greet` / `system_ui`），只影响门户计数矩阵 |
 | 内容类型分析（有没有图/有没有新文本面） | ❌ | CI 里没有任何 texture/sprite 扫描 |
 
-> **断点 1：全新 bundle 不会被自动发现。** 官方 index 里从没在 `locales/` 出现过的 bundle，既不下下载、也不抽取，也不会被写进 memo（`next_bundle_index` 只保留 `downloaded` 或 remote 未变的条目）。
-> 实测：`manifests/official-bundle-index.json` 有 11,816 条，`locales/` 的 distinct bundle 也是 11,816 条，**两个集合完全相同** —— 当前处于「已覆盖官方全集」状态，一旦上游出现第 11,817 个 bundle，它不会自动进入翻译队列，必须人工离线跑一次提取并落进 `locales/`。
+> **断点 1（2026-10-10 已修）：全新 bundle 不会被自动发现。** 旧实现从 `locales/**` 反推下载集合，而 memo（`manifests/official-bundle-index.json`）本身也由 `locales/` 生成，于是「已覆盖官方全集」这个结论是自己证明自己的：11,816 对 11,816，两个集合必然相等。
+> 实测代价：asset 1077720 时官方有 168,391 个包，仓库只跟到 12,248 个；**77 个文本包**（304,269 字节，含 `event_0448_story_*`、`event_0450_story_*`、card/birth/special/job/liveresult/lbonus）与 **59 个歌词包**（6,819,130 字节，含新歌 `scrobj_ittana`「一旦愛して」）从来没有进入过翻译队列。
+> 现在的选择规则是「**声明式家族**」而不是「已知集合」：`manifests/localizable-bundle-families.json` 声明 `gtx_text`（后缀 `_jp.gtx.unity3d`）与 `song_lyrics`（前缀 `scrobj_`），按 `pipeline` 分流，所以歌词包不可能被送进 GTX 抽取器；未声明家族的包只报告、绝不自动下载（168,391 个包里有 156,007 个是贴图/音频等非文本资源）。
 
 ### 8.2 会自动提取文本并自动翻译
 
 ```
 官方新版本
-  → ① 增量下载已跟踪 bundle        内容寻址 memo，remote 未变则跳过（冷启动/--full-rescan ≈1h，常态几分钟）
-  → ② extract-snapshot 抽 GTX 文本  只 read_gtx；无 texture/sprite 抽取
-  → ③ 追加 untranslated 行          locales/master/official-<ver>-untranslated.jsonl（只追加，永不覆盖）
-  → ④ LLM 翻译池                     translate_mltd_api_pool.py --batch-mode single --prompt-source compiled
-  → ⑤ 原地写回 pending/llm_translated 永不写 accepted；非 untranslated 行逐字节保留
-  → ⑥ 提交 main（无 [skip ci]）      再触发一轮 validate + build
-  → ⑦ 人工审校 → accepted           唯一的语义把关点
+  → ① 家族匹配 + 增量下载              registry 选包；remote 未变则跳过（冷启动/--full-rescan ≈1h，常态几分钟）
+  → ② 新包发现（只读）                 discover_official_bundles.py：新可汉化包 / 字节数 / 全新家族签名 + 更新 inventory
+  → ③ extract-snapshot 抽 GTX 文本     只 read_gtx；无 texture/sprite 抽取
+  → ③' refresh_lyrics_catalogue 抽歌词  scrobj_* → lyrics/songs/*.jsonl，内容寻址合并，重算汇总
+  → ④ 追加 untranslated 行             locales/master/official-<ver>-untranslated.jsonl（只追加，永不覆盖）
+  → ⑤ LLM 翻译池（--scope all）        translate_mltd_api_pool.py --batch-mode single --prompt-source compiled
+  → ⑥ 原地写回 pending/llm_translated  永不写 accepted；非 untranslated 行逐字节保留
+  → ⑦ publish（locales + lyrics）      机器稿转 accepted 且保留 llm_translated 来源标记
+  → ⑧ 提交 main（无 [skip ci]）        再触发一轮 validate + build
+  → ⑨ 人工审校                         唯一的语义把关点
 ```
+
+失败关闭（fail-closed）的三道闸门：
+
+| 闸门 | 默认上限 | 触发时行为 |
+| --- | --- | --- |
+| 新可汉化包（发现） | 400 个 / 1 GiB | `discover_official_bundles.py` exit 2，Run 变红，不提交 |
+| 新歌词包（抽取） | 200 个 / 512 MiB | `refresh_lyrics_catalogue.py` exit 2，Run 变红，不提交 |
+| 新追加行（文本） | `--max-new-rows` 5000 | `refresh_latest_official_catalogue.py` 拒绝追加 |
+
+> 上限取值的依据：常态一次游戏更新只新增个位数到几十个包（1077720 实测 77 个文本包 / 1,570 行、59 个歌词包），2026-10-01 的故障形态是「无界 39.4 万行」，两者之间留了两三个数量级的余量。今天这批补录（77 + 59 个包）**没有触发任何上限**。
 
 代码级边界：
 
-- `llm_translate_untranslated.py collect` 只取 `status == "untranslated"` 且 `zh` 为空的行，并按 `source_sha256` 去重；`source_sha256 != sha256(ja)` 直接 `SystemExit`。
+- `llm_translate_untranslated.py collect --scope {locales,lyrics,all}` 只取 `status == "untranslated"` 且 `zh` 为空的行，并按 `source_sha256` 去重；`source_sha256 != sha256(ja)` 直接 `SystemExit`。`--scope lyrics` 额外跳过「纯英文」行（拉丁字母、无假名无汉字），这是仓库既有政策，不是新规则。
 - `apply` 只改 `status == "untranslated"` 的行；译文含半角 `|`/`^`、或同一 source 出现两份不一致译稿，直接 `SystemExit`。
+- `publish --scope locales`：`pending` + `llm_translated` + 非空译文 → `accepted`，并保留 `llm_translated` 来源；同一 source 已有别的 accepted 措辞则跳过，机器稿之间措辞冲突时按 `asset_version` 仲裁（最旧者生效，其余降回 `pending`）。
+- `publish --scope lyrics`：同样只动机器稿；额外规则是「同一首歌内同一日文行必须只有一种中文措辞」，出现两种就让这些行全部留在 `pending` 交人工——它们指向同一句歌词，将来回写进客户端后必然显示为同一行，措辞不一致比不翻译更糟。
 - `enforce_new_row_cap`：单次自动追加超过 `--max-new-rows`（默认 **5000**）即 fail-closed，需人工显式提高上限。
 - `source_identity = (bundle, item_key, source_sha256)` **刻意不含 `asset_version`** —— 否则每次版本步进都会把全量目录重追加一遍（2026-10-01 曾因此产生约 39.3 万行与无界队列）。
 - 失败语义：翻译步骤 `continue-on-error`；只有 `accepted == 0 且 failed ≥ 50` 才让 Run 变红并开 issue，少量顽固条目只 `::warning::` 并在下次重试。
+- 歌词行的身份是 `(bundle, index, source_sha256)`；重抽同一首歌时按内容哈希保留既有译文（`preserved` / `reindexed` / `retranslated` / `dropped_accepted` 四个计数进报告）。
+- **`str.splitlines()` 不能用来切 JSONL**：U+2028 / U+2029 / U+0085 / VT / FF 在 JSON 字符串里合法且会被 `json.dumps(ensure_ascii=False)` 原样写出，`splitlines()` 会把 1 行看成 2 行、再写回时把分隔符变成真换行。`lyrics/songs/scrobj_gf0000.unity3d.jsonl` 已有 3 行带 U+2028；统一用 `mltd_localize_gtx.jsonl_lines()`（`promote_merged_locales.py` 是依赖为零的脚本，用本地 `split_keepends()`）。
 
 实测痕迹（仓库内真实产物）：
 
@@ -368,7 +388,31 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | `locales/master/official-1077710-untranslated.jsonl` | 1,833 | `pending` 1,830 + `untranslated` 3；`llm_translated` 1,830；5 个 bundle（`MD_jp` / `CD_jp` / `MB_jp` / `CM_jp` / `ST_jp`）**全部为既有 bundle** |
 | `locales/master/official-1077640-untranslated.jsonl` | ~~4~~ 0 | 已删除：4 行全是同 `(bundle, item_key, source_sha256)` 的重复行，`locales/birth/birth_bdl2_001har_005_jp.gtx.jsonl` 里已有 `accepted` 译文。收集时那些 accepted 行还不存在（追加是幂等的，identity 不含 `asset_version`），属于历史顺序造成的重复；复核后维持已发布措辞，删除重复草稿。 |
 
-即：自动链路**确实端到端跑通**，但作用面是「已跟踪 bundle 的增量新文本」，**不是「新资源面的发现」**。
+即：自动链路**确实端到端跑通**，作用面在 2026-10-10 之后扩到「声明式家族选包 + 新包发现 + 歌词面抽取」，而不再只是「已跟踪 bundle 的增量新文本」。
+
+补录现场（asset 1077720，实测而非估算）：
+
+| 面 | 官方 | 仓库原有 | 新发现 | 字节 | 抽取结果 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 文本 `gtx_text` | 11,893 | 11,816 | 77 | 304,269 | 1,587 记录 / 1,570 可翻译行 → **实际新增 1,532 行**：官方拼错名的包 `pecial_108_fc_01_jp.gtx` 的**内部名其实是正确拼写** `special_108_fc_01_jp.gtx`（实测：内部名、38 条记录、键 `special_108_fc_01_*`，与 `locales/story/special_108_fc_01_jp.gtx.jsonl` 里的 38 行逐条一致），因此这 38 行被 `(bundle, item_key, source_sha256)` 身份去重 |
+| 歌词 `song_lyrics` | 491 | 432 | 59 | 6,819,130 | 59 首歌 / 1,598 槽（新歌 `scrobj_ittana`「一旦愛して」= 48 行，全为日文） |
+| 其他 | 137,207 | 0 | 0（只报告） | — | 17,583 个未纳入的家族签名。注意 `new_family_count` 的口径：**首次运行没有基线时它就是全部家族数**（所以首轮日志会写 "17909 new resource families"），有基线后才是「本次新出现」的个数；报告里 `new_families` 列表只列前 40 个样本（`new_signatures[:40]`）。已人工抽查、确认不可翻译的 18,800 个包（326 个家族）列在 `reviewed_unclassified`，不再计入这两个数。 |
+
+> 歌词只有**源库**（`lyrics/`）会被这个仓库更新；**没有任何代码把歌词写回客户端资源包**，`generated/` 里至今是 0 个 `scrobj` 包。所以「新增歌词进入汉化范围」目前等于「进入门户与人工审校」，不等于「游戏里能看见」。
+
+#### 未纳入面审计（2026-10-10 实测）
+
+「其他 13.7 万个包」里是否还藏着没被发现的可翻译文本？逐个家族抽样下载并解包检查后的结论：**没有**。抽查证据：
+
+| 面 | 家族签名 | 抽查方式 | 结论 |
+| --- | --- | --- | --- |
+| 语音音频 | `event_#_story_#.acb`、`event_#_story_intro/_chat.acb`、`card_episode_#*#.acb`、`card_list_#*#.acb`、`main_chat_#.acb`（约 2,700 包 / 3 GB） | 解包看内层 TextAsset 文件头 | Criware 音频容器（`@UTF` 魔数），**没有文本**；对应正文在已覆盖的 `event_*_jp.gtx` 里 |
+| 动画曲线 | `fhout_event_#_story_#.json`（1,515 包） | 12 个样本解 JSON | 每条是 `{"TextId": "event_0189_story_12_1001_033sih", "List": [{"t":0,"v":0.0}, …]}`：**TextId 引用 + 口型曲线**，12 个样本合计 0 个假名、0 个汉字；正文仍指向已覆盖的 gtx 键 |
+| 图片 | `blog#`（1,255）、`event_#_info`（439）、`tutorialinfo#`（167）、`igp_tutorial_info_#`（223）、`costumesalesinfo#`（294）、`pinkyringstonesalesinfo#`（96）、`unit_list_intro_#`（111）、`specialeventinfo#`、`titlebg_#`（289）、`event_unit_talk_chr_#_#_#`（1,965） | 解包统计对象类型 | 只有 `Sprite` / `Texture2D` / `AssetBundle`，**0 个字符串**；画面上的文字来自已覆盖的主数据表（`MD_jp.gtx` 等），重绘属离线图片面（见 8.3） |
+
+因此当前只有两个可翻译文本面：`gtx_text` 与 `song_lyrics`。若官方将来出现**新家族**，`discover_official_bundles.py` 仍会照常把它列进 `new_families` 告警（`reviewed_unclassified` 只屏蔽上面这些已抽查的前缀）。
+
+审计的边界要说清楚：抽查覆盖的是**包数/字节数占绝对多数**的家族（语音、图片、动画三类共 326 个签名 / 18,800 个包），按每个家族抽 1～12 个样本开箱看对象类型或文件头；剩下 17,583 个签名属于长尾（单个签名包数很少，多为历史版本或一次性资源），**没有逐一开箱**。它们仍照旧计入 `unclassified` 并在出现新签名时告警，只是不再有人为它们逐个判断，直到某个家族的数量增长到值得看一眼。
 
 ### 8.3 图像面完全不自动
 
@@ -386,10 +430,10 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 
 | 问题 | 答案 |
 | --- | --- |
-| 会分析最新 assets 吗？ | 会，但**只做版本跟踪 + 已跟踪 bundle 的增量复验**；不做新面发现，不识别资源内容类型 |
-| 会归类吗？ | 只有**门户展示层**按 bundle 名前缀分 15 类；翻译与构建逻辑不依赖它 |
-| 会自动提取文本吗？ | 会 —— 增量下载已跟踪 bundle 并抽 GTX 文本，落到 `untranslated` 行 |
-| 会自动翻译吗？ | 会 —— LLM 池自动译为 `pending` / `llm_translated` 并直接提交 `main`，人工只负责改成 `accepted` |
+| 会分析最新 assets 吗？ | 会 —— 版本跟踪 + **家族匹配选包**（新文本包、新歌词包都会自动进入范围）+ 新家族签名告警；仍不识别资源内容类型（贴图/音频只报告不下载） |
+| 会归类吗？ | 只有**门户展示层**按 bundle 名前缀分 15 类；翻译与构建逻辑依赖的是 `manifests/localizable-bundle-families.json`（2 个声明式家族 + 按 `pipeline` 分流） |
+| 会自动提取文本吗？ | 会 —— 家族匹配下载 + 抽 GTX 文本落 `untranslated` 行；歌词面另走 `refresh_lyrics_catalogue.py` 落 `lyrics/songs/*.jsonl` |
+| 会自动翻译吗？ | 会 —— LLM 池自动译为 `pending` / `llm_translated` 并直接提交 `main`，人工只负责改成 `accepted`；歌词同理，只是发布终点是 `lyrics/` 源库 |
 | 会自动提取/翻译图片吗？ | **不会** —— 无自动发现，无自动重绘，无自动注入；CI 里已无任何图片步骤 |
 
 ---

@@ -59,7 +59,7 @@ def identity(row: dict[str, Any]) -> tuple[str, str, str]:
 
 def parse_rows(text: str, label: str) -> dict[tuple[str, str, str], dict[str, Any]]:
     rows: dict[tuple[str, str, str], dict[str, Any]] = {}
-    for line_no, line in enumerate(text.splitlines(), 1):
+    for line_no, line in enumerate(text.split("\n"), 1):
         if not line.strip():
             continue
         try:
@@ -115,6 +115,25 @@ def _tokens_agree(row: dict[str, Any]) -> bool:
     return True
 
 
+def split_keepends(text: str) -> list[str]:
+    """Split file text on real newlines, keeping each terminator.
+
+    ``str.splitlines(keepends=True)`` also breaks on U+2028, U+2029, U+0085, VT
+    and FF, which are legal inside a JSON string and are written raw by
+    ``json.dumps(..., ensure_ascii=False)``.  A row containing one would be seen
+    as two lines here and re-joined as two lines, corrupting the file; the
+    lyrics library already ships such a row.  This module is imported by the
+    dependency-free validation job, so the helper is local rather than shared
+    with the Unity-dependent pipelines package.
+    """
+    parts = text.split("\n")
+    tail = parts.pop()
+    lines = [part + "\n" for part in parts]
+    if tail:
+        lines.append(tail)
+    return lines
+
+
 def promote_file(
     root: Path,
     relative: str,
@@ -139,7 +158,7 @@ def promote_file(
         previous = parse_rows(before_text, f"{before}:{relative}") if before_text else {}
 
     original = path.read_text(encoding="utf-8")
-    lines = original.splitlines(keepends=True)
+    lines = split_keepends(original)
     promoted = 0
     skipped_tokens = 0
     for index, raw in enumerate(lines):

@@ -3,16 +3,21 @@
   "kind": "mltd-lyrics-manifest",
   "description": "Bilingual synchronized lyrics with scrobj slot alignment",
   "counts": {
-    "total_songs": 432,
-    "total_slots": 12131,
+    "total_songs": 491,
+    "total_slots": 13729,
     "translated_slots": 11065,
-    "english_bypass_slots": 1066
+    "english_bypass_slots": 1258
   },
   "songs": [
     {
       "bundle": "scrobj_aftspt.unity3d",
       "slots": 32,
       "translated": 27
+    },
+    {
+      "bundle": "scrobj_ahhan+.unity3d",
+      "slots": 35,
+      "translated": 0
     },
     {
       "bundle": "scrobj_ahhan0.unity3d",
@@ -50,9 +55,19 @@
       "translated": 13
     },
     {
+      "bundle": "scrobj_amate+.unity3d",
+      "slots": 16,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_amater.unity3d",
       "slots": 16,
       "translated": 16
+    },
+    {
+      "bundle": "scrobj_angel+.unity3d",
+      "slots": 23,
+      "translated": 0
     },
     {
       "bundle": "scrobj_angelp.unity3d",
@@ -135,6 +150,11 @@
       "translated": 19
     },
     {
+      "bundle": "scrobj_bntht+.unity3d",
+      "slots": 26,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_bnthtr.unity3d",
       "slots": 26,
       "translated": 23
@@ -158,6 +178,11 @@
       "bundle": "scrobj_brakes.unity3d",
       "slots": 37,
       "translated": 30
+    },
+    {
+      "bundle": "scrobj_brave+.unity3d",
+      "slots": 24,
+      "translated": 0
     },
     {
       "bundle": "scrobj_braveh.unity3d",
@@ -185,9 +210,19 @@
       "translated": 26
     },
     {
+      "bundle": "scrobj_chafe+.unity3d",
+      "slots": 36,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_chafes.unity3d",
       "slots": 36,
       "translated": 27
+    },
+    {
+      "bundle": "scrobj_choch+.unity3d",
+      "slots": 32,
+      "translated": 0
     },
     {
       "bundle": "scrobj_chocho.unity3d",
@@ -213,6 +248,11 @@
       "bundle": "scrobj_chupac.unity3d",
       "slots": 24,
       "translated": 18
+    },
+    {
+      "bundle": "scrobj_cider+.unity3d",
+      "slots": 24,
+      "translated": 0
     },
     {
       "bundle": "scrobj_ciders.unity3d",
@@ -250,9 +290,19 @@
       "translated": 33
     },
     {
+      "bundle": "scrobj_crilo+.unity3d",
+      "slots": 23,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_crilov.unity3d",
       "slots": 19,
       "translated": 18
+    },
+    {
+      "bundle": "scrobj_cross+.unity3d",
+      "slots": 46,
+      "translated": 0
     },
     {
       "bundle": "scrobj_crossi.unity3d",
@@ -298,6 +348,11 @@
       "bundle": "scrobj_decide.unity3d",
       "slots": 20,
       "translated": 20
+    },
+    {
+      "bundle": "scrobj_dende+.unity3d",
+      "slots": 25,
+      "translated": 0
     },
     {
       "bundle": "scrobj_denden.unity3d",
@@ -390,6 +445,11 @@
       "translated": 34
     },
     {
+      "bundle": "scrobj_everl+.unity3d",
+      "slots": 14,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_everla.unity3d",
       "slots": 12,
       "translated": 12
@@ -405,6 +465,11 @@
       "translated": 21
     },
     {
+      "bundle": "scrobj_fateo+.unity3d",
+      "slots": 36,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_fateow.unity3d",
       "slots": 24,
       "translated": 21
@@ -418,6 +483,16 @@
       "bundle": "scrobj_ferrap.unity3d",
       "slots": 15,
       "translated": 14
+    },
+    {
+      "bundle": "scrobj_flye39.unity3d",
+      "slots": 17,
+      "translated": 0
+    },
+    {
+      "bundle": "scrobj_flyer+.unity3d",
+      "slots": 17,
+      "translated": 0
     },
     {
       "bundle": "scrobj_flyers.unity3d",
@@ -440,6 +515,11 @@
       "translated": 32
     },
     {
+      "bundle": "scrobj_ftjai+.unity3d",
+      "slots": 26,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_ftjair.unity3d",
       "slots": 26,
       "translated": 22
@@ -458,6 +538,11 @@
       "bundle": "scrobj_fywind.unity3d",
       "slots": 20,
       "translated": 18
+    },
+    {
+      "bundle": "scrobj_gdsig+.unity3d",
+      "slots": 38,
+      "translated": 0
     },
     {
       "bundle": "scrobj_gdsign.unity3d",
@@ -503,6 +588,16 @@
       "bundle": "scrobj_girlmw.unity3d",
       "slots": 28,
       "translated": 28
+    },
+    {
+      "bundle": "scrobj_glow39.unity3d",
+      "slots": 22,
+      "translated": 0
+    },
+    {
+      "bundle": "scrobj_glowm+.unity3d",
+      "slots": 22,
+      "translated": 0
     },
     {
       "bundle": "scrobj_glowmp.unity3d",
@@ -555,6 +650,11 @@
       "translated": 46
     },
     {
+      "bundle": "scrobj_harm4+.unity3d",
+      "slots": 29,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_harm4u.unity3d",
       "slots": 29,
       "translated": 22
@@ -600,6 +700,11 @@
       "translated": 18
     },
     {
+      "bundle": "scrobj_hmt02+.unity3d",
+      "slots": 35,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_hmt020.unity3d",
       "slots": 35,
       "translated": 35
@@ -610,9 +715,19 @@
       "translated": 20
     },
     {
+      "bundle": "scrobj_hmt04+.unity3d",
+      "slots": 38,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_hmt040.unity3d",
       "slots": 38,
       "translated": 32
+    },
+    {
+      "bundle": "scrobj_hmt05+.unity3d",
+      "slots": 30,
+      "translated": 0
     },
     {
       "bundle": "scrobj_hmt050.unity3d",
@@ -715,6 +830,11 @@
       "translated": 33
     },
     {
+      "bundle": "scrobj_ittana.unity3d",
+      "slots": 48,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_iv0000.unity3d",
       "slots": 27,
       "translated": 19
@@ -770,6 +890,11 @@
       "translated": 18
     },
     {
+      "bundle": "scrobj_kohao+.unity3d",
+      "slots": 57,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_kohaov.unity3d",
       "slots": 58,
       "translated": 52
@@ -800,6 +925,11 @@
       "translated": 17
     },
     {
+      "bundle": "scrobj_kyush+.unity3d",
+      "slots": 35,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_kyushu.unity3d",
       "slots": 35,
       "translated": 35
@@ -808,6 +938,11 @@
       "bundle": "scrobj_lastac.unity3d",
       "slots": 30,
       "translated": 30
+    },
+    {
+      "bundle": "scrobj_leade+.unity3d",
+      "slots": 33,
+      "translated": 0
     },
     {
       "bundle": "scrobj_leader.unity3d",
@@ -835,9 +970,19 @@
       "translated": 17
     },
     {
+      "bundle": "scrobj_lilact.unity3d",
+      "slots": 16,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_liveka.unity3d",
       "slots": 38,
       "translated": 34
+    },
+    {
+      "bundle": "scrobj_lmlad+.unity3d",
+      "slots": 21,
+      "translated": 0
     },
     {
       "bundle": "scrobj_lmlady.unity3d",
@@ -848,6 +993,11 @@
       "bundle": "scrobj_loveig.unity3d",
       "slots": 20,
       "translated": 18
+    },
+    {
+      "bundle": "scrobj_lsfes+.unity3d",
+      "slots": 18,
+      "translated": 0
     },
     {
       "bundle": "scrobj_lsfest.unity3d",
@@ -920,6 +1070,11 @@
       "translated": 24
     },
     {
+      "bundle": "scrobj_mosqu+.unity3d",
+      "slots": 26,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_mosqui.unity3d",
       "slots": 26,
       "translated": 25
@@ -945,6 +1100,11 @@
       "translated": 23
     },
     {
+      "bundle": "scrobj_nandw+.unity3d",
+      "slots": 30,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_nandwr.unity3d",
       "slots": 30,
       "translated": 25
@@ -953,6 +1113,11 @@
       "bundle": "scrobj_nasiko.unity3d",
       "slots": 20,
       "translated": 20
+    },
+    {
+      "bundle": "scrobj_newbn+.unity3d",
+      "slots": 26,
+      "translated": 0
     },
     {
       "bundle": "scrobj_newbnt.unity3d",
@@ -1010,6 +1175,11 @@
       "translated": 50
     },
     {
+      "bundle": "scrobj_newref.unity3d",
+      "slots": 22,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_newsim.unity3d",
       "slots": 18,
       "translated": 18
@@ -1025,9 +1195,19 @@
       "translated": 29
     },
     {
+      "bundle": "scrobj_nijil+.unity3d",
+      "slots": 24,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_nijile.unity3d",
       "slots": 24,
       "translated": 20
+    },
+    {
+      "bundle": "scrobj_ninni+.unity3d",
+      "slots": 24,
+      "translated": 0
     },
     {
       "bundle": "scrobj_ninnin.unity3d",
@@ -1115,6 +1295,11 @@
       "translated": 18
     },
     {
+      "bundle": "scrobj_pomeg+.unity3d",
+      "slots": 15,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_pomegr.unity3d",
       "slots": 15,
       "translated": 15
@@ -1128,6 +1313,11 @@
       "bundle": "scrobj_predre.unity3d",
       "slots": 25,
       "translated": 23
+    },
+    {
+      "bundle": "scrobj_priam+.unity3d",
+      "slots": 29,
+      "translated": 0
     },
     {
       "bundle": "scrobj_priamb.unity3d",
@@ -1185,6 +1375,11 @@
       "translated": 22
     },
     {
+      "bundle": "scrobj_refre+.unity3d",
+      "slots": 33,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_refrel.unity3d",
       "slots": 30,
       "translated": 30
@@ -1218,6 +1413,11 @@
       "bundle": "scrobj_ryuseg.unity3d",
       "slots": 24,
       "translated": 24
+    },
+    {
+      "bundle": "scrobj_ryusem.unity3d",
+      "slots": 24,
+      "translated": 0
     },
     {
       "bundle": "scrobj_s01amw.unity3d",
@@ -1363,6 +1563,11 @@
       "bundle": "scrobj_s02jul.unity3d",
       "slots": 16,
       "translated": 16
+    },
+    {
+      "bundle": "scrobj_s02jum.unity3d",
+      "slots": 19,
+      "translated": 0
     },
     {
       "bundle": "scrobj_s02kan.unity3d",
@@ -1620,6 +1825,11 @@
       "translated": 24
     },
     {
+      "bundle": "scrobj_s03jum.unity3d",
+      "slots": 24,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_s03kan.unity3d",
       "slots": 26,
       "translated": 26
@@ -1820,9 +2030,19 @@
       "translated": 30
     },
     {
+      "bundle": "scrobj_sdwee+.unity3d",
+      "slots": 28,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_sdweek.unity3d",
       "slots": 28,
       "translated": 27
+    },
+    {
+      "bundle": "scrobj_seigo+.unity3d",
+      "slots": 20,
+      "translated": 0
     },
     {
       "bundle": "scrobj_seigod.unity3d",
@@ -1885,6 +2105,11 @@
       "translated": 21
     },
     {
+      "bundle": "scrobj_solei+.unity3d",
+      "slots": 48,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_soleil.unity3d",
       "slots": 48,
       "translated": 40
@@ -1905,6 +2130,11 @@
       "translated": 28
     },
     {
+      "bundle": "scrobj_spshi+.unity3d",
+      "slots": 22,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_spship.unity3d",
       "slots": 22,
       "translated": 22
@@ -1923,6 +2153,11 @@
       "bundle": "scrobj_sssoul.unity3d",
       "slots": 31,
       "translated": 28
+    },
+    {
+      "bundle": "scrobj_stame+.unity3d",
+      "slots": 19,
+      "translated": 0
     },
     {
       "bundle": "scrobj_stamel.unity3d",
@@ -1955,6 +2190,11 @@
       "translated": 28
     },
     {
+      "bundle": "scrobj_sunrh+.unity3d",
+      "slots": 31,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_sunrhy.unity3d",
       "slots": 31,
       "translated": 20
@@ -1965,9 +2205,19 @@
       "translated": 25
     },
     {
+      "bundle": "scrobj_sunru+.unity3d",
+      "slots": 22,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_sunrun.unity3d",
       "slots": 22,
       "translated": 22
+    },
+    {
+      "bundle": "scrobj_suppa+.unity3d",
+      "slots": 21,
+      "translated": 0
     },
     {
       "bundle": "scrobj_suppan.unity3d",
@@ -1988,6 +2238,11 @@
       "bundle": "scrobj_texyou.unity3d",
       "slots": 40,
       "translated": 33
+    },
+    {
+      "bundle": "scrobj_thank+.unity3d",
+      "slots": 27,
+      "translated": 0
     },
     {
       "bundle": "scrobj_thanky.unity3d",
@@ -2020,6 +2275,11 @@
       "translated": 16
     },
     {
+      "bundle": "scrobj_top00+.unity3d",
+      "slots": 32,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_top000.unity3d",
       "slots": 32,
       "translated": 26
@@ -2033,6 +2293,11 @@
       "bundle": "scrobj_towara.unity3d",
       "slots": 13,
       "translated": 13
+    },
+    {
+      "bundle": "scrobj_towarm.unity3d",
+      "slots": 13,
+      "translated": 0
     },
     {
       "bundle": "scrobj_trenoe.unity3d",
@@ -2058,6 +2323,16 @@
       "bundle": "scrobj_undund.unity3d",
       "slots": 35,
       "translated": 27
+    },
+    {
+      "bundle": "scrobj_unio39.unity3d",
+      "slots": 24,
+      "translated": 0
+    },
+    {
+      "bundle": "scrobj_union+.unity3d",
+      "slots": 24,
+      "translated": 0
     },
     {
       "bundle": "scrobj_union1.unity3d",
@@ -2115,6 +2390,11 @@
       "translated": 27
     },
     {
+      "bundle": "scrobj_welco+.unity3d",
+      "slots": 28,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_welcom.unity3d",
       "slots": 28,
       "translated": 24
@@ -2140,6 +2420,11 @@
       "translated": 42
     },
     {
+      "bundle": "scrobj_ymrai+.unity3d",
+      "slots": 27,
+      "translated": 0
+    },
+    {
       "bundle": "scrobj_ymrain.unity3d",
       "slots": 27,
       "translated": 25
@@ -2148,6 +2433,11 @@
       "bundle": "scrobj_yokase.unity3d",
       "slots": 19,
       "translated": 19
+    },
+    {
+      "bundle": "scrobj_zenit+.unity3d",
+      "slots": 23,
+      "translated": 0
     },
     {
       "bundle": "scrobj_zenitu.unity3d",
@@ -2163,6 +2453,11 @@
       "bundle": "scrobj_zetper.unity3d",
       "slots": 27,
       "translated": 20
+    },
+    {
+      "bundle": "scrobj_zunzu+.unity3d",
+      "slots": 31,
+      "translated": 0
     },
     {
       "bundle": "scrobj_zunzun.unity3d",

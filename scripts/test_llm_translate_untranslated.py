@@ -25,7 +25,10 @@ def _write(path, rows):
 
 
 def _read(path):
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    # Split on real newlines only: a raw U+2028 inside a JSON string is legal and
+    # ``str.splitlines()`` would break the row (see the separator regression test).
+    text = path.read_text(encoding="utf-8")
+    return [json.loads(line) for line in text.split("\n") if line.strip()]
 
 
 class LlmDraftWorkflowTests(unittest.TestCase):
@@ -215,6 +218,168 @@ class LlmPublishAmbiguityTests(unittest.TestCase):
         self.assertEqual(after[0]["status"], "accepted")
         self.assertEqual(after[1]["status"], "accepted", "an unrelated machine draft is promoted")
         self.assertNotEqual(before, self.locale.read_text(encoding="utf-8"))
+
+
+class LlmLyricsScopeTests(unittest.TestCase):
+    """Song lyrics are a second source tree: same states, one extra rule."""
+
+    def _lyric_root(self, root: Path) -> Path:
+        songs = root / "lyrics" / "songs"
+        songs.mkdir(parents=True)
+        return songs
+
+    def _song(self, path: Path, rows):
+        path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
+                        encoding="utf-8")
+
+    def _lyric_row(self, bundle, index, text, *, zh="", status="untranslated", stage=None):
+        row = {
+            "bundle": bundle, "index": index, "tick": index * 960, "abs_time": index / 10.0,
+            "source_sha256": tool.sha256_text(text), "ja": text, "zh": zh,
+            "status": status, "updated_at": "2026-01-01T00:00:00Z",
+        }
+        if stage is not None:
+            row["translation_stage"] = stage
+        return row
+
+    def test_collect_queues_japanese_lines_and_skips_english_bypass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            self._song(songs / "scrobj_x.unity3d.jsonl", [
+                self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡"),
+                self._lyric_row("scrobj_x.unity3d", 42, "I Love You"),
+                self._lyric_row("scrobj_x.unity3d", 43, "ちょうだい", zh="已经译好", status="accepted"),
+            ])
+            out = root / "queue.jsonl"
+            args = type("Args", (), {"output": out, "asset_version": "", "scope": "lyrics"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.collect(args), 0)
+            queued = _read(out)
+            self.assertEqual([row["source"] for row in queued], ["一旦愛して♡"])
+            self.assertEqual(queued[0]["task"], "ASSETS_LYRICS")
+            self.assertEqual(queued[0]["key"], "41")
+
+    def test_default_scope_still_ignores_lyrics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            self._song(songs / "scrobj_x.unity3d.jsonl", [self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡")])
+            locale = root / "locales" / "master" / "x.jsonl"
+            locale.parent.mkdir(parents=True)
+            _write(locale, [_row("こんにちは {$P$}")])
+            out = root / "queue.jsonl"
+            args = type("Args", (), {"output": out, "asset_version": "", "scope": "locales"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.collect(args), 0)
+            queued = _read(out)
+            self.assertEqual([row["source"] for row in queued], ["こんにちは {$P$}"])
+            self.assertEqual(queued[0]["task"], "ASSETS_TEXT")
+
+    def test_apply_writes_pending_rows_into_the_song_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            self._song(song, [
+                self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡"),
+                self._lyric_row("scrobj_x.unity3d", 42, "I Love You"),
+            ])
+            draft = root / "draft.jsonl"
+            draft.write_text(json.dumps({
+                "source": "一旦愛して♡", "source_sha256": tool.sha256_text("一旦愛して♡"),
+                "translation": "先爱一下♡"}) + "\n", encoding="utf-8")
+            args = type("Args", (), {"draft": draft, "scope": "lyrics"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.apply(args), 0)
+            rows = _read(song)
+            self.assertEqual(rows[0]["zh"], "先爱一下♡")
+            self.assertEqual(rows[0]["status"], "pending")
+            self.assertEqual(rows[0]["translation_stage"], "llm_translated")
+            self.assertEqual(rows[1]["zh"], "", "the English bypass line is untouched")
+
+    def test_publish_promotes_lyric_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            self._song(song, [
+                self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡", zh="先爱一下♡",
+                                status="pending", stage="llm_translated"),
+                self._lyric_row("scrobj_x.unity3d", 42, "ちょうだい", status="untranslated", stage="untranslated"),
+            ])
+            args = type("Args", (), {"draft": None, "dry_run": False, "scope": "lyrics"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.publish(args), 0)
+            rows = _read(song)
+            self.assertEqual([row["status"] for row in rows], ["accepted", "untranslated"])
+            self.assertEqual(rows[0]["translation_stage"], "llm_translated")
+            first = song.read_text(encoding="utf-8")
+            with patch.object(tool, "ROOT", root):
+                tool.publish(args)
+            self.assertEqual(song.read_text(encoding="utf-8"), first)
+
+    def test_disagreeing_wordings_of_one_line_stay_pending(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            self._song(song, [
+                self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡", zh="先爱一下♡",
+                                status="pending", stage="llm_translated"),
+                self._lyric_row("scrobj_x.unity3d", 88, "一旦愛して♡", zh="暂且爱我吧♡",
+                                status="pending", stage="llm_translated"),
+            ])
+            args = type("Args", (), {"draft": None, "dry_run": False, "scope": "lyrics"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.publish(args), 0)
+            self.assertEqual([row["status"] for row in _read(song)], ["pending", "pending"])
+
+    def test_locale_publish_never_touches_lyrics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            self._song(song, [self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡", zh="先爱一下♡",
+                                              status="pending", stage="llm_translated")])
+            locale = root / "locales" / "master" / "x.jsonl"
+            locale.parent.mkdir(parents=True)
+            _write(locale, [_row("こんにちは {$P$}", zh="你好 {$P$}", status="pending", stage="llm_translated")])
+            before = song.read_text(encoding="utf-8")
+            args = type("Args", (), {"draft": None, "dry_run": False})()
+            with patch.object(tool, "ROOT", root):
+                tool.publish(args)
+            self.assertEqual(song.read_text(encoding="utf-8"), before)
+            self.assertEqual(_read(locale)[0]["status"], "accepted")
+
+    def test_a_unicode_line_separator_never_becomes_a_real_newline(self):
+        """A raw U+2028 inside a JSON string is legal and must survive a rewrite.
+
+        ``str.splitlines()`` treats it as a line break, so a naive apply/publish
+        would split one row into two and corrupt the file (observed in
+        ``lyrics/songs/scrobj_gf0000.unity3d.jsonl``).
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            source = "モヤモヤするわ！\u2028"
+            self._song(song, [self._lyric_row("scrobj_x.unity3d", 41, source)])
+            before_lines = song.read_text(encoding="utf-8").count("\n")
+            draft = root / "draft.jsonl"
+            draft.write_text(json.dumps({
+                "source": source, "source_sha256": tool.sha256_text(source),
+                "translation": "真让人心烦意乱！"}) + "\n", encoding="utf-8")
+            with patch.object(tool, "ROOT", root):
+                tool.apply(type("Args", (), {"draft": draft, "scope": "lyrics"})())
+                tool.publish(type("Args", (), {"draft": None, "dry_run": False, "scope": "lyrics"})())
+            text = song.read_text(encoding="utf-8")
+            self.assertEqual(text.count("\n"), before_lines, "no extra line was created")
+            rows = _read(song)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["status"], "accepted")
+            self.assertEqual(rows[0]["zh"], "真让人心烦意乱！")
+            self.assertTrue(rows[0]["ja"].endswith("\u2028"))
 
 
 if __name__ == "__main__":

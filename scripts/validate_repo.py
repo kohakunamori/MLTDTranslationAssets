@@ -31,6 +31,18 @@ PROTECTED_TOKEN_RE = re.compile(
     r"|\\[nrt]"
     r"|\\[0-9]{2}\\"
 )
+#: Placeholder classes that must survive verbatim in every surface.  Bare
+#: ``<...>`` is excluded here on purpose: in lyric text it is a *display*
+#: quotation mark (``<いつの間にかこんなに>`` -> ``<不知不觉间已经如此>``), so
+#: comparing its text would flag three correct rows in
+#: ``lyrics/songs/scrobj_homesf.unity3d.jsonl``; the bracket *balance* is checked
+#: instead, which still catches a dropped engine tag such as ``<size=24>``.
+NON_ANGLE_TOKEN_RE = re.compile(
+    r"\{[^{}]+\}"
+    r"|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]"
+    r"|\\[nrt]"
+    r"|\\[0-9]{2}\\"
+)
 ROOT = Path(__file__).resolve().parents[1]
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -62,6 +74,27 @@ def validate_translation_tokens(source: str, translated: str) -> None:
     after = Counter(PROTECTED_TOKEN_RE.findall(translated))
     if before != after:
         raise ValueError(f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}")
+
+
+def validate_lyric_tokens(source: str, translated: str) -> None:
+    """Token rule for lyric lines: placeholders verbatim, brackets balanced.
+
+    Lyric strings use ``<...>`` as emphasis punctuation rather than as an engine
+    field, so the exact-text comparison used for locale rows would reject correct
+    translations.  The placeholder classes that do carry meaning are compared
+    verbatim, and the number of angle brackets must be preserved so a dropped
+    ``<size=24>``-style tag is still caught.
+    """
+    before = Counter(NON_ANGLE_TOKEN_RE.findall(source))
+    after = Counter(NON_ANGLE_TOKEN_RE.findall(translated))
+    if before != after:
+        raise ValueError(f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}")
+    if source.count("<") != translated.count("<") or source.count(">") != translated.count(">"):
+        raise ValueError(
+            "angle bracket count changed: "
+            f"source=({source.count('<')},{source.count('>')}) "
+            f"translation=({translated.count('<')},{translated.count('>')})"
+        )
 
 
 def validate_locales(root: Path) -> dict[str, int]:
@@ -209,6 +242,94 @@ def validate_locales(root: Path) -> dict[str, int]:
     return counts
 
 
+def validate_lyrics(root: Path) -> dict[str, int]:
+    """Validate the song lyric library, which is no longer hand-built only.
+
+    ``lyrics/songs/*.jsonl`` is now written by ``refresh_lyrics_catalogue.py``
+    and promoted by ``llm_translate_untranslated.py publish --scope lyrics``, so
+    the same source-binding and control-character rules that protect the locale
+    rows must protect lyric rows too.  The derived counts in
+    ``lyrics_manifest.json`` are deliberately *not* checked against the rows:
+    they are regenerated from the songs, and requiring agreement would block a
+    translator's one-row pull request.
+    """
+    songs_dir = root / "lyrics" / "songs"
+    if not songs_dir.is_dir():
+        print(f"WARNING: no lyrics/songs directory at {songs_dir}", file=sys.stderr)
+        return {"files": 0, "total_rows": 0, "accepted": 0, "pending": 0, "untranslated": 0}
+
+    counts = {"files": 0, "total_rows": 0, "accepted": 0, "pending": 0, "untranslated": 0}
+    for path in sorted(songs_dir.glob("*.jsonl")):
+        counts["files"] += 1
+        bundle = path.name[: -len(".jsonl")]
+        with path.open("r", encoding="utf-8") as handle:
+            # Iterating the handle splits on real newlines only; a raw U+2028 in
+            # a JSON string is legal and must not be treated as a line break.
+            for line_no, line in enumerate(handle, 1):
+                if not line.strip():
+                    continue
+                counts["total_rows"] += 1
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    print(f"ERROR: {path}:{line_no} invalid JSON: {exc}", file=sys.stderr)
+                    sys.exit(1)
+                for req_key in ("bundle", "index", "tick", "abs_time", "source_sha256",
+                                "ja", "zh", "status", "updated_at"):
+                    if req_key not in row:
+                        print(f"ERROR: {path}:{line_no} missing key '{req_key}'", file=sys.stderr)
+                        sys.exit(1)
+                if str(row["bundle"]) != bundle:
+                    print(
+                        f"ERROR: {path}:{line_no} bundle '{row['bundle']}' does not match "
+                        f"the file name '{bundle}'",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                declared = str(row["source_sha256"]).lower()
+                actual = sha256_text(str(row["ja"]))
+                if declared != actual:
+                    print(
+                        f"ERROR: {path}:{line_no} source_sha256 does not match ja "
+                        f"({declared} != {actual})",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                status = str(row["status"])
+                if status not in VALID_STATUSES:
+                    print(f"ERROR: {path}:{line_no} invalid status '{status}'", file=sys.stderr)
+                    sys.exit(1)
+                counts[status] += 1
+                translated = str(row["zh"])
+                if status == "untranslated" and translated:
+                    print(
+                        f"ERROR: {path}:{line_no} untranslated row carries text",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                if status != "untranslated" and not translated:
+                    print(
+                        f"ERROR: {path}:{line_no} {status} row has no translation",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                for delimiter in RESERVED_DELIMITERS:
+                    if delimiter in translated:
+                        print(
+                            f"ERROR: {path}:{line_no} translation contains the reserved "
+                            f"engine delimiter '{delimiter}'",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+                if translated:
+                    try:
+                        validate_lyric_tokens(str(row["ja"]), translated)
+                    except ValueError as exc:
+                        print(f"ERROR: {path}:{line_no} {exc}", file=sys.stderr)
+                        sys.exit(1)
+    return counts
+
+
 def validate_glossary(root: Path) -> None:
     glossary_dir = root / "glossary"
     terms_file = glossary_dir / "authoritative-terms.json"
@@ -263,6 +384,7 @@ def validate_manifests(root: Path) -> None:
 def main() -> int:
     print(f"Validating repository at: {ROOT}")
     locales_counts = validate_locales(ROOT)
+    lyrics_counts = validate_lyrics(ROOT)
     validate_glossary(ROOT)
     validate_manifests(ROOT)
 
@@ -272,6 +394,10 @@ def main() -> int:
     print(f"  Pending: {locales_counts['pending']}")
     print(f"  Untranslated: {locales_counts['untranslated']}")
     print(f"  Bundles: {locales_counts['bundles']}")
+    print(f"Total lyric songs: {lyrics_counts['files']} ({lyrics_counts['total_rows']} rows)")
+    print(f"  Accepted: {lyrics_counts['accepted']}")
+    print(f"  Pending: {lyrics_counts['pending']}")
+    print(f"  Untranslated: {lyrics_counts['untranslated']}")
     return 0
 
 

@@ -250,6 +250,29 @@ def catalogue_rows(bundle: Path) -> tuple[dict, list[dict]]:
     return summary, rows
 
 
+def jsonl_lines(text: str) -> list[str]:
+    """Split file text into JSONL lines on real newlines only.
+
+    ``str.splitlines()`` also breaks on U+2028, U+2029, U+0085, VT and FF.  Those
+    are legal *inside* a JSON string and ``json.dumps(..., ensure_ascii=False)``
+    leaves them raw, so a ``splitlines()``-based reader counts one row as two
+    lines and a writer that re-joins corrupts the file by turning the separator
+    into a real newline.  ``lyrics/songs/scrobj_gf0000.unity3d.jsonl`` already
+    carries a raw U+2028 in three rows, so this is a live defect, not a
+    theoretical one.  Read with ``Path.read_text()`` (universal newlines) and
+    split here.
+
+    A single trailing empty element is dropped, so the result matches
+    ``str.splitlines()`` for newline-terminated text: callers re-join the list
+    with ``"\\n"`` and append one terminator, which would otherwise add a blank
+    line.
+    """
+    lines = [line[:-1] if line.endswith("\r") else line for line in text.split("\n")]
+    if lines and lines[-1] == "":
+        lines.pop()
+    return lines
+
+
 def read_jsonl(path: Path) -> list[dict]:
     rows: list[dict] = []
     with path.open("r", encoding="utf-8") as handle:

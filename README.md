@@ -20,14 +20,17 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
   - `locales/dialogue/`：偶像触碰台词、常驻问候、工作对话、演出结算台词
   - `locales/birth/`：偶像生日剧情与白板问候
   - `locales/master/`：Master 核心主数据表、菜单UI、卡片技能、系统提示
-- `lyrics/`：全曲目歌词库（432 首歌曲对齐双语歌词与时间戳）
+- `lyrics/`：全曲目歌词库（491 首歌曲对齐双语歌词与时间戳；官方 `scrobj_*` 包共 492 个，其中开发自测包 `scrobj_00test` 不含歌词行、已排除）
   - `lyrics/songs/`：按歌曲独立分轨 JSONL
   - `lyrics/all_lyrics.jsonl`：全曲歌词总汇
+  - 说明：歌词只有源库会随官方更新自动扩充（`scripts/refresh_lyrics_catalogue.py`）；把歌词写回客户端资源包的步骤尚未接入，`generated/` 里目前没有任何歌词包。
 - `glossary/`：翻译规范与标准术语
   - `glossary/authoritative-terms.json`：项目当前采用的固定译名与避免词
   - `glossary/idols.json`：项目整理的 52 名偶像与声优名录
 - `manifests/`：贴图元数据清单（文字在库，多媒体外链）
   - `manifests/images.manifest.json`：937 张已汉化贴图的 SHA-256 索引
+  - `manifests/localizable-bundle-families.json`：哪些官方资源包属于「可汉化面」（文本包、歌词包），新面必须先在这里声明
+  - `manifests/official-asset-inventory.json`：官方 16.8 万个包的家族签名基线，用于告警「出现了从未见过的资源类型」
 - `pipelines/`：自动化汉化与生成流水线工具集
   - `pipelines/text/`：全量文本提取、加密 GTX 解密/回写、多模型并发翻译与自动化质检流水线
   - `pipelines/image/`：Sprite Atlas 几何重组、`gpt-image-2.5-sunburst` 图像重绘、`gpt-5.6-luna` 视觉审查与 ASTC 纹理回填流水线
@@ -88,6 +91,21 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 自己做的：`apply`（写 `pending/llm_translated`）→ `publish`（晋级为 `accepted`，
 保留出处）→ 提交 `main` → `workflow_dispatch` 触发 `assets-generated.yml`。两条路径
 共用同一个 `generated/` writer，因此仍只有一个 writer。
+
+同一支工作流还负责「把新资源纳入范围」。每天按官方索引做三步：
+
+1. `discover_official_bundles.py` 报告「属于已声明家族、但仓库还没有」的包与新出现的
+   资源类型，并把家族基线写进 `manifests/official-asset-inventory.json`；
+2. `refresh_latest_official_catalogue.py` 按 `manifests/localizable-bundle-families.json`
+   的家族匹配下载新文本包（不再从 `locales/` 反推，避免「自己证明自己」）；
+3. `refresh_lyrics_catalogue.py` 抽取新歌歌词到 `lyrics/songs/`，并重算
+   `all_lyrics.jsonl` 与 `lyrics_manifest.json`。
+
+三步都 fail-closed：单次新包数量或字节数超过上限（发现 400 个/1 GiB，歌词 200 个/
+512 MiB）就报错退出，不提交；未声明家族的包只报告、不下载。官方 index 里占了绝大多数
+包数的家族（语音音频、动画曲线、图片，共 326 个家族 / 1.88 万个包）已抽样确认不含
+可翻译文本，登记在 `reviewed_unclassified` 后不再计入告警；其余长尾家族仍照旧计数，
+清单与证据见 `docs/ARCHITECTURE.md` 的「未纳入面审计」。
 
 普通协作翻译仍以 GitHub PR 合并作为审核入口；LLM CI 是独立路径：它先把结果直接
 写入 `main` 并保留 `llm_translated` 标记，随后由 `llm_translate_untranslated.py

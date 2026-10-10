@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 """Extract the latest official text bundles and append new source rows.
 
-Only logical bundles already represented by this repository are downloaded.
-This keeps the scheduled job bounded while still detecting new/changed GTX
-records in the current text surface.  The official archive remains temporary;
-only source text with ``untranslated`` status is committed.
+Selection is name-pattern based, not "what do we already have".  Until
+2026-10-09 this job could only re-verify the bundles already represented in
+``locales/``: a bundle the repository had never seen could never be selected, so
+a new event's story text was invisible to every automated step (77 text bundles
+were already missing at asset 1077720).  A logical bundle is now downloaded when
+it is either (a) already represented here, or (b) a new name inside a
+``gtx_text`` family declared in ``manifests/localizable-bundle-families.json``.
+
+The scheduled job stays bounded by caps, not by ignorance: the new-row cap below
+fails closed, ``discover_official_bundles.py`` refuses an oversized discovery
+batch, and families bound to another pipeline (song lyrics) are excluded so a
+bundle never reaches an extractor that cannot read it.  The official archive
+remains temporary; only source text with ``untranslated`` status is committed.
 
 Downloads are incremental.  An official ``remote`` object name is
 content-addressed, so ``manifests/official-bundle-index.json`` memoises the
@@ -26,10 +35,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from build_generated_release import download, load_official_index, load_version_manifest
+from official_bundle_families import (
+    DEFAULT_REGISTRY,
+    classify,
+    families_for_pipeline,
+    load_registry,
+    logical_bundle_name,
+)
 
 #: Refuse an automatic append larger than this. A version bump that genuinely
 #: adds thousands of lines needs an explicit --max-new-rows decision.
 DEFAULT_MAX_NEW_ROWS = 5000
+
+#: The extractor this command runs.  Only families bound to it may be selected:
+#: a lyric bundle handed to the GTX reader fails with "expected exactly one
+#: TextAsset", so the split is enforced by the registry rather than by hope.
+EXTRACTOR_PIPELINE = "gtx_text"
 
 #: Verified-remote memo. ``--full-rescan`` ignores it for one run.
 BUNDLE_INDEX_SCHEMA_VERSION = 1
@@ -54,6 +75,29 @@ def source_identity(bundle: str, item_key: str, source_sha256: str) -> tuple[str
     ~393k rows and an unbounded translation queue on 2026-10-01.
     """
     return (bundle, item_key, source_sha256)
+
+
+def select_bundles(
+    index: dict, known_bundles: set[str], registry: dict
+) -> tuple[dict, list[str]]:
+    """Split the official index into (bundles to download, newly discovered).
+
+    ``known_bundles`` are the names this repository already carries rows for.
+    Everything else must match a family bound to this command's extractor;
+    names that match nothing stay untouched so a new resource type is reported
+    (by ``discover_official_bundles.py``) instead of being fetched blindly.
+    """
+    allowed = families_for_pipeline(registry, EXTRACTOR_PIPELINE)
+    selected: dict = {}
+    discovered: list[str] = []
+    for logical, row in index.items():
+        if logical.casefold() in known_bundles:
+            selected[logical] = row
+            continue
+        if classify(registry, logical) in allowed:
+            selected[logical] = row
+            discovered.append(logical)
+    return selected, sorted(discovered)
 
 
 def collect_new_rows(catalogue_rows, existing, asset_version: str, client_version: str, now: str):
@@ -171,17 +215,20 @@ def main() -> int:
     parser.add_argument("--max-new-rows", type=int, default=DEFAULT_MAX_NEW_ROWS)
     parser.add_argument("--bundle-index", type=Path, default=DEFAULT_BUNDLE_INDEX,
                         help="verified remote memo (logical -> content-addressed remote)")
+    parser.add_argument("--families", type=Path, default=DEFAULT_REGISTRY,
+                        help="localizable bundle family registry")
     parser.add_argument("--full-rescan", action="store_true",
                         help="ignore the memo and re-download every tracked bundle")
     args = parser.parse_args()
 
     version = load_version_manifest(ROOT / "manifests" / "asset-version.json")
+    registry = load_registry(args.families)
     known_bundles = set()
     existing = set()
     for _path, row in locale_rows():
         bundle = str(row.get("bundle", "")).strip()
         if bundle:
-            known_bundles.add(bundle.casefold() if bundle.endswith(".unity3d") else (bundle + ".unity3d").casefold())
+            known_bundles.add(logical_bundle_name(bundle).casefold())
         existing.add(source_identity(bundle, str(row.get("item_key", "")), str(row.get("source_sha256", ""))))
 
     work = args.work_root.resolve()
@@ -189,10 +236,7 @@ def main() -> int:
     index_path = work / version["index_name"]
     download(f"{version['asset_root']}/{version['index_name']}", index_path, None)
     index = load_official_index(index_path)
-    selected = {
-        logical: row for logical, row in index.items()
-        if logical.casefold() in known_bundles
-    }
+    selected, discovered = select_bundles(index, known_bundles, registry)
     if args.max_bundles:
         selected = dict(sorted(selected.items())[:args.max_bundles])
     if not selected:
@@ -246,6 +290,8 @@ def main() -> int:
 
     print(json.dumps({"asset_version": version["asset_version"],
                       "matched_bundles": len(selected),
+                      "discovered_bundles": len(discovered),
+                      "discovered_logical_names": discovered,
                       "downloaded_bundles": len(to_download),
                       "reused_bundles": len(reused),
                       "downloaded_bytes": sum(int(row["declared_size"]) for row in to_download.values()),
