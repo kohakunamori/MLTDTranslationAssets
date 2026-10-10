@@ -233,6 +233,13 @@ jobs:
           fi
           python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl --scope all
           python scripts/validate_repo.py
+          # Publish what just validated, before anything else can fail.  These
+          # rows are still `pending`, so no release reads them until the
+          # promotion below; committing them here is what makes a night's work
+          # survivable.  Run 38058410546 applied 2,937 rows and lost all of them
+          # because the failure came after this point, and recovering the batch
+          # from its diagnostics artifact took a human.
+          python scripts/commit_llm_drafts.py
 
       - name: Publish machine drafts for the generated build
         # Machine output is admitted to generated/<asset_version>/ here, and only
@@ -266,67 +273,27 @@ jobs:
         # items failed terminally; never runs after a failed apply or a failed
         # promotion.  A failed promotion must not be committed as if the run's
         # local state were the reviewed state.
+        #
+        # The same script already ran at the end of the apply step, where the new
+        # rows are still `pending`.  This second call records the promotion:
+        # the message and the body come from the run's own `.llm-publish*.json`
+        # reports, so neither call can describe work the other one did.
         id: commit
         if: >-
           (success() || steps.apply.outcome == 'success') &&
           steps.publish.outcome != 'failure'
         shell: bash
-        run: |
-          set -euo pipefail
-          paths=(locales lyrics manifests/asset-version.json)
-          if [ -f manifests/official-bundle-index.json ]; then
-            paths+=(manifests/official-bundle-index.json)
-          fi
-          # The discovery baseline: only changes when the game introduces a new
-          # resource family, and that is exactly the event worth committing.
-          if [ -f manifests/official-asset-inventory.json ]; then
-            paths+=(manifests/official-asset-inventory.json)
-          fi
-          if [ -z "$(git status --porcelain -- "${paths[@]}")" ]; then
-            echo 'No changes to publish.'
-            exit 0
-          fi
-          version=$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["asset_version"])')
-          promoted=0
-          if [ -f .llm-publish.json ]; then
-            promoted=$(python -c 'import json; print(json.load(open(".llm-publish.json"))["promoted"])')
-          fi
-          lyric_promoted=0
-          if [ -f .llm-publish-lyrics.json ]; then
-            lyric_promoted=$(python -c 'import json; print(json.load(open(".llm-publish-lyrics.json"))["promoted"])')
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "${paths[@]}"
-          if [ "$promoted" -gt 0 ] || [ "$lyric_promoted" -gt 0 ]; then
-            git commit -m "ci(assets): apply and publish LLM drafts for asset $version" \
-                       -m "Machine drafts admitted to the build: $promoted text row(s); song lyrics: $lyric_promoted row(s). translation_stage stays llm_translated."
-          else
-            git commit -m "ci(assets): apply LLM translations for asset $version"
-          fi
-
-          # Publish directly to main by policy. Never force-push: if another
-          # workflow advances main, rebase this generated commit and retry.
-          for attempt in 1 2 3; do
-            if git push origin HEAD:main; then
-              echo "Published LLM translations to main on attempt $attempt."
-              echo "published=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo 'main advanced during LLM publish; refusing to force-push.' >&2
-              exit 1
-            fi
-            git fetch origin main
-            git rebase origin/main
-            python scripts/validate_repo.py
-          done
+        run: python scripts/commit_llm_drafts.py
 
       - name: Trigger the generated Assets build
         # Without this dispatch the freshly published rows would sit on main
         # until some unrelated push happened to trigger assets-generated.yml:
         # a GITHUB_TOKEN push never starts another workflow run.
-        if: steps.commit.outputs.published == 'true'
+        #
+        # Either commit can be the one that published: the apply step now
+        # publishes the pending rows immediately, so the promotion step has
+        # nothing left to push whenever the two happen in one run.
+        if: steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

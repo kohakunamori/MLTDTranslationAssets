@@ -17,13 +17,30 @@
 """
 from __future__ import annotations
 
+import tempfile
 import unittest
 from pathlib import Path
 
 import yaml
 
+import commit_llm_drafts
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "llm-translate-assets.yml"
+
+
+def staged_paths_with(**trees) -> list[str]:
+    """What the commit step would stage for a repository holding ``trees``.
+
+    The step itself is now one call to ``scripts/commit_llm_drafts.py``, so the
+    paths it covers are asserted against that script rather than against bash.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for name in trees:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n", encoding="utf-8")
+        return commit_llm_drafts.stage_paths(root)
 
 
 class LlmTranslateWorkflowTests(unittest.TestCase):
@@ -80,8 +97,10 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         triggers = self.workflow["on"] if "on" in self.workflow else self.workflow[True]
         self.assertIn("full_rescan", triggers["workflow_dispatch"]["inputs"])
         commit = self.steps["Commit LLM translations to main"]["run"]
-        self.assertIn("manifests/official-bundle-index.json", commit)
-        self.assertIn("git add", commit)
+        self.assertIn("python scripts/commit_llm_drafts.py", commit)
+        self.assertIn("manifests/official-bundle-index.json",
+                      staged_paths_with(**{"manifests/official-bundle-index.json": None,
+                                           "manifests/asset-version.json": None}))
 
     def test_job_cannot_hang_forever(self):
         self.assertEqual(self.job["timeout-minutes"], 180)
@@ -119,8 +138,12 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         publish = self.steps["Publish machine drafts for the generated build"]["run"]
         self.assertIn("publish --scope lyrics", publish)
         commit = self.steps["Commit LLM translations to main"]["run"]
-        self.assertIn("lyrics", commit)
-        self.assertIn("manifests/official-asset-inventory.json", commit)
+        self.assertIn("python scripts/commit_llm_drafts.py", commit)
+        covered = staged_paths_with(**{"lyrics/songs/x.jsonl": None,
+                                       "manifests/asset-version.json": None,
+                                       "manifests/official-asset-inventory.json": None})
+        self.assertIn("lyrics", covered)
+        self.assertIn("manifests/official-asset-inventory.json", covered)
         upload = self.steps["Upload translation diagnostics"]["with"]["path"]
         for name in (".llm-discovery.json", ".llm-lyrics.json", ".llm-publish-lyrics.json"):
             self.assertIn(name, upload)
@@ -146,12 +169,18 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertIn("steps.publish.outcome != 'failure'", commit["if"])
 
     def test_the_generated_build_is_dispatched_explicitly(self):
-        """A GITHUB_TOKEN push never starts assets-generated.yml by itself."""
+        """A GITHUB_TOKEN push never starts assets-generated.yml by itself.
+
+        Either commit can be the one that published: the apply step now pushes the
+        pending rows as soon as they validate, so on a healthy run the promotion
+        step has nothing left to push and only the apply step reports a publish.
+        """
         trigger = self.steps["Trigger the generated Assets build"]
-        self.assertEqual(trigger["if"], "steps.commit.outputs.published == 'true'")
+        self.assertEqual(
+            trigger["if"],
+            "steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true'")
         self.assertIn("gh workflow run assets-generated.yml --ref main", trigger["run"])
-        commit = self.steps["Commit LLM translations to main"]["run"]
-        self.assertIn('published=true', commit)
+        self.assertIn("published=true", Path(commit_llm_drafts.__file__).read_text(encoding="utf-8"))
         self.assertIn("actions: write", self.text)
 
     def test_publishing_can_be_switched_off_without_editing_code(self):
