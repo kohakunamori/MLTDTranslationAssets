@@ -24,6 +24,7 @@ param(
     [string]$ProjectDir = '/vol1/1000/appdata/imas/mltd-generated-assets',
     [string]$VhostDir = '/vol1/1000/appdata/imas/mltd-asset/asset-server',
     [string]$PublicHost = 'https://mltd-asset.nyaneko.cn:18443',
+    [string]$ProbeRoot = '/tmp/mltd-deploy-probe',
     [switch]$Apply
 )
 
@@ -108,9 +109,20 @@ if ($Apply -and $drift.Count -gt 0) {
     # Rebuild without disturbing the running containers, then prove the image on
     # a throwaway root before anything is recreated.
     Invoke-Nas "cd '$ProjectDir' && docker compose build 2>&1 | tail -n 3" | Out-Null
+    # The probe root is seeded from the live object pool.  The pool is
+    # content-addressed and write-once, so sharing it is safe, and an empty probe
+    # root would instead re-download the entire archive (measured: 12,000 objects,
+    # about an hour through this proxy) to learn what a few hundred real downloads
+    # teach in minutes.  Seeded, the probe still exercises the real download path
+    # and a real publish -- into a root that is deleted afterwards.
+    # Hard links are tried first because they are instant, with a full copy as the
+    # fallback: they only work inside one filesystem and /tmp is not the archive
+    # volume, so the fallback is the normal case rather than an error case.
+    Invoke-Nas "rm -rf '$ProbeRoot' && mkdir -p '$ProbeRoot/objects' && { cp -al /vol2/1000/imas-asset-archive/mltd/generated/objects/sha256 '$ProbeRoot/objects/' 2>/dev/null || cp -a /vol2/1000/imas-asset-archive/mltd/generated/objects/sha256 '$ProbeRoot/objects/'; } && echo seeded" | Out-Null
     $probe = Invoke-Nas @"
-docker run --rm -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e HTTP_PROXY=http://192.168.2.31:7890 -e HTTPS_PROXY=http://192.168.2.31:7890 -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_loop.py --root /tmp/probe --once | head -c 400
+docker run --rm -v ${ProbeRoot}:/probe -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e MLTD_MIRROR_OBJECT_WORKERS=8 -e HTTP_PROXY=http://192.168.2.31:7890 -e HTTPS_PROXY=http://192.168.2.31:7890 -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_loop.py --root /probe --once | head -c 1200
 "@ -AllowFailure
+    Invoke-Nas "rm -rf '$ProbeRoot'" | Out-Null
     $summary.ImageProbe = "$probe".Trim()
 
     if ($drift.Repo -contains 'asset-server/nginx-vhost.conf') {

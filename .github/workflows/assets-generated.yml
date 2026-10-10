@@ -98,6 +98,10 @@ jobs:
         if: steps.gate.outputs.build == 'true'
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
+          # Same value the gate above decides with: a forced dispatch rebuilds
+          # everything, and an incremental build here would silently keep the
+          # bundles the force was meant to regenerate.
+          FORCE_BUILD: ${{ inputs.force || 'false' }}
         run: |
           set -euo pipefail
           SOURCE_COMMIT="$(git rev-parse HEAD)"
@@ -119,12 +123,20 @@ jobs:
           else
             echo "No image overlay for ${ASSET_VERSION}; publishing the text surface only."
           fi
+          reuse_args=()
+          if [ "$FORCE_BUILD" = "true" ]; then
+            # A forced dispatch exists to rebuild after the procedure itself
+            # changed, so it must not carry old bundles over: the proof that a
+            # bundle did not change says nothing about a changed writer.
+            reuse_args+=(--no-reuse)
+          fi
           python scripts/build_generated_release.py \
             --source-commit "$SOURCE_COMMIT" \
             --translation-commit "$SOURCE_COMMIT" \
             --generated-commit "$SOURCE_COMMIT" \
             --ci-run-id "$GITHUB_RUN_ID" \
             --official-cache .generated-work/official-by-content \
+            "${reuse_args[@]}" \
             "${image_args[@]}"
 
       - name: Save the official object cache

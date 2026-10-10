@@ -518,6 +518,13 @@ def cmd_build_overlay(args: argparse.Namespace) -> int:
         counts["source_candidates"] += sum(route_counts.values())
         counts["resolved"] += route_counts["exact"] + route_counts["memory"]
         counts["stale_exact"] += route_counts["stale_exact"]
+        # Which route answered, not just whether something did.  A key answered
+        # by `memory` was answered from another bundle's row, so the bundle's
+        # bytes depend on inputs that a per-bundle reuse decision cannot see;
+        # `scripts/release_reuse.py` refuses to reuse a release whose keys were
+        # not all answered by their own row, and it needs this split to tell.
+        counts["resolved_exact"] += route_counts["exact"]
+        counts["resolved_memory"] += route_counts["memory"]
         if not replacements:
             continue
 

@@ -6,6 +6,7 @@ import contextlib
 import hashlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -252,6 +253,324 @@ class DefaultTextPathRegression(unittest.TestCase):
             self.assertTrue((output / translated["object_path"]).is_file())
             catalog = entries["__official_asset_index__"]
             self.assertEqual(catalog["runtime_path"], "production/2018/Android/index.data")
+
+
+class IncrementalReuseRegression(unittest.TestCase):
+    """A second build must not fetch or rewrite a bundle whose inputs did not move.
+
+    The whole point of the incremental path: one edited translation used to cost a
+    full rebuild of every bundle, which on the real repository is ten thousand
+    downloads and ten thousand rewrites for one changed row.
+    """
+
+    def _overlay_from_snapshot(self, snapshot, _archive, _ledger, output, *_args, **_kwargs):
+        """A stand-in overlay that rewrites exactly the objects the snapshot names.
+
+        Unlike ``_fabricate_overlay`` it reports the route counters the real
+        overlay reports, which is what a release has to record before a later
+        build is allowed to reuse anything from it.  It also refuses an empty
+        snapshot exactly as the real overlay does (``localization_version_identity``
+        rejects a snapshot with no objects), so a build that reuses everything
+        must not call it at all.
+        """
+        requested = json.loads(Path(snapshot).read_text(encoding="utf-8"))["objects"]
+        if not requested:
+            raise AssertionError("the text overlay must not be invoked with an empty snapshot")
+        # The real overlay creates its own output root before writing anything,
+        # which matters when reuse leaves it nothing to rewrite.
+        Path(output).mkdir(parents=True, exist_ok=True)
+        self._guard_identity(Path(snapshot), Path(output), requested)
+        rows = []
+        for row in requested:
+            target = Path(output) / "jp-android" / row["remote"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"translated:" + row["logical"].encode("utf-8"))
+            rows.append({"logical": row["logical"], "remote": row["remote"],
+                         "source_bundle_sha256": "a" * 64,
+                         "output_plain_sha256": "b" * 64})
+        (Path(output) / "localization-manifest.json").write_text(json.dumps({
+            "source_candidates": len(rows), "resolved_exact": len(rows),
+            "resolved_memory": 0, "stale_exact": 0, "bundles": rows}),
+            encoding="utf-8")
+
+    def _guard_identity(self, snapshot: Path, output: Path, requested: list) -> None:
+        """Mirror the overlay's own refusal to reuse a build directory.
+
+        ``cmd_build_overlay`` records the snapshot identity in the output root and
+        refuses to write when a different snapshot already owns it.  A stub that
+        skips this hides the fact that an incremental attempt followed by a full
+        retry hands the overlay two different snapshots in one work directory.
+        """
+        identity_path = output / "version-identity.json"
+        identity = {
+            "snapshot_sha256": hashlib.sha256(snapshot.read_bytes()).hexdigest(),
+            "snapshot_objects": len(requested),
+        }
+        if identity_path.is_file():
+            if json.loads(identity_path.read_text(encoding="utf-8")) != identity:
+                raise ValueError("overlay output root already belongs to another identity")
+        else:
+            identity_path.write_text(json.dumps(identity), encoding="utf-8")
+
+    def _overlay_answering_from_memory(self, snapshot, _archive, _ledger, output,
+                                       *_args, **_kwargs):
+        """A subset run that answers one key from the memory table.
+
+        The real overlay's ledger holds every accepted row of the bundles it was
+        given, so a subset run can resolve a key that a full run resolves from the
+        bundle's own row.  The builder must notice and rebuild everything.
+        """
+        requested = json.loads(Path(snapshot).read_text(encoding="utf-8"))["objects"]
+        Path(output).mkdir(parents=True, exist_ok=True)
+        self._guard_identity(Path(snapshot), Path(output), requested)
+        rows = []
+        for row in requested:
+            target = Path(output) / "jp-android" / row["remote"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"translated:" + row["logical"].encode("utf-8"))
+            rows.append({"logical": row["logical"], "remote": row["remote"],
+                         "source_bundle_sha256": "a" * 64,
+                         "output_plain_sha256": "b" * 64})
+        from_memory = 1 if len(rows) == 1 else 0
+        (Path(output) / "localization-manifest.json").write_text(json.dumps({
+            "source_candidates": len(rows),
+            "resolved_exact": len(rows) - from_memory,
+            "resolved_memory": from_memory, "stale_exact": 0, "bundles": rows}),
+            encoding="utf-8")
+
+    def _downloader(self, downloads, index_rows):
+        """A fake fetch that serves the catalogue rows this fixture publishes."""
+
+        def counted_download(url, destination, *args, **kwargs):
+            downloads.append(str(destination))
+            destination = Path(destination)
+            if destination.suffix == ".data":
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(msgpack.packb([{
+                    logical: ["catalog-" + remote, remote, 9]
+                    for logical, remote, _digest in index_rows}], use_bin_type=True))
+                return "fetched"
+            return _fake_download(url, destination, *args, **kwargs)
+
+        return counted_download
+
+    def _build_once(self, root: Path, work: Path, output: Path, commit: str,
+                    index_rows=((("story.gtx.unity3d"), "remote-hash.unity3d", "a" * 64),)):
+        from assets_generated_index import GeneratedStore
+        argv = [
+            "--version-manifest", str(root / "manifests" / "asset-version.json"),
+            "--work-root", str(work), "--output-root", str(output),
+            "--source-commit", commit, "--translation-commit", commit,
+            "--generated-commit", commit, "--ci-run-id", "12345",
+        ]
+        stdout = io.StringIO()
+        downloads: list[str] = []
+
+        counted_download = self._downloader(downloads, index_rows)
+
+        with mock.patch.object(build, "ROOT", root), \
+                mock.patch.object(build, "download", side_effect=counted_download), \
+                mock.patch.object(build, "run_overlay",
+                                  side_effect=self._overlay_from_snapshot) as overlay, \
+                mock.patch.object(build, "GeneratedStore",
+                                  return_value=GeneratedStore(output)), \
+                mock.patch.object(build, "read_gtx",
+                                  return_value=("name", "k^原文", b"cipher")), \
+                mock.patch.object(sys, "argv", ["build_generated_release.py", *argv]), \
+                contextlib.redirect_stdout(stdout):
+            self.assertEqual(build.main(), 0)
+        return json.loads(stdout.getvalue()), downloads, overlay.call_count
+
+    def _layout(self, base: Path, bundles=("story.gtx",)):
+        root = base / "repo"
+        _write_synthetic_root(root, images_complete=False)
+        subprocess.run(["git", "-C", str(root), "init", "-q"], check=True,
+                       capture_output=True)
+        for key, value in (("user.email", "tests@example.invalid"),
+                           ("user.name", "reuse tests"),
+                           ("commit.gpgsign", "false")):
+            subprocess.run(["git", "-C", str(root), "config", key, value],
+                           check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(root), "add", "-A"], check=True,
+                       capture_output=True)
+        subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", "inputs"],
+                       check=True, capture_output=True)
+        for name in bundles[1:]:
+            source = "原文"
+            (root / "locales" / "story" / f"{name}.jsonl").write_text(json.dumps({
+                "asset_version": "1077640", "client_version": None,
+                "source_client_version": "9.0.200", "bundle": name,
+                "item_key": "k",
+                "source_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+                "ja": source, "zh": "译文", "status": "accepted",
+            }, ensure_ascii=False) + "\n", encoding="utf-8")
+        if len(bundles) > 1:
+            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True,
+                           capture_output=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", "more inputs"],
+                           check=True, capture_output=True)
+        commit = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                                check=True, capture_output=True,
+                                text=True).stdout.strip()
+        return root, commit
+
+    def test_an_unchanged_bundle_is_neither_downloaded_nor_rewritten(self):
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base)
+            output = base / "out"
+            first, first_downloads, first_overlays = self._build_once(root, base / "work-1", output, commit)
+            self.assertEqual(first["reuse"]["mode"], "full")
+            self.assertIn("remote-hash.unity3d", " ".join(first_downloads))
+
+            # A fresh runner: same repository, same store, empty work directory.
+            second, second_downloads, second_overlays = self._build_once(root, base / "work-2", output, commit)
+            self.assertEqual(second["reuse"]["mode"], "incremental")
+            self.assertEqual(second["reuse"]["reused_bundles"], 1)
+            self.assertEqual([d for d in second_downloads if d.endswith(".unity3d")], [])
+            # The overlay refuses an empty snapshot, so a build with nothing to
+            # rewrite must not reach it at all.
+            self.assertEqual(first_overlays, 1)
+            self.assertEqual(second_overlays, 0)
+            # The release still names every bundle; the reused one kept its bytes.
+            manifest = json.loads(
+                (output / "1077640" / "manifest.json").read_text(encoding="utf-8"))
+            entries = {e["logical_key"]: e for e in manifest["entries"]}
+            self.assertEqual(entries["story.gtx.unity3d"]["runtime_path"],
+                             "production/2018/Android/remote-hash.unity3d")
+            self.assertTrue((output / entries["story.gtx.unity3d"]["object_path"]).is_file())
+            self.assertEqual(manifest["reuse"]["text_scope"], "regenerated")
+            self.assertTrue(manifest["reuse"]["every_key_resolved_exactly"])
+
+    def test_a_locale_file_may_spell_the_bundle_differently_from_the_catalogue(self):
+        # The real repository has this: a locale file names `CD_jp.gtx` where the
+        # official catalogue says `cd_jp.gtx`.  The rows must stay attached to the
+        # catalogue's spelling, or the build dies looking them up.
+        index_rows = (("cd_jp.gtx.unity3d", "cd-remote.unity3d", "a" * 64),)
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base)
+            path = root / "locales/story/story.gtx.jsonl"
+            row = json.loads(path.read_text(encoding="utf-8").strip())
+            row["bundle"] = "CD_jp.gtx"
+            path.write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+
+            report, downloads, overlays = self._build_once(
+                root, base / "work-1", base / "out", commit, index_rows=index_rows)
+            self.assertEqual(report["status"], "success")
+            self.assertEqual([Path(d).name for d in downloads if d.endswith(".unity3d")],
+                             ["cd-remote.unity3d"])
+            manifest = json.loads(
+                (base / "out" / "1077640" / "manifest.json").read_text(encoding="utf-8"))
+            entries = {e["logical_key"]: e for e in manifest["entries"]}
+            self.assertIn("cd_jp.gtx.unity3d", entries)
+            self.assertEqual(entries["cd_jp.gtx.unity3d"]["runtime_path"],
+                             "production/2018/Android/cd-remote.unity3d")
+
+    def test_only_the_changed_bundle_is_fetched_and_rewritten_again(self):
+        index_rows = (("story.gtx.unity3d", "remote-hash.unity3d", "a" * 64),
+                      ("other.gtx.unity3d", "other-remote.unity3d", "b" * 64))
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base, bundles=("story.gtx", "other.gtx"))
+            output = base / "out"
+            first, first_downloads, first_overlays = self._build_once(root, base / "work-1", output, commit,
+                                                      index_rows=index_rows)
+            self.assertEqual(first["reuse"]["mode"], "full")
+            self.assertEqual(len([d for d in first_downloads if d.endswith(".unity3d")]), 2)
+
+            row = json.loads((root / "locales/story/story.gtx.jsonl")
+                             .read_text(encoding="utf-8").strip())
+            row["zh"] = "新译文"
+            (root / "locales/story/story.gtx.jsonl").write_text(
+                json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+
+            second, downloads, second_overlays = self._build_once(
+                root, base / "work-2", output, commit, index_rows=index_rows)
+            self.assertEqual(second["reuse"]["mode"], "incremental")
+            self.assertEqual(second["reuse"]["reused_bundles"], 1)
+            self.assertEqual(second["reuse"]["rebuilt_bundles"], 1)
+            # One download: the bundle whose translation moved.  The other one is
+            # published from the store, not fetched and not rewritten.
+            self.assertEqual([Path(d).name for d in downloads if d.endswith(".unity3d")],
+                             ["remote-hash.unity3d"])
+            manifest = json.loads(
+                (output / "1077640" / "manifest.json").read_text(encoding="utf-8"))
+            entries = {e["logical_key"]: e for e in manifest["entries"]}
+            self.assertEqual(entries["other.gtx.unity3d"]["runtime_path"],
+                             "production/2018/Android/other-remote.unity3d")
+
+    def test_a_subset_that_answered_from_memory_falls_back_to_a_full_rebuild(self):
+        index_rows = (("story.gtx.unity3d", "remote-hash.unity3d", "a" * 64),
+                      ("other.gtx.unity3d", "other-remote.unity3d", "b" * 64))
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base, bundles=("story.gtx", "other.gtx"))
+            output = base / "out"
+            self._build_once(root, base / "work-1", output, commit, index_rows=index_rows)
+
+            row = json.loads((root / "locales/story/story.gtx.jsonl")
+                             .read_text(encoding="utf-8").strip())
+            row["zh"] = "新译文"
+            (root / "locales/story/story.gtx.jsonl").write_text(
+                json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+
+            from assets_generated_index import GeneratedStore
+            argv = [
+                "--version-manifest", str(root / "manifests" / "asset-version.json"),
+                "--work-root", str(base / "work-2"), "--output-root", str(output),
+                "--source-commit", commit, "--translation-commit", commit,
+                "--generated-commit", commit, "--ci-run-id", "12345",
+            ]
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            downloads: list[str] = []
+            with mock.patch.object(build, "ROOT", root), \
+                    mock.patch.object(build, "download",
+                                      side_effect=self._downloader(downloads, index_rows)), \
+                    mock.patch.object(build, "run_overlay",
+                                      side_effect=self._overlay_answering_from_memory
+                                      ) as overlay, \
+                    mock.patch.object(build, "GeneratedStore",
+                                      return_value=GeneratedStore(output)), \
+                    mock.patch.object(build, "read_gtx",
+                                      return_value=("name", "k^原文", b"cipher")), \
+                    mock.patch.object(sys, "argv", ["build_generated_release.py", *argv]), \
+                    contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                self.assertEqual(build.main(), 0)
+            # The risky subset run happened, was rejected, and the whole surface
+            # ran again -- in the same work directory, which the overlay would
+            # refuse if the builder handed it the previous attempt's directory.
+            self.assertEqual(overlay.call_count, 2)
+            self.assertIn("reuse_fallback", stderr.getvalue())
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(report["reuse"]["mode"], "full")
+            self.assertEqual(report["reuse"]["reused_bundles"], 0)
+            self.assertEqual(report["reuse"]["text_scope"], "release")
+            manifest = json.loads(
+                (output / "1077640" / "manifest.json").read_text(encoding="utf-8"))
+            entries = {e["logical_key"]: e for e in manifest["entries"]}
+            self.assertEqual(entries["story.gtx.unity3d"]["runtime_path"],
+                             "production/2018/Android/remote-hash.unity3d")
+            self.assertEqual(entries["other.gtx.unity3d"]["runtime_path"],
+                             "production/2018/Android/other-remote.unity3d")
+            self.assertTrue(manifest["reuse"]["every_key_resolved_exactly"])
+
+    def test_a_changed_builder_disables_reuse_entirely(self):
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base)
+            output = base / "out"
+            self._build_once(root, base / "work-1", output, commit)
+
+            (root / "scripts").mkdir(exist_ok=True)
+            (root / "scripts" / "build_generated_release.py").write_text(
+                "# a changed writer must regenerate every bundle\n", encoding="utf-8")
+
+            second, downloads, second_overlays = self._build_once(root, base / "work-2", output, commit)
+            self.assertEqual(second["reuse"]["mode"], "full")
+            self.assertIn("outside locales/", second["reuse"]["reason"])
+            self.assertTrue([d for d in downloads if d.endswith(".unity3d")])
 
 
 class GeneratedReleaseContracts(unittest.TestCase):

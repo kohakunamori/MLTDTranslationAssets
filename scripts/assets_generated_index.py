@@ -820,6 +820,7 @@ class GeneratedStore:
         ci_run_id: Any = None,
         build_status: str = "success",
         entries_base: Path | None = None,
+        extra_manifest: Mapping[str, Any] | None = None,
     ) -> BuildResult:
         """Publish one ``asset_version`` release into the store.
 
@@ -827,6 +828,12 @@ class GeneratedStore:
         ``written=False`` and touches nothing on disk -- not even the store
         root.  ``entries_base`` is the directory that relative
         ``artifact_file``/``source_file`` paths in ``entries`` resolve against.
+
+        ``extra_manifest`` adds producer-owned keys to the manifest (the release
+        builder records what a later incremental build may reuse).  It may only
+        add: a key the store itself writes is a clash and raises, because a
+        caller silently overwriting ``entry_count`` or ``build_status`` would
+        publish a manifest that lies about itself.
 
         ``ci_run_id`` defaults to the runner's own environment
         (:data:`CI_RUN_ID_ENV_VARS`); pass ``None`` explicitly to record no run
@@ -913,6 +920,14 @@ class GeneratedStore:
             "entries": manifest_entries,
             "reuse_summary": _reuse_summary(manifest_entries, rejected),
         }
+        if extra_manifest:
+            clashes = sorted(set(extra_manifest) & set(manifest))
+            if clashes:
+                raise GeneratedStoreError(
+                    f"extra_manifest would overwrite manifest key(s) {', '.join(clashes)}; "
+                    "the store owns those, and a caller that silently replaced one would "
+                    "publish a manifest that misdescribes itself")
+            manifest.update(extra_manifest)
 
         digests = sorted({entry["artifact_sha256"] for entry in manifest_entries})
         checksums_text = "".join(

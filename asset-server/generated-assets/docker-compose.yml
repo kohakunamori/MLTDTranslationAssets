@@ -28,6 +28,18 @@ services:
       MLTD_ASSETS_BRANCH: main
       MLTD_SYNC_INTERVAL: "21600"
       MLTD_MIN_ASSET_VERSION: "100"
+      # One object is one HTTPS request, and a release that adds lyrics and images
+      # adds hundreds of them.  Measured on this NAS through the LAN proxy below:
+      # 1.65 s per object one at a time, 0.42 s per object with eight in flight.
+      # Sixteen in flight started tripping the proxy, so this is the measured
+      # sweet spot rather than a round number.
+      MLTD_MIRROR_OBJECT_WORKERS: "8"
+      # Anonymous GitHub API access allows 60 requests an hour and one tick uses
+      # about 40 of them (a listing plus a manifest and checksums per version).
+      # A token raises that to 5,000.  It is read from the project's .env so the
+      # credential never enters this repository, and an empty value is simply
+      # anonymous access, which is what the deployment has today.
+      MLTD_ASSETS_GITHUB_TOKEN: ${MLTD_ASSETS_GITHUB_TOKEN:-}
       HTTP_PROXY: http://192.168.2.31:7890
       HTTPS_PROXY: http://192.168.2.31:7890
       NO_PROXY: 127.0.0.1,localhost
