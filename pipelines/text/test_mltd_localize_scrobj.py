@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mltd_localize_scrobj import (  # noqa: E402
+    bilingual_line,
     LyricBundleError,
     LyricSlot,
     accepted_slot_translations,
@@ -94,6 +95,29 @@ class AcceptedSlotTranslationsTests(unittest.TestCase):
         rows = [self._row(10, "Wow", "哇"), self._row(20, "Wow", "哇哦")]
         self.assertEqual(accepted_slot_translations(rows),
                          {(10, "Wow"): "哇", (20, "Wow"): "哇哦"})
+
+
+class BilingualLineTests(unittest.TestCase):
+    """The lyric slot carries Japanese over Chinese, in one string.
+
+    The client draws one string per timed line, so the second line can only be a
+    newline; the modified client patches away the ``String.Replace("\\n", "")``
+    that the stock client applies before rendering.  These pin the exact shape the
+    resource has to have for that to read as two lines.
+    """
+
+    def test_japanese_stays_on_top_and_chinese_below(self):
+        self.assertEqual(bilingual_line("一旦愛して♡", "先爱着我吧♡"), "一旦愛して♡\n先爱着我吧♡")
+
+    def test_exactly_one_newline_is_added(self):
+        composed = bilingual_line("ちょうだい", "给我")
+        self.assertEqual(composed.count("\n"), 1)
+        self.assertEqual(composed.split("\n"), ["ちょうだい", "给我"])
+
+    def test_english_bypass_lines_are_left_alone_by_the_caller(self):
+        # ``is_english_bypass`` keeps Latin-only lines untranslated, so the writer
+        # never composes a pair for them; the helper itself is a plain join.
+        self.assertEqual(bilingual_line("Give me", ""), "Give me\n")
 
 
 class SlotTranslationsTests(unittest.TestCase):

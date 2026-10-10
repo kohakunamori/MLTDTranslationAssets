@@ -44,6 +44,7 @@ from mltd_lyric_rules import (  # noqa: E402
 # Re-exported for callers and tests that reach the rules through this module.
 __all__ = [
     "KANA_KANJI_RE",
+    "bilingual_line",
     "LATIN_RE",
     "LyricBundleError",
     "LyricSlot",
@@ -444,8 +445,22 @@ def _scenario_text_positions(bundle: Path) -> list[list[tuple[int, str]]]:
     return objects
 
 
+def bilingual_line(source: str, translation: str) -> str:
+    """The Japanese line over the Chinese one, in the single slot the client draws.
+
+    The lyric object has one string per timed line, so a second line can only come
+    from a newline inside that string.  The stock client throws those away --
+    ``MVModeMgr.OnScenarioEvent`` calls ``String.Replace("\\n", "")`` -- which is
+    exactly what ``localization.lyrics-multiline`` in MLTDModifiedAPK patches out
+    (``b #...`` over that call), so the pair renders as two lines in Unit Live and
+    MV.  On an unpatched client the two lines would be joined on one line, which is
+    ugly but not broken: the Chinese is still readable and nothing is lost.
+    """
+    return f"{source}\n{translation}"
+
+
 def save_localized_bundle(source: Path, output: Path, translations: SlotTranslations) -> dict:
-    """Write ``source`` with accepted Chinese lines replacing their Japanese.
+    """Write ``source`` with accepted Chinese lines added under their Japanese.
 
     Mirrors the proven GTX writer on purpose: the same ``lz4`` packer, the same
     round-trip gate and the same manifest fields, so a lyric bundle enters the
@@ -489,9 +504,10 @@ def save_localized_bundle(source: Path, output: Path, translations: SlotTranslat
             if translation is None or translation == text:
                 expected.append((position, text))
                 continue
-            element["str"] = translation
+            localized = bilingual_line(text, translation)
+            element["str"] = localized
             replacements += 1
-            expected.append((position, translation))
+            expected.append((position, localized))
             touched = True
         expected_objects.append(expected)
         if touched:
