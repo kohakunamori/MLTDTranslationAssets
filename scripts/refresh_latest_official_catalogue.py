@@ -36,6 +36,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from build_generated_release import download, load_official_index, load_version_manifest
+import source_provenance
 from official_bundle_families import (
     DEFAULT_REGISTRY,
     classify,
@@ -287,8 +288,18 @@ def main() -> int:
             for line in catalogue.read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
+        # New rows inherit the provenance the library already carries; there is no
+        # separate client version to read any more (scripts/source_provenance.py).
+        source_client, provenance_counts = source_provenance.from_library(ROOT)
+        if source_client is None:
+            raise SystemExit(
+                "refusing to append rows: no existing locale row carries a "
+                "source_client_version, so the new rows would have no provenance"
+            )
+        print(f"New rows inherit source_client_version {source_client} "
+              f"({len(provenance_counts)} distinct value(s) in the library)")
         additions = collect_new_rows(catalogue_rows, existing,
-                                     version["asset_version"], version["client_version"], now)
+                                     version["asset_version"], source_client, now)
         enforce_new_row_cap(additions, args.max_new_rows)
         if additions:
             output.parent.mkdir(parents=True, exist_ok=True)

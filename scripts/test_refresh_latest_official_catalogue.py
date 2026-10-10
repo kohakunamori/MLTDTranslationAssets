@@ -245,16 +245,20 @@ class MainFlowTests(unittest.TestCase):
             (root / "locales" / "master").mkdir(parents=True)
             (root / "manifests").mkdir(parents=True)
             (root / "manifests" / "asset-version.json").write_text(json.dumps({
-                "asset_version": "2", "client_version": "9.0.200",
+                "asset_version": "2",
                 "asset_root": "https://td-assets.bn765.com/{version}/production/2018/Android",
                 "index_name": "idx.data"}), encoding="utf-8")
+            # New rows inherit the provenance of the rows already in the library;
+            # the manifest no longer carries a client version of its own.
             (root / "locales" / "master" / "rows.jsonl").write_text(
                 json.dumps({
                     "asset_version": "1", "bundle": "x.gtx", "item_key": "k1",
+                    "client_version": None, "source_client_version": "9.0.200",
                     "source_sha256": hashlib.sha256("既存".encode("utf-8")).hexdigest(),
                     "ja": "既存"}, ensure_ascii=False) + "\n"
                 + json.dumps({
                     "asset_version": "1", "bundle": "y.gtx", "item_key": "k9",
+                    "client_version": None, "source_client_version": "9.0.200",
                     "source_sha256": hashlib.sha256("別".encode("utf-8")).hexdigest(),
                     "ja": "別"}, ensure_ascii=False) + "\n",
                 encoding="utf-8")

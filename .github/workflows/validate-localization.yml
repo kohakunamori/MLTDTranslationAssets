@@ -160,6 +160,7 @@ jobs:
             scripts/test_promote_merged_locales.py \
             scripts/test_build_generated_release.py \
             scripts/test_build_lyric_overlay.py \
+            scripts/test_source_provenance.py \
             scripts/test_commit_llm_drafts.py \
             scripts/test_should_build_release.py \
             scripts/test_assets_mirror.py \

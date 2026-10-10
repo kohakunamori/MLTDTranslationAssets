@@ -45,6 +45,7 @@ if str(ROOT / "scripts") not in sys.path:
 from assets_generated_index import GeneratedStore
 import build_lyric_overlay
 import merge_image_overlay
+import source_provenance
 from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
 
 
@@ -63,18 +64,41 @@ def sha256_text(value: str) -> str:
 def load_version_manifest(path: Path) -> dict:
     value = json.loads(path.read_text(encoding="utf-8"))
     version = str(value.get("asset_version", ""))
-    client = str(value.get("client_version", ""))
-    if not version.isdigit() or not client.count(".") == 2:
-        raise ValueError("asset-version.json has invalid independent version fields")
+    if not version.isdigit():
+        raise ValueError("asset-version.json has an invalid asset_version")
     template = str(value.get("asset_root", ""))
     if "{version}" not in template or not template.startswith("https://td-assets.bn765.com/"):
         raise ValueError("asset_root must be the official td-assets.bn765.com template")
     index_name = str(value.get("index_name", ""))
     if not index_name or "/" in index_name or "\\" in index_name:
         raise ValueError("asset-version.json has no safe official index_name")
-    return {"asset_version": version, "client_version": client,
+    # No client version here: the release's ``source_client_version`` comes from
+    # the rows themselves (see ``scripts/source_provenance.py``).  The key is
+    # still honoured when present so an older checkout builds unchanged.
+    legacy_client = str(value.get("client_version", "") or "")
+    return {"asset_version": version, "legacy_client_version": legacy_client,
             "asset_root": template.format(version=version).rstrip("/"),
             "index_name": index_name}
+
+
+def release_provenance(version: dict, rows: Iterable[dict]) -> str:
+    """The client version this release describes, asked of the library itself.
+
+    The rows carry ``source_client_version`` individually and the schema requires
+    it, so the majority value is the honest answer for the release as a whole.
+    ``manifests/asset-version.json`` used to hold a second, hand-maintained copy
+    which read as a version to keep in step with the game; nothing keeps it in
+    step today, so it is gone and this is the only source.
+    """
+    provenance, counts = source_provenance.from_rows(rows)
+    if provenance is None:
+        provenance = version.get("legacy_client_version") or None
+    if provenance is None:
+        raise ValueError(
+            "cannot determine source_client_version: no locale row carries one and "
+            "manifests/asset-version.json has no 'client_version' to fall back on"
+        )
+    return provenance
 
 
 def load_official_index(path: Path) -> dict[str, dict]:
@@ -353,6 +377,9 @@ def main() -> int:
     version = load_version_manifest(args.version_manifest)
     images_ready = image_inputs_are_complete(ROOT)
     grouped = read_translation_rows(ROOT, version["asset_version"])
+    # The release's provenance is a property of the text it carries, so it is
+    # read from those rows instead of from a field somebody has to keep current.
+    source_client = release_provenance(version, (row for rows in grouped.values() for row in rows))
     work = args.work_root.resolve()
     work.mkdir(parents=True, exist_ok=True)
     index_path = work / version["index_name"]
@@ -413,7 +440,7 @@ def main() -> int:
             for row in canonical_grouped[logical]:
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
     overlay = work / "overlay"
-    run_overlay(snapshot, archive, ledger, overlay, version["client_version"], version["asset_version"])
+    run_overlay(snapshot, archive, ledger, overlay, source_client, version["asset_version"])
     # Song lyrics are the second translatable surface and, until now, the one the
     # client never received: the library carried 11,065 accepted Chinese lines
     # that no published bundle contained.  Patch the lyric bundles into the same
@@ -431,7 +458,7 @@ def main() -> int:
     )
     entries_path = work / "entries.json"
     entries = build_entries(overlay, overlay / "localization-manifest.json",
-                            version["asset_version"], version["client_version"],
+                            version["asset_version"], source_client,
                             index_name=version["index_name"], index_path=index_path)
     entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     image_bundles = 0
@@ -449,7 +476,7 @@ def main() -> int:
         merged_index = work / f"merged-{version['index_name']}"
         merged_index.write_bytes(payload)
         image_entries = merge_image_overlay.build_entries(
-            records, overlay_root, version["asset_version"], version["client_version"])
+            records, overlay_root, version["asset_version"], source_client)
         image_bundles = len(image_entries)
         # The client reads one declared size per runtime_path, so the catalogue
         # carries both patches or neither: the pass-through official index entry
@@ -465,7 +492,7 @@ def main() -> int:
             "channel": "assets",
             "asset_version": version["asset_version"],
             "client_version": None,
-            "source_client_version": version["client_version"],
+            "source_client_version": source_client,
             "source_sha256": merged_digest,
             "translated_sha256": merged_digest,
             "reuse_status": "exact",
@@ -484,7 +511,7 @@ def main() -> int:
         source_commit=args.source_commit,
         translation_commit=args.translation_commit,
         generated_commit=args.generated_commit,
-        source_client_version=version["client_version"],
+        source_client_version=source_client,
         ci_run_id=args.ci_run_id,
         entries_base=work,
     )
@@ -492,7 +519,8 @@ def main() -> int:
         raise RuntimeError(result.note)
     report = {
         "status": "success", "asset_version": version["asset_version"],
-        "client_version": version["client_version"], "selected_bundles": len(selected),
+        "client_version": None, "source_client_version": source_client,
+        "selected_bundles": len(selected),
         "generated_entries": len(entries), "generated_manifest": str(result.manifest_path),
         "image_surface": (f"published_{image_bundles}_bundles" if image_bundles else
                           ("ready_for_injection" if images_ready
