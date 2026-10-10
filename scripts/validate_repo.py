@@ -31,19 +31,14 @@ PROTECTED_TOKEN_RE = re.compile(
     r"|\\[nrt]"
     r"|\\[0-9]{2}\\"
 )
-#: Placeholder classes that must survive verbatim in every surface.  Bare
-#: ``<...>`` is excluded here on purpose: in lyric text it is a *display*
-#: quotation mark (``<いつの間にかこんなに>`` -> ``<不知不觉间已经如此>``), so
-#: comparing its text would flag three correct rows in
-#: ``lyrics/songs/scrobj_homesf.unity3d.jsonl``; the bracket *balance* is checked
-#: instead, which still catches a dropped engine tag such as ``<size=24>``.
-NON_ANGLE_TOKEN_RE = re.compile(
-    r"\{[^{}]+\}"
-    r"|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]"
-    r"|\\[nrt]"
-    r"|\\[0-9]{2}\\"
-)
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# The lyric token rule lives with the rest of the lyric domain rules so the
+# translation pipeline can apply exactly the rule that will judge its output;
+# this validator must never be the first place a draft is rejected.
+from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
+
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 VALID_STATUSES = {"untranslated", "pending", "accepted"}
@@ -74,27 +69,6 @@ def validate_translation_tokens(source: str, translated: str) -> None:
     after = Counter(PROTECTED_TOKEN_RE.findall(translated))
     if before != after:
         raise ValueError(f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}")
-
-
-def validate_lyric_tokens(source: str, translated: str) -> None:
-    """Token rule for lyric lines: placeholders verbatim, brackets balanced.
-
-    Lyric strings use ``<...>`` as emphasis punctuation rather than as an engine
-    field, so the exact-text comparison used for locale rows would reject correct
-    translations.  The placeholder classes that do carry meaning are compared
-    verbatim, and the number of angle brackets must be preserved so a dropped
-    ``<size=24>``-style tag is still caught.
-    """
-    before = Counter(NON_ANGLE_TOKEN_RE.findall(source))
-    after = Counter(NON_ANGLE_TOKEN_RE.findall(translated))
-    if before != after:
-        raise ValueError(f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}")
-    if source.count("<") != translated.count("<") or source.count(">") != translated.count(">"):
-        raise ValueError(
-            "angle bracket count changed: "
-            f"source=({source.count('<')},{source.count('>')}) "
-            f"translation=({translated.count('<')},{translated.count('>')})"
-        )
 
 
 def validate_locales(root: Path) -> dict[str, int]:

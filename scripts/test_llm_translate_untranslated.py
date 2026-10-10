@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import llm_translate_untranslated as tool
+import validate_repo
 
 
 def _row(source, *, item_key="a", zh="", status="untranslated", stage=None, version="1"):
@@ -380,6 +381,120 @@ class LlmLyricsScopeTests(unittest.TestCase):
             self.assertEqual(rows[0]["status"], "accepted")
             self.assertEqual(rows[0]["zh"], "真让人心烦意乱！")
             self.assertTrue(rows[0]["ja"].endswith("\u2028"))
+
+
+class LlmDraftRejectionTests(unittest.TestCase):
+    """One unusable draft must not discard the rest of the batch.
+
+    Run 38058410546 applied 2,937 drafts and then failed ``validate_repo`` on a
+    single lyric row where the model answered with its reasoning instead of a
+    line.  Nothing was committed, but the whole night's work was lost; the row
+    should have been refused at the write step, with the other 2,936 kept.
+    """
+
+    def _lyric_root(self, root: Path) -> Path:
+        songs = root / "lyrics" / "songs"
+        songs.mkdir(parents=True)
+        return songs
+
+    def _song(self, path: Path, rows):
+        path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
+                        encoding="utf-8")
+
+    def _lyric_row(self, bundle, index, text):
+        return {
+            "bundle": bundle, "index": index, "tick": index * 960, "abs_time": index / 10.0,
+            "source_sha256": tool.sha256_text(text), "ja": text, "zh": "",
+            "status": "untranslated", "updated_at": "2026-01-01T00:00:00Z",
+        }
+
+    def _draft(self, path: Path, pairs):
+        path.write_text("".join(json.dumps(
+            {"source": source, "source_sha256": tool.sha256_text(source), "translation": translation},
+            ensure_ascii=False) + "\n" for source, translation in pairs), encoding="utf-8")
+
+    def test_a_reasoning_blob_is_refused_and_the_other_drafts_are_kept(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_harm4+.unity3d.jsonl"
+            good = "空っぽのステージ"
+            bad = "空っぽのステージ （ここからがそう）"
+            self._song(song, [self._lyric_row("scrobj_harm4+.unity3d", 41, good),
+                              self._lyric_row("scrobj_harm4+.unity3d", 9, bad)])
+            reasoning = ("思考过程：\n- 空っぽのステージ：空无一人的舞台\n"
+                         "采用直接自然翻译：空荡荡的舞台 （从这里开始才是）\n"
+                         "-]空荡荡的舞台 （从这里开始就是这样）")
+            draft = root / "draft.jsonl"
+            self._draft(draft, [(good, "空荡荡的舞台"), (bad, reasoning)])
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.apply(type("Args", (), {"draft": draft, "scope": "lyrics"})()), 0)
+            rows = {row["index"]: row for row in _read(song)}
+            self.assertEqual(rows[41]["zh"], "空荡荡的舞台")
+            self.assertEqual(rows[41]["status"], "pending")
+            self.assertEqual(rows[9]["status"], "untranslated", "the blob was not written")
+            self.assertEqual(rows[9]["zh"], "")
+            # And the repository therefore still validates.
+            self.assertEqual(validate_repo.validate_lyrics(root)["untranslated"], 1)
+
+    def test_the_lyric_rule_allows_translating_emphasis_text(self):
+        """``<...>`` is display punctuation in a lyric, so its text may change.
+
+        The locale rule (``validate_translation``) would reject this correct row;
+        using it on lyric drafts was the second half of the same bug.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_homesf.unity3d.jsonl"
+            source = "<いつの間にかこんなに>"
+            self._song(song, [self._lyric_row("scrobj_homesf.unity3d", 41, source)])
+            draft = root / "draft.jsonl"
+            self._draft(draft, [(source, "<不知不觉间已经如此>")])
+            with patch.object(tool, "ROOT", root):
+                tool.apply(type("Args", (), {"draft": draft, "scope": "lyrics"})())
+            self.assertEqual(_read(song)[0]["zh"], "<不知不觉间已经如此>")
+
+    def test_a_locale_draft_that_drops_a_placeholder_is_still_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            locale = root / "locales" / "story" / "x.jsonl"
+            locale.parent.mkdir(parents=True)
+            source = "こんにちは {$P$}"
+            _write(locale, [_row(source, item_key="a")])
+            draft = root / "draft.jsonl"
+            self._draft(draft, [(source, "你好")])
+            with patch.object(tool, "ROOT", root):
+                tool.apply(type("Args", (), {"draft": draft, "scope": "locales"})())
+            self.assertEqual(_read(locale)[0]["status"], "untranslated")
+
+    def test_a_second_disagreeing_draft_is_refused_instead_of_aborting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            self._song(song, [self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡")])
+            draft = root / "draft.jsonl"
+            self._draft(draft, [("一旦愛して♡", "先爱一下♡"), ("一旦愛して♡", "先爱上你♡")])
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.apply(type("Args", (), {"draft": draft, "scope": "lyrics"})()), 0)
+            self.assertEqual(_read(song)[0]["zh"], "先爱一下♡")
+
+    def test_publish_skips_an_unusable_pending_row_and_reports_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            bad = self._lyric_row("scrobj_x.unity3d", 41, "一旦愛して♡")
+            bad.update(zh="先爱一下♡\n（附注）", status="pending", translation_stage="llm_translated")
+            good = self._lyric_row("scrobj_x.unity3d", 42, "ちょうだい")
+            good.update(zh="给我嘛", status="pending", translation_stage="llm_translated")
+            self._song(song, [bad, good])
+            with patch.object(tool, "ROOT", root):
+                tool.publish(type("Args", (), {"draft": None, "dry_run": False, "scope": "lyrics"})())
+            rows = {row["index"]: row for row in _read(song)}
+            self.assertEqual(rows[41]["status"], "pending", "the unusable row stays for a human")
+            self.assertEqual(rows[42]["status"], "accepted")
 
 
 if __name__ == "__main__":

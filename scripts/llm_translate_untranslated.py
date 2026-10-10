@@ -31,12 +31,32 @@ from pathlib import Path
 from typing import Any
 
 from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
-from pipelines.text.mltd_lyric_rules import is_english_bypass
+from pipelines.text.mltd_lyric_rules import is_english_bypass, validate_lyric_tokens
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 SCOPES = ("locales", "lyrics", "all")
+
+#: How many rejected drafts the run summary lists by name.  The count is always
+#: complete; the list is bounded so one bad batch cannot flood the CI log.
+REJECTION_SAMPLE = 10
+
+
+def validate_draft(kind: str, source: str, translation: str) -> None:
+    """Apply the rule that will judge this row in ``scripts/validate_repo.py``.
+
+    Lyric lines and locale rows are not judged the same way: in a lyric, ``<...>``
+    is display punctuation, so its *text* may be translated, while in a locale row
+    it is an engine placeholder that must survive verbatim.  Using the locale rule
+    on lyric drafts both rejects correct lines and lets lyric-specific mistakes
+    through to the final repository check -- where a single bad row fails the
+    whole run, which is what happened in run 38058410546.
+    """
+    if kind == "lyrics":
+        validate_lyric_tokens(source, translation)
+    else:
+        validate_translation(source, translation)
 
 
 def sha256_text(value: str) -> str:
@@ -133,8 +153,17 @@ def collect(args: argparse.Namespace) -> int:
 
 
 def apply(args: argparse.Namespace) -> int:
+    """Write draft translations into their source rows, skipping unusable ones.
+
+    A draft is refused -- never written, and reported -- when it carries a
+    reserved delimiter, when two drafts disagree about one source line, or when it
+    breaks the rule its own surface will be validated with.  Refusing one draft
+    must not discard the other thousands: that is the difference between a queue
+    that drains and a run that fails whole.
+    """
     scope = scope_of(args)
     translations: dict[str, str] = {}
+    rejected: list[dict[str, str]] = []
     for line in jsonl_lines(args.draft.read_text(encoding="utf-8-sig")):
         if not line.strip():
             continue
@@ -144,21 +173,24 @@ def apply(args: argparse.Namespace) -> int:
         translation = str(row.get("translation", ""))
         if not source or sid != sha256_text(source) or not translation:
             continue
-        validate_translation(source, translation)
         if "|" in translation or "^" in translation:
-            raise SystemExit(f"LLM output contains reserved delimiter for {sid}")
+            rejected.append({"source_sha256": sid, "reason": "reserved delimiter"})
+            continue
         prior = translations.get(sid)
         if prior is not None and prior != translation:
-            raise SystemExit(f"conflicting LLM output for source {sid}")
+            rejected.append({"source_sha256": sid, "reason": "draft disagrees with itself"})
+            continue
         translations[sid] = translation
 
     if not translations:
-        print(json.dumps({"updated": 0, "drafts": 0, "scope": scope}, ensure_ascii=False))
+        print(json.dumps({"updated": 0, "drafts": 0, "skipped_invalid": len(rejected),
+                          "rejected": rejected[:REJECTION_SAMPLE], "scope": scope},
+                         ensure_ascii=False))
         return 0
 
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     updated = 0
-    for path, _kind in scope_paths(ROOT, scope):
+    for path, kind in scope_paths(ROOT, scope):
         original = path.read_text(encoding="utf-8")
         changed = False
         lines = []
@@ -170,8 +202,19 @@ def apply(args: argparse.Namespace) -> int:
             sid = str(row.get("source_sha256", ""))
             translation = translations.get(sid)
             if row.get("status") == "untranslated" and translation is not None:
-                if str(row.get("ja", "")) != "":
-                    validate_translation(str(row["ja"]), translation)
+                source_text = str(row.get("ja", ""))
+                if source_text:
+                    try:
+                        validate_draft(kind, source_text, translation)
+                    except ValueError as exc:
+                        rejected.append({
+                            "source_sha256": sid,
+                            "file": path.name,
+                            "index": str(row.get("index", "")),
+                            "reason": str(exc),
+                        })
+                        lines.append(line)
+                        continue
                 row["zh"] = translation
                 row["status"] = "pending"
                 row["translation_stage"] = "llm_translated"
@@ -186,6 +229,8 @@ def apply(args: argparse.Namespace) -> int:
         if changed:
             path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({"updated": updated, "drafts": len(translations),
+                      "skipped_invalid": len(rejected),
+                      "rejected": rejected[:REJECTION_SAMPLE],
                       "scope": scope, "stage": "llm_translated"}, ensure_ascii=False))
     return 0
 
@@ -361,12 +406,14 @@ def _publish_locales(args: argparse.Namespace) -> int:
 def _publish_lyrics(args: argparse.Namespace) -> int:
     """Promote machine-translated lyric rows to ``accepted``.
 
-    Simpler than the locale promotion on purpose: a lyric row is not part of the
-    generated release, so there is no build ambiguity gate to protect.  The one
-    invariant worth enforcing is agreement -- the same Japanese line inside one
-    song must not end up with two different Chinese wordings, because the game
-    shows them as the same line.  If any two rows of one song disagree, all of
-    them stay ``pending`` for a human instead of the newest one winning.
+    Simpler than the locale promotion on purpose.  The invariant worth enforcing
+    is agreement -- the same Japanese line inside one song must not end up with
+    two different Chinese wordings, because the game shows them as the same line
+    and the published bundle can only carry one.  If any two rows of one song
+    disagree, all of them stay ``pending`` for a human instead of the newest one
+    winning.  Each row is also checked with the same lyric rule
+    ``scripts/validate_repo.py`` applies, and an unusable row is skipped and
+    reported instead of failing the whole promotion.
     """
     wanted = _draft_source_ids(args.draft) if args.draft is not None else None
     files = [path for path, _kind in scope_paths(ROOT, "lyrics")]
@@ -385,6 +432,8 @@ def _publish_lyrics(args: argparse.Namespace) -> int:
 
     promoted = 0
     skipped_conflicting = 0
+    skipped_invalid = 0
+    rejected: list[dict[str, str]] = []
     changed_files = 0
     for path in files:
         original = path.read_text(encoding="utf-8")
@@ -411,9 +460,16 @@ def _publish_lyrics(args: argparse.Namespace) -> int:
             source = str(row.get("ja", ""))
             if not source or sid != sha256_text(source):
                 raise SystemExit(f"source identity mismatch at {path}: refusing to publish {sid}")
-            if "|" in translation or "^" in translation:
-                raise SystemExit(f"LLM output contains reserved delimiter for {sid}")
-            validate_translation(source, translation)
+            try:
+                if "|" in translation or "^" in translation:
+                    raise ValueError("reserved delimiter")
+                validate_draft("lyrics", source, translation)
+            except ValueError as exc:
+                skipped_invalid += 1
+                rejected.append({"file": path.name, "source_sha256": sid,
+                                 "index": str(row.get("index", "")), "reason": str(exc)})
+                lines.append(line)
+                continue
             row["status"] = "accepted"
             changed = True
             promoted += 1
@@ -425,6 +481,8 @@ def _publish_lyrics(args: argparse.Namespace) -> int:
     print(json.dumps({
         "promoted": promoted,
         "skipped_conflicting_wording": skipped_conflicting,
+        "skipped_invalid": skipped_invalid,
+        "rejected": rejected[:REJECTION_SAMPLE],
         "files": changed_files,
         "dry_run": bool(args.dry_run),
         "scope": "lyrics",
