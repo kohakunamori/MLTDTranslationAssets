@@ -8,6 +8,7 @@
 #
 # Keep in sync with asset-server/requirements.txt: the suite imports requests.
 pytest
+pytest-xdist
 pyyaml
 msgpack
 UnityPy
