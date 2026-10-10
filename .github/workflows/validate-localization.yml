@@ -93,8 +93,13 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        # Same sparse checkout as the `validate` job above; keep the two lists
-        # identical so a missing path is never a difference between them.
+        # Deliberately narrower than the `validate` job above: no suite in this
+        # job reads `locales/` or `lyrics/` (every one of them builds its own
+        # fixtures in a temp directory), and `validate_repo.py` -- which does
+        # walk both trees -- runs in the other job.  Dropping them takes the
+        # checkout from 210 MB to 11 MB.  `scripts/test_validate_workflow.py`
+        # fails if a directory the suites import from disappears from this list
+        # or if this list grows something the other job does not check out.
         uses: actions/checkout@v4
         with:
           filter: blob:none
@@ -104,8 +109,6 @@ jobs:
             configs
             docs
             glossary
-            locales
-            lyrics
             manifests
             pipelines
             research-tools
