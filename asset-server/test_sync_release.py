@@ -59,38 +59,51 @@ def build_release(version: str, seeds: list[str], *, generated_commit: str = COM
 class FakeGitHub:
     """An in-memory repository: a commit, a generated tree, and raw objects."""
 
-    def __init__(self, releases: dict[str, dict], commit: str = COMMIT, extra_dirs=()):
+    def __init__(self, releases: dict[str, dict], commit: str = COMMIT, extra_dirs=(),
+                 api_status: int = 200):
         self.releases = releases
         self.commit = commit
         self.extra_dirs = list(extra_dirs)
+        self.api_status = api_status
         self.raw_calls: list[str] = []
+        self.tracked_version = max(releases, key=lambda value: (int(value), value)) if releases else ""
         self.broken_objects: set[str] = set()
 
+    def _api(self, payload: object):
+        if self.api_status != 200:
+            raise sync_release.HttpError(f"HTTP {self.api_status} for the API", status=self.api_status)
+        return sync_release.FetchResponse(200, json.dumps(payload).encode(), {})
+
     def fetch(self, url: str, **kwargs):
-        if url.endswith(f"/commits/{sync_release.DEFAULT_BRANCH}") or "/commits/" in url:
-            return sync_release.FetchResponse(200, json.dumps({"sha": self.commit}).encode(), {})
+        if "/commits/" in url:
+            return self._api({"sha": self.commit})
         if "/contents/generated?" in url:
             listing = [{"name": name, "type": "dir"} for name in
                        [*self.releases, *self.extra_dirs, "objects"]]
-            return sync_release.FetchResponse(200, json.dumps(listing).encode(), {})
-        if "/contents/generated/" in url:
-            path = url.split("/contents/", 1)[1].split("?", 1)[0]
-            _, version, name = path.split("/", 2)
-            release = self.releases[version]
-            body = json.dumps(release["manifest"]) if name == "manifest.json" else release["checksums"]
-            return sync_release.FetchResponse(200, json.dumps({
-                "encoding": "base64",
-                "content": base64.b64encode(body.encode()).decode()}).encode(), {})
+            return self._api(listing)
         if url.startswith(sync_release.RAW_BASE):
-            digest = url.rsplit("/", 1)[-1]
-            self.raw_calls.append(digest)
-            for release in self.releases.values():
-                if digest in release["objects"]:
-                    body = release["objects"][digest]
-                    if digest in self.broken_objects:
-                        body = b"tampered"
-                    return sync_release.FetchResponse(200, body, {})
-            return sync_release.FetchResponse(404, b"", {})
+            path = url.split(f"{sync_release.RAW_BASE}/{REPOSITORY}/", 1)[1].split("?", 1)[0]
+            _commit, *rest = path.split("/")
+            body_path = "/".join(rest)
+            if body_path == "manifests/asset-version.json":
+                return sync_release.FetchResponse(
+                    200, json.dumps({"asset_version": self.tracked_version}).encode(), {})
+            if body_path.startswith("generated/") and body_path.split("/")[2] in ("manifest.json",
+                                                                                 "checksums.txt"):
+                _, version, name = body_path.split("/", 2)
+                release = self.releases[version]
+                body = json.dumps(release["manifest"]) if name == "manifest.json" else release["checksums"]
+                return sync_release.FetchResponse(200, body.encode(), {})
+            if body_path.startswith(f"generated/{sync_release.OBJECT_DIRNAME}/"):
+                digest = body_path.rsplit("/", 1)[-1]
+                self.raw_calls.append(digest)
+                for release in self.releases.values():
+                    if digest in release["objects"]:
+                        body = release["objects"][digest]
+                        if digest in self.broken_objects:
+                            body = b"tampered"
+                        return sync_release.FetchResponse(200, body, {})
+                return sync_release.FetchResponse(404, b"", {})
         raise AssertionError(f"unexpected URL {url}")
 
 
@@ -110,6 +123,27 @@ class NewestVersionTests(unittest.TestCase):
         source = sync_release.GitHubReleaseSource(repository=REPOSITORY, fetch=fake.fetch)
         with self.assertRaises(sync_release.SyncError):
             source.newest_version(COMMIT)
+
+    def test_a_rate_limited_api_falls_back_to_the_branch_and_the_tracked_version(self):
+        # GitHub allows 60 unauthenticated API calls an hour for the whole machine.
+        # A sync that stops when that runs out stops mirroring, so the release is
+        # readable without any API call at all.
+        fake = FakeGitHub({"1077741": {}}, api_status=403)
+        source = sync_release.GitHubReleaseSource(repository=REPOSITORY, fetch=fake.fetch)
+        self.assertEqual(source.head_commit(), source.branch)
+        self.assertEqual(source.newest_version(source.branch), "1077741")
+
+    def test_reading_a_branch_ref_asks_for_a_fresh_copy(self):
+        _, bundle = build_release("1077741", ["alpha"])
+        fake = FakeGitHub({"1077741": bundle})
+        source = sync_release.GitHubReleaseSource(repository=REPOSITORY, fetch=fake.fetch)
+        seen: list[str] = []
+        source.fetch = lambda url, **kwargs: (seen.append(url), fake.fetch(url))[1]
+        source.fetch_text("generated/1077741/manifest.json", "main")
+        self.assertIn("?sync=", seen[0])
+        seen.clear()
+        source.fetch_text("generated/1077741/manifest.json", COMMIT)
+        self.assertNotIn("?sync=", seen[0])
 
 
 class SyncOnceTests(unittest.TestCase):
@@ -209,6 +243,15 @@ class SyncOnceTests(unittest.TestCase):
         fake = FakeGitHub({"1077741": {**bundle, "manifest": manifest}})
         with self.assertRaises(sync_release.SyncError):
             self.sync(fake)
+
+    def test_the_whole_sync_survives_an_api_that_refuses_every_call(self):
+        _, bundle = build_release("1077741", ["alpha", "beta"])
+        fake = FakeGitHub({"1077741": bundle}, api_status=403)
+        report = self.sync(fake)
+        self.assertEqual(report["sync_status"], "success")
+        self.assertEqual(report["downloaded"], 2)
+        self.assertEqual(report["source_commit"], sync_release.DEFAULT_BRANCH)
+        self.assertTrue(report["verification"]["ok"])
 
     def test_the_root_holds_exactly_the_release_and_nothing_else(self):
         # The swap writes through temporary files beside their targets; a leftover

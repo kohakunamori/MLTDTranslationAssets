@@ -14,6 +14,11 @@ and it makes the dangerous cases explicit:
   failure at any point leaves the previous release intact.
 
 Nothing here talks to the official archive; that stays the reader's job.
+
+The loop reads the release over raw file URLs and treats the GitHub API as an
+optional shortcut for finding the newest commit.  That is not a style choice:
+unauthenticated API calls are limited to 60 an hour for the whole machine, and a
+sync that can be locked out by its own retries is a sync that stops mirroring.
 """
 from __future__ import annotations
 
@@ -69,7 +74,8 @@ class FetchResponse:
     headers: dict[str, str]
 
 
-def http_get(url: str, *, timeout: float = 60.0, attempts: int = 3) -> FetchResponse:
+def http_get(url: str, *, accept: str = "application/vnd.github+json", timeout: float = 60.0,
+             attempts: int = 3) -> FetchResponse:
     """One GET with bounded retries, no implicit caching, optional token.
 
     A token is read from the environment and never written to disk or to the report:
@@ -81,7 +87,7 @@ def http_get(url: str, *, timeout: float = 60.0, attempts: int = 3) -> FetchResp
     for attempt in range(1, max(1, attempts) + 1):
         request = urllib.request.Request(url, method="GET")
         request.add_header("User-Agent", "mltd-asset-sync")
-        request.add_header("Accept", "application/vnd.github+json")
+        request.add_header("Accept", accept)
         request.add_header("X-GitHub-Api-Version", "2022-11-28")
         # The deployment may sit behind a caching proxy: a stale cached ref would
         # make it miss a release that has already been published.
@@ -119,51 +125,69 @@ class GitHubReleaseSource:
         self.fetch = fetch
 
     def head_commit(self) -> str:
-        payload = json.loads(self._api_json(f"{API_BASE}/repos/{self.repository}/commits/{self.branch}"))
+        """A commit to pin reads to, or the branch itself when the API will not say.
+
+        Falling back to the branch name is not a failure: those reads are still
+        exact enough for this loop (the manifest names its own commit) and they are
+        never refused.  Losing a whole sync because a rate limit ran out would be
+        worse than reading a branch.
+        """
+        try:
+            payload = json.loads(self._api_json(
+                f"{API_BASE}/repos/{self.repository}/commits/{self.branch}"))
+        except SyncError:
+            return self.branch
         commit = str(payload.get("sha") or "")
-        if not commit:
-            raise SyncError("the branch head has no commit sha")
-        return commit
+        return commit if len(commit) == 40 else self.branch
 
     def newest_version(self, commit: str) -> str:
-        """The newest ``generated/<version>`` directory, by number, not by name order.
+        """The newest release the pipeline has actually built.
 
-        Only digits count: the tree also holds ``objects`` and, historically, other
-        directories that are not releases.
+        The directory listing is the source of truth for that; ``manifests/asset-version.json``
+        is the version being *tracked* and is updated by a pull request, so it can
+        name a version that has not been built yet.  The listing therefore comes
+        first, and the tracked version is the fallback for when the API is
+        unavailable.
         """
-        entries = json.loads(self._api_json(
-            f"{API_BASE}/repos/{self.repository}/contents/generated?ref={urllib.parse.quote(commit, safe='')}"))
-        if not isinstance(entries, list):
-            raise SyncError("the generated directory listing was not an array")
-        versions = [str(item.get("name")) for item in entries
-                    if isinstance(item, dict) and item.get("type") == "dir"
-                    and str(item.get("name", "")).isdigit()]
-        if not versions:
+        ref = commit or self.branch
+        try:
+            entries = json.loads(self._api_json(
+                f"{API_BASE}/repos/{self.repository}/contents/generated?ref={urllib.parse.quote(ref, safe='')}"))
+        except SyncError:
+            entries = None
+        if isinstance(entries, list):
+            versions = [str(item.get("name")) for item in entries
+                        if isinstance(item, dict) and item.get("type") == "dir"
+                        and str(item.get("name", "")).isdigit()]
+            if versions:
+                return max(versions, key=lambda value: (int(value), value))
             raise SyncError("the repository has no generated release directory")
-        return max(versions, key=lambda value: (int(value), value))
+
+        tracked = json.loads(self._raw_text("manifests/asset-version.json", ref))
+        version = str((tracked or {}).get("asset_version") or "")
+        if not version.isdigit():
+            raise SyncError("the tracked asset version is missing or not a number")
+        return version
 
     def release_path(self, version: str, name: str) -> str:
         return f"generated/{version}/{name}"
 
     def fetch_text(self, path: str, commit: str) -> str:
-        """Read a repository file through the contents API, pinned to one commit."""
+        """Read a repository file over its raw URL: no API quota, no size limit."""
+        return self._raw_text(path, commit)
+
+    def _raw_text(self, path: str, ref: str) -> str:
         if path.startswith("/") or ".." in Path(path).parts:
             raise SyncError(f"refusing to read outside the repository: {path}")
-        url = (f"{API_BASE}/repos/{self.repository}/contents/{urllib.parse.quote(path, safe='/')}"
-               f"?ref={urllib.parse.quote(commit, safe='')}")
-        payload = json.loads(self._api_json(url))
-        if not isinstance(payload, dict) or "content" not in payload:
-            raise SyncError(f"unexpected contents response for {path}")
-        if payload.get("encoding") == INLINE_LIMIT_ENCODING:
-            download = payload.get("download_url")
-            if not isinstance(download, str) or not download:
-                raise SyncError(f"{path} is too large for the contents API and offers no raw URL")
-            return self.fetch(download).body.decode("utf-8")
+        url = f"{RAW_BASE}/{self.repository}/{urllib.parse.quote(ref, safe='')}/{path}"
+        if len(ref) != 40:
+            # A branch name can be cached anywhere along the way; a unique query makes
+            # the read fresh without spending an API call to pin a commit.
+            url += f"?sync={int(time.time())}"
         try:
-            import base64
-            return base64.b64decode(payload["content"]).decode("utf-8")
-        except (ValueError, KeyError) as exc:
-            raise SyncError(f"{path} was not base64 text: {exc}") from exc
+            return self.fetch(url, accept="text/plain").body.decode("utf-8")
+        except HttpError as exc:
+            raise SyncError(f"cannot read {path}: {exc}") from exc
 
     def fetch_object(self, digest: str, commit: str) -> bytes:
         """Read one content-addressed object and verify it before returning."""
