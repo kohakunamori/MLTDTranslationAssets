@@ -69,13 +69,30 @@ class DeploymentRecordTests(unittest.TestCase):
                 self.assertEqual(entry["repo_sha256"], entry["deployed_sha256"])
 
     def test_recorded_drift_is_real_drift(self):
-        """A `false` entry must carry both hashes and an explanation."""
-        drifted = [e for e in self.record["files"] if not e["repo_matches_deployed"]]
-        self.assertTrue(drifted, "the assets_mirror.py divergence must stay recorded")
-        for entry in drifted:
+        """A `false` entry must carry both hashes and an explanation.
+
+        This used to also demand that at least one such entry existed, because the
+        NAS ran an older revision of the mirror module and a record claiming full
+        convergence would have been a lie.  The 2026-10-10 deployment converged
+        every managed file, so demanding a permanent divergence would now ask the
+        record to lie in the other direction.  What must still hold is that every
+        entry claiming a difference really differs, and says why.
+        """
+        for entry in self.record["files"]:
+            if entry["repo_matches_deployed"]:
+                continue
             with self.subTest(entry["nas_path"]):
                 self.assertNotEqual(entry["repo_sha256"], entry["deployed_sha256"])
                 self.assertTrue(entry.get("note"), "drift needs an explanation")
+
+    def test_the_record_is_internally_consistent(self):
+        """A `true` entry must name one hash, not two that disagree."""
+        for entry in self.record["files"]:
+            with self.subTest(entry["nas_path"]):
+                if entry["repo_matches_deployed"]:
+                    self.assertEqual(entry["repo_sha256"], entry["deployed_sha256"])
+                    self.assertNotIn("note", entry)
+                self.assertRegex(entry["deployed_sha256"], r"^[0-9a-f]{64}$")
 
     def test_services_and_route_are_recorded(self):
         services = self.record["services"]

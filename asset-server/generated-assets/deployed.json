@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "kind": "mltd-generated-assets-deployment-record",
-  "observed_at": "2026-10-08T16:45:00Z",
-  "observed_from": "read-only ssh probe of the NAS plus byte-compare of the copied files",
+  "observed_at": "2026-10-10T16:05:00Z",
+  "observed_from": "an -Apply of asset-server/Deploy-GeneratedAssets.ps1, which uploads through a staging directory, re-hashes every file remotely, probes the rebuilt image on a throwaway root, and only then recreates the services",
   "hash_convention": "repo_sha256 is the repository blob (git cat-file blob HEAD:<repo_source>), i.e. the bytes a clean checkout deploys; deployed_sha256 is the file on the NAS.",
   "host_alias": "nas",
   "project_dir": "/vol1/1000/appdata/imas/mltd-generated-assets",
@@ -20,7 +20,14 @@
       "command": "python /app/sync_loop.py --root /data",
       "interval_seconds": 21600,
       "repository": "kohakunamori/MLTDTranslationAssets",
-      "branch": "main"
+      "branch": "main",
+      "environment": {
+        "MLTD_MIRROR_OBJECT_WORKERS": "8",
+        "MLTD_ASSETS_GITHUB_TOKEN": "empty, i.e. anonymous GitHub API access",
+        "HTTP_PROXY": "http://192.168.2.31:7890",
+        "HTTPS_PROXY": "http://192.168.2.31:7890",
+        "NO_PROXY": "127.0.0.1,localhost"
+      }
     }
   },
   "files": [
@@ -41,25 +48,23 @@
     {
       "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/docker-compose.yml",
       "repo_source": "asset-server/generated-assets/docker-compose.yml",
-      "deployed_sha256": "5356b360c9040d7faad533e2b15031205f0def31726b10cee1f29e3653334814",
-      "repo_sha256": "5356b360c9040d7faad533e2b15031205f0def31726b10cee1f29e3653334814",
+      "deployed_sha256": "4a86f1daa16d66b914527512ec1bd285751bbadc860fb4fb87d5c04f59088247",
+      "repo_sha256": "4a86f1daa16d66b914527512ec1bd285751bbadc860fb4fb87d5c04f59088247",
       "repo_matches_deployed": true
     },
     {
       "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/assets_route.py",
       "repo_source": "asset-server/assets_route.py",
-      "deployed_sha256": "93603413e47546d3ec926fc12b2ebb39d3d8461e997a4186551f79b972dea07e",
+      "deployed_sha256": "34622996ebada89c383bc10481b1b2a44994922f52eeac8e3bc9d695e5c4484c",
       "repo_sha256": "34622996ebada89c383bc10481b1b2a44994922f52eeac8e3bc9d695e5c4484c",
-      "repo_matches_deployed": false,
-      "note": "Same module, different line endings: the deployed NAS copy is CRLF (229 CRLF, 24,369 B) while the repository blob is LF (24,140 B). Behaviour is identical for Python, and .gitattributes now pins LF, so the next -Apply of the deployment adapter converges it. Recorded rather than claimed identical."
+      "repo_matches_deployed": true
     },
     {
       "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/scripts/assets_mirror.py",
       "repo_source": "scripts/assets_mirror.py",
-      "deployed_sha256": "08c8212584b25e8373a3e279cda98f16257f5f6ca3b1e295617e3c507225f685",
-      "repo_sha256": "1e39ebaa1eba89ab8a573265a4cb958fe57661afd8deb1c0dc08552fdaab5bc7",
-      "repo_matches_deployed": false,
-      "note": "The deployed image was built from an older revision of the mirror module (LF, 73,831 B) than the repository copy (LF, 76,456 B). The repository copy was verified compatible with the deployed sync_loop.py by a read-only probe (head enumeration plus a dry-run sync of 1077710 that wrote nothing); converging the NAS onto the repository copy is an explicit -Apply of the deployment adapter, not part of this record."
+      "deployed_sha256": "051fd31fae8e0179b9216cfdc6fe2b9f0e475e6f86c78eb0530772498189eb3d",
+      "repo_sha256": "051fd31fae8e0179b9216cfdc6fe2b9f0e475e6f86c78eb0530772498189eb3d",
+      "repo_matches_deployed": true
     },
     {
       "nas_path": "/vol1/1000/appdata/imas/mltd-asset/asset-server/nginx-vhost.conf",
@@ -76,36 +81,39 @@
       "1077640",
       "1077650",
       "1077700",
-      "1077710"
-    ],
-    "last_sync_completed_at": "2026-10-08T16:37:31Z",
-    "last_sync_head": "32d868c45cf534d2beeaa4db02d7089799b10b85",
-    "versions_tracked_upstream": [
-      "1077100",
-      "1077600",
-      "1077640",
-      "1077650",
-      "1077700",
-      "1077710"
+      "1077710",
+      "1077720",
+      "1077741"
     ],
     "delivery": {
-      "asset_version": "1077710",
-      "source_commit": "2e07139629b2ed8df6d8d537e4ccc6feec514269",
-      "ci_run_id": "37803021789",
-      "sync_started_at": "2026-10-08T16:31:05Z",
-      "sync_completed_at": "2026-10-08T16:34:15Z",
-      "objects_downloaded": 6,
-      "bytes_downloaded": 41415743,
-      "objects_already_present": 11811,
+      "asset_version": "1077741",
+      "generated_commit": "bc3a74719be82947e54e84f65597a6b098bdd277",
+      "entry_count": 11249,
+      "resource_kinds": {
+        "bundle": 11017,
+        "texture": 231,
+        "other": 1
+      },
+      "lyric_bundles": 491,
+      "objects_downloaded": 419,
+      "bytes_downloaded": 115168783,
+      "download_started_at": "2026-10-10T15:43:48Z",
+      "published_at": "2026-10-10T15:46:53Z",
+      "objects_already_present": 12248,
       "verified": true,
+      "verification_checked": 11249,
       "public_checks": [
-        "/generated-assets/1077710/production/2018/Android/4f79de4fee93078d79d498058313fbe61efe7bbd.data -> 200, X-Asset-Source: translated",
-        "/generated-assets/1077710/production/2018/Android/ae6f65178599bdc6b1d203d3fdfd632c09ade759.unity3d -> 200, X-Asset-Source: translated, sha256 == manifest artifact_sha256",
-        "/cn/1077710/... -> 200, X-Asset-Source: translated",
-        "/1077710/... (official route) -> 404, the official archive is untouched"
-      ],
-      "content_proof": "The delivered cd_jp.gtx bundle was decrypted with pipelines/text/mltd_localize_gtx.py and the record for card_list_015siz0683_skillname_015siz equals the machine-translated zh accepted in locales/master/official-1077710-untranslated.jsonl."
+        "/generated-assets/1077741/production/2018/Android/birth_bdl2_001har_005_jp.gtx.unity3d -> 200 (text bundle)",
+        "/generated-assets/1077741/production/2018/Android/scrobj_aftspt.unity3d -> 200 (translated song lyrics)",
+        "/generated-assets/1077741/production/2018/Android/costumesalesinfo0005.unity3d -> 200 (texture)"
+      ]
     },
-    "note": "sync_loop.py enumerates generated/<digits> at the pinned head on every tick. 1077700 and 1077710 were picked up by the tick that started 2026-10-08T16:31:05Z with no operator action; the 6 changed objects per version are the five GTX bundles carrying machine translations plus the rebuilt official index."
-  }
+    "image_probe": {
+      "root": "a throwaway root seeded from the live pool with cp -al before the probe runs",
+      "first_run": "419 objects downloaded in 3m18s, 11,249 entries verified, skipped_existing 10,830",
+      "second_run": "downloaded 0, skipped_existing 11,249, verified in 10.2s -- the probe measures the release, not the link"
+    }
+  },
+  "note": "The two files that used to be recorded as drift are converged: assets_route.py had CRLF line endings on the NAS against an LF repository blob, and scripts/assets_mirror.py was an older revision that fetched one object at a time. Both were replaced by the -Apply this record describes. What the deployment also had to survive is the LAN proxy: it is an Xray container that another job restarts regularly for node selection (47 config reloads on 2026-10-10, and a restart at 15:28:02Z), and a tick that loses one connection used to lose the whole six-hour round. The deployed mirror now retries a transient transport failure and fetches eight objects at a time, which is why the 419-object release above took three minutes instead of never finishing.",
+  "verification": "asset-server/generated-assets/test_closure.py reads this file; test_every_recorded_file_matches_its_repository_copy re-hashes the repository blob at HEAD, test_identical_files_really_are_identical holds the two hashes equal where repo_matches_deployed is true, and test_recorded_drift_is_real_drift requires both hashes plus a reason for any entry that is not."
 }
