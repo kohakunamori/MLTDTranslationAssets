@@ -35,13 +35,10 @@ $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 
 # repo-relative source -> absolute NAS path
 $managed = @(
-    [pscustomobject]@{ Repo = 'asset-server/generated-assets/sync_loop.py';         Remote = "$ProjectDir/sync_loop.py" }
     [pscustomobject]@{ Repo = 'asset-server/generated-assets/Dockerfile';           Remote = "$ProjectDir/Dockerfile" }
     [pscustomobject]@{ Repo = 'asset-server/generated-assets/docker-compose.yml';   Remote = "$ProjectDir/docker-compose.yml" }
-    [pscustomobject]@{ Repo = 'asset-server/assets_route.py';                       Remote = "$ProjectDir/assets_route.py" }
     [pscustomobject]@{ Repo = 'asset-server/serve_release.py';                     Remote = "$ProjectDir/serve_release.py" }
     [pscustomobject]@{ Repo = 'asset-server/sync_release.py';                      Remote = "$ProjectDir/sync_release.py" }
-    [pscustomobject]@{ Repo = 'scripts/assets_mirror.py';                           Remote = "$ProjectDir/scripts/assets_mirror.py" }
     [pscustomobject]@{ Repo = 'asset-server/nginx-vhost.conf';                      Remote = "$VhostDir/nginx-vhost.conf" }
 )
 
@@ -124,7 +121,10 @@ if ($Apply -and $drift.Count -gt 0) {
     $probe = Invoke-Nas @"
 docker run --rm -v ${ProbeRoot}:/probe -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e MLTD_MIRROR_OBJECT_WORKERS=8 -e HTTP_PROXY=http://192.168.2.31:7890 -e HTTPS_PROXY=http://192.168.2.31:7890 -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_release.py --root /probe --once | head -c 1200
 "@ -AllowFailure
-    Invoke-Nas "rm -rf '$ProbeRoot'" | Out-Null
+    # The distributor no longer runs these; leaving them behind would leave a second
+# program in the project directory that can be started by hand against stale data.
+Invoke-Nas "rm -f '$ProjectDir/assets_route.py' '$ProjectDir/sync_loop.py' '$ProjectDir/scripts/assets_mirror.py'" | Out-Null
+Invoke-Nas "rm -rf '$ProbeRoot'" | Out-Null
     $summary.ImageProbe = "$probe".Trim()
 
     if ($drift.Repo -contains 'asset-server/nginx-vhost.conf') {

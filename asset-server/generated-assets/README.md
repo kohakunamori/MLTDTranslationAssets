@@ -11,8 +11,8 @@
 
 | 服务 | 容器 | 作用 |
 | --- | --- | --- |
-| `generated-assets` | `mltd-generated-assets` | 只读路由：`assets_route.py serve`，只监听 `127.0.0.1:18765`；按 manifest 的 `runtime_path`/`logical_path` 读 CAS 对象，逐请求复验字节；未命中的对象只读回源同版本官方 CDN（缓存写在 CAS 之外） |
-| `generated-assets-sync` | `mltd-generated-assets-sync` | 常驻同步：`sync_loop.py` 每 6 小时按当前 `main` HEAD 枚举 `generated/<数字版本>/`，校验 manifest 与 checksums 后写入 `published/<ver>/` 与 `objects/sha256/` |
+| `generated-assets` | `mltd-generated-assets` | 只读路由：`serve_release.py serve`（单版本：`manifest.json` + `checksums.txt` + `objects/sha256/`），只监听 `127.0.0.1:18765`；按 manifest 的 `runtime_path`/`logical_path` 读 CAS 对象，逐请求复验字节；未命中的对象只读回源同版本官方 CDN（缓存写在 CAS 之外） |
+| `generated-assets-sync` | `mltd-generated-assets-sync` | 常驻同步：`sync_release.py` 每 6 小时取仓库里最新的 `generated/<数字版本>/`，逐个校验对象指纹后就地替换 `manifest.json`/`checksums.txt`/`version.json`，并清掉新版本不再引用的对象 |
 
 公开路由（复用共享 `on-demand-nginx:18443`，不新开端口）：
 
@@ -34,11 +34,11 @@ head 上重新枚举 `generated/` 下的纯数字目录，因此一笔新版本�
 
 | 本仓文件 | NAS 路径 | 说明 |
 | --- | --- | --- |
-| `sync_loop.py` | `<project_dir>/sync_loop.py` | 同步循环；只调用 `scripts/assets_mirror.py` 的实现，不复制第二实现 |
+| `sync_release.py` | `<project_dir>/sync_release.py` | 同步循环；自包含（只用标准库），发布文件走不限额的 raw 地址 |
 | `Dockerfile` | `<project_dir>/Dockerfile` | 镜像配方；构建上下文就是 NAS 上的 `<project_dir>` |
 | `docker-compose.yml` | `<project_dir>/docker-compose.yml` | 两个服务的卷/环境/命令 |
-| `../assets_route.py` | `<project_dir>/assets_route.py` | 只读路由（本仓 `asset-server/` 同一文件） |
-| `../../scripts/assets_mirror.py` | `<project_dir>/scripts/assets_mirror.py` | mirror/校验实现（本仓唯一来源） |
+| `../serve_release.py` | `<project_dir>/serve_release.py` | 只读路由（本仓 `asset-server/` 同一文件） |
+
 | `../nginx-vhost.conf` | `<vhost_dir>/nginx-vhost.conf` | 共享 nginx 的项目 vhost（单文件 bind，需保 inode） |
 
 `deployed.json` 逐文件记录**部署时**的 NAS SHA-256 与本仓 SHA-256，`test_closure.py`

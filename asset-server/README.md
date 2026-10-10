@@ -25,6 +25,7 @@
 | `switch-version.sh` | 兼容 wrapper：`activate --version <v>` |
 | `requirements.txt` | `msgpack`、`requests` |
 | `generated-assets/` | NAS 已部署的 generated 分发闭包：`sync_loop.py`（自动发现版本）、`Dockerfile`、`docker-compose.yml`、`deployed.json`（部署字节哈希记录）、`test_closure.py`；详见该目录 README |
+| `cloudflare/` | 云端分发候选：Cloudflare Worker 网关（只保留最新版，命中汉化包的直取 GitHub 仓库、未命中的转发官方 CDN）、`build_index.py`（生成"路径→对象"对照表）、`check_gateway.py`（线上逐字节验收）；本目录不持有发布产物副本，也不写 `generated/` |
 | `nginx-vhost.conf` | 共享 nginx 的项目 vhost 副本（`/assets/`、`/cn/`、`/generated-assets/`） |
 | `Deploy-GeneratedAssets.ps1` | 项目侧部署/核对入口（默认只计划；`-Apply` 才收敛） |
 

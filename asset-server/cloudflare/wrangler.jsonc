@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mltd-assets",
+  "main": "src/index.js",
+  "compatibility_date": "2026-01-01",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  // No storage binding: the gateway carries src/index.json and reads the
+  // translated bytes straight out of the GitHub repository at a pinned commit
+  // (see README.md).  Everything about *which* release that is lives in
+  // src/index.json, which build_index.py generates.
+  //
+  // The custom domain is the address clients are meant to use: *.workers.dev is
+  // DNS-poisoned in mainland China, so the bare workers.dev hostname is only
+  // reachable from networks that can resolve it.
+  "routes": [
+    { "pattern": "mltd-asset-cf.nyaneko.cn", "custom_domain": true }
+  ],
+  "vars": {
+    "OFFICIAL_BASE": "https://td-assets.bn765.com"
+  }
+}

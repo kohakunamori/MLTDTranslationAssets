@@ -131,10 +131,10 @@ publish` 把 `pending + llm_translated` 的行原地晋级为 `accepted`（出�
 
 `asset-server/` 是本仓**自足**的最小运行闭包（本仓内唯一 writer 的消费端）：
 
-- `assets_mirror.py`（本仓 `scripts/`）：把 `generated/` 的已发布版本显式同步到独立
+- `serve_release.py` / `sync_release.py`（本仓 `asset-server/`）：NAS 分发侧的读取与同步，
   mirror root（`objects/sha256/<digest>` + `published/<ver>/…`）；只同步，不激活、不清理
   （`activate`/`prune` 是单独的显式动作）。
-- `assets_route.py`：只读 HTTP 分发（loopback），按 manifest 的 `runtime_path` /
+- `sync_release.py` 只保留最新一版；`serve_release.py` 按 manifest 的 `runtime_path` /
   `logical_path` 读取并逐请求复验对象字节。
 - `generated-assets/`：NAS 上**已部署**的 generated 分发服务闭包
   （`mltd-generated-assets` 只读路由 + `mltd-generated-assets-sync` 常驻同步）。

@@ -6,7 +6,7 @@
 （mltd-current）名字；每个 COPY 进镜像的模块所 import 的本仓模块也在 COPY 清单里；
 把这份上下文复制到临时目录后（不挂任何兄弟仓库，剔除 PYTHONPATH），闭包模块可导入、
 五个镜像 CLI 入口从复制后的 app 执行 ``--help`` 并退出 0，且 mirror 的顶层名 / 包名两条兼容导入分支都解析到同一份
-producer 字节。未入镜像的 assets_route.py 另作宿主专用 CLI 检查。
+producer 字节。入镜像的 serve_release.py 同时作宿主专用 CLI 检查。
 
 它**不**运行 docker（不 pull、不 build、不起服务、不联网），也**不**验证生产部署；
 镜像闭包是候选状态，构建与上线另行授权。
@@ -53,7 +53,7 @@ CLI_HELP_ENTRIES = (
 )
 
 # 未列入 Dockerfile COPY 或 Compose 的入口，仅验证宿主 --help。
-HOST_ONLY_CLI_HELP_ENTRIES = ("asset-server/assets_route.py",)
+HOST_ONLY_CLI_HELP_ENTRIES = ("asset-server/serve_release.py",)
 
 #: 本仓自足：闭包源码中不得出现主仓检出目录名（跨仓路径/回退的痕迹）。
 FOREIGN_REPO_MARKERS = ("mltd-current",)
@@ -259,7 +259,7 @@ class DockerContextClosureTest(unittest.TestCase):
 
         # 两条兼容导入分支（顶层名 / 包名）都必须解析到**同一份 producer 字节**：
         # 顶层名分支是镜像内 `python scripts/assets_mirror.py` 的真实形态；
-        # 包名分支是 asset-server/assets_route.py 等以包方式引用的形态。
+        # 包名分支是 asset-server/serve_release.py 等以包方式引用的形态。
         probe = (
             "import hashlib, importlib, inspect, sys\n"
             "m = importlib.import_module('assets_mirror')\n"

@@ -30,6 +30,11 @@ import shutil
 import tempfile
 import threading
 import time
+
+try:  # the lock is a Linux deployment concern; the test suite also runs on Windows
+    import fcntl
+except ImportError:  # pragma: no cover - exercised on Windows only
+    fcntl = None  # type: ignore[assignment]
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -368,6 +373,26 @@ def sync_once(root: Path, *, repository: str = DEFAULT_REPOSITORY, branch: str =
     }
 
 
+def single_writer_lock(root: Path):
+    """Hold a non-blocking lock on the mirror, or report who already has it.
+
+    Two loops on one mirror is not a data race that ends well: the slower one can
+    finish a tick holding an older release and swap it back over the newer one.  The
+    deployment runs one loop, but a person can always start a second by hand, and the
+    probe in the deployment script does exactly that against its own root.
+    """
+    if fcntl is None:
+        return None
+    root.mkdir(parents=True, exist_ok=True)
+    handle = open(root / ".generated-assets-sync.lock", "a+")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+    return handle
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(os.environ.get("MLTD_MIRROR_ROOT", "/data")))
@@ -380,6 +405,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.workers < 1:
         parser.error("--workers must be at least 1")
 
+    lock = single_writer_lock(args.root)
+    if lock is False:
+        print(json.dumps({"sync_status": "skipped",
+                          "error": "another generated-assets sync is already running against this mirror"},
+                         ensure_ascii=False), flush=True)
+        return 0
+
     def tick() -> None:
         try:
             print(json.dumps(sync_once(args.root, repository=args.repository, branch=args.branch,
@@ -388,14 +420,18 @@ def main(argv: list[str] | None = None) -> int:
             # A failed tick is not a reason to stop: the previous release keeps serving.
             print(json.dumps({"sync_status": "refused", "error": str(exc)}, ensure_ascii=False), flush=True)
 
-    if args.once:
-        tick()
-        return 0
-    if args.interval <= 0:
-        parser.error("--interval must be positive")
-    while True:
-        tick()
-        time.sleep(args.interval)
+    try:
+        if args.once:
+            tick()
+            return 0
+        if args.interval <= 0:
+            parser.error("--interval must be positive")
+        while True:
+            tick()
+            time.sleep(args.interval)
+    finally:
+        if lock is not None:
+            lock.close()
 
 
 if __name__ == "__main__":

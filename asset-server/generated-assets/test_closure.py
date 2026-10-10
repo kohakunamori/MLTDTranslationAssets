@@ -102,41 +102,27 @@ class DeploymentRecordTests(unittest.TestCase):
 
 
 class SyncLoopContractTests(unittest.TestCase):
+    """The loop keeps one release in step, and never loses the one it has."""
+
     @classmethod
     def setUpClass(cls) -> None:
-        cls.text = (CLOSURE / "sync_loop.py").read_text(encoding="utf-8")
+        cls.text = (CLOSURE.parent / "sync_release.py").read_text(encoding="utf-8")
 
-    def test_no_current_pointer_is_ever_used(self):
-        self.assertNotIn("current.json", self.text)
-        self.assertIn('"current_pointer_used": False', self.text)
-        self.assertIn('"current_pointer_written": False', self.text)
+    def test_the_newest_release_is_discovered_rather_than_listed(self):
+        self.assertIn("def newest_version(", self.text)
+        # A version list is how the old deployment ended up holding eight of them.
+        self.assertNotIn("ASSETS_MIRROR_VERSIONS", self.text)
 
-    def test_versions_are_discovered_from_the_generated_directory(self):
-        self.assertIn("/contents/generated?ref=", self.text)
-        self.assertIn("isdigit()", self.text)
-        self.assertIn('item.get("type") == "dir"', self.text)
-
-    def test_only_successful_builds_are_mirrored(self):
-        guard = self.text.index('manifest.get("build_status") != "success"')
-        sync = self.text.index("mirror.sync(asset_version, commit=head, dry_run=False)")
-        self.assertLess(guard, sync, "a refused build_status must be checked before the sync")
-
-    def test_single_writer_lock_is_non_blocking(self):
-        self.assertIn("fcntl.flock", self.text)
-        self.assertIn("LOCK_EX | fcntl.LOCK_NB", self.text)
-        self.assertIn("another generated-assets sync is already running", self.text)
-
-    def test_the_loop_keeps_running_after_a_failed_tick(self):
-        self.assertIn("keep the distributor alive; next poll retries", self.text)
+    def test_a_failed_tick_leaves_the_previous_release_serving(self):
+        self.assertIn("kept the previous release", self.text)
+        self.assertIn("A failed tick is not a reason to stop", self.text)
         self.assertIn("time.sleep(args.interval)", self.text)
 
-    def test_it_consumes_the_repository_mirror_module(self):
-        self.assertIn("from assets_mirror import", self.text)
-        for name in ("AssetVersionMirror", "GitHubAssetsSource", "ObjectPool",
-                     "AssetsMirrorError", "ManifestValidationError"):
-            self.assertIn(name, self.text)
-        # Two implementations would be a divergence risk.
-        self.assertNotIn("def sync(", self.text)
+    def test_only_one_writer_may_hold_the_mirror(self):
+        self.assertIn("fcntl.LOCK_EX | fcntl.LOCK_NB", self.text)
+        self.assertIn("another generated-assets sync is already running", self.text)
+        # Without the lock a slower tick can swap an older release back over a newer one.
+        self.assertIn("single_writer_lock", self.text)
 
 
 class ImageAndComposeContractTests(unittest.TestCase):
@@ -146,8 +132,12 @@ class ImageAndComposeContractTests(unittest.TestCase):
         cls.compose = (CLOSURE / "docker-compose.yml").read_text(encoding="utf-8")
 
     def test_image_is_built_from_its_own_uploaded_context(self):
-        for copied in ("serve_release.py", "sync_release.py", "assets_route.py", "scripts", "sync_loop.py"):
+        for copied in ("serve_release.py", "sync_release.py"):
             self.assertIn(f"COPY {copied}", self.dockerfile)
+        # The programs that carried a version list are gone; an image that still
+        # copies them is an image that can still be started against eight versions.
+        for gone in ("assets_route.py", "sync_loop.py", "scripts"):
+            self.assertNotIn(f"COPY {gone}", self.dockerfile)
 
     def test_the_deployment_runs_the_single_release_programs(self):
         # The reader holds one release; the loop keeps that one release in step.
