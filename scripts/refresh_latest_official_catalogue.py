@@ -26,6 +26,7 @@ memo untouched and the next run re-verifies what it lost.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import subprocess
 import sys
@@ -249,9 +250,24 @@ def main() -> int:
     additions: list[dict] = []
     if to_download:
         archive = work / "archive"
-        for row in to_download.values():
-            destination = archive / "jp-android" / row["remote"]
-            download(f"{version['asset_root']}/{row['remote']}", destination, row["declared_size"])
+        # These objects are tiny (~6 KB) but there are thousands of them, so the
+        # cost is one connection setup per file, not bandwidth: the 2026-10-10
+        # run spent ~51 of its ~56 minutes here fetching 11,816 objects
+        # sequentially.  Pool the requests exactly like the generated-release
+        # builder does; the size check inside ``download`` stays the gate, and
+        # one failure still aborts the run.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+            futures = [
+                pool.submit(
+                    download,
+                    f"{version['asset_root']}/{row['remote']}",
+                    archive / "jp-android" / row["remote"],
+                    row["declared_size"],
+                )
+                for row in to_download.values()
+            ]
+            for future in futures:
+                future.result()
         snapshot = work / "snapshot.json"
         snapshot.write_text(json.dumps({
             "complete": True, "scope": "jp-android", "asset_index": str(index_path),
