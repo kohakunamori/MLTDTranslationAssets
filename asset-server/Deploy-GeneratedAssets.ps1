@@ -39,6 +39,8 @@ $managed = @(
     [pscustomobject]@{ Repo = 'asset-server/generated-assets/Dockerfile';           Remote = "$ProjectDir/Dockerfile" }
     [pscustomobject]@{ Repo = 'asset-server/generated-assets/docker-compose.yml';   Remote = "$ProjectDir/docker-compose.yml" }
     [pscustomobject]@{ Repo = 'asset-server/assets_route.py';                       Remote = "$ProjectDir/assets_route.py" }
+    [pscustomobject]@{ Repo = 'asset-server/serve_release.py';                     Remote = "$ProjectDir/serve_release.py" }
+    [pscustomobject]@{ Repo = 'asset-server/sync_release.py';                      Remote = "$ProjectDir/sync_release.py" }
     [pscustomobject]@{ Repo = 'scripts/assets_mirror.py';                           Remote = "$ProjectDir/scripts/assets_mirror.py" }
     [pscustomobject]@{ Repo = 'asset-server/nginx-vhost.conf';                      Remote = "$VhostDir/nginx-vhost.conf" }
 )
@@ -120,7 +122,7 @@ if ($Apply -and $drift.Count -gt 0) {
     # volume, so the fallback is the normal case rather than an error case.
     Invoke-Nas "rm -rf '$ProbeRoot' && mkdir -p '$ProbeRoot/objects' && { cp -al /vol2/1000/imas-asset-archive/mltd/generated/objects/sha256 '$ProbeRoot/objects/' 2>/dev/null || cp -a /vol2/1000/imas-asset-archive/mltd/generated/objects/sha256 '$ProbeRoot/objects/'; } && echo seeded" | Out-Null
     $probe = Invoke-Nas @"
-docker run --rm -v ${ProbeRoot}:/probe -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e MLTD_MIRROR_OBJECT_WORKERS=8 -e HTTP_PROXY=http://192.168.2.31:7890 -e HTTPS_PROXY=http://192.168.2.31:7890 -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_loop.py --root /probe --once | head -c 1200
+docker run --rm -v ${ProbeRoot}:/probe -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e MLTD_MIRROR_OBJECT_WORKERS=8 -e HTTP_PROXY=http://192.168.2.31:7890 -e HTTPS_PROXY=http://192.168.2.31:7890 -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_release.py --root /probe --once | head -c 1200
 "@ -AllowFailure
     Invoke-Nas "rm -rf '$ProbeRoot'" | Out-Null
     $summary.ImageProbe = "$probe".Trim()

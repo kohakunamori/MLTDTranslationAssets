@@ -12,7 +12,7 @@ services:
       - /vol2/1000/imas-asset-archive/mltd/generated:/data:ro
       - /vol2/1000/imas-asset-archive/mltd:/official:ro
       - /vol2/1000/imas-asset-archive/mltd/generated-official-cache:/official-cache
-    command: ["python", "/app/assets_route.py", "serve", "--root", "/data", "--bind", "127.0.0.1", "--port", "18765", "--official-root", "/official", "--official-base-url", "https://td-assets.bn765.com", "--official-cache-root", "/official-cache", "--legacy-overlay-root", "/official/cn-version"]
+    command: ["python", "/app/serve_release.py", "serve", "--root", "/data", "--bind", "127.0.0.1", "--port", "18765", "--official-root", "/official", "--official-base-url", "https://td-assets.bn765.com", "--official-cache-root", "/official-cache", "--legacy-overlay-root", "/official/cn-version"]
   generated-assets-sync:
     build: .
     image: local/mltd-generated-assets:20260930
@@ -27,7 +27,6 @@ services:
       MLTD_ASSETS_REPOSITORY: kohakunamori/MLTDTranslationAssets
       MLTD_ASSETS_BRANCH: main
       MLTD_SYNC_INTERVAL: "21600"
-      MLTD_MIN_ASSET_VERSION: "100"
       # One object is one HTTPS request, and a release that adds lyrics and images
       # adds hundreds of them.  Measured on this NAS through the LAN proxy below:
       # 1.65 s per object one at a time, 0.42 s per object with eight in flight.
@@ -43,4 +42,4 @@ services:
       HTTP_PROXY: http://192.168.2.31:7890
       HTTPS_PROXY: http://192.168.2.31:7890
       NO_PROXY: 127.0.0.1,localhost
-    command: ["python", "/app/sync_loop.py", "--root", "/data"]
+    command: ["python", "/app/sync_release.py", "--root", "/data"]

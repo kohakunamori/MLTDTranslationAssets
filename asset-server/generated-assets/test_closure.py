@@ -146,8 +146,13 @@ class ImageAndComposeContractTests(unittest.TestCase):
         cls.compose = (CLOSURE / "docker-compose.yml").read_text(encoding="utf-8")
 
     def test_image_is_built_from_its_own_uploaded_context(self):
-        for copied in ("assets_route.py", "scripts", "sync_loop.py"):
+        for copied in ("serve_release.py", "sync_release.py", "assets_route.py", "scripts", "sync_loop.py"):
             self.assertIn(f"COPY {copied}", self.dockerfile)
+
+    def test_the_deployment_runs_the_single_release_programs(self):
+        # The reader holds one release; the loop keeps that one release in step.
+        self.assertIn('"python", "/app/serve_release.py", "serve"', self.compose)
+        self.assertIn('"python", "/app/sync_release.py", "--root", "/data"', self.compose)
 
     def test_route_service_binds_loopback_only(self):
         self.assertIn('"--bind", "127.0.0.1", "--port", "18765"', self.compose)
