@@ -596,6 +596,21 @@ def main() -> int:
     # client never received: the library carried 11,065 accepted Chinese lines
     # that no published bundle contained.  Patch the lyric bundles into the same
     # overlay and let the manifest below publish them like text bundles.
+    #
+    # Reading the library costs a few hundred small file reads and downloading the
+    # official lyric bundles costs minutes, so the library is read first and the
+    # songs whose own lyric file did not move are neither fetched nor rewritten:
+    # their entries come from the published release, exactly like a reused text
+    # bundle.  A song that is left out is still counted by the summary, so the
+    # report cannot look like the whole library was packaged.
+    lyric_pending, _lyric_library = build_lyric_overlay.pending_songs(
+        index=index, lyrics_root=ROOT / "lyrics")
+    lyric_plan = release_reuse.plan_lyric_reuse(
+        root=ROOT, manifest=previous, asset_version=version["asset_version"],
+        bundles={bundle: row for bundle, row, _translations in lyric_pending},
+        index_sha256=index_sha256, object_file=store.object_file)
+    print(json.dumps({"lyric_reuse_plan": lyric_plan.to_dict()}, ensure_ascii=False),
+          file=sys.stderr)
     lyric_summary = build_lyric_overlay.run(
         index=index,
         archive_root=work / "archive",
@@ -606,16 +621,19 @@ def main() -> int:
         downloader=download,
         cache_root=official_cache,
         progress_every=100,
+        targets=lyric_plan.rebuild,
     )
     entries_path = work / "entries.json"
     entries = build_entries(overlay, overlay / "localization-manifest.json",
                             version["asset_version"], source_client,
                             index_name=version["index_name"], index_path=index_path,
-                            allow_empty=bool(plan.reusable))
+                            allow_empty=bool(plan.reusable or lyric_plan.reusable))
     # The reused bundles were never handed to the overlay, so their entries come
     # from the release already in the store: same bytes, same digest, and the
-    # store re-hashes the object before it accepts the entry.
+    # store re-hashes the object before it accepts the entry.  The songs the lyric
+    # pass was told to leave alone are carried over by the same rule.
     entries.extend(plan.reusable.values())
+    entries.extend(lyric_plan.reusable.values())
     entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     image_bundles = 0
     if args.image_overlay_manifest is not None:
@@ -707,7 +725,10 @@ def main() -> int:
         "reuse": {**plan.to_dict(), "objects_written": result.objects_written,
                   "objects_deduped": result.objects_deduped,
                   "text_resolution": resolution.to_dict() if resolution else None,
-                  "text_scope": text_scope},
+                  "text_scope": text_scope,
+                  "lyric_scope": "regenerated" if lyric_plan.reusable else "release",
+                  "lyric_reused_bundles": len(lyric_plan.reusable),
+                  "lyric_rebuilt_bundles": len(lyric_plan.rebuild)},
         "lyrics": {key: value for key, value in lyric_summary.items() if key != "patched_bundles"},
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))

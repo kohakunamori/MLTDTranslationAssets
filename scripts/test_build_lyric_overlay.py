@@ -133,6 +133,45 @@ class RunTests(unittest.TestCase):
             self.assertEqual(self.downloads[0][2], 100)          # declared size is verified
             self.assertEqual(self.downloads[0][3], "ha")         # content fingerprint drives the cache
 
+    def test_targets_patch_only_the_named_song_and_download_only_that_song(self):
+        """A song the caller carried over is neither fetched nor rewritten.
+
+        This is what makes a lyric that changed in one song cost one song instead of
+        the whole 491-song library, and the download list is the proof that the
+        saving is real rather than a bookkeeping claim.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            lyrics, archive, over = self._workspace(tmp)
+            summary = self._run(lyrics, archive, over, targets={"scrobj_b.unity3d"})
+            self.assertEqual(summary["songs_with_translation"], 2)
+            self.assertEqual(summary["songs_reused"], 1)
+            self.assertEqual(summary["bundles_patched"], 1)
+            self.assertEqual(summary["slots_patched"], 1)
+            self.assertEqual([url for url, *_ in self.downloads],
+                             ["https://cdn/1077741/production/2018/Android/bbb.unity3d"])
+            document = json.loads((over / "localization-manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual([r["logical"] for r in document["bundles"]],
+                             ["scrobj_b.unity3d"])
+
+    def test_an_empty_target_set_downloads_nothing_and_writes_no_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lyrics, archive, over = self._workspace(tmp)
+            summary = self._run(lyrics, archive, over, targets=set())
+            self.assertEqual(self.downloads, [])
+            self.assertEqual(summary["bundles_patched"], 0)
+            self.assertEqual(summary["songs_reused"], 2)
+            document = json.loads((over / "localization-manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(document["bundles"], [])
+
+    def test_pending_songs_is_the_library_read_without_a_download(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lyrics, _archive, _over = self._workspace(tmp)
+            pending, counts = overlay.pending_songs(index=self.index, lyrics_root=lyrics)
+            self.assertEqual([bundle for bundle, _row, _t in pending],
+                             ["scrobj_a.unity3d", "scrobj_b.unity3d"])
+            self.assertEqual(counts["songs_with_translation"], 2)
+            self.assertEqual(counts["declared_bytes"], 300)
+
     def test_manifest_row_carries_what_the_release_builder_reads(self):
         with tempfile.TemporaryDirectory() as tmp:
             lyrics, archive, over = self._workspace(tmp)

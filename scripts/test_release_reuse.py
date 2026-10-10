@@ -49,7 +49,7 @@ def reuse_record(*, exact: int = 10, memory: int = 0, stale_exact: int = 0,
         scope="release")[reuse.REUSE_KEY]
 
 
-class ReusePlanTests(unittest.TestCase):
+class ReuseFixture(unittest.TestCase):
     """A git checkout whose release inputs can be moved one at a time."""
 
     def setUp(self) -> None:
@@ -123,6 +123,8 @@ class ReusePlanTests(unittest.TestCase):
 
     # -- the happy path ----------------------------------------------------- #
 
+
+class ReusePlanTests(ReuseFixture):
     def test_unchanged_inputs_reuse_every_bundle(self):
         plan = self._plan()
         self.assertEqual(sorted(plan.reusable), ["a.gtx.unity3d", "b.gtx.unity3d"])
@@ -252,6 +254,102 @@ class ReusePlanTests(unittest.TestCase):
         manifest = self._manifest()
         manifest["asset_version"] = "1077600"
         self.assertEqual(self._plan(manifest).reusable, {})
+
+
+class LyricReusePlanTests(ReuseFixture):
+    """The same decision for the second surface: songs, not text bundles.
+
+    A song's only input of its own is ``lyrics/songs/<bundle>.jsonl``, so a build
+    that changed one song must repackage that song and no other -- and a build that
+    changed none must repackage nothing, which is the four minutes every release
+    used to spend patching 491 unchanged bundles.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        for name, body in (("scrobj_alpha.unity3d", '{"slot":"1"}\n'),
+                           ("scrobj_beta.unity3d", '{"slot":"2"}\n')):
+            target = self.root / f"lyrics/songs/{name}.jsonl"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(body, encoding="utf-8")
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", "lyric library")
+        self.built_from = self._git("rev-parse", "HEAD").stdout.strip()
+        self.bundles = {"scrobj_alpha.unity3d": index_row("aaa.unity3d"),
+                        "scrobj_beta.unity3d": index_row("bbb.unity3d")}
+
+    def _lyric_manifest(self, entries=None, *, block=None, commit: str | None = None) -> dict:
+        document = self._manifest(entries=[
+            previous_entry("scrobj_alpha.unity3d", "aaa.unity3d", digest="a" * 64),
+            previous_entry("scrobj_beta.unity3d", "bbb.unity3d", digest="e" * 64),
+        ] if entries is None else entries, block=block, commit=commit)
+        return document
+
+    def _lyric_plan(self, manifest=ReusePlanTests._DEFAULT, *, bundles=None,
+                    index_sha256="d" * 64):
+        return reuse.plan_lyric_reuse(
+            root=self.root,
+            manifest=self._lyric_manifest() if manifest is self._DEFAULT else manifest,
+            asset_version="1077640",
+            bundles=self.bundles if bundles is None else bundles,
+            index_sha256=index_sha256,
+            object_file=self._object_file,
+        )
+
+    def test_an_unchanged_library_reuses_every_song(self) -> None:
+        plan = self._lyric_plan()
+        self.assertEqual(sorted(plan.reusable), ["scrobj_alpha.unity3d", "scrobj_beta.unity3d"])
+        self.assertEqual(plan.rebuild, {})
+        self.assertEqual(plan.reason, "incremental")
+
+    def test_only_the_song_whose_own_lyrics_moved_is_rebuilt(self) -> None:
+        (self.root / "lyrics/songs/scrobj_beta.unity3d.jsonl").write_text(
+            '{"slot":"2b"}\n', encoding="utf-8")
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", "one song")
+        plan = self._lyric_plan()
+        self.assertEqual(sorted(plan.reusable), ["scrobj_alpha.unity3d"])
+        self.assertEqual(sorted(plan.rebuild), ["scrobj_beta.unity3d"])
+        self.assertEqual(plan.declined, {"lyric source changed": 1})
+
+    def test_a_new_song_is_patched_rather_than_carried_over(self) -> None:
+        plan = self._lyric_plan(bundles={**self.bundles, "scrobj_gamma.unity3d": index_row("ccc.unity3d")})
+        self.assertIn("scrobj_gamma.unity3d", plan.rebuild)
+        self.assertEqual(plan.declined.get("not in the published release"), 1)
+
+    def test_a_changed_official_catalogue_refuses_the_whole_surface(self) -> None:
+        plan = self._lyric_plan(index_sha256="f" * 64)
+        self.assertEqual(plan.reusable, {})
+        self.assertEqual(len(plan.rebuild), 2)
+        self.assertIn("official catalogue changed", plan.reason)
+
+    def test_a_release_without_the_record_refuses_the_whole_surface(self) -> None:
+        plan = self._lyric_plan(self._lyric_manifest(block={}))
+        self.assertEqual(plan.reusable, {})
+        self.assertEqual(len(plan.rebuild), 2)
+
+    def test_the_object_leaving_the_store_refuses_that_song(self) -> None:
+        self.objects.pop("a" * 64)
+        plan = self._lyric_plan()
+        self.assertEqual(sorted(plan.reusable), ["scrobj_beta.unity3d"])
+        self.assertEqual(plan.declined, {"the published object is no longer in the store": 1})
+
+    def test_a_changed_writer_refuses_the_whole_surface(self) -> None:
+        (self.root / "scripts/build_lyric_overlay.py").write_text("# changed\n", encoding="utf-8")
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", "writer")
+        plan = self._lyric_plan()
+        self.assertEqual(plan.reusable, {})
+        self.assertIn("release inputs outside locales/ changed", plan.reason)
+
+    def test_sources_are_the_songs_own_file(self) -> None:
+        sources = reuse.lyric_sources(self.root / "lyrics")
+        self.assertEqual(sources["scrobj_alpha.unity3d"],
+                         {"lyrics/songs/scrobj_alpha.unity3d.jsonl"})
+        self.assertEqual(len(sources), 2)
+
+    def test_a_missing_library_is_not_an_error(self) -> None:
+        self.assertEqual(reuse.lyric_sources(self.root / "nowhere"), {})
 
 
 class ResolutionTests(unittest.TestCase):

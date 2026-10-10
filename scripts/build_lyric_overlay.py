@@ -29,6 +29,7 @@ import argparse
 import concurrent.futures
 import json
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,44 +70,24 @@ def _resolve_catalogue_entry(index: dict[str, dict], bundle: str) -> dict | None
     return None
 
 
-def run(
-    *,
-    index: dict[str, dict],
-    archive_root: Path,
-    overlay_root: Path,
-    lyrics_root: Path,
-    asset_version: str,
-    upstream_root: str,
-    downloader,
-    cache_root: Path | None = None,
-    scope: str = SCOPE,
-    max_bundles: int = DEFAULT_MAX_BUNDLES,
-    max_bytes: int = DEFAULT_MAX_BYTES,
-    progress_every: int = 0,
-) -> dict:
-    """Patch every translatable song into ``overlay_root``; append its manifest rows.
+def pending_songs(*, index: dict[str, dict], lyrics_root: Path,
+                  max_bundles: int = DEFAULT_MAX_BUNDLES,
+                  max_bytes: int = DEFAULT_MAX_BYTES
+                  ) -> tuple[list[tuple[str, dict, SlotTranslations]], dict]:
+    """Every song the library can patch, with the catalogue row for each.
 
-    ``downloader`` is the release builder's own ``download`` function, so lyric
-    objects are fetched and cached by exactly the same rules (declared size is
-    verified, the content fingerprint drives cross-version reuse).
+    Reading the library is cheap (a few hundred small files) and downloading the
+    official bundles is not, so this is the step the caller can afford to run
+    before deciding what actually needs rewriting -- see ``run``'s ``targets``.
     """
     lyrics_root = Path(lyrics_root)
-    overlay_root = Path(overlay_root)
-    archive_root = Path(archive_root)
     summary = {
         "songs_with_translation": 0,
-        "bundles_patched": 0,
-        "slots_patched": 0,
         "songs_without_translation": 0,
         "songs_absent_from_catalogue": [],
-        "songs_without_matching_lines": [],
-        "accepted_rows_not_applied": 0,
         "declared_bytes": 0,
-        "written_bytes": 0,
     }
-    prepared: list[dict] = []
     pending: list[tuple[str, dict, SlotTranslations]] = []
-
     for bundle in song_bundles(lyrics_root):
         translations = collect_translations(lyrics_root, bundle)
         if not translations:
@@ -130,6 +111,54 @@ def run(
             f"refusing to package {summary['declared_bytes']} bytes of lyrics "
             f"(cap {max_bytes}); raise --max-bytes deliberately"
         )
+    return pending, summary
+
+
+def run(
+    *,
+    index: dict[str, dict],
+    archive_root: Path,
+    overlay_root: Path,
+    lyrics_root: Path,
+    asset_version: str,
+    upstream_root: str,
+    downloader,
+    cache_root: Path | None = None,
+    scope: str = SCOPE,
+    max_bundles: int = DEFAULT_MAX_BUNDLES,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    progress_every: int = 0,
+    targets: Iterable[str] | None = None,
+) -> dict:
+    """Patch every translatable song into ``overlay_root``; append its manifest rows.
+
+    ``downloader`` is the release builder's own ``download`` function, so lyric
+    objects are fetched and cached by exactly the same rules (declared size is
+    verified, the content fingerprint drives cross-version reuse).
+
+    ``targets`` narrows that to the songs whose own lyrics changed; anything left
+    out is neither downloaded nor rewritten, and the caller is the one that knows
+    its bytes are still the ones the previous release published.  ``None`` means
+    every song, which is what a full build passes.
+    """
+    lyrics_root = Path(lyrics_root)
+    overlay_root = Path(overlay_root)
+    archive_root = Path(archive_root)
+    pending, summary = pending_songs(index=index, lyrics_root=lyrics_root,
+                                     max_bundles=max_bundles, max_bytes=max_bytes)
+    summary.update({
+        "bundles_patched": 0,
+        "slots_patched": 0,
+        "songs_without_matching_lines": [],
+        "accepted_rows_not_applied": 0,
+        "written_bytes": 0,
+    })
+    if targets is not None:
+        wanted = {str(name) for name in targets}
+        selected = [item for item in pending if item[0] in wanted]
+        summary["songs_reused"] = len(pending) - len(selected)
+        pending = selected
+    prepared: list[dict] = []
 
     # Fetch in parallel: these objects are small (~100 KB), so the cost is one
     # connection per file and the release builder already fetches its text

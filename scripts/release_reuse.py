@@ -68,6 +68,10 @@ GLOBAL_INPUT_TREES = ("manifests", "pipelines", "schema", "images", "scripts")
 #: two builds and must never be read as an input change.  Deliberately identical
 #: to ``should_build_release.DERIVED_OUTPUTS``: two gates that disagree about
 #: what counts as an input would make one of them wrong.
+#: The lyric library: ``lyrics/songs/<bundle>.jsonl`` is the only input a lyric
+#: bundle has of its own, the way a locale file is for a text bundle.
+LYRIC_TREE = "lyrics"
+
 DERIVED_OUTPUTS = ("manifests/portal-resource-manifest.json",)
 
 HEX64_RE = re.compile(r"[0-9a-f]{64}")
@@ -256,8 +260,15 @@ def _full_rebuild(index: Mapping[str, Mapping[str, Any]], reason: str) -> ReuseP
 
 def _reuse_refusal(previous: Mapping[str, Any], logical: str, remote: str,
                    sources: set[str], changed_locale: set[str],
-                   object_file: Callable[[str], Path | None]) -> str | None:
-    """Why ``logical`` may not be reused, or ``None`` when it may."""
+                   object_file: Callable[[str], Path | None],
+                   label: str = "locale") -> str | None:
+    """Why ``logical`` may not be reused, or ``None`` when it may.
+
+    ``sources`` are the repository files that fed this bundle and ``changed_locale``
+    the ones that moved since the published release: the locale JSONL for a text
+    bundle, the song's own ``lyrics/songs/*.jsonl`` for a lyric bundle.  ``label``
+    only names them in the refusal, so a report reads honestly for both surfaces.
+    """
     if previous.get("resource_kind") != "bundle":
         return "previous entry is not a text bundle"
     if previous.get("reuse_status") != "exact" or previous.get("translation_status") != "modified":
@@ -265,12 +276,12 @@ def _reuse_refusal(previous: Mapping[str, Any], logical: str, remote: str,
     if str(previous.get("runtime_path") or "") != f"{RUNTIME_PREFIX}{remote}":
         return "the official object the client requests changed"
     if not sources:
-        return "no locale file feeds this bundle"
+        return f"no {label} file feeds this bundle"
     if sources & changed_locale:
         # Bucketed, not named: one build moves a handful of files normally, but a
         # promotion run can touch hundreds, and a reason per file would turn the
         # report into a directory listing.  `changed_locale_files` has the count.
-        return "locale source changed"
+        return f"{label} source changed"
     digest = str(previous.get("artifact_sha256") or "")
     if not HEX64_RE.fullmatch(digest):
         return "previous entry has no usable artifact digest"
@@ -305,6 +316,58 @@ def _reused_entry(previous: Mapping[str, Any], logical: str, remote: str,
     return entry
 
 
+def _carried_over_release(*, root: Path, manifest: Mapping[str, Any] | None,
+                          asset_version: Any, index_sha256: str
+                          ) -> tuple[str | None, dict[str, Mapping[str, Any]], str]:
+    """The gates that decide whether *anything* of the published release may be reused.
+
+    Returns ``(reason, entries_by_logical_key, built_from)``.  A ``reason`` means the
+    whole surface is rebuilt, and the caller must not carry over a single bundle:
+    these are the conditions under which the previous release cannot prove what its
+    own bytes contain, so its objects are evidence of nothing.
+
+    Both surfaces ask the same questions here, because both are published by the
+    same build: the same official catalogue fed them, the same writer produced
+    them, and the same store holds their objects.
+    """
+    if not isinstance(manifest, Mapping):
+        return "no published release to reuse for this asset version", {}, ""
+    if manifest.get("build_status") != "success":
+        return "the published release is not a successful build", {}, ""
+    if str(manifest.get("asset_version") or "") != str(asset_version):
+        return "the published release tracks another asset version", {}, ""
+
+    block = manifest.get(REUSE_KEY)
+    resolution = Resolution.from_reuse_block(block)
+    if resolution is None:
+        return ("the published release carries no reuse record this builder understands",
+                {}, "")
+    if block.get("every_key_resolved_exactly") is not True:
+        return ("the published release does not claim that every key resolved through "
+                "its own row", {}, "")
+    if not resolution.exclusive:
+        return ("the published release answered some keys without their own row, so a "
+                "bundle's bytes may depend on another bundle's rows", {}, "")
+
+    recorded_index = str(block.get("asset_index_sha256") or "")
+    if recorded_index != str(index_sha256):
+        return "the official catalogue changed since the published release", {}, ""
+
+    built_from = str(manifest.get("translation_commit") or "")
+    changed_global = changed_paths(root, built_from, GLOBAL_INPUT_TREES)
+    if changed_global is None:
+        return ("cannot tell whether the release inputs outside locales/ changed", {}, "")
+    if changed_global:
+        listed = ", ".join(sorted(changed_global)[:3])
+        return f"release inputs outside locales/ changed: {listed}", {}, ""
+
+    entries: dict[str, Mapping[str, Any]] = {}
+    for item in manifest.get("entries") or []:
+        if isinstance(item, Mapping) and isinstance(item.get("logical_key"), str):
+            entries.setdefault(str(item["logical_key"]), item)
+    return None, entries, built_from
+
+
 def plan_reuse(*, root: Path, manifest: Mapping[str, Any] | None, asset_version: Any,
                index: Mapping[str, Mapping[str, Any]],
                bundle_sources: Mapping[str, set[str]], index_sha256: str,
@@ -316,48 +379,14 @@ def plan_reuse(*, root: Path, manifest: Mapping[str, Any] | None, asset_version:
     ``bundle_sources`` maps each logical bundle to the locale files that fed it,
     as the current scan saw them.
     """
-    if not isinstance(manifest, Mapping):
-        return _full_rebuild(index, "no published release to reuse for this asset version")
-    if manifest.get("build_status") != "success":
-        return _full_rebuild(index, "the published release is not a successful build")
-    if str(manifest.get("asset_version") or "") != str(asset_version):
-        return _full_rebuild(index, "the published release tracks another asset version")
-
-    block = manifest.get(REUSE_KEY)
-    resolution = Resolution.from_reuse_block(block)
-    if resolution is None:
-        return _full_rebuild(
-            index, "the published release carries no reuse record this builder understands")
-    if block.get("every_key_resolved_exactly") is not True:
-        return _full_rebuild(
-            index, "the published release does not claim that every key resolved through "
-                   "its own row")
-    if not resolution.exclusive:
-        return _full_rebuild(
-            index, "the published release answered some keys without their own row, so a "
-                   "bundle's bytes may depend on another bundle's rows")
-
-    recorded_index = str(block.get("asset_index_sha256") or "")
-    if recorded_index != str(index_sha256):
-        return _full_rebuild(index, "the official catalogue changed since the published release")
-
-    built_from = str(manifest.get("translation_commit") or "")
-    changed_global = changed_paths(root, built_from, GLOBAL_INPUT_TREES)
-    if changed_global is None:
-        return _full_rebuild(
-            index, "cannot tell whether the release inputs outside locales/ changed")
-    if changed_global:
-        listed = ", ".join(sorted(changed_global)[:3])
-        return _full_rebuild(index, f"release inputs outside locales/ changed: {listed}")
+    reason, entries, built_from = _carried_over_release(
+        root=root, manifest=manifest, asset_version=asset_version, index_sha256=index_sha256)
+    if reason is not None:
+        return _full_rebuild(index, reason)
 
     changed_locale = changed_paths(root, built_from, (LOCALE_TREE,))
     if changed_locale is None:
         return _full_rebuild(index, "cannot tell which locale files changed")
-
-    entries: dict[str, Mapping[str, Any]] = {}
-    for item in manifest.get("entries") or []:
-        if isinstance(item, Mapping) and isinstance(item.get("logical_key"), str):
-            entries.setdefault(str(item["logical_key"]), item)
 
     plan = ReusePlan(reason="incremental",
                      changed_locale_files=tuple(sorted(changed_locale)))
@@ -375,6 +404,66 @@ def plan_reuse(*, root: Path, manifest: Mapping[str, Any] | None, asset_version:
                                                    str(asset_version))
         else:
             declined[reason] = declined.get(reason, 0) + 1
+            plan.rebuild[logical] = dict(row)
+    plan.declined = declined
+    return plan
+
+
+def lyric_sources(lyrics_root: Path) -> dict[str, set[str]]:
+    """Each song bundle's own lyric file, in the names the release publishes.
+
+    ``lyrics/songs/<bundle>.jsonl`` is the only input a lyric bundle has that is
+    not shared with the whole release, so it is what a per-song reuse decision
+    turns on.
+    """
+    songs = Path(lyrics_root) / "songs"
+    if not songs.is_dir():
+        return {}
+    return {
+        path.name[: -len(".jsonl")]: {f"{LYRIC_TREE}/songs/{path.name}"}
+        for path in sorted(songs.glob("*.jsonl"))
+    }
+
+
+def plan_lyric_reuse(*, root: Path, manifest: Mapping[str, Any] | None,
+                     asset_version: Any, bundles: Mapping[str, Mapping[str, Any]],
+                     index_sha256: str,
+                     object_file: Callable[[str], Path | None]) -> ReusePlan:
+    """Split the lyric bundles into the songs to patch and the songs to carry over.
+
+    ``bundles`` maps every song the library can patch today to its official
+    catalogue row (``{"remote": ...}``), which is the same shape ``plan_reuse``
+    takes for the text surface, so the two decisions read alike and refuse for the
+    same stated reasons.  A song left out of ``rebuild`` is not downloaded and not
+    rewritten: its bytes are the ones the published release already carries.
+    """
+    reason, entries, built_from = _carried_over_release(
+        root=root, manifest=manifest, asset_version=asset_version, index_sha256=index_sha256)
+    if reason is not None:
+        return _full_rebuild(bundles, reason)
+
+    changed_lyrics = changed_paths(root, built_from, (LYRIC_TREE,))
+    if changed_lyrics is None:
+        return _full_rebuild(bundles, "cannot tell which lyric files changed")
+
+    sources = lyric_sources(root / LYRIC_TREE)
+    plan = ReusePlan(reason="incremental",
+                     changed_locale_files=tuple(sorted(changed_lyrics)))
+    declined: dict[str, int] = {}
+    for logical in sorted(bundles):
+        row = bundles[logical]
+        previous = entries.get(logical)
+        if previous is None:
+            why = "not in the published release"
+        else:
+            why = _reuse_refusal(previous, logical, str(row["remote"]),
+                                 set(sources.get(logical) or ()), changed_lyrics,
+                                 object_file, label="lyric")
+        if why is None:
+            plan.reusable[logical] = _reused_entry(previous, logical, str(row["remote"]),
+                                                   str(asset_version))
+        else:
+            declined[why] = declined.get(why, 0) + 1
             plan.rebuild[logical] = dict(row)
     plan.declined = declined
     return plan
