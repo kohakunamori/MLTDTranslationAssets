@@ -1,0 +1,17 @@
+# Dependencies of the offline regression suite in
+# .github/workflows/validate-localization.yml.
+#
+# Deliberately unpinned: the suite is an integration check against the versions
+# a contributor gets from a clean `pip install`, and pinning is a separate
+# decision with its own review.  The workflow caches pip's wheel cache under a
+# key derived from this file, so a change here invalidates that cache on purpose.
+#
+# Keep in sync with asset-server/requirements.txt: the suite imports requests.
+pytest
+pyyaml
+msgpack
+UnityPy
+Pillow
+pycryptodome
+jsonschema
+requests

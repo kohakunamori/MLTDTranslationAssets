@@ -12,6 +12,7 @@ on:
       - 'scripts/**'
       - 'schema/**'
       - 'asset-server/**'
+      - 'requirements-ci.txt'
       - '.github/workflows/validate-localization.yml'
       - '.github/workflows/llm-translate-assets.yml'
       - '.github/workflows/assets-generated.yml'
@@ -26,6 +27,7 @@ on:
       - 'scripts/**'
       - 'schema/**'
       - 'asset-server/**'
+      - 'requirements-ci.txt'
       - '.github/workflows/validate-localization.yml'
       - '.github/workflows/llm-translate-assets.yml'
       - '.github/workflows/assets-generated.yml'
@@ -43,9 +45,31 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
+        # `generated/` and `images/` are 880 MB of this repository's 1.09 GB
+        # working copy and neither suite below opens them, so the checkout asks
+        # for everything else.  `filter: blob:none` is what makes that saving
+        # real: without it the fetch still transfers every blob and only the
+        # write to disk gets smaller.  Add a top-level directory here when a
+        # suite starts reading one.
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            .github
+            asset-server
+            configs
+            docs
+            glossary
+            locales
+            lyrics
+            manifests
+            pipelines
+            research-tools
+            schema
+            scripts
+            server
+            tools
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -69,17 +93,42 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
+        # Same sparse checkout as the `validate` job above; keep the two lists
+        # identical so a missing path is never a difference between them.
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            .github
+            asset-server
+            configs
+            docs
+            glossary
+            locales
+            lyrics
+            manifests
+            pipelines
+            research-tools
+            schema
+            scripts
+            server
+            tools
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          # The install step measured 9 s of pip resolving and downloading eight
+          # packages that change rarely; the wheels are cached under a key made
+          # from the requirement file, so editing that file refreshes the cache
+          # and nothing else does.
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
 
       - name: Install test dependencies
         # Keep this list in sync with asset-server/requirements.txt: the
         # regression suite imports requests.  Verified in a clean venv.
-        run: python -m pip install --disable-pip-version-check pytest pyyaml msgpack UnityPy Pillow pycryptodome jsonschema requests
+        run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
 
       - name: Run the offline suites that gate publishing
         # scripts/test_assets_generated_index.py keeps one known-red migration
@@ -102,6 +151,7 @@ jobs:
             scripts/test_discover_official_bundles.py \
             scripts/test_refresh_lyrics_catalogue.py \
             scripts/test_validate_repo_lyrics.py \
+            scripts/test_validate_workflow.py \
             pipelines/text/test_mltd_localize_scrobj.py \
             pipelines/text/test_mltd_lyric_rules.py \
             asset-server \
