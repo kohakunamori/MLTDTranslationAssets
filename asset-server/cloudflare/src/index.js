@@ -227,8 +227,15 @@ async function serveFromRepository(request, ctx, route, digest) {
   }
 
   if (cache && upstream.status === 200) {
+    // A failed store only costs the next reader a GitHub round trip, so it must
+    // not fail the response -- but it must not be silent either, which is why
+    // the rejection is logged instead of being left to waitUntil.
     try {
-      ctx.waitUntil(cache.put(cacheKey, storable(upstream.clone())));
+      const storing = cache.put(cacheKey, storable(upstream.clone()));
+      if (storing && typeof storing.catch === 'function') {
+        storing.catch((err) => console.log(`cache store failed for ${digest}: ${err && err.message}`));
+      }
+      ctx.waitUntil(storing);
     } catch (err) {
       console.log(`cache store failed for ${digest}: ${err && err.message}`);
     }

@@ -28,6 +28,7 @@ import json
 import os
 import random
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -137,6 +138,23 @@ def check_health(runner: Runner, release: dict) -> None:
                                  f"commit={str(payload.get('source_commit'))[:12]}")
 
 
+def read_until_cached(runner: Runner, url: str, *, attempts: int = 7, delay: float = 2.5):
+    """Read ``url`` until the edge reports a cache hit, then return that read.
+
+    The store happens after the response has been handed over, and the Cache API
+    does not promise read-after-write: a stored object can take a few seconds to
+    become readable again, so asking twice immediately is a race, not a test.
+    What matters is that the store happens at all, hence the bounded wait.
+    """
+    started = time.monotonic()
+    status, headers, body = runner.request(url)
+    while headers.get("x-mltd-cache") != "hit" and attempts > 1:
+        attempts -= 1
+        time.sleep(delay)
+        status, headers, body = runner.request(url)
+    return status, headers, body, time.monotonic() - started
+
+
 def check_translated(runner: Runner, release: dict, samples: list[dict]) -> None:
     pool = release["pool"]
     version = release["version"]
@@ -158,13 +176,13 @@ def check_translated(runner: Runner, release: dict, samples: list[dict]) -> None
             f"cache={headers.get('x-mltd-cache')}",
         )
 
-        # Second read of the same object must come from the edge cache, not the
+        # A second read of the same object must come from the edge cache, not the
         # repository: that is what keeps GitHub at one read per object.
-        status, cached_headers, body = runner.request(url)
+        status, cached_headers, body, waited = read_until_cached(runner, url)
         runner.record(
             f"cached  {entry['logical_key']}",
             status == 200 and cached_headers.get("x-mltd-cache") == "hit" and hashlib.sha256(body).hexdigest() == local_sha,
-            f"HTTP {status} cache={cached_headers.get('x-mltd-cache')}",
+            f"HTTP {status} cache={cached_headers.get('x-mltd-cache')} after {waited:.1f}s",
             echo=False,
         )
 
