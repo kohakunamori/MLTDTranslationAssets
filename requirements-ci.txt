@@ -7,7 +7,10 @@
 # key derived from this file, so a change here invalidates that cache on purpose.
 #
 # Keep in sync with asset-server/requirements.txt: the suite imports requests.
+# pytest-xdist is what makes the workflow's `-n 4 --dist loadfile` legal; drop it
+# and the suite fails with an unrecognised argument.
 pytest
+pytest-xdist
 pyyaml
 msgpack
 UnityPy

@@ -103,6 +103,18 @@ class SparseCheckoutTests(unittest.TestCase):
         self.assertTrue(REQUIRED_PACKAGES.issubset(packages),
                         f"requirements-ci.txt is missing {sorted(REQUIRED_PACKAGES - packages)}")
 
+    def test_the_suite_runs_on_four_workers_without_merging_files(self):
+        """Parallelism is only safe with ``--dist loadfile``.
+
+        Without it pytest may put two tests from the same file in different
+        processes, which is exactly what a module-level fixture or an in-process
+        HTTP server bound by one test file cannot survive.
+        """
+        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
+        self.assertIn("-n 4", run)
+        self.assertIn("--dist loadfile", run)
+        self.assertIn("pytest-xdist", REQUIREMENTS.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
