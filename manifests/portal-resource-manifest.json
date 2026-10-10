@@ -27689,8 +27689,8 @@
       "bundles": {
         "CD_jp.gtx": {
           "pending": 0,
-          "total": 25356,
-          "translated": 25356,
+          "total": 25416,
+          "translated": 25416,
           "untranslated": 0
         }
       },
@@ -27703,8 +27703,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 25356,
-      "translated": 25356,
+      "total": 25416,
+      "translated": 25416,
       "unit": "句",
       "untranslated": 0
     },
@@ -46889,8 +46889,8 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 0,
-          "total": 9942,
-          "translated": 9942,
+          "total": 9962,
+          "translated": 9962,
           "untranslated": 0
         }
       },
@@ -46903,8 +46903,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 9942,
-      "translated": 9942,
+      "total": 9962,
+      "translated": 9962,
       "unit": "句",
       "untranslated": 0
     },
@@ -48527,8 +48527,8 @@
       "bundles": {
         "MD_jp.gtx": {
           "pending": 0,
-          "total": 117315,
-          "translated": 117315,
+          "total": 117526,
+          "translated": 117526,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -48569,8 +48569,8 @@
         },
         "igp_jp.gtx": {
           "pending": 0,
-          "total": 4222,
-          "translated": 4222,
+          "total": 4621,
+          "translated": 4621,
           "untranslated": 0
         },
         "job_text_001har_1000_jp.gtx": {
@@ -71119,8 +71119,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 175626,
-      "translated": 175626,
+      "total": 176236,
+      "translated": 176236,
       "unit": "句",
       "untranslated": 0
     },
@@ -71129,8 +71129,8 @@
       "bundles": {
         "CM_jp.gtx": {
           "pending": 0,
-          "total": 26497,
-          "translated": 26497,
+          "total": 26521,
+          "translated": 26521,
           "untranslated": 0
         }
       },
@@ -71143,8 +71143,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 26497,
-      "translated": 26497,
+      "total": 26521,
+      "translated": 26521,
       "unit": "句",
       "untranslated": 0
     }
@@ -71160,15 +71160,15 @@
     {
       "id": "card",
       "pending": 0,
-      "total": 83488,
-      "translated": 83488,
+      "total": 83548,
+      "translated": 83548,
       "untranslated": 0
     },
     {
       "id": "dialogue",
       "pending": 0,
-      "total": 37445,
-      "translated": 37445,
+      "total": 37489,
+      "translated": 37489,
       "untranslated": 0
     },
     {
@@ -71181,29 +71181,29 @@
     {
       "id": "system",
       "pending": 0,
-      "total": 175626,
-      "translated": 175626,
+      "total": 176236,
+      "translated": 176236,
       "untranslated": 0
     }
   ],
-  "generated_at": "2026-10-09T09:13:38.032546+00:00",
+  "generated_at": "2026-10-10T08:37:30.805043+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1077720",
-    "assets_commit": "280a179331e9fac9ca7ce4288faa2203e099cb09",
-    "release_id": "assets-1077720",
+    "asset_version": "1077741",
+    "assets_commit": "dfa8a2fcee929aea6e9ae9925b7de894d001a294",
+    "release_id": "assets-1077741",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "2dc662865064cfaf61efa676c72fed591789b50c36f6208433c6c233dd73c2b6",
+    "source_manifest_sha256": "008a4751fff0df18877208cfc507fe1c43033bfde32b87bd0ea0290aef5ee46f",
     "status": "published",
-    "updated_at": "2026-10-09T12:00:00+09:00"
+    "updated_at": "2026-10-10T15:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "280a179331e9fac9ca7ce4288faa2203e099cb09",
+    "commit": "dfa8a2fcee929aea6e9ae9925b7de894d001a294",
     "generated_entry_count": 11817,
-    "generated_manifest_sha256": "2dc662865064cfaf61efa676c72fed591789b50c36f6208433c6c233dd73c2b6",
+    "generated_manifest_sha256": "008a4751fff0df18877208cfc507fe1c43033bfde32b87bd0ea0290aef5ee46f",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "0283df3f5e020ab4d4362b7c9c1287f80f0e501605f2128279e48785872eaade",
+    "source_catalogue_sha256": "57324e644a02895e7c09b79c3fff94b7525b3354c844aa9e27d2923127ddeaf9",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -71212,8 +71212,8 @@
     "pending": 0,
     "reused": 0,
     "suggested": 0,
-    "total": 393427,
-    "translated": 393427,
+    "total": 394141,
+    "translated": 394141,
     "untranslated": 0
   }
 }
