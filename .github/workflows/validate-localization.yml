@@ -139,10 +139,15 @@ jobs:
         # "retired fan-out") and scripts/test_auto_track_jp_assets_workflow.py
         # drives bash+git sandboxes that are environment sensitive.  Neither is
         # silently claimed as covered here; they are run manually.
+        #
+        # -n 4 is the runner's vCPU count and --dist loadfile is the safety rule
+        # that comes with it: every file keeps its own process, so a module-level
+        # fixture or an HTTP server bound inside one test file is never split
+        # across workers.  The suite measures 63 s serially and 28 s with four.
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          python -m pytest -q \
+          python -m pytest -q -n 4 --dist loadfile \
             scripts/test_llm_translate_untranslated.py \
             scripts/test_llm_translate_workflow.py \
             scripts/test_promote_merged_locales.py \
