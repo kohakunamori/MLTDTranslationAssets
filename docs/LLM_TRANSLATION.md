@@ -69,8 +69,11 @@
   将来回写进客户端后必然显示为同一行，措辞不一致比不翻译更糟。这里没有 `generated/`
   的歧义闸门可用，所以用这条更简单的规则代替。
 
-歌词晋级**不会**写 `generated/`：仓库里没有任何把歌词写回客户端资源包的注入器，
-`publish --scope lyrics` 的终点是 `lyrics/` 源库（门户与人工审校用）。
+歌词晋级**不直接**写 `generated/`：`publish --scope lyrics` 的终点是 `lyrics/` 源库
+（门户与人工审校用），但源库不是终点——下一次发布构建会用
+`scripts/build_lyric_overlay.py` 把有中文的歌曲写回资源包并随版本发布（见
+`docs/ARCHITECTURE.md` 的发布流程）。所以「歌词被采纳」到「手机能看到」之间的
+唯一动作就是等一次发布构建，没有人工步骤。
 `lyrics/all_lyrics.jsonl` 是派生文件，collect 不读它（否则同一行会被翻译两次）。
 
 `collect --scope all` 是工作流的实际用法，一次同时覆盖两个面。

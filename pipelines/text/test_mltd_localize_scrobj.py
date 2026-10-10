@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sys
 import tempfile
@@ -12,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mltd_localize_scrobj import (  # noqa: E402
     LyricBundleError,
     LyricSlot,
+    accepted_slot_translations,
     is_english_bypass,
     is_localizable_line,
     merge_slots,
@@ -19,6 +21,7 @@ from mltd_localize_scrobj import (  # noqa: E402
     read_song,
     rebuild_aggregate,
     slot_rows,
+    slot_translations,
     song_names,
     write_song,
 )
@@ -43,6 +46,90 @@ class RulesAreReachableThroughThisModuleTests(unittest.TestCase):
 
         self.assertIs(is_english_bypass, shared_bypass)
         self.assertIs(is_localizable_line, shared_localizable)
+
+
+class AcceptedSlotTranslationsTests(unittest.TestCase):
+    """Only rows that are safe to mount on a device may reach a patched bundle."""
+
+    @staticmethod
+    def _row(index, ja, zh, status="accepted", sha=None):
+        return {
+            "bundle": "scrobj_x.unity3d",
+            "index": index,
+            "tick": 0,
+            "abs_time": 0.0,
+            "source_sha256": sha if sha is not None
+            else hashlib.sha256(ja.encode("utf-8")).hexdigest(),
+            "ja": ja,
+            "zh": zh,
+            "status": status,
+            "updated_at": "2026-10-10T00:00:00+00:00",
+        }
+
+    def test_accepted_rows_with_a_matching_source_hash_are_used(self):
+        rows = [self._row(41, "一旦愛して♡", "先爱一下♡")]
+        self.assertEqual(accepted_slot_translations(rows), {(41, "一旦愛して♡"): "先爱一下♡"})
+
+    def test_pending_and_untranslated_rows_are_ignored(self):
+        rows = [self._row(1, "あ", "啊", status="pending"),
+                self._row(2, "い", "呀", status="untranslated"),
+                self._row(3, "う", "")]
+        self.assertEqual(accepted_slot_translations(rows), {})
+
+    def test_a_row_whose_hash_does_not_match_its_own_source_is_refused(self):
+        """A stale row would overwrite a *different* line on the device."""
+        rows = [self._row(1, "あ", "啊", sha="0" * 64)]
+        self.assertEqual(accepted_slot_translations(rows), {})
+
+    def test_reserved_client_separators_are_refused(self):
+        rows = [self._row(1, "あ", "啊|呜"), self._row(2, "い", "呀^哦")]
+        self.assertEqual(accepted_slot_translations(rows), {})
+
+    def test_a_position_that_is_not_an_integer_is_skipped(self):
+        rows = [{"bundle": "x", "index": None, "ja": "あ", "zh": "啊", "status": "accepted",
+                 "source_sha256": hashlib.sha256("あ".encode("utf-8")).hexdigest()}]
+        self.assertEqual(accepted_slot_translations(rows), {})
+
+    def test_the_same_line_at_two_positions_keeps_both_translations(self):
+        rows = [self._row(10, "Wow", "哇"), self._row(20, "Wow", "哇哦")]
+        self.assertEqual(accepted_slot_translations(rows),
+                         {(10, "Wow"): "哇", (20, "Wow"): "哇哦"})
+
+
+class SlotTranslationsTests(unittest.TestCase):
+    """The library's identity is the line, not its position."""
+
+    def test_a_line_that_moved_position_is_still_translated(self):
+        """``scrobj_refkis`` really moved line 376 to 484 between two versions.
+
+        Matching on ``(position, line)`` alone refused the whole song; the text is
+        what re-extraction preserves, so the text must be what the writer trusts.
+        """
+        rows = [AcceptedSlotTranslationsTests._row(376, "不器用に熱く悩んでる指先", "笨拙而炽热地烦恼着的指尖")]
+        translations = slot_translations(rows)
+        self.assertEqual(translations.lookup(484, "不器用に熱く悩んでる指先"), "笨拙而炽热地烦恼着的指尖")
+        self.assertIsNone(translations.lookup(484, "别的一句日文"))
+
+    def test_the_exact_position_wins_when_a_line_repeats(self):
+        rows = [AcceptedSlotTranslationsTests._row(10, "Wow", "哇"),
+                AcceptedSlotTranslationsTests._row(20, "Wow", "哇哦")]
+        translations = slot_translations(rows)
+        self.assertEqual(translations.lookup(10, "Wow"), "哇")
+        self.assertEqual(translations.lookup(20, "Wow"), "哇哦")
+        self.assertEqual(translations.ambiguous_texts, frozenset({"Wow"}))
+        # A third occurrence has no position of its own; with two wordings on
+        # record, guessing would be wrong, so the line is left Japanese.
+        self.assertIsNone(translations.lookup(30, "Wow"))
+
+    def test_a_line_with_one_wording_is_available_at_any_position(self):
+        rows = [AcceptedSlotTranslationsTests._row(10, "Wow", "哇")]
+        translations = slot_translations(rows)
+        self.assertEqual(translations.lookup(30, "Wow"), "哇")
+        self.assertEqual(translations.ambiguous_texts, frozenset())
+
+    def test_boolean_and_length_follow_the_shippable_rows(self):
+        self.assertFalse(slot_translations([]))
+        self.assertEqual(len(slot_translations([AcceptedSlotTranslationsTests._row(1, "あ", "啊")])), 1)
 
 
 class SlotRowTests(unittest.TestCase):

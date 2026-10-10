@@ -23,7 +23,7 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
 - `lyrics/`：全曲目歌词库（491 首歌曲对齐双语歌词与时间戳；官方 `scrobj_*` 包共 492 个，其中开发自测包 `scrobj_00test` 不含歌词行、已排除）
   - `lyrics/songs/`：按歌曲独立分轨 JSONL
   - `lyrics/all_lyrics.jsonl`：全曲歌词总汇
-  - 说明：歌词只有源库会随官方更新自动扩充（`scripts/refresh_lyrics_catalogue.py`）；把歌词写回客户端资源包的步骤尚未接入，`generated/` 里目前没有任何歌词包。
+  - 说明：歌词源库随官方更新自动扩充（`scripts/refresh_lyrics_catalogue.py`）；**已采纳中文的歌曲会在发布构建时被写回资源包并随版本发布**（`scripts/build_lyric_overlay.py`），未翻译的行保持官方日文不动。
 - `glossary/`：翻译规范与标准术语
   - `glossary/authoritative-terms.json`：项目当前采用的固定译名与避免词
   - `glossary/idols.json`：项目整理的 52 名偶像与声优名录
@@ -101,11 +101,16 @@ generated/ 保存 CI 生成的 Unity3D：objects/sha256/ 负责跨版本内容�
 3. `refresh_lyrics_catalogue.py` 抽取新歌歌词到 `lyrics/songs/`，并重算
    `all_lyrics.jsonl` 与 `lyrics_manifest.json`。
 
-三步都 fail-closed：单次新包数量或字节数超过上限（发现 400 个/1 GiB，歌词 200 个/
-512 MiB）就报错退出，不提交；未声明家族的包只报告、不下载。官方 index 里占了绝大多数
-包数的家族（语音音频、动画曲线、图片，共 326 个家族 / 1.88 万个包）已抽样确认不含
-可翻译文本，登记在 `reviewed_unclassified` 后不再计入告警；其余长尾家族仍照旧计数，
-清单与证据见 `docs/ARCHITECTURE.md` 的「未纳入面审计」。
+翻译完成后，发布构建（`assets-generated.yml`）除了把文本包写回，还会调用
+`build_lyric_overlay.py`：把所有「有已采纳中文」的歌曲的官方歌词包改写中文、放进同一个
+覆盖层并追加到发布清单。因此手机端拿到的歌词包和文本包走完全相同的分发路径，
+新版本发布时自动更新，不需要人工步骤。
+
+这些步骤都 fail-closed：单次数量或字节数超过上限（发现 400 个/1 GiB，歌词刷新 200 个/
+512 MiB，歌词打包 600 首/256 MiB）就报错退出，不提交；未声明家族的包只报告、不下载。
+官方 index 里占了绝大多数包数的家族（语音音频、动画曲线、图片，共 326 个家族 / 1.88 万个包）
+已抽样确认不含可翻译文本，登记在 `reviewed_unclassified` 后不再计入告警；其余长尾家族仍照旧
+计数，清单与证据见 `docs/ARCHITECTURE.md` 的「未纳入面审计」。
 
 普通协作翻译仍以 GitHub PR 合并作为审核入口；LLM CI 是独立路径：它先把结果直接
 写入 `main` 并保留 `llm_translated` 标记，随后由 `llm_translate_untranslated.py

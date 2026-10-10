@@ -14,7 +14,8 @@ extracted song is indistinguishable in shape from a song extracted by the
 original offline run.
 
 The reader only *reads*: writing a localized lyric bundle back into a mountable
-overlay is a separate, explicitly gated step that this module does not perform.
+overlay is a separate step (``save_localized_bundle``) that only accepted rows
+may feed, because a patched bundle is what the game client actually mounts.
 """
 from __future__ import annotations
 
@@ -46,12 +47,16 @@ __all__ = [
     "LATIN_RE",
     "LyricBundleError",
     "LyricSlot",
+    "accepted_slot_translations",
+    "slot_translations",
+    "SlotTranslations",
     "is_english_bypass",
     "is_localizable_line",
     "merge_slots",
     "read_slots",
     "read_song",
     "rebuild_aggregate",
+    "save_localized_bundle",
     "slot_rows",
     "song_file",
     "song_names",
@@ -329,3 +334,216 @@ def rebuild_aggregate(lyrics_root: Path) -> dict:
     manifest_path = lyrics_root / "lyrics_manifest.json"
     write_text_if_changed(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return manifest
+
+
+@dataclass(frozen=True)
+class SlotTranslations:
+    """Accepted Chinese for one song, keyed the two ways the writer needs.
+
+    ``by_position`` is the exact ``(scenario position, source line)`` match;
+    ``by_text`` is the fallback keyed on the source line alone.  The fallback is
+    what makes the write-back survive an upstream re-layout: the same line can
+    move to another position (``scrobj_refkis`` moved line 376 to 484 between two
+    official versions) while the text is untouched, and the library's own
+    identity is the text -- re-extraction keeps a translation because the *line*
+    is unchanged, not because it sits at the same index.
+    """
+
+    by_position: dict[tuple[int, str], str]
+    by_text: dict[str, str]
+    ambiguous_texts: frozenset[str]
+
+    def lookup(self, position: int, text: str) -> str | None:
+        exact = self.by_position.get((position, text))
+        if exact is not None:
+            return exact
+        return self.by_text.get(text)
+
+    def source_texts(self) -> set[str]:
+        return {text for _position, text in self.by_position}
+
+    def __bool__(self) -> bool:
+        return bool(self.by_position)
+
+    def __len__(self) -> int:
+        return len(self.by_position)
+
+
+def slot_translations(rows: Iterable[dict]) -> SlotTranslations:
+    """Filter the library rows down to what may be mounted on a device.
+
+    A row is usable only when it is ``accepted``, carries Chinese, matches its own
+    ``source_sha256``, and avoids the client's reserved separators (``|`` and
+    ``^``).  A source line with two different accepted wordings is ambiguous: the
+    exact position still wins, and the line is otherwise left Japanese rather
+    than guessed (today no song has such a pair, and ``publish --scope lyrics``
+    refuses to create one).
+    """
+    by_position: dict[tuple[int, str], str] = {}
+    wordings: dict[str, set[str]] = {}
+    for row in rows:
+        if str(row.get("status")) != "accepted":
+            continue
+        source = str(row.get("ja", ""))
+        translation = str(row.get("zh", ""))
+        if not source or not translation:
+            continue
+        if "|" in translation or "^" in translation:
+            continue
+        if str(row.get("source_sha256", "")).lower() != hashlib.sha256(
+            source.encode("utf-8")
+        ).hexdigest():
+            continue
+        try:
+            position = int(row.get("index"))
+        except (TypeError, ValueError):
+            continue
+        by_position[(position, source)] = translation
+        wordings.setdefault(source, set()).add(translation)
+    by_text = {text: next(iter(values)) for text, values in wordings.items() if len(values) == 1}
+    ambiguous = frozenset(text for text, values in wordings.items() if len(values) > 1)
+    return SlotTranslations(by_position=by_position, by_text=by_text, ambiguous_texts=ambiguous)
+
+
+def accepted_slot_translations(rows: Iterable[dict]) -> dict[tuple[int, str], str]:
+    """The exact-position view of :func:`slot_translations`, for callers that
+    only need to know which rows are shippable."""
+    return slot_translations(rows).by_position
+
+
+def _slot_texts(slots: Iterable[LyricSlot]) -> list[str]:
+    return [slot.text for slot in slots]
+
+
+def _scenario_text_positions(bundle: Path) -> list[list[tuple[int, str]]]:
+    """Every filled ``str`` slot as ``(scenario position, text)``, per object.
+
+    Verification uses this instead of the reader's flattened view because the
+    reader orders localizable lines first; the writer must prove that *each
+    position* of *each* scenario object holds exactly what it intended.
+    """
+    environment = UnityPy.load(str(bundle))
+    objects: list[list[tuple[int, str]]] = []
+    for obj in environment.objects:
+        if obj.type.name != "MonoBehaviour":
+            continue
+        try:
+            tree = obj.read_typetree()
+        except Exception:  # noqa: BLE001 - a non-scenario MonoBehaviour is not an error
+            continue
+        if not isinstance(tree, dict) or not isinstance(tree.get("scenario"), list):
+            continue
+        slots: list[tuple[int, str]] = []
+        for position, element in enumerate(tree["scenario"]):
+            if not isinstance(element, dict):
+                continue
+            text = element.get("str")
+            if isinstance(text, str) and text:
+                slots.append((position, text))
+        objects.append(slots)
+    return objects
+
+
+def save_localized_bundle(source: Path, output: Path, translations: SlotTranslations) -> dict:
+    """Write ``source`` with accepted Chinese lines replacing their Japanese.
+
+    Mirrors the proven GTX writer on purpose: the same ``lz4`` packer, the same
+    round-trip gate and the same manifest fields, so a lyric bundle enters the
+    published release through the code path the text bundles already use.  Only
+    ``str`` fields that carry an accepted translation are touched; every other
+    field of every object is compared afterwards and must be unchanged.
+
+    Returns ``changed = 0`` (and writes nothing) when no stored translation
+    describes a line of this bundle, so the caller can report a song whose
+    upstream lyrics were rewritten instead of publishing a half-translated one.
+    """
+    source = Path(source)
+    output = Path(output)
+    if not translations:
+        raise ValueError(f"{source}: no accepted translations to apply")
+    environment = UnityPy.load(str(source))
+    replacements = 0
+    before_texts: list[str] = []
+    seen_texts: set[str] = set()
+    expected_objects: list[list[tuple[int, str]]] = []
+    for obj in environment.objects:
+        if obj.type.name != "MonoBehaviour":
+            continue
+        try:
+            tree = obj.read_typetree()
+        except Exception:  # noqa: BLE001 - a non-scenario MonoBehaviour is not an error
+            continue
+        if not isinstance(tree, dict) or not isinstance(tree.get("scenario"), list):
+            continue
+        touched = False
+        expected: list[tuple[int, str]] = []
+        for position, element in enumerate(tree["scenario"]):
+            if not isinstance(element, dict):
+                continue
+            text = element.get("str")
+            if not isinstance(text, str) or not text:
+                continue
+            before_texts.append(text)
+            seen_texts.add(text)
+            translation = translations.lookup(position, text)
+            if translation is None or translation == text:
+                expected.append((position, text))
+                continue
+            element["str"] = translation
+            replacements += 1
+            expected.append((position, translation))
+            touched = True
+        expected_objects.append(expected)
+        if touched:
+            obj.save_typetree(tree)
+    unmatched = sorted(translations.source_texts() - seen_texts)
+    if not replacements:
+        return {
+            "bundle": source.name,
+            "source_path": str(source),
+            "output_path": str(output),
+            "source_bundle_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+            "output_bundle_sha256": "",
+            "output_plain_sha256": "",
+            "output_bytes": 0,
+            "changed": 0,
+            "slots_total": len(before_texts),
+            "unmatched_texts": unmatched,
+            "written": False,
+        }
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    payload = environment.file.save(packer="lz4")
+    if isinstance(payload, str):
+        payload = payload.encode("utf-8", "surrogateescape")
+    output.write_bytes(payload)
+
+    verified = read_slots(output)
+    after_texts = _slot_texts(verified)
+    if len(after_texts) != len(before_texts):
+        raise ValueError(
+            f"round-trip verification failed for {output}: "
+            f"{len(before_texts)} lines became {len(after_texts)}"
+        )
+    if _scenario_text_positions(output) != expected_objects:
+        raise ValueError(
+            f"round-trip verification failed for {output}: "
+            "a scenario slot is not where the writer put it"
+        )
+    return {
+        "bundle": source.name,
+        "source_path": str(source),
+        "output_path": str(output),
+        "source_bundle_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_bundle_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "output_plain_sha256": hashlib.sha256(
+            json.dumps(
+                [[slot.index, slot.text] for slot in verified], ensure_ascii=False
+            ).encode("utf-8")
+        ).hexdigest(),
+        "output_bytes": output.stat().st_size,
+        "changed": replacements,
+        "slots_total": len(after_texts),
+        "unmatched_texts": unmatched,
+        "written": True,
+    }

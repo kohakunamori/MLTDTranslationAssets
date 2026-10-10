@@ -278,7 +278,20 @@ generated/
 └── objects/sha256/<64hex>      11,844 个 flat CAS 对象 · 274.8 MB · 跨版本去重
 ```
 
-`manifest.json` 顶层：`kind` / `schema_version` / `asset_version` / `client_version` / `source_client_version` / `source_commit` / `translation_commit` / `generated_commit` / `ci_run_id` / `build_status` / `generated_at_utc` / `entry_count` / `entries` / `reuse_summary`。
+`manifest.json` 顶层：`kind` / `schema_version` / `asset_version` / `client_version` / `source_client_version` / `source_commit` / `translation_commit` / `generated_commit` / `ci_run_id` / `build_status` / `generated_at_utc` / `entry_count` / `entries` / `reuse_summary` / `reuse`。
+
+`reuse` 是**给下一次构建看的**（schema 1，由 `scripts/release_reuse.py` 读写）：
+
+| 字段 | 含义 |
+| --- | --- |
+| `asset_index_sha256` | 本release 依据的官方目录摘要；目录一变，全量重建 |
+| `text_resolution` | 文本面每个 key 由哪条路径作答：`exact` / `memory` / `stale_exact` / `unresolved` |
+| `text_scope` | 计数覆盖范围：`release`（全量构建）或 `regenerated`（只覆盖本轮重写的那部分） |
+| `every_key_resolved_exactly` | `text_resolution` 中 `memory` / `stale_exact` / `unresolved` 是否全为 0 |
+
+只有当上一版 release 声明 `every_key_resolved_exactly = true`，且 `locales/` 之外的发布输入（`manifests` / `pipelines` / `schema` / `images` / `scripts`）自该版本构建提交以来未变、目标 bundle 自己的 `locales/` 文件未变、官方 `runtime_path` 与产物对象都还在时，下一轮才复用该 bundle：不下载、不重写，直接把已发布对象写回新 manifest。任何一项无法**证明**就退回全量重建——重建一份没变的 bundle 只浪费时间，复用一份变了的 bundle 会发错内容。
+
+「翻译记忆」是唯一跨 bundle 的隐式输入：`build-overlay` 对没有自身源绑定行的 key，会去全局记忆表按源文匹配，那可能来自别的 bundle 的行。因此只要上一版有任何一条 key 不是由自己的行作答，本模块就对**整份 release** 拒绝复用（`memory` 计数非 0 即如此）；增量构建若在子集上出现同样情况，会在同一次运行里自动退回全量重建。
 
 每个 entry 的字段：
 
@@ -351,6 +364,7 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
   → ② 新包发现（只读）                 discover_official_bundles.py：新可汉化包 / 字节数 / 全新家族签名 + 更新 inventory
   → ③ extract-snapshot 抽 GTX 文本     只 read_gtx；无 texture/sprite 抽取
   → ③' refresh_lyrics_catalogue 抽歌词  scrobj_* → lyrics/songs/*.jsonl，内容寻址合并，重算汇总
+  → ③'' 发布构建 build_lyric_overlay 把已采纳中文写回 scrobj_* 包，与文本包同清单发布
   → ④ 追加 untranslated 行             locales/master/official-<ver>-untranslated.jsonl（只追加，永不覆盖）
   → ⑤ LLM 翻译池（--scope all）        translate_mltd_api_pool.py --batch-mode single --prompt-source compiled
   → ⑥ 原地写回 pending/llm_translated  永不写 accepted；非 untranslated 行逐字节保留
@@ -365,6 +379,7 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | --- | --- | --- |
 | 新可汉化包（发现） | 400 个 / 1 GiB | `discover_official_bundles.py` exit 2，Run 变红，不提交 |
 | 新歌词包（抽取） | 200 个 / 512 MiB | `refresh_lyrics_catalogue.py` exit 2，Run 变红，不提交 |
+| 歌词写回（打包） | 600 首 / 256 MiB | `build_lyric_overlay.py` 在下载前就抛错，发布构建失败且不产出新版本（只有「有已采纳中文」的歌才计数） |
 | 新追加行（文本） | `--max-new-rows` 5000 | `refresh_latest_official_catalogue.py` 拒绝追加 |
 
 > 上限取值的依据：常态一次游戏更新只新增个位数到几十个包（1077720 实测 77 个文本包 / 1,570 行、59 个歌词包），2026-10-01 的故障形态是「无界 39.4 万行」，两者之间留了两三个数量级的余量。今天这批补录（77 + 59 个包）**没有触发任何上限**。
@@ -398,7 +413,7 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | 歌词 `song_lyrics` | 491 | 432 | 59 | 6,819,130 | 59 首歌 / 1,598 槽（新歌 `scrobj_ittana`「一旦愛して」= 48 行，全为日文） |
 | 其他 | 137,207 | 0 | 0（只报告） | — | 17,583 个未纳入的家族签名。注意 `new_family_count` 的口径：**首次运行没有基线时它就是全部家族数**（所以首轮日志会写 "17909 new resource families"），有基线后才是「本次新出现」的个数；报告里 `new_families` 列表只列前 40 个样本（`new_signatures[:40]`）。已人工抽查、确认不可翻译的 18,800 个包（326 个家族）列在 `reviewed_unclassified`，不再计入这两个数。 |
 
-> 歌词只有**源库**（`lyrics/`）会被这个仓库更新；**没有任何代码把歌词写回客户端资源包**，`generated/` 里至今是 0 个 `scrobj` 包。所以「新增歌词进入汉化范围」目前等于「进入门户与人工审校」，不等于「游戏里能看见」。
+> 歌词**已经进入发布**：`scripts/build_lyric_overlay.py` 在每次发布构建里把「有已采纳中文」的歌曲的官方歌词包改写为中文，写进与文本包相同的覆盖层、相同的发布清单、相同的对象库（`generated/objects/sha256/`）。因此手机端拿到的歌词包与文本包走同一条分发路径，随版本自动更新；未翻译的行保持官方日文，不会被改写。
 
 #### 未纳入面审计（2026-10-10 实测）
 
@@ -433,7 +448,8 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | 会分析最新 assets 吗？ | 会 —— 版本跟踪 + **家族匹配选包**（新文本包、新歌词包都会自动进入范围）+ 新家族签名告警；仍不识别资源内容类型（贴图/音频只报告不下载） |
 | 会归类吗？ | 只有**门户展示层**按 bundle 名前缀分 15 类；翻译与构建逻辑依赖的是 `manifests/localizable-bundle-families.json`（2 个声明式家族 + 按 `pipeline` 分流） |
 | 会自动提取文本吗？ | 会 —— 家族匹配下载 + 抽 GTX 文本落 `untranslated` 行；歌词面另走 `refresh_lyrics_catalogue.py` 落 `lyrics/songs/*.jsonl` |
-| 会自动翻译吗？ | 会 —— LLM 池自动译为 `pending` / `llm_translated` 并直接提交 `main`，人工只负责改成 `accepted`；歌词同理，只是发布终点是 `lyrics/` 源库 |
+| 会自动翻译吗？ | 会 —— LLM 池自动译为 `pending` / `llm_translated` 并直接提交 `main`，人工只负责改成 `accepted`；歌词同理 |
+| 歌词会进手机吗？ | 会 —— 发布构建调用 `build_lyric_overlay.py`，把有已采纳中文的歌写回 `scrobj_*` 包并随版本发布；未翻译的行保持官方日文 |
 | 会自动提取/翻译图片吗？ | **不会** —— 无自动发现，无自动重绘，无自动注入；CI 里已无任何图片步骤 |
 
 ---

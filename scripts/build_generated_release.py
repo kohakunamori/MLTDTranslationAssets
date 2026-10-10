@@ -43,6 +43,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 from assets_generated_index import GeneratedStore
+import build_lyric_overlay
 import merge_image_overlay
 from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
 
@@ -413,6 +414,21 @@ def main() -> int:
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
     overlay = work / "overlay"
     run_overlay(snapshot, archive, ledger, overlay, version["client_version"], version["asset_version"])
+    # Song lyrics are the second translatable surface and, until now, the one the
+    # client never received: the library carried 11,065 accepted Chinese lines
+    # that no published bundle contained.  Patch the lyric bundles into the same
+    # overlay and let the manifest below publish them like text bundles.
+    lyric_summary = build_lyric_overlay.run(
+        index=index,
+        archive_root=archive,
+        overlay_root=overlay,
+        lyrics_root=ROOT / "lyrics",
+        asset_version=str(version["asset_version"]),
+        upstream_root=str(version["asset_root"]),
+        downloader=download,
+        cache_root=official_cache,
+        progress_every=100,
+    )
     entries_path = work / "entries.json"
     entries = build_entries(overlay, overlay / "localization-manifest.json",
                             version["asset_version"], version["client_version"],
@@ -483,6 +499,7 @@ def main() -> int:
                            else "blocked_missing_reviewed_inputs")),
         "official_index_sha256": sha256_file(index_path),
         "official_objects": official_objects,
+        "lyrics": {key: value for key, value in lyric_summary.items() if key != "patched_bundles"},
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
