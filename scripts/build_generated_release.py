@@ -81,16 +81,21 @@ def load_version_manifest(path: Path) -> dict:
             "index_name": index_name}
 
 
-def release_provenance(version: dict, rows: Iterable[dict]) -> str:
+def release_provenance(version: dict, root: Path = ROOT) -> str:
     """The client version this release describes, asked of the library itself.
 
-    The rows carry ``source_client_version`` individually and the schema requires
-    it, so the majority value is the honest answer for the release as a whole.
-    ``manifests/asset-version.json`` used to hold a second, hand-maintained copy
-    which read as a version to keep in step with the game; nothing keeps it in
-    step today, so it is gone and this is the only source.
+    The locale rows carry ``source_client_version`` individually and the schema
+    requires it, so the majority value is the honest answer for the release as a
+    whole.  ``manifests/asset-version.json`` used to hold a second,
+    hand-maintained copy which read as a version to keep in step with the game;
+    nothing keeps it in step today, so it is gone.
+
+    This reads the library rather than the rows ``read_translation_rows``
+    returns: that projection deliberately keeps only what the applier needs, and
+    the first version of this function trusted it, so the release build failed
+    with "no locale row carries one" while 395,673 rows said 9.0.200.
     """
-    provenance, counts = source_provenance.from_rows(rows)
+    provenance, _counts = source_provenance.from_library(root)
     if provenance is None:
         provenance = version.get("legacy_client_version") or None
     if provenance is None:
@@ -378,8 +383,8 @@ def main() -> int:
     images_ready = image_inputs_are_complete(ROOT)
     grouped = read_translation_rows(ROOT, version["asset_version"])
     # The release's provenance is a property of the text it carries, so it is
-    # read from those rows instead of from a field somebody has to keep current.
-    source_client = release_provenance(version, (row for rows in grouped.values() for row in rows))
+    # read from the library instead of from a field somebody has to keep current.
+    source_client = release_provenance(version)
     work = args.work_root.resolve()
     work.mkdir(parents=True, exist_ok=True)
     index_path = work / version["index_name"]

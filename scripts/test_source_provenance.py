@@ -60,6 +60,23 @@ class ProvenanceVoteTests(unittest.TestCase):
 
 
 class ReleaseBuilderProvenanceTests(unittest.TestCase):
+    """The builder asks the library, not the projection it feeds the applier.
+
+    The first version of this read `read_translation_rows`' output, which keeps
+    only what the applier needs -- no `source_client_version` -- so the real
+    release build failed with "no locale row carries one" while 395,673 rows said
+    9.0.200.  These tests drive the file-backed path the builder actually uses.
+    """
+
+    @staticmethod
+    def _library(tmp: str, *values: str) -> Path:
+        root = Path(tmp)
+        (root / "locales" / "story").mkdir(parents=True)
+        (root / "locales" / "story" / "rows.jsonl").write_text(
+            "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows(*values)),
+            encoding="utf-8")
+        return root
+
     def test_the_version_manifest_no_longer_needs_a_client_version(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "asset-version.json"
@@ -72,24 +89,35 @@ class ReleaseBuilderProvenanceTests(unittest.TestCase):
             self.assertEqual(version["asset_version"], "1077741")
             self.assertEqual(version["legacy_client_version"], "")
 
-    def test_the_rows_answer_and_a_leftover_field_does_not_override_them(self):
-        version = {"legacy_client_version": "9.0.100"}
-        self.assertEqual(builder.release_provenance(version, rows("9.0.200")), "9.0.200")
+    def test_the_library_answers_instead_of_the_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._library(tmp, "9.0.200", "9.0.200", "9.0.100")
+            version = {"legacy_client_version": "9.0.100"}
+            self.assertEqual(builder.release_provenance(version, root), "9.0.200")
 
     def test_a_leftover_field_still_serves_an_empty_library(self):
-        version = {"legacy_client_version": "9.0.200"}
-        self.assertEqual(builder.release_provenance(version, []), "9.0.200")
+        with tempfile.TemporaryDirectory() as tmp:
+            version = {"legacy_client_version": "9.0.200"}
+            self.assertEqual(builder.release_provenance(version, Path(tmp)), "9.0.200")
 
     def test_no_provenance_anywhere_is_a_named_error(self):
-        with self.assertRaises(ValueError) as caught:
-            builder.release_provenance({"legacy_client_version": ""}, [])
-        self.assertIn("source_client_version", str(caught.exception))
-        self.assertIn("client_version", str(caught.exception))
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError) as caught:
+                builder.release_provenance({"legacy_client_version": ""}, Path(tmp))
+            self.assertIn("source_client_version", str(caught.exception))
+            self.assertIn("client_version", str(caught.exception))
 
     def test_the_builder_does_not_read_the_field_it_deleted(self):
         source = Path(builder.__file__).read_text(encoding="utf-8")
         self.assertNotIn('version["client_version"]', source)
-        self.assertIn("release_provenance(version", source)
+        self.assertIn("release_provenance(version)", source)
+
+    def test_the_projection_the_builder_feeds_the_applier_drops_the_field(self):
+        """Why the file-backed path exists: this is the shape the builder holds."""
+        source = Path(builder.__file__).read_text(encoding="utf-8")
+        projection = source.split("grouped.setdefault(", 1)[1].split("})", 1)[0]
+        self.assertNotIn("source_client_version", projection)
+        self.assertIn('"translation": translation', projection)
 
 
 if __name__ == "__main__":
