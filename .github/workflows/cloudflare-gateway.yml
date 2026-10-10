@@ -29,9 +29,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # The checkout pulls the content-addressed object pool (~660 MB) so that
-    # `build_index.py` can verify every object it indexes against its own
-    # SHA-256; that is the slow part of this job.
+    # The checkout pulls the whole content-addressed object pool (~1 GB, of which
+    # this release references ~640 MiB) so that `build_index.py` can verify every
+    # object it indexes against its own SHA-256; that is the slow part of this job.
     timeout-minutes: 30
     steps:
       - name: Check whether a Cloudflare token is configured
