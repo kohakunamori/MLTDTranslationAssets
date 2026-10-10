@@ -36,6 +36,7 @@ if str(ROOT / "pipelines" / "text") not in sys.path:
     sys.path.insert(0, str(ROOT / "pipelines" / "text"))
 
 from mltd_localize_scrobj import (  # noqa: E402
+    SlotTranslations,
     read_song,
     save_localized_bundle,
     slot_translations,
@@ -54,7 +55,7 @@ def song_bundles(lyrics_root: Path) -> list[str]:
     return sorted(path.name[: -len(".jsonl")] for path in songs.glob("*.jsonl"))
 
 
-def collect_translations(lyrics_root: Path, bundle: str):
+def collect_translations(lyrics_root: Path, bundle: str) -> SlotTranslations:
     return slot_translations(read_song(Path(lyrics_root), bundle))
 
 
@@ -104,7 +105,7 @@ def run(
         "written_bytes": 0,
     }
     prepared: list[dict] = []
-    pending: list[tuple[str, dict, dict[tuple[int, str], str]]] = []
+    pending: list[tuple[str, dict, SlotTranslations]] = []
 
     for bundle in song_bundles(lyrics_root):
         translations = collect_translations(lyrics_root, bundle)
