@@ -28,6 +28,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     # The checkout pulls the whole content-addressed object pool (~1 GB, of which
     # this release references ~640 MiB) so that `build_index.py` can verify every

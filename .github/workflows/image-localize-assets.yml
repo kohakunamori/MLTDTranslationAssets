@@ -15,6 +15,7 @@ name: image-localize-assets
 #     inject_reviewed_textures.py still re-checks every hash, geometry and
 #     roundtrip before a bundle is written.
 #
+# Completed, reviewed repository outputs are verified before restoring work.
 # Pipeline state lives in work/image-localization-25/ and travels between runs
 # in the Actions cache.  A run without cached state fails its preflight by name
 # rather than generating against an unknown cohort.
@@ -75,7 +76,12 @@ jobs:
           python -m pip install --disable-pip-version-check \
             -r pipelines/image/requirements-injection.txt pytest==8.4.2
 
+      - name: Verify reviewed outputs against the frozen cohort
+        id: current
+        run: python scripts/image_ci_state.py --report image-current-state.json --github-output "$GITHUB_OUTPUT"
+
       - name: Restore image work state
+        if: steps.current.outputs.needs_work == 'true'
         uses: actions/cache/restore@v4
         with:
           path: work/image-localization-25
@@ -84,6 +90,7 @@ jobs:
             image-work-
 
       - name: Report effective rate limit
+        if: steps.current.outputs.needs_work == 'true'
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -100,6 +107,7 @@ jobs:
           PY
 
       - name: Preflight
+        if: steps.current.outputs.needs_work == 'true'
         run: |
           set -euo pipefail
           missing=0
@@ -130,7 +138,7 @@ jobs:
             pipelines/image/test_moderation_batch.py
 
       - name: Generate images (serial, at most one request per minute)
-        if: ${{ github.event.inputs.skip_generation != 'true' }}
+        if: steps.current.outputs.needs_work == 'true' && github.event.inputs.skip_generation != 'true'
         run: |
           set -euo pipefail
           echo "time budget ${MAX_SECONDS}s, item cap ${MAX_ITEMS} (0 = unlimited)"
@@ -138,7 +146,16 @@ jobs:
             --max-seconds "$MAX_SECONDS" \
             --max-items "$MAX_ITEMS"
 
+      - name: Check whether the batch finished or needs another run
+        id: batch
+        if: steps.current.outputs.needs_work == 'true'
+        run: |
+          python scripts/image_ci_state.py \
+            --batch-progress "$WORK/reconstructed-preprocess/batch-progress.json" \
+            --report "$WORK/batch-status.json" --github-output "$GITHUB_OUTPUT"
+
       - name: Independent audit (the only approval gate)
+        if: steps.batch.outputs.audit_ready == 'true'
         run: |
           set -euo pipefail
           python -u pipelines/image/audit_reconstructed_release.py \
@@ -146,6 +163,7 @@ jobs:
             --output-dir "$WORK/release-prep"
 
       - name: Approve automatically (no human sign-off)
+        if: steps.batch.outputs.audit_ready == 'true'
         # The audit above is the gate; this step only translates a clean audit
         # into the install manifest the injector accepts.  It refuses any run
         # with audit errors, upstream-declined images or failed tasks, so it can
@@ -165,12 +183,14 @@ jobs:
         with:
           name: image-progress-${{ github.run_number }}
           path: |
+            image-current-state.json
+            work/image-localization-25/batch-status.json
             work/image-localization-25/reconstructed-preprocess/batch-progress.json
             work/image-localization-25/release-prep/
           if-no-files-found: warn
 
       - name: Save image work state
-        if: always()
+        if: always() && steps.current.outputs.needs_work == 'true'
         uses: actions/cache/save@v4
         with:
           path: work/image-localization-25
