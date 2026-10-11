@@ -269,23 +269,29 @@ jobs:
           if [ -z "$REMOTE_SHA" ]; then
             git push -u origin "HEAD:refs/heads/${BRANCH}"
           else
-            git fetch --quiet --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
-            if git merge-base --is-ancestor "refs/remotes/origin/${BRANCH}" "${CHECKOUT_SHA}"; then
-              echo "Remote ${BRANCH} is already contained in ${CHECKOUT_SHA}; reusing it as-is."
-            else
-              EXTRA_COMMITS="$(git rev-list "refs/remotes/origin/${BRANCH}" --not "${CHECKOUT_SHA}" || true)"
-              for commit in $EXTRA_COMMITS; do
-                FILES="$(git diff-tree --no-commit-id --name-only -r "$commit")"
-                AUTHOR="$(git show -s --format='%an <%ae>' "$commit")"
-                if [ "$FILES" != "$MANIFEST" ] || \
-                   [ "$AUTHOR" != "github-actions[bot] <github-actions[bot]@users.noreply.github.com>" ]; then
-                  echo "FAIL: remote ${BRANCH} carries commit ${commit} (${AUTHOR}) touching [${FILES}]" >&2
-                  echo "Refusing to reuse a branch that is not purely this bot's single-file update." >&2
-                  exit 1
-                fi
-              done
-              echo "Reusing existing tracker branch ${BRANCH} at ${REMOTE_SHA} (no push, no rewrite)."
+            # 这里不能再用本地的提交遍历：本 job 是浅克隆（fetch-depth 1），
+            # `git rev-list <分支> --not HEAD` 会把分支历史里所有更早的提交都当成
+            # “本分支独有”，于是把 main 自己的旧提交误判成他人工，永远拒绝复用。
+            # 判定条件不变——只有本 bot 的单文件更新可以复用——但把“分支相对 main
+            # 多了什么”交给服务器回答，深度就再也不会影响结论。
+            git fetch --quiet --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --depth=1 || true
+            COMPARE="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${BRANCH}" \
+              --jq '[.ahead_by, ([.files[].filename] | join(",")), ([.commits[].commit.author.email] | unique | join(","))] | @tsv' \
+              2>/dev/null || true)"
+            AHEAD="$(printf '%s' "$COMPARE" | cut -f1)"
+            FILES="$(printf '%s' "$COMPARE" | cut -f2)"
+            AUTHORS="$(printf '%s' "$COMPARE" | cut -f3)"
+            if [ -z "$AHEAD" ]; then
+              echo "FAIL: cannot read how ${BRANCH} compares to main; refusing to reuse it." >&2
+              exit 1
             fi
+            if [ "$AHEAD" != "0" ] && { [ "$FILES" != "$MANIFEST" ] || \
+                 [ "$AUTHORS" != "github-actions[bot]@users.noreply.github.com" ]; }; then
+              echo "FAIL: remote ${BRANCH} is ${AHEAD} commit(s) ahead of main, changing [${FILES}] by [${AUTHORS}]" >&2
+              echo "Refusing to reuse a branch that is not purely this bot's single-file update." >&2
+              exit 1
+            fi
+            echo "Reusing existing tracker branch ${BRANCH} at ${REMOTE_SHA} (no push, no rewrite)."
           fi
 
           # 建档 PR（不合并）：main 的推进保留给 owner/审查。

@@ -147,6 +147,31 @@ class WorkflowShapeTest(unittest.TestCase):
         self.assertGreaterEqual(run.count("exit 1"), 2)
         self.assertIn("treating as failure", run)
 
+    def test_freeze_reads_the_tagged_commit_before_reusing_a_tag(self) -> None:
+        """复用已在别处的冻结标签之前，必须先证明它记录的正是正在离开的版本。
+
+        附注标签在 ``git ls-remote`` 里给出的是标签对象；直接与 HEAD 比较会把
+        “标签已经正确”误判成冲突，所以 ``^{}`` 那一行必须优先。
+        """
+        run = _step_run(self.jobs["freeze"], "Freeze the outgoing")
+        self.assertIn("refs/tags/${TAG}^{}", run)
+        self.assertIn("manifests/asset-version.json", run)
+        self.assertIn("already freezes asset version", run)
+        self.assertIn("2>/dev/null || true", run)
+        self.assertIn("exit 1", run)
+
+    def test_branch_reuse_asks_the_server_instead_of_walking_a_shallow_clone(self) -> None:
+        """浅克隆里 ``rev-list --not HEAD`` 会把 main 自己的旧提交当成他人工。
+
+        复用判定必须与 runner 拿到的历史深度无关，所以它问服务器。
+        """
+        run = _step_run(self.jobs["update-pr"], "Update manifest")
+        self.assertIn("compare/main...${BRANCH}", run)
+        self.assertNotIn("$(git rev-list", run)
+        self.assertNotIn("git merge-base --is-ancestor", run)
+        self.assertIn("github-actions[bot]@users.noreply.github.com", run)
+        self.assertIn("refusing to reuse it", run)
+
     def test_source_commit_is_the_checkout_not_a_moving_branch(self) -> None:
         for job_name in ("resolve-target", "freeze", "update-pr"):
             run = "\n".join(
@@ -169,13 +194,41 @@ class FreezeSandboxTest(unittest.TestCase):
         workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
         script = _step_run(workflow["jobs"]["freeze"], "Freeze the outgoing")
         # 把步骤里的 github.sha 表达式换成环境变量，便于测试伪造“checkout 与事件 SHA 不一致”。
-        cls.script = script.replace("${{ github.sha }}", "${GITHUB_SHA}")
+        cls.script_template = script.replace("${{ github.sha }}", "${GITHUB_SHA}")
+        if "curl -fsSL" not in cls.script_template:
+            raise AssertionError("the freeze step no longer reads the tagged manifest over HTTP")
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory(prefix="freeze-sandbox-")
         self.root = Path(self._tmp.name)
         self.origin = self.root / "origin.git"
         self.work = self.root / "work"
+        # 冻结步骤用一个 HTTP 请求读“标签所在提交记录的版本号”。沙箱里换成桩，
+        # 这样这一步依然完全离线：桩打印 MLTD_STUB_ASSET_VERSION，未设置就失败
+        # （等价于“读不到”，必须 fail closed）。
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        stub = self.bin / "curl"
+        stub.write_text(
+            "#!/bin/sh\n"
+            '[ -n "${MLTD_STUB_ASSET_VERSION:-}" ] || exit 22\n'
+            'printf \'{"asset_version": %s}\\n\' "$MLTD_STUB_ASSET_VERSION"\n',
+            encoding="utf-8", newline="\n",
+        )
+        stub.chmod(0o755)
+        # Git bash prepends its own /mingw64/bin to PATH, so a PATH stub for curl
+        # would never win; the harness therefore calls the stub by absolute path
+        # in the extracted script, the same way it substitutes the event SHA.
+        self.script = self.script_template.replace("curl -fsSL", f"{self.bin.as_posix()}/curl -fsSL")
+        # 步骤里用 python3 解析 API 返回的 JSON；沙箱提供同名入口指向当前解释器，
+        # 这样被验证的仍是真正的解析代码，而不是一个更宽松的替身。
+        python3 = self.bin / "python3"
+        python3.write_text(
+            "#!/bin/sh\n"
+            f'exec "{sys.executable}" "$@"\n',
+            encoding="utf-8", newline="\n",
+        )
+        python3.chmod(0o755)
         run_git(self.root, "init", "-q", "--bare", str(self.origin))
         run_git(self.root, "init", "-q", "-b", "main", str(self.work))
         for key, value in (("user.email", "t@example.invalid"), ("user.name", "tracker test"),
@@ -208,8 +261,16 @@ class FreezeSandboxTest(unittest.TestCase):
         result = run_git(self.work, "checkout", "-q", "--detach", sha)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def run_freeze(self, old_ver: str, github_sha: str) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ, OLD_VER=old_ver, GITHUB_SHA=github_sha)
+    def run_freeze(self, old_ver: str, github_sha: str,
+                   frozen_version: str | None = None) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ, OLD_VER=old_ver, GITHUB_SHA=github_sha,
+                   GH_TOKEN="sandbox-token", GITHUB_REPOSITORY="owner/repo")
+        # 桩 curl 通过 PATH 生效；MSYS/Git bash 会把 Windows 风格的分隔符转换好。
+        env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
+        if frozen_version is None:
+            env.pop("MLTD_STUB_ASSET_VERSION", None)
+        else:
+            env["MLTD_STUB_ASSET_VERSION"] = frozen_version
         return subprocess.run(
             [BASH, "-c", self.script], cwd=str(self.work), env=env,
             capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
@@ -237,10 +298,48 @@ class FreezeSandboxTest(unittest.TestCase):
         run_git(self.work, "tag", "assets-1077500", self.first)
         run_git(self.work, "push", "-q", "origin", "refs/tags/assets-1077500")
         self.checkout(self.second)
-        result = self.run_freeze("1077500", self.second)
+        # 标签在别处，而且它记录的版本不是正在离开的这一版：必须失败，且不动远端。
+        result = self.run_freeze("1077500", self.second, frozen_version="1077400")
         self.assertEqual(result.returncode, 1)
         self.assertIn("immutable", result.stderr)
         self.assertEqual(self.remote_tag_sha("assets-1077500"), self.first)
+
+    def test_unreadable_tagged_manifest_fails_closed(self) -> None:
+        run_git(self.work, "remote", "add", "origin", str(self.origin))
+        run_git(self.work, "tag", "assets-1077500", self.first)
+        run_git(self.work, "push", "-q", "origin", "refs/tags/assets-1077500")
+        self.checkout(self.second)
+        result = self.run_freeze("1077500", self.second)  # 桩不可用 → 读不到版本
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("cannot be reused", result.stderr)
+        self.assertEqual(self.remote_tag_sha("assets-1077500"), self.first)
+
+    def test_an_existing_freeze_of_the_outgoing_version_is_reused(self) -> None:
+        """标签已经在别处，但它记录的正是正在离开的这一版：沿用，不移动。
+
+        这正是 2026-10-11 那次失败的情形：pr #40 还开着、assets-1077741 已经在
+        eae9a5ed 上冻结，而运行想把标签放到更新的 main 上。
+        """
+        run_git(self.work, "remote", "add", "origin", str(self.origin))
+        run_git(self.work, "tag", "assets-1077500", self.first)
+        run_git(self.work, "push", "-q", "origin", "refs/tags/assets-1077500")
+        self.checkout(self.second)
+        result = self.run_freeze("1077500", self.second, frozen_version="1077500")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("already freezes asset version 1077500", result.stdout)
+        self.assertEqual(self.remote_tag_sha("assets-1077500"), self.first)
+
+    def test_annotated_tag_is_compared_by_its_commit(self) -> None:
+        """附注标签：清单里的标签对象不是提交，比较必须用 ^{} 那一行。"""
+        run_git(self.work, "remote", "add", "origin", str(self.origin))
+        run_git(self.work, "tag", "-a", "assets-1077500", "-m", "freeze", self.second)
+        run_git(self.work, "push", "-q", "origin", "refs/tags/assets-1077500")
+        self.checkout(self.second)
+        result = self.run_freeze("1077500", self.second, frozen_version="1077500")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("no-op", result.stdout)
+        tag_object = self.remote_tag_sha("assets-1077500")
+        self.assertNotEqual(tag_object, self.second, "the fixture must produce an annotated tag")
 
     def test_composite_version_is_refused_before_any_push(self) -> None:
         run_git(self.work, "remote", "add", "origin", str(self.origin))
