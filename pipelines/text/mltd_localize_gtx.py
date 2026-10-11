@@ -24,14 +24,27 @@ from pathlib import Path
 _MODULE_DIR = Path(__file__).resolve().parent
 if str(_MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(_MODULE_DIR))
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 import json
 import re
 from collections import Counter
-from pathlib import Path
 from typing import Iterable
 
 import UnityPy
 from Crypto.Cipher import AES
+from pipelines.core.hashing import sha256_bytes
+from pipelines.core.jsonl import jsonl_lines, read_jsonl, write_jsonl
+
+try:  # package import (``pipelines.text``)
+    from .translation_tokens import (  # type: ignore[import-not-found]
+        PROTECTED_TOKEN_RE,
+        protected_tokens,
+        validate_translation,
+    )
+except ImportError:  # direct script/module import from this directory
+    from translation_tokens import PROTECTED_TOKEN_RE, protected_tokens, validate_translation  # noqa: E402
 
 PASSWORD = b"Millicon"
 SALT = b"DAISUL___"
@@ -42,21 +55,6 @@ IV_BYTES = 16
 # Include CJK so Kanji-only JP labels are not omitted from the translation queue.
 SOURCE_TEXT_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
 KANA_RE = re.compile(r"[\u3040-\u30ff]")
-PROTECTED_TOKEN_RE = re.compile(
-    r"\{[^{}]+\}"
-    r"|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]"
-    # A kaomoji may contain < and > on separate lines; never protect prose
-    # between them as a single fake rich-text tag.
-    r"|<[^<>\r\n]+>"
-    r"|\\[nrt]"
-    # MLTD numbered inline control sequences, e.g. \03\ and \17\.
-    # These are formatting/control data, never translatable prose or digits.
-    r"|\\[0-9]{2}\\"
-)
-
-
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def derive_key_iv() -> tuple[bytes, bytes]:
@@ -151,20 +149,6 @@ def replace_records(text: str, replacements: dict[str, str]) -> tuple[str, int]:
     return "|".join(output), changed
 
 
-def protected_tokens(value: str) -> Counter[str]:
-    return Counter(PROTECTED_TOKEN_RE.findall(value))
-
-
-def validate_translation(source: str, translated: str) -> None:
-    before = protected_tokens(source)
-    after = protected_tokens(translated)
-    if before != after:
-        raise ValueError(
-            "protected token mismatch: "
-            f"source={dict(before)!r} translation={dict(after)!r}"
-        )
-
-
 # Statuses a release decision has actually granted: only these may be used as a
 # translation value.  Owner ruling 2026-09-26 replaced the previous *blacklist*
 # ("anything not obviously pending is releasable") with this allowlist, because the
@@ -248,52 +232,6 @@ def catalogue_rows(bundle: Path) -> tuple[dict, list[dict]]:
         "kana_records": sum(row["has_kana"] for row in rows),
     }
     return summary, rows
-
-
-def jsonl_lines(text: str) -> list[str]:
-    """Split file text into JSONL lines on real newlines only.
-
-    ``str.splitlines()`` also breaks on U+2028, U+2029, U+0085, VT and FF.  Those
-    are legal *inside* a JSON string and ``json.dumps(..., ensure_ascii=False)``
-    leaves them raw, so a ``splitlines()``-based reader counts one row as two
-    lines and a writer that re-joins corrupts the file by turning the separator
-    into a real newline.  ``lyrics/songs/scrobj_gf0000.unity3d.jsonl`` already
-    carries a raw U+2028 in three rows, so this is a live defect, not a
-    theoretical one.  Read with ``Path.read_text()`` (universal newlines) and
-    split here.
-
-    A single trailing empty element is dropped, so the result matches
-    ``str.splitlines()`` for newline-terminated text: callers re-join the list
-    with ``"\\n"`` and append one terminator, which would otherwise add a blank
-    line.
-    """
-    lines = [line[:-1] if line.endswith("\r") else line for line in text.split("\n")]
-    if lines and lines[-1] == "":
-        lines.pop()
-    return lines
-
-
-def read_jsonl(path: Path) -> list[dict]:
-    rows: list[dict] = []
-    with path.open("r", encoding="utf-8") as handle:
-        for line_no, line in enumerate(handle, 1):
-            if not line.strip():
-                continue
-            try:
-                value = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"{path}:{line_no}: invalid JSON: {exc}") from exc
-            if not isinstance(value, dict):
-                raise ValueError(f"{path}:{line_no}: expected JSON object")
-            rows.append(value)
-    return rows
-
-
-def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
 def translation_map(rows: Iterable[dict], bundle_name: str, current: dict[str, str]) -> tuple[dict[str, str], dict]:

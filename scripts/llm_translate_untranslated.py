@@ -26,12 +26,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
 from pipelines.text.mltd_lyric_rules import is_english_bypass, validate_lyric_tokens
+from pipelines.core.hashing import sha256_text
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,10 +63,6 @@ def validate_draft(kind: str, source: str, translation: str) -> None:
         validate_lyric_tokens(source, translation)
     else:
         validate_translation(source, translation)
-
-
-def sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def scope_of(args: argparse.Namespace) -> str:

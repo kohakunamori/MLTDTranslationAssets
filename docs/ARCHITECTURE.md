@@ -181,6 +181,7 @@ flowchart TB
 | `schema/` | `entry.schema.json`、`assets-generated-manifest.schema.json` | 2 | <0.1 MB | 人工 |
 | `generated/` | 内容寻址生成物（5 个版本 + CAS） | 11,854 | 347 MB | `assets_generated_index.py` |
 | `pipelines/` | 文本/图像/导出流水线（离线） | 53 | 0.7 MB | 人工 |
+| `pipelines/core/` | 无业务依赖的 JSONL、哈希和写入原语 | 4 | <0.1 MB | 流水线模块 |
 | `scripts/` | 产品入口脚本（10 个入口 + 9 个回归测试） | 19 | 1.4 MB | 人工 |
 | `asset-server/` | 只读分发 + 镜像 compose（候选） | 10 | 0.2 MB | 人工 |
 | `server/` | 版本感知 CAS 存储原语 | 7 | 0.1 MB | 人工 |
@@ -200,6 +201,20 @@ flowchart TB
 ```
 
 `pipelines/` 与 `research-tools/` 是**离线**的：它们不跑在 CI runner 上，只在本地被维护者手工驱动，产出回写 `locales/` 等源数据后再走 CI。
+
+### 3.1 模块边界与未来扩展规则
+
+`pipelines/core/` 是仓库内最低层的共享库，只提供确定性、无业务状态的原语：
+
+- `hashing.py`：流式 SHA-256、文本和字节摘要；
+- `jsonl.py`：保留 U+2028 等 JSON 字符内容的 JSONL 读写，以及原子写入；
+- `pipelines/text/translation_tokens.py`：文本域的控制符/占位符契约。
+
+依赖方向固定为：`core → domain pipeline → product entry point`。核心层不能导入 UnityPy、模型 SDK、发布策略或任何具体数据目录；文本、图像和发布模块可以依赖核心层，但核心层不能反向依赖它们。入口脚本只负责参数解析和编排，不再复制哈希/JSONL 原语。新增入口应依赖领域包或共享库；少数旧 CLI 之间的兼容导入会逐步收敛，不能再作为新模块的复用方式。
+
+新增能力时先放入最小的领域包，再由入口组合；只有被两个以上领域复用且不携带业务语义的代码才进入 `pipelines/core/`。现有顶层脚本仍保留兼容导出，迁移可以按模块逐步完成，不需要一次性改写 CI 调用协议。
+
+少量同名方法是有意保留的边界适配：`server` 的 `sha256_file` 静态方法维持旧 API、`report_localization_progress.py` 和图像 staging 的 `read_jsonl` 负责各自的 BOM 编码兼容，Cloudflare 构建脚本保持独立部署闭包。它们只转发或适配核心实现，不再复制算法。
 
 ---
 
@@ -493,7 +508,7 @@ mirror root ── objects/sha256/<digest>  +  published/<ver>/{manifest,checksu
 | 镜像与服务 | 只有 `asset-server/` 的 compose 模板，**没有任何 workflow 调用 `assets_mirror.py`**；生产切换（NAS 指向、单写者交接）未做。 |
 | `manifests/images.manifest.json` 的 `distribution` | 只保留 GitHub Release 的 `url_template`（2026-10-09 删除了失效的 `cloudflare_r2` 指针），但**没有 workflow 发布 GitHub Release**，只是外链指针。 |
 | `local-data/` | 117 GB 本地草稿（含历史 `build/`、`work/`、APK jadx 审计等），已 gitignore，非架构组成。 |
-| `docs/GENERATED_STORE.md` | 记录了 writer 回归迁移的**一条未决红项**（`test_a_retained_sharded_manifest_verifies_without_rewriting` 的 notes 措辞期待 `shard`，writer 实际写 `retired fan-out`），移交后续对齐。 |
+| `docs/GENERATED_STORE.md` | 记录内容寻址存储的 flat 主路径与历史 shard/fan-out 兼容路径，以及对应回归契约。 |
 
 ---
 

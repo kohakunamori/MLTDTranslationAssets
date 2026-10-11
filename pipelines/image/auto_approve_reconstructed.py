@@ -26,10 +26,15 @@ injector is given.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from pipelines.core.hashing import sha256_file  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -40,14 +45,6 @@ CONFIRMED_CANDIDATE_KIND = "mltd-audited-image-install-manifest"
 
 class RefusedGate(ValueError):
     """The audit gate did not pass, so no manifest may be produced."""
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for block in iter(lambda: handle.read(1048576), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def load_json(path: Path) -> dict:

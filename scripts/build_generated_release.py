@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
-import hashlib
 import json
 import os
 import shutil
@@ -48,20 +47,8 @@ import build_lyric_overlay
 import merge_image_overlay
 import release_reuse
 import source_provenance
+from pipelines.core.hashing import sha256_file, sha256_text
 from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1 << 20), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
-
 
 def load_version_manifest(path: Path) -> dict:
     value = json.loads(path.read_text(encoding="utf-8"))

@@ -17,7 +17,6 @@ validated.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from collections import Counter
@@ -40,6 +39,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from localization_version_identity import version_identity
+from pipelines.core.hashing import sha256_text
 from mltd_localize_gtx import (
     is_source_text,
     parse_records,
@@ -54,7 +54,7 @@ from mltd_localize_gtx import (
 
 
 def source_id(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return sha256_text(text)
 
 
 def load_snapshot(path: Path) -> dict:

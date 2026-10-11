@@ -8,20 +8,18 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+from pipelines.core.jsonl import iter_jsonl
 from localization_progress_eta import estimate, format_duration
 
 ACCEPTED_EXCLUSIONS = {"pending", "needs_review", "skip"}
 
 
 def read_jsonl(path: Path) -> Iterable[dict]:
-    with path.open("r", encoding="utf-8-sig") as handle:
-        for line in handle:
-            if line.strip():
-                yield json.loads(line)
+    yield from iter_jsonl(path, encoding="utf-8-sig")
 
 
 def accepted_ids(path: Path) -> set[str]:

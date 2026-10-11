@@ -19,7 +19,6 @@ may feed, because a patched bundle is what the game client actually mounts.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import sys
@@ -32,14 +31,26 @@ import UnityPy
 _MODULE_DIR = Path(__file__).resolve().parent
 if str(_MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(_MODULE_DIR))
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from mltd_localize_gtx import jsonl_lines  # noqa: E402
-from mltd_lyric_rules import (  # noqa: E402
-    KANA_KANJI_RE,
-    LATIN_RE,
-    is_english_bypass,
-    is_localizable_line,
-)
+from pipelines.core.hashing import sha256_file, sha256_text  # noqa: E402
+from pipelines.core.jsonl import read_jsonl, write_text_if_changed  # noqa: E402
+try:  # package import
+    from .mltd_lyric_rules import (  # type: ignore[import-not-found]
+        KANA_KANJI_RE,
+        LATIN_RE,
+        is_english_bypass,
+        is_localizable_line,
+    )
+except ImportError:  # direct legacy module import
+    from mltd_lyric_rules import (  # noqa: E402
+        KANA_KANJI_RE,
+        LATIN_RE,
+        is_english_bypass,
+        is_localizable_line,
+    )
 
 # Re-exported for callers and tests that reach the rules through this module.
 __all__ = [
@@ -81,7 +92,7 @@ class LyricSlot:
 
     @property
     def source_sha256(self) -> str:
-        return hashlib.sha256(self.text.encode("utf-8")).hexdigest()
+        return sha256_text(self.text)
 
 
 def read_slots(bundle: Path) -> list[LyricSlot]:
@@ -167,7 +178,7 @@ def merge_slots(
     by_source: dict[str, list[dict]] = {}
     for row in existing:
         text = str(row.get("ja", ""))
-        computed = hashlib.sha256(text.encode("utf-8")).hexdigest() if text else ""
+        computed = sha256_text(text) if text else ""
         stored = str(row.get("source_sha256", ""))
         if stored and computed and stored != computed:
             raise LyricBundleError(
@@ -198,7 +209,7 @@ def merge_slots(
         same_source = [row for row in by_source.get(slot.source_sha256, [])]
         if same_source:
             donor = same_source[0]
-            donor_hash = hashlib.sha256(str(donor.get("ja", "")).encode("utf-8")).hexdigest()
+            donor_hash = sha256_text(str(donor.get("ja", "")))
             matched_identities.add((int(donor.get("index", -1)), donor_hash))
             row = dict(donor)
             row["bundle"] = bundle_name
@@ -244,23 +255,7 @@ def read_song(lyrics_root: Path, bundle_name: str) -> list[dict]:
     path = song_file(lyrics_root, bundle_name)
     if not path.is_file():
         return []
-    return [json.loads(line) for line in jsonl_lines(path.read_text(encoding="utf-8")) if line.strip()]
-
-
-def write_text_if_changed(path: Path, text: str) -> bool:
-    """Write ``text`` unless the file already holds it; return whether it moved.
-
-    The lyric refresh runs on every scheduled build, so an unconditional write
-    would touch 1.3 MB of derived files (and their timestamps) on days when
-    nothing changed and make "did this run change anything?" unanswerable.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.is_file() and path.read_text(encoding="utf-8") == text:
-        return False
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(text, encoding="utf-8")
-    temporary.replace(path)
-    return True
+    return read_jsonl(path)
 
 
 def write_song(lyrics_root: Path, bundle_name: str, rows: list[dict]) -> bool:
@@ -391,9 +386,7 @@ def slot_translations(rows: Iterable[dict]) -> SlotTranslations:
             continue
         if "|" in translation or "^" in translation:
             continue
-        if str(row.get("source_sha256", "")).lower() != hashlib.sha256(
-            source.encode("utf-8")
-        ).hexdigest():
+        if str(row.get("source_sha256", "")).lower() != sha256_text(source):
             continue
         try:
             position = int(row.get("index"))
@@ -518,7 +511,7 @@ def save_localized_bundle(source: Path, output: Path, translations: SlotTranslat
             "bundle": source.name,
             "source_path": str(source),
             "output_path": str(output),
-            "source_bundle_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+            "source_bundle_sha256": sha256_file(source),
             "output_bundle_sha256": "",
             "output_plain_sha256": "",
             "output_bytes": 0,
@@ -550,13 +543,11 @@ def save_localized_bundle(source: Path, output: Path, translations: SlotTranslat
         "bundle": source.name,
         "source_path": str(source),
         "output_path": str(output),
-        "source_bundle_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "output_bundle_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
-        "output_plain_sha256": hashlib.sha256(
-            json.dumps(
-                [[slot.index, slot.text] for slot in verified], ensure_ascii=False
-            ).encode("utf-8")
-        ).hexdigest(),
+        "source_bundle_sha256": sha256_file(source),
+        "output_bundle_sha256": sha256_file(output),
+        "output_plain_sha256": sha256_text(
+            json.dumps([[slot.index, slot.text] for slot in verified], ensure_ascii=False)
+        ),
         "output_bytes": output.stat().st_size,
         "changed": replacements,
         "slots_total": len(after_texts),

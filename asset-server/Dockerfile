@@ -3,6 +3,7 @@
 # 上下文 = 本仓库根目录。只复制 compose 服务实际导入/调用的源码：
 #   - mltd-assets-mirror:  scripts/assets_mirror.py + 它导入的 producer 校验模块
 #     scripts/assets_generated_index.py（同仓生成侧 CI 的同一文件，非第二实现）
+#   - shared pipeline primitives: pipelines/__init__.py、pipelines/core/*
 #   - mltd-asset-updater / mltd-asset-tools: tools/archive_controller.py
 #     （+ 其经子进程调用的 tools/versioned_assets.py、
 #      tools/materialize_versioned_assets.py、tools/asset_version.py）
@@ -36,3 +37,11 @@ COPY tools/asset_version.py /app/tools/asset_version.py
 # 闭包必需项，删一不可。
 COPY scripts/assets_generated_index.py /app/scripts/assets_generated_index.py
 COPY scripts/assets_mirror.py /app/scripts/assets_mirror.py
+
+# pipelines/core/ is a dependency of the shared hashing primitives used by
+# the producer, mirror, and server storage modules. Keep the package boundary
+# explicit so this image remains a self-contained closure.
+COPY pipelines/__init__.py /app/pipelines/__init__.py
+COPY pipelines/core/__init__.py /app/pipelines/core/__init__.py
+COPY pipelines/core/hashing.py /app/pipelines/core/hashing.py
+COPY pipelines/core/jsonl.py /app/pipelines/core/jsonl.py

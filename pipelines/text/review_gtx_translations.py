@@ -17,19 +17,20 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from mltd_localize_gtx import PROTECTED_TOKEN_RE, read_jsonl
-from mltd_translation_quality import applicable_glossary, index_unique, load_glossary
-from build_character_voice_evidence import (
+from pipelines.text.mltd_localize_gtx import read_jsonl
+from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE
+from pipelines.text.mltd_translation_quality import applicable_glossary, index_unique, load_glossary
+from pipelines.text.build_character_voice_evidence import (
     load_character_evidence,
     select_official_style_samples,
 )
-from translate_gtx_queue import strip_json_fence
-from classify_translation_risk import load_risk_index
-from mltd_character_profiles import load_character_profiles, select_character_profile
+from pipelines.text.translate_gtx_queue import strip_json_fence
+from pipelines.text.classify_translation_risk import load_risk_index
+from pipelines.text.mltd_character_profiles import load_character_profiles, select_character_profile
 
 SCORE_NAMES = (
     "semantic_accuracy",

@@ -12,14 +12,20 @@ import argparse
 from collections import Counter, defaultdict
 import csv
 import json
+import sys
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from pipelines.core.jsonl import read_jsonl as _read_jsonl  # noqa: E402
 
 DEFAULT_WORK = Path(__file__).resolve().parents[2] / "work/image-localization-25"
 
 
 def read_jsonl(path: Path) -> list[dict]:
-    return [json.loads(s) for s in path.read_text(encoding="utf-8-sig").splitlines()
-            if s.strip()]
+    return _read_jsonl(path, encoding="utf-8-sig")
 
 
 def write(path: Path, rows: list[dict]) -> None:

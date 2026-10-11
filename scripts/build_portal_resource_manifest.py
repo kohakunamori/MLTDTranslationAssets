@@ -12,9 +12,16 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from pipelines.core.hashing import sha256_file  # noqa: E402
 
 
 CATEGORY_RULES = {
@@ -67,14 +74,6 @@ def category_id(bundle: str, item_key: str = "") -> str:
     if b.startswith("birth_"):
         return "birth_greet"
     return "system_ui"
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def git_commit(root: Path) -> str | None:
@@ -143,7 +142,7 @@ def main() -> int:
                 bundle_counts[bucket] += 1
 
     generated = json.loads(generated_path.read_text(encoding="utf-8"))
-    generated_hash = sha256(generated_path)
+    generated_hash = sha256_file(generated_path)
     release = {
         "asset_version": asset_version,
         "release_id": f"assets-{asset_version}",

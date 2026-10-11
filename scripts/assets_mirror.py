@@ -67,7 +67,6 @@ import argparse
 import base64
 import concurrent.futures
 import binascii
-import hashlib
 import json
 import os
 import re
@@ -86,6 +85,8 @@ from typing import Any, Callable, Iterable, Iterator
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+
+from pipelines.core.hashing import sha256_bytes, sha256_file
 
 # The provenance gate is the producer's, imported rather than re-implemented:
 # two compare implementations would be two chances to disagree about what "an
@@ -491,7 +492,7 @@ class GitHubAssetsSource:
             legacy_url = self.legacy_object_url(digest, commit)
             response = self._get(legacy_url)
             url = legacy_url
-        actual = hashlib.sha256(response.body).hexdigest()
+        actual = sha256_bytes(response.body)
         if actual != digest:
             raise ObjectDigestMismatch(digest, actual, origin=url)
         return response.body
@@ -724,14 +725,6 @@ def parse_checksums(text: str) -> dict[str, str]:
 # --------------------------------------------------------------------------------------
 
 
-def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for chunk in iter(lambda: handle.read(chunk_size), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 class ObjectPool:
     """Content-addressed store at ``<root>/objects/sha256/<sha256>`` (flat).
 
@@ -775,7 +768,7 @@ class ObjectPool:
         with the same digest is left untouched (idempotent re-runs).
         """
         _require_digest(digest, "digest")
-        actual = hashlib.sha256(data).hexdigest()
+        actual = sha256_bytes(data)
         if actual != digest:
             raise ObjectDigestMismatch(digest, actual)
         target = self.path_for(digest)

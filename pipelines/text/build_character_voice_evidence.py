@@ -13,11 +13,11 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from mltd_localize_gtx import read_jsonl, validate_translation
+from pipelines.text.mltd_localize_gtx import read_jsonl, validate_translation
 
 FULL_NAME_RE = re.compile(r"^ld_idol_fullname_(\d+)$")
 SPEAKER_SUFFIX_RE = re.compile(r"(?:^|_)(?P<code>\d{3}[a-z]{3}|p)$", re.IGNORECASE)

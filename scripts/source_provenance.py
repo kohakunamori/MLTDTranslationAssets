@@ -24,10 +24,16 @@ whether a missing provenance is fatal.
 """
 from __future__ import annotations
 
-import json
 from collections import Counter
 from pathlib import Path
+import sys
 from typing import Iterable, Mapping
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from pipelines.core.jsonl import iter_jsonl
 
 LIBRARY_GLOB = "locales/*/*.jsonl"
 
@@ -59,11 +65,8 @@ def from_library(root: Path) -> tuple[str | None, Counter]:
     """Stream the locale library and vote; the nightly job can afford the scan."""
     counts: Counter = Counter()
     for path in sorted(root.glob(LIBRARY_GLOB)):
-        with path.open(encoding="utf-8") as stream:
-            for line in stream:
-                if not line.strip():
-                    continue
-                value = _value(json.loads(line))
-                if value:
-                    counts[value] += 1
+        for row in iter_jsonl(path):
+            value = _value(row)
+            if value:
+                counts[value] += 1
     return _pick(counts), counts

@@ -90,6 +90,6 @@ C:/Users/gekdanhs/AppData/Local/Programs/Python/Python313/python.exe -I -X utf8 
 
 该临时 runner 只加载复制的产品三个文件，阻断 socket 连接及 `GeneratedStore.prune_orphans`，全量逐用例结果已记录。没有主仓或兄弟树 fallback；jsonschema 本环境可用，schema 正反用例实际 pass，未跳过。未跑真实 generated、网络、DB、NAS 或 GC。48 个产品用例不包含 4 个完整归档用例；部分归档子用例也不计 pass。
 
-仅一条未决项交给 Assets：`test_a_retained_sharded_manifest_verifies_without_rewriting` 的 notes 断言期待 `shard`，现有 writer 明确使用 `retired fan-out`。这是迁入后的措辞接线不匹配，不据此认定 writer 业务缺陷。该用例 `report.ok` 及 notes 非空已通过，失败之后的字节未变 / 未产生 flat 副本断言**未执行**；不能宣称该用例整体通过。保留红项及完整断言，不改 writer，不重跑求绿。
+历史兼容路径的验证提示统一使用 `retired shard/fan-out` 术语，既保留旧的 fan-out 含义，也明确说明这是分片路径。`test_a_retained_sharded_manifest_verifies_without_rewriting` 现已覆盖完整的字节不变与不产生 flat 副本断言。
 
 有限下一步：由 Assets 在本仓单独对齐上述历史布局 notes 断言并验证该用例；迁移 candidate 已交付，此问题不阻止废弃主仓维护入口。实现、schema、mirror、workflow 和入口测试均未修改，未提交、推送或部署。

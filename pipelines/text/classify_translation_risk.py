@@ -15,12 +15,14 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from mltd_localize_gtx import PROTECTED_TOKEN_RE, read_jsonl
-from mltd_translation_quality import source_id
+from pipelines.text.mltd_localize_gtx import read_jsonl
+from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE
+from pipelines.text.mltd_translation_quality import source_id
+from pipelines.core.jsonl import write_jsonl
 
 DIALOGUE_CATEGORIES = {
     "birth", "card", "event", "job", "main", "memory", "season", "special", "live_mc"
@@ -143,15 +145,6 @@ def load_risk_index(path: Path | None) -> dict[str, dict]:
             raise ValueError(f"invalid risk_level for {sid}: {level!r}")
         out[sid] = row
     return out
-
-
-def write_jsonl(path: Path, rows: list[dict]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8", newline="\n") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
-    tmp.replace(path)
 
 
 def main() -> int:

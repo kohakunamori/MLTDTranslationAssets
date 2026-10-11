@@ -25,10 +25,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# The repository's own gate is the authority on what may be published, so the
-# promotion reuses its protected-token check instead of re-implementing it.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validate_repo import validate_translation_tokens  # noqa: E402
+# Promotion and validation share one token contract without importing a CLI
+# module (which would also pull in the full repository validator).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipelines.text.translation_tokens import validate_translation_tokens  # noqa: E402
 
 
 PROMOTABLE = {"pending", "untranslated"}

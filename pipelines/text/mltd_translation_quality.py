@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
@@ -13,11 +12,14 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from mltd_localize_gtx import KANA_RE, PROTECTED_TOKEN_RE, read_jsonl, validate_translation
+from pipelines.core.hashing import sha256_text
+from pipelines.core.jsonl import read_jsonl, write_jsonl
+from pipelines.text.mltd_localize_gtx import KANA_RE
+from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE, validate_translation
 
 NUMBER_RE = re.compile(r"\d+(?:\.\d+)?%?")
 JP_PERCENT_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)パーセント")
@@ -113,7 +115,7 @@ META_PATTERNS = (
 
 
 def source_id(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return sha256_text(text)
 
 
 def load_glossary(path: Path | None) -> dict:
@@ -443,15 +445,6 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
         "examples": queue_row.get("examples", candidate.get("examples", [])),
         "occurrences": queue_row.get("occurrences", candidate.get("occurrences")),
     }
-
-
-def write_jsonl(path: Path, rows: list[dict]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8", newline="\n") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
-    tmp.replace(path)
 
 
 def build_parser() -> argparse.ArgumentParser:

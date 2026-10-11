@@ -134,12 +134,15 @@ tools/materialize_versioned_assets.py
 tools/asset_version.py
 scripts/assets_generated_index.py     # producer（本仓同一文件的唯一正式 writer 实现）
 scripts/assets_mirror.py              # mirror 入口
+pipelines/__init__.py                  # shared pipeline package marker
+pipelines/core/{__init__,hashing,jsonl}.py  # mirror/server shared primitives
 asset-server/requirements.txt
 ```
 
-仓库没有 `scripts/__init__.py`/`server/__init__.py`/`tools/__init__.py`：这些目录以
-Python 3 命名空间包方式导入（各入口脚本都会把仓库根插入 `sys.path`），因此不需要
-`__init__.py`。`scripts/assets_mirror.py` 的 producer 导入有两条兼容分支：
+仓库的 `pipelines/` 使用显式包边界；`scripts/`、`server/`、`tools/` 仍以 Python 3
+命名空间包方式导入（各入口脚本都会把仓库根插入 `sys.path`）。`pipelines/core/`
+只包含无业务依赖的哈希与 JSONL 原语，镜像闭包会逐文件复制它们。`scripts/assets_mirror.py`
+的 producer 导入有两条兼容分支：
 
 - 顶层名 `assets_generated_index`（镜像内 `python scripts/assets_mirror.py` 的真实形态，
   以及本仓 CI `python scripts/assets_generated_index.py …` 的形态）；

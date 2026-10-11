@@ -2,7 +2,6 @@
 """Durable on-disk MLTD asset archive primitives."""
 from __future__ import annotations
 
-import hashlib
 import os
 import sqlite3
 import time
@@ -11,6 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 import msgpack
+from pipelines.core.hashing import sha256_file as _sha256_file
 
 
 def safe_relative_name(value: str) -> str:
@@ -185,11 +185,7 @@ class AssetArchive:
 
     @staticmethod
     def sha256_file(path: Path) -> str:
-        digest = hashlib.sha256()
-        with path.open("rb") as f:
-            for chunk in iter(lambda: f.read(1024 * 1024), b""):
-                digest.update(chunk)
-        return digest.hexdigest()
+        return _sha256_file(path)
 
     def verify_many(self, scope: str, names: Iterable[str]) -> tuple[int, list[str]]:
         ok = 0

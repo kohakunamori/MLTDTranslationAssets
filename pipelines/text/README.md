@@ -10,6 +10,7 @@
   - 阻断破坏客户端底层解析的半角保留分隔符（`|` 与 `^`）。
 - **多模型并发池调度 (Model Pool & Rate Limiting)**：支持 OpenAI / Claude / Gemini 多 Provider、动态分组批处理（Batch V2）与 RPM 速率控制。
 - **自动化质量把关 (Automated QA Gate)**：提供针对未转义日文汉字、平假名/片假名残留、数字错位的多级质量质检。
+- **单一占位符契约 (Single Token Contract)**：`translation_tokens.py` 集中定义控制符/占位符的识别与校验；提取、审校、晋级和仓库验证统一调用同一实现。
 
 ## 2. 环境配置与凭证脱敏
 
@@ -29,6 +30,7 @@ export MLTD_API_KEY="your_api_key_here"
 |---|---|
 | `mltd_localization_pipeline.py` | 游戏资源包全量提取、翻译记忆库构建、覆盖率审计与 UnityFS Overlay 合流 |
 | `mltd_localize_gtx.py` | 底层加密 `TextAsset` (GTX) 加解密、UnityPy 解析、行内控制符保护与验证 |
+| `translation_tokens.py` | 轻量共享的占位符识别与校验规则，供流水线和仓库门禁复用 |
 | `translate_mltd_api_pool.py` | 多模型并发翻译池控制器（支持动态 Batch V2、缓存预热与失败回退） |
 | `review_gtx_translations.py` | 译文自动化 QA 审校器（假名残留、术语一致性、格式标记校验） |
 | `run_dual_track_pipeline.py` | 双轨并发流水线编排器（快速小包与主文本池并行推进） |

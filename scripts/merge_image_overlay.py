@@ -16,7 +16,6 @@ rather than silently picking one side.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -24,20 +23,16 @@ from pathlib import Path
 import msgpack
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from pipelines.core.hashing import sha256_file  # noqa: E402
 
 IMAGE_RESOURCE_KIND = "texture"
 
 
 class RefusedMerge(ValueError):
     """The two catalogues cannot be merged without guessing."""
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for block in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def load_catalogue(path: Path) -> dict:

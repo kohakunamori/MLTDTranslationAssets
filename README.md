@@ -32,6 +32,7 @@ APK 内置面，由配套仓库 [MLTDTranslationClient](https://github.com/kohak
   - `manifests/localizable-bundle-families.json`：哪些官方资源包属于「可汉化面」（文本包、歌词包），新面必须先在这里声明
   - `manifests/official-asset-inventory.json`：官方 16.8 万个包的家族签名基线，用于告警「出现了从未见过的资源类型」
 - `pipelines/`：自动化汉化与生成流水线工具集
+  - `pipelines/core/`：跨文本、图像和发布域共享的无业务依赖 JSONL、哈希与原子写入原语
   - `pipelines/text/`：全量文本提取、加密 GTX 解密/回写、多模型并发翻译与自动化质检流水线
   - `pipelines/image/`：Sprite Atlas 几何重组、`gpt-image-2.5-sunburst` 图像重绘、`gpt-5.6-luna` 视觉审查与 ASTC 纹理回填流水线
   - `pipelines/export/`：数据分发与 GitHub 规范导出工具

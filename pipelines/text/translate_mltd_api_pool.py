@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
 import json
 import os
 import re
@@ -17,14 +16,15 @@ from typing import Any, Callable
 
 import httpx
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from mltd_localize_gtx import read_jsonl, validate_translation
-from mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
-from mltd_translation_prompt import compile_prompt_bundle, snapshot_status
-from translate_gtx_queue import (
+from pipelines.core.hashing import sha256_bytes, sha256_text
+from pipelines.text.mltd_localize_gtx import read_jsonl, validate_translation
+from pipelines.text.mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
+from pipelines.text.mltd_translation_prompt import compile_prompt_bundle, snapshot_status
+from pipelines.text.translate_gtx_queue import (
     ACCEPTED_STATUS,
     BASIC_BLOCKING_QA_CODES,
     mask_tokens,
@@ -157,10 +157,6 @@ def retry_delay_seconds(exc: Exception, attempt: int) -> float:
         if 500 <= exc.status_code < 600:
             return min(2.0 * (2 ** max(attempt - 1, 0)), 16.0)
     return min(float(2 ** max(attempt - 1, 0)), 8.0)
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def load_authoritative_terms(path: Path) -> dict[str, str]:
@@ -1742,7 +1738,7 @@ async def async_main(args: argparse.Namespace) -> int:
     glossary = load_glossary(args.glossary)
     authoritative_terms = load_authoritative_terms(args.authoritative_terms)
     authoritative_terms_sha256 = (
-        hashlib.sha256(args.authoritative_terms.read_bytes()).hexdigest()
+        sha256_bytes(args.authoritative_terms.read_bytes())
         if args.authoritative_terms.is_file()
         else ""
     )

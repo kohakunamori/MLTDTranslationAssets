@@ -24,7 +24,6 @@ Backends:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -41,22 +40,20 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from mltd_localize_gtx import (
-    PROTECTED_TOKEN_RE,
-    read_jsonl,
-    validate_translation,
-)
-from mltd_translation_quality import applicable_glossary, evaluate_row, load_glossary
-from build_character_voice_evidence import (
+from pipelines.core.hashing import sha256_text
+from pipelines.core.jsonl import read_jsonl
+from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE, validate_translation
+from pipelines.text.mltd_translation_quality import applicable_glossary, evaluate_row, load_glossary
+from pipelines.text.build_character_voice_evidence import (
     load_character_evidence,
     select_official_style_samples,
 )
-from classify_translation_risk import load_risk_index
-from mltd_character_profiles import load_character_profiles, select_character_profile
+from pipelines.text.classify_translation_risk import load_risk_index
+from pipelines.text.mltd_character_profiles import load_character_profiles, select_character_profile
 
 MARKER_RE = re.compile(r"__MLTD_TOKEN_(\d{3})__")
 ACCEPTED_STATUS = "machine_translated"
@@ -83,7 +80,7 @@ BASIC_BLOCKING_QA_CODES = {
 
 
 def source_id(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return sha256_text(text)
 
 
 def mask_tokens(text: str) -> tuple[str, list[str]]:

@@ -70,9 +70,16 @@ REQUIRED_COPIES = (
     "tools/asset_version.py",
     "scripts/assets_generated_index.py",
     "scripts/assets_mirror.py",
+    "pipelines/__init__.py",
+    "pipelines/core/__init__.py",
+    "pipelines/core/hashing.py",
+    "pipelines/core/jsonl.py",
 )
 
-LOCAL_IMPORT_RE = re.compile(r"^\s*from\s+(scripts|server|tools)\.([A-Za-z_]\w*)", re.M)
+LOCAL_IMPORT_RE = re.compile(
+    r"^\s*from\s+((?:scripts|server|tools|pipelines)(?:\.[A-Za-z_]\w*)+)\s+import",
+    re.M,
+)
 
 
 def copy_pairs(text: str) -> list[tuple[str, str]]:
@@ -100,7 +107,7 @@ def referenced_local_files(text: str) -> list[str]:
     只认显式前缀导入——这正是本仓自足性要求的形式：跨仓引用要么是本仓文件，
     要么是第三方依赖；其余都应被本函数报出并在测试里对照 COPY 清单。
     """
-    return sorted({f"{pkg}/{name}.py" for pkg, name in LOCAL_IMPORT_RE.findall(text)})
+    return sorted({f"{module.replace('.', '/')}.py" for module in LOCAL_IMPORT_RE.findall(text)})
 
 
 class DockerContextClosureTest(unittest.TestCase):

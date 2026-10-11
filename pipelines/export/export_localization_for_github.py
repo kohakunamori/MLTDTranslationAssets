@@ -10,13 +10,18 @@ Project architecture:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from pipelines.core.hashing import sha256_file, sha256_text  # noqa: E402
 
 RESERVED_DELIMITERS = ("|", "^")
 DELIMITER_REPLACEMENTS = {
@@ -40,20 +45,6 @@ def is_pure_english_lyric(text: str) -> bool:
 class ExportValidationError(ValueError):
     """Raised when data integrity or schema constraints are violated."""
     pass
-
-
-def sha256_text(value: str) -> str:
-    """Return SHA-256 hex digest of a UTF-8 string."""
-    return hashlib.sha256(value.encode("utf-8")).hexdigest().lower()
-
-
-def sha256_file(path: Path) -> str:
-    """Return SHA-256 hex digest of a file."""
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest().lower()
 
 
 def clean_translation(text: str) -> Tuple[str, List[str]]:

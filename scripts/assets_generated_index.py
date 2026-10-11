@@ -102,7 +102,6 @@ as ``verified-compatible``.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -114,6 +113,12 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from pipelines.core.hashing import sha256_bytes, sha256_file
+
 MANIFEST_KIND = "mltd-assets-generated-manifest"
 MANIFEST_SCHEMA_VERSION = 1
 OBJECTS_DIRNAME = "objects"
@@ -123,7 +128,7 @@ MANIFEST_NAME = "manifest.json"
 
 #: SHA-256 of an empty file.  An empty object is still an object; what it is
 #: *not* is the same thing as an object that is missing from the store.
-EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
+EMPTY_SHA256 = sha256_bytes(b"")
 
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 HEX40_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -221,20 +226,6 @@ class ReleaseCommitError(GeneratedStoreError):
 # --------------------------------------------------------------------------- #
 # primitives
 # --------------------------------------------------------------------------- #
-def sha256_bytes(payload: bytes) -> str:
-    """Lowercase hex SHA-256 of ``payload``."""
-    return hashlib.sha256(payload).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    """Lowercase hex SHA-256 of the file at ``path`` (streamed)."""
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def cas_object_path(digest: str) -> PurePosixPath:
     """Canonical store-relative object path: ``objects/sha256/<digest>``.
 
@@ -1564,7 +1555,7 @@ class GeneratedStore:
         # saying so once beats discovering it at NAS serve time.
         if legacy_listing:
             report.notes.append(
-                f"{CHECKSUMS_NAME} lists objects under the retired fan-out layout "
+                f"{CHECKSUMS_NAME} lists objects under the retired shard/fan-out layout "
                 f"({OBJECTS_DIRNAME}/{HASH_ALGO}/<aa>/<digest>); a release written now lists "
                 f"{OBJECTS_DIRNAME}/{HASH_ALGO}/<digest>. Rebuild to migrate it; this manifest "
                 "is still readable and its objects are still resolvable.")
@@ -1629,7 +1620,7 @@ class GeneratedStore:
                     f"artifact_sha256 {artifact} (expected {expected_object!r})")
             elif declared_object == legacy_object:
                 report.notes.append(
-                    f"{label}: object_path names the retired fan-out layout "
+                    f"{label}: object_path names the retired shard/fan-out layout "
                     f"({legacy_object}); accepted for a manifest written before the flat "
                     f"switch (canonical now: {expected_object})")
 

@@ -17,20 +17,10 @@ absent: they are delivered by the client repository instead.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import sys
-from collections import Counter
 from pathlib import Path
-
-PROTECTED_TOKEN_RE = re.compile(
-    r"\{[^{}]+\}"
-    r"|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]"
-    r"|<[^<>\r\n]+>"
-    r"|\\[nrt]"
-    r"|\\[0-9]{2}\\"
-)
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -38,6 +28,11 @@ if str(ROOT) not in sys.path:
 # translation pipeline can apply exactly the rule that will judge its output;
 # this validator must never be the first place a draft is rejected.
 from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
+from pipelines.core.hashing import sha256_text  # noqa: E402
+from pipelines.text.translation_tokens import (  # noqa: E402
+    PROTECTED_TOKEN_RE,
+    validate_translation_tokens,
+)
 
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -58,17 +53,6 @@ CATEGORIES = ("story", "card", "dialogue", "birth", "master")
 #   source_client_version provenance, `<X.Y.Z>`
 ASSET_VERSION_RE = re.compile(r"^[0-9]+$")
 CLIENT_VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
-
-
-def sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest().lower()
-
-
-def validate_translation_tokens(source: str, translated: str) -> None:
-    before = Counter(PROTECTED_TOKEN_RE.findall(source))
-    after = Counter(PROTECTED_TOKEN_RE.findall(translated))
-    if before != after:
-        raise ValueError(f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}")
 
 
 def validate_locales(root: Path) -> dict[str, int]:
