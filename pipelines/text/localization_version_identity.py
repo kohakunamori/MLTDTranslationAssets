@@ -18,7 +18,7 @@ _MODULE_DIR = Path(__file__).resolve().parent
 if str(_MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(_MODULE_DIR))
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 CLIENT_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 ASSET_RE = re.compile(r"^[0-9]+$")
 UPSTREAM_RE = re.compile(r"/([0-9]+)/production(?:/|$)")

@@ -6,6 +6,7 @@ import contextlib
 import hashlib
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,49 @@ import msgpack
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_generated_release as build
+
+
+class RealPipelineEntrypointTests(unittest.TestCase):
+    """Exercise the child CLI without inheriting pytest's import path."""
+
+    def run_cli(self, script: str, *args: str, cwd: Path):
+        env = dict(os.environ)
+        env.pop("PYTHONPATH", None)
+        return subprocess.run(
+            [sys.executable, "-P", str(build.ROOT / script), *args],
+            cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8",
+            timeout=30,
+        )
+
+    def test_generated_overlay_cli_starts_from_an_unrelated_directory(self):
+        with tempfile.TemporaryDirectory() as raw:
+            result = self.run_cli(
+                "pipelines/text/mltd_localization_pipeline.py", "--help", cwd=Path(raw),
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("build-overlay", result.stdout)
+
+    def test_version_identity_resolves_relative_index_from_repository_root(self):
+        # Keep the fixture on the repository's drive on Windows.
+        with tempfile.TemporaryDirectory(dir=build.ROOT) as raw:
+            temp = Path(raw)
+            index = temp / "index.data"
+            index.write_bytes(b"source-bound-index")
+            snapshot = temp / "snapshot.json"
+            snapshot.write_text(json.dumps({
+                "complete": True, "scope": "jp-android",
+                "upstream_root": "https://td-assets.bn765.com/1077741/production/2018/Android",
+                "asset_index": os.path.relpath(index, build.ROOT),
+                "objects": [{"logical": "story.gtx.unity3d"}],
+            }), encoding="utf-8")
+            result = self.run_cli(
+                "pipelines/text/localization_version_identity.py",
+                "--snapshot", str(snapshot), "--client-version", "9.0.200",
+                "--asset-version", "1077741", cwd=temp,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["asset_index_sha256"],
+                         hashlib.sha256(b"source-bound-index").hexdigest())
 
 
 def _write_synthetic_root(root: Path, *, images_complete: bool, write_manifest: bool = True) -> None:
