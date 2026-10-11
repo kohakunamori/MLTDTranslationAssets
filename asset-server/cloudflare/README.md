@@ -32,6 +32,14 @@ Worker 里带一张表（`src/index.json`），内容是**请求路径 → 这�
 | 4 | 取回来的字节交给客户端，同时写进 Cloudflare 的边缘缓存（Cache API，1 年） |
 | 5 | 没命中（或 GitHub 取不到）→ 转发 `https://td-assets.bn765.com/<version>/<path>` |
 
+**不带版本号的请求（客户端拿新版的索引文件）**：这种请求按表里那一版转发。游戏发布新版本之后，
+新版索引文件在旧版本号下并不存在，官方 CDN 会用 403 拒绝，客户端就一直卡在 "Now Loading"。
+所以**只有**这种请求在**第一次转发被 4xx 拒绝**时，会按"最新正式版本"再试一次：拿到 2xx 就用它
+（响应头 `x-mltd-asset-source: official-newest-version`），拿不到就原样返回第一次的响应——只会变好，
+不会变坏。最新正式版本取自 `https://api.matsurihi.me/api/mltd/v2/version/assets`（JSON 数组，
+取最大的 `version`），按每 15 分钟缓存一次，不会每个请求都去问。带版本号的请求、命中汉化包的请求、
+`/healthz` 都不受影响。
+
 接受的 URL 形状（与现有 nginx vhost、`serve_release.py` 兼容）：
 
 ```text
@@ -97,6 +105,13 @@ python asset-server/cloudflare/check_gateway.py --base https://mltd-assets.<sub>
 抽查汉化包字节与 `artifact_sha256` 一致；第二次读必须命中边缘缓存；逻辑名别名同字节；`HEAD`/`Range`；
 **从官方目录里挑本版没有的文件**，比对直连官方拿到的字节一致；别的版本不被本地命中；路径穿越/写请求被拒。
 
+部署之前先在本地跑一遍 Worker（不上线、不联网也能跑）：
+
+```bash
+node asset-server/cloudflare/test_newest_version_fallback.mjs          # 打桩，全部离线，12 项
+node asset-server/cloudflare/test_newest_version_fallback.mjs --live   # 额外用真实 feed + 真实官方 CDN 验 2 项
+```
+
 ## 6. 边界与风险
 
 * **`*.workers.dev` 在中国大陆不可用**（DNS 被污染）。自定义域 `mltd-asset-cf.nyaneko.cn` 直连实测可用，
@@ -109,7 +124,11 @@ python asset-server/cloudflare/check_gateway.py --base https://mltd-assets.<sub>
   （R2/Stream/Images）再经 CDN 分发，而"缓存在 Cloudflare 之外的大文件"属于受限的那一类；本项目量级很小，
   但这条要知道。
 * **环境依赖**：`check_gateway.py` 的"官方目录"抽查需要 `msgpack`（`asset-server/requirements.txt` 已列）。
-* 响应头自查：`x-mltd-asset-source`（哪一端答的）、`x-mltd-cache`（hit/miss/bypass）、`x-mltd-build`（部署的提交号）。
+* 响应头自查：`x-mltd-asset-source`（哪一端答的，取值 `generated-release` / `official-miss` /
+  `official-other-version` / `official-repository-unavailable` / `official-newest-version` / `official-error`）、
+  `x-mltd-cache`（hit/miss/bypass）、`x-mltd-build`（部署的提交号）。
+* **最新版兜底依赖第三方 feed**（`api.matsurihi.me`）：它挂了、变格式了、或者报的版本还没真正上传到官方 CDN，
+  结果只是"这次不兜底"，客户端拿到的仍是改造前的那份 403，不会出现新错误。
 
 ## 7. 本次实测（2026-10-11）
 

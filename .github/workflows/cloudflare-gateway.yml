@@ -78,6 +78,14 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         run: python asset-server/cloudflare/build_index.py --apply
 
+      - name: Test the version-less recovery rule
+        if: steps.guard.outputs.configured == 'true'
+        # Offline: the harness runs the real worker source with stubbed Worker
+        # globals and checks that a refusal is only retried for a version-less
+        # request, that a retry which is not 2xx returns the original response,
+        # and that a version-carrying or covered request never touches the feed.
+        run: node asset-server/cloudflare/test_newest_version_fallback.mjs
+
       - name: Deploy to Cloudflare
         if: steps.guard.outputs.configured == 'true'
         working-directory: asset-server/cloudflare

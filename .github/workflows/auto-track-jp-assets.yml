@@ -121,6 +121,7 @@ jobs:
       - name: Freeze the outgoing asset version tag
         env:
           OLD_VER: ${{ needs.resolve-target.outputs.current_version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           CHECKOUT_SHA="$(git rev-parse HEAD)"
@@ -148,9 +149,14 @@ jobs:
           echo "Freeze target: tag ${TAG} -> commit ${TARGET}"
 
           # 先查远端状态，失败可见（旧版 `git tag -f ... || true` 会把本地打标失败
-          # 吞掉，再用 -f 强推覆盖远端标签）。
-          REMOTE_LINE="$(git ls-remote origin "refs/tags/${TAG}" || true)"
-          REMOTE_SHA="$(printf '%s\n' "$REMOTE_LINE" | awk '{print $1}' | head -n1)"
+          # 吞掉，再用 -f 强推覆盖远端标签）。两个 ref 一起查，并且优先取 `^{}` 那
+          # 一行：附注标签在 ls-remote 里给出的是标签对象，不是提交，直接和 HEAD
+          # 比较永远不会相等，会把“标签已经正确”误判成冲突。
+          REMOTE_LINE="$(git ls-remote origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}" || true)"
+          REMOTE_SHA="$(printf '%s\n' "$REMOTE_LINE" | awk -v ref="refs/tags/${TAG}^{}" '$2 == ref {print $1; exit}')"
+          if [ -z "$REMOTE_SHA" ]; then
+            REMOTE_SHA="$(printf '%s\n' "$REMOTE_LINE" | awk -v ref="refs/tags/${TAG}" '$2 == ref {print $1; exit}')"
+          fi
 
           if [ -z "$REMOTE_SHA" ]; then
             # 远端还没有这个标签：创建，且 source 显式写 TARGET，不依赖任何本地 ref。
@@ -164,9 +170,25 @@ jobs:
             exit 0
           fi
 
+          # 标签已经在别的提交上。只有它确实冻结着「正在离开的这一版」才可以接受：
+          # 冻结本身不可变，沿用一份已经正确的冻结不会改变任何消费者读到的
+          # source_commit，也不会重写历史；而指向别的版本的标签仍然必须失败。
+          # 这里读该标签提交上的 manifest，避免为了它做一次全历史浅克隆。
+          FROZEN_VER="$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.raw" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/manifests/asset-version.json?ref=${REMOTE_SHA}" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin).get("asset_version",""))' 2>/dev/null || true)"
+          if [ "$FROZEN_VER" = "$OLD_VER" ]; then
+            echo "OK: tag ${TAG} already freezes asset version ${OLD_VER} at ${REMOTE_SHA}; keeping it."
+            echo "Freeze tags are immutable, so nothing is re-pointed and no consumer changes source_commit."
+            exit 0
+          fi
+
           echo "FAIL: tag ${TAG} already exists at ${REMOTE_SHA}, but this run would freeze ${TARGET}." >&2
           echo "Existing freeze tags are immutable: re-pointing one would silently change the" >&2
           echo "source_commit that generated/<asset_version>/manifest.json records. No --force is used." >&2
+          echo "That tag does not record asset version ${OLD_VER} (it records '${FROZEN_VER:-unknown}'), so it cannot be reused." >&2
           exit 1
 
   update-pr:
