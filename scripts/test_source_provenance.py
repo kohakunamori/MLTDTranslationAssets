@@ -15,6 +15,8 @@ import json
 import sys
 import tempfile
 import unittest
+from collections import Counter
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -110,7 +112,22 @@ class ReleaseBuilderProvenanceTests(unittest.TestCase):
     def test_the_builder_does_not_read_the_field_it_deleted(self):
         source = Path(builder.__file__).read_text(encoding="utf-8")
         self.assertNotIn('version["client_version"]', source)
-        self.assertIn("release_provenance(version)", source)
+        self.assertIn("release_provenance(version, counts=provenance_counts)", source)
+
+    def test_the_translation_scan_tallies_unaccepted_rows_without_a_second_read(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._library(tmp, "9.0.200", "9.0.200", "9.0.100")
+            counts = Counter()
+            self.assertEqual(builder.read_translation_rows(
+                root, "1077741", allow_empty=True, provenance_counts=counts), {})
+            self.assertEqual(counts, Counter({"9.0.200": 2, "9.0.100": 1}))
+            with patch.object(source_provenance, "from_library", side_effect=AssertionError("second scan")):
+                self.assertEqual(builder.release_provenance({}, root, counts=counts), "9.0.200")
+
+    def test_an_empty_tally_uses_the_legacy_fallback_without_rescanning(self):
+        with patch.object(source_provenance, "from_library", side_effect=AssertionError("second scan")):
+            self.assertEqual(builder.release_provenance(
+                {"legacy_client_version": "9.0.200"}, counts=Counter()), "9.0.200")
 
     def test_the_projection_the_builder_feeds_the_applier_drops_the_field(self):
         """Why the file-backed path exists: this is the shape the builder holds."""

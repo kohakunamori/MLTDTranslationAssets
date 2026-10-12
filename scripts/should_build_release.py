@@ -41,6 +41,7 @@ RELEASE_INPUT_TREES = (
     "schema",
     "images",
     "lyrics",
+    "image-overlay",
 )
 
 # Scripts invoked by the build workflow that can change release bytes.
@@ -49,6 +50,12 @@ RELEASE_INPUT_FILES = (
     "scripts/assets_generated_index.py",
     "scripts/promote_merged_locales.py",
     "scripts/build_portal_resource_manifest.py",
+    "scripts/build_lyric_overlay.py",
+    "scripts/bundle_incremental.py",
+    "scripts/merge_image_overlay.py",
+    "scripts/source_provenance.py",
+    "scripts/localization_features.py",
+    "configs/localization-pipeline.json",
 )
 
 # Files the build itself writes.  `portal-resource-manifest.json` carries a
@@ -66,28 +73,33 @@ def git(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def digest(commit: str, path: str) -> str | None:
+def digests(commit: str, paths: tuple[str, ...]) -> dict[str, str | None]:
     """Content digest of ``path`` in ``commit``, ignoring derived outputs.
 
     Trees and single files are handled the same way: ``ls-tree`` lists the
-    ``mode type object name`` line of every file below the path.  Returns None
-    when the path cannot be read there (absent, empty after filtering, or an
-    unreadable commit), which the caller treats as "cannot prove reuse".
+    ``mode type object name`` line of every file below the path. Missing paths
+    have the empty digest, so adding or deleting an input changes it while two
+    absent optional inputs compare equal. A git failure returns None.
     """
-    result = git("ls-tree", "-r", "-z", commit, "--", path)
+    result = git("ls-tree", "-r", "-z", commit, "--", *paths)
     if result.returncode != 0:
-        return None
-    entries = []
+        return dict.fromkeys(paths)
+    entries: dict[str, list[str]] = {path: [] for path in paths}
     for entry in result.stdout.split("\0"):
         if not entry:
             continue
         meta, _, name = entry.partition("\t")
         if name in DERIVED_OUTPUTS:
             continue
-        entries.append(f"{meta}\t{name}")
-    if not entries:
-        return None
-    return hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+        for path in paths:
+            if name == path or name.startswith(path + "/"):
+                entries[path].append(f"{meta}\t{name}")
+    return {path: hashlib.sha256("\n".join(rows).encode("utf-8")).hexdigest()
+            for path, rows in entries.items()}
+
+
+def digest(commit: str, path: str) -> str | None:
+    return digests(commit, (path,))[path]
 
 
 def changed_paths(paths: tuple[str, ...]) -> list[str]:
@@ -158,10 +170,11 @@ def decide(force: bool = False, release_root: Path | None = None) -> dict:
     differences: list[str] = []
     current = git("rev-parse", "HEAD").stdout.strip()
     decision["head"] = current
-    for path in RELEASE_INPUT_TREES + RELEASE_INPUT_FILES:
-        before = digest(built_from, path)
-        after = digest("HEAD", path)
-        if before is None or after is None or before != after:
+    paths = RELEASE_INPUT_TREES + RELEASE_INPUT_FILES
+    before = digests(built_from, paths)
+    after = digests("HEAD", paths)
+    for path in paths:
+        if before[path] is None or after[path] is None or before[path] != after[path]:
             differences.append(path)
     decision["differences"] = differences
     if differences:

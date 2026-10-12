@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "images": {
+    "enabled": false,
+    "disabled_reason": "No suitable image localization model provider has been selected."
+  }
+}

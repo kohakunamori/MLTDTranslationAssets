@@ -175,10 +175,11 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         pending rows as soon as they validate, so on a healthy run the promotion
         step has nothing left to push and only the apply step reports a publish.
         """
-        trigger = self.steps["Trigger the generated Assets build"]
-        self.assertEqual(
-            trigger["if"],
-            "steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true'")
+        package = self.workflow["jobs"]["package"]
+        trigger = next(step for step in package["steps"] if step.get("name") == "Trigger the generated Assets build")
+        self.assertEqual(package["needs"], ["draft", "images"])
+        self.assertIn("needs.draft.outputs.published == 'true'", package["if"])
+        self.assertIn("needs.images.outputs.published == 'true'", package["if"])
         self.assertIn("gh workflow run assets-generated.yml --ref main", trigger["run"])
         self.assertIn("published=true", Path(commit_llm_drafts.__file__).read_text(encoding="utf-8"))
         self.assertIn("actions: write", self.text)

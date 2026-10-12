@@ -70,6 +70,56 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertFalse(decision["build"], decision)
         self.assertEqual(decision["differences"], [])
 
+    def test_all_input_digests_use_two_git_tree_reads(self):
+        with patch.object(tool, "git", wraps=tool.git) as calls:
+            self.assertFalse(self.decide()["build"])
+        tree_calls = [call for call in calls.call_args_list if call.args[0] == "ls-tree"]
+        self.assertEqual(len(tree_calls), 2)
+
+    def test_a_tree_read_error_cannot_skip_a_release(self):
+        original = tool.git
+        def git(*args):
+            if args[0] == "ls-tree":
+                return subprocess.CompletedProcess(args, 1, "", "failed")
+            return original(*args)
+        with patch.object(tool, "git", side_effect=git):
+            self.assertTrue(self.decide()["build"])
+
+    def test_metadata_checkout_can_skip_then_materialize_only_needed_binaries(self):
+        import yaml
+        workflow = yaml.safe_load((Path(tool.__file__).resolve().parents[1] /
+                                  ".github/workflows/assets-generated.yml").read_text(encoding="utf-8"))
+        checkout = workflow["jobs"]["build"]["steps"][0]["with"]
+        self.assertEqual(checkout["filter"], "blob:none")
+        self.assertFalse(checkout["sparse-checkout-cone-mode"])
+        binaries = ("generated/objects/sha256/object", "generated/build-inputs/text/cache.json.gz",
+                    "images/translated/a.png", "image-overlay/100/jp-android/a.unity3d")
+        for name in binaries:
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"fixture")
+        self._git("add", "-A")
+        self._git("commit", "-qm", "binary inputs")
+        self._write_release(self._git("rev-parse", "HEAD").stdout.strip())
+        self._git("add", "-A")
+        self._git("commit", "-qm", "metadata release")
+        subprocess.run(["git", "-C", str(self.root), "sparse-checkout", "set", "--no-cone", "--stdin"],
+                       input=checkout["sparse-checkout"], text=True, capture_output=True, check=True)
+        self.assertTrue((self.root / "generated/100/manifest.json").is_file())
+        for name in binaries:
+            self.assertFalse((self.root / name).exists(), name)
+        self.assertFalse(self.decide()["build"])
+        materialize = next(s for s in workflow["jobs"]["build"]["steps"]
+                           if s.get("name") == "Materialize build inputs after the gate")
+        self.assertIn("git sparse-checkout set --no-cone '/*' '!/images/' '!/image-overlay/'", materialize["run"])
+        self._git("sparse-checkout", "set", "--no-cone", "/*", "!/images/", "!/image-overlay/")
+        self.assertTrue((self.root / binaries[0]).is_file())
+        self.assertTrue((self.root / binaries[1]).is_file())
+        self.assertFalse((self.root / binaries[2]).exists())
+        self._git("sparse-checkout", "disable")
+        self.assertTrue((self.root / binaries[2]).is_file())
+        self.assertTrue((self.root / binaries[3]).is_file())
+
     def test_a_changed_release_input_rebuilds(self):
         (self.root / "locales/master/rows.jsonl").write_text(
             '{"bundle":"a.gtx","item_key":"k","zh":"再会"}\n', encoding="utf-8")
@@ -218,6 +268,15 @@ class WorkflowGateTests(unittest.TestCase):
     def test_the_build_workflow_offers_an_explicit_force(self):
         dispatch = self._workflow("assets-generated.yml")["on"]["workflow_dispatch"]
         self.assertIn("force", dispatch.get("inputs", {}))
+
+    def test_official_cache_is_version_bound_and_only_saved_after_a_miss(self):
+        steps = self._steps("assets-generated.yml")
+        restore = next(s for s in steps if s.get("id") == "official-cache")
+        save = next(s for s in steps if s.get("name") == "Save the official object cache")
+        self.assertIn("steps.gate.outputs.asset_version", restore["with"]["key"])
+        self.assertNotIn("hashFiles", restore["with"]["key"])
+        self.assertIn("steps.official-cache.outputs.cache-hit != 'true'", save["if"])
+        self.assertIn("success()", save["if"])
 
     def test_the_translation_workflow_skips_an_empty_queue(self):
         steps = self._steps("llm-translate-assets.yml", job="draft")

@@ -13,6 +13,7 @@ on:
       - 'schema/**'
       - 'asset-server/**'
       - 'configs/image-cohort.json'
+      - 'configs/localization-pipeline.json'
       - '.github/workflows/image-localize-assets.yml'
       - '.github/workflows/cloudflare-gateway.yml'
       - 'requirements-ci.txt'
@@ -31,6 +32,7 @@ on:
       - 'schema/**'
       - 'asset-server/**'
       - 'configs/image-cohort.json'
+      - 'configs/localization-pipeline.json'
       - '.github/workflows/image-localize-assets.yml'
       - '.github/workflows/cloudflare-gateway.yml'
       - 'requirements-ci.txt'
@@ -168,6 +170,8 @@ jobs:
             scripts/test_build_generated_release.py \
             scripts/test_bundle_incremental.py \
             scripts/test_image_ci_state.py \
+            scripts/test_localization_features.py \
+            scripts/test_publish_image_overlay.py \
             scripts/test_release_reuse.py \
             scripts/test_build_lyric_overlay.py \
             scripts/test_source_provenance.py \

@@ -43,7 +43,7 @@ def _value(row: Mapping[str, object]) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
-def _pick(counts: Counter) -> str | None:
+def from_counts(counts: Counter) -> str | None:
     """A tie goes to the higher version: the newer capture describes the library.
 
     When half the rows come from 9.0.100 and half from 9.0.200, the release tells
@@ -58,7 +58,7 @@ def _pick(counts: Counter) -> str | None:
 def from_rows(rows: Iterable[Mapping[str, object]]) -> tuple[str | None, Counter]:
     """The library's provenance as a majority vote, with the full tally."""
     counts: Counter = Counter(value for row in rows if (value := _value(row)))
-    return _pick(counts), counts
+    return from_counts(counts), counts
 
 
 def from_library(root: Path) -> tuple[str | None, Counter]:
@@ -69,4 +69,4 @@ def from_library(root: Path) -> tuple[str | None, Counter]:
             value = _value(row)
             if value:
                 counts[value] += 1
-    return _pick(counts), counts
+    return from_counts(counts), counts

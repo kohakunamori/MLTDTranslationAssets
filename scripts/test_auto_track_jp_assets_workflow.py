@@ -162,7 +162,6 @@ class WorkflowShapeTest(unittest.TestCase):
         for name in (
             "auto-track-jp-assets.yml",
             "llm-translate-assets.yml",
-            "image-localize-assets.yml",
             "cloudflare-gateway.yml",
             "assets-generated.yml",
         ):
@@ -237,17 +236,11 @@ class WorkflowShapeTest(unittest.TestCase):
         # 派发前必须证明 checkout 的版本号就是版本检查报告的当前版本。
         self.assertIn('"$HEAD_VER" != "$CURRENT_VER"', run)
 
-        image = _step_run(self.jobs["wake-translation"], "Wake the image localization run")
-        self.assertIn("image-localize-assets.yml", image)
-        self.assertIn("gh workflow run", image)
-        # 只在兜底那一轮按一次，并且不叠班。
-        self.assertIn(
-            "github.event.inputs.daily_housekeeping == 'true'",
-            str(next(s for s in self.jobs["wake-translation"]["steps"]
-                     if s.get("name") == "Wake the image localization run")["if"]),
-        )
-        self.assertIn("queued", image)
-        self.assertIn("in_progress", image)
+        # Image localization belongs to the translation workflow. The tracker
+        # must never start an independent model run, including daily housekeeping.
+        self.assertNotIn("image-localize-assets.yml", run)
+        self.assertNotIn("Wake the image localization run",
+                         [step.get("name") for step in self.jobs["wake-translation"]["steps"]])
 
     def test_source_commit_is_the_checkout_not_a_moving_branch(self) -> None:
         for job_name in ("resolve-target", "freeze", "wake-translation"):
@@ -565,82 +558,6 @@ class WakeSandboxTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(self.dispatched())
         self.assertIn("nothing to wake", result.stdout)
-
-
-class ImageWakeSandboxTest(unittest.TestCase):
-    """兜底那一轮里的“按一次图片汉化”：闲置才按，已在跑就不叠班。"""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        if os.name == "nt":
-            raise unittest.SkipTest("needs a POSIX bash; run it on Linux (or under WSL python)")
-        if not WORKFLOW.is_file():
-            raise unittest.SkipTest(f"workflow not present: {WORKFLOW}")
-        if BASH is None:
-            raise unittest.SkipTest("bash is unavailable; cannot run the sandbox")
-        workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-        cls.script = _step_run(
-            workflow["jobs"]["wake-translation"], "Wake the image localization run"
-        )
-        if "gh workflow run" not in cls.script:
-            raise AssertionError("the image wake step no longer dispatches anything")
-
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory(prefix="image-wake-sandbox-")
-        self.root = Path(self._tmp.name)
-        self.calls = self.root / "gh-calls.log"
-        self.bin = self.root / "bin"
-        self.bin.mkdir()
-        stub = self.bin / "gh"
-        stub.write_text(
-            "#!/bin/sh\n"
-            'printf \'%s\\n\' "$*" >> "$GH_CALLS"\n'
-            'if [ "${GH_STUB_FAIL:-0}" = "1" ]; then exit 1; fi\n'
-            'case "$*" in\n'
-            '  *--status=queued*) printf \'%s\\n\' "${GH_STUB_QUEUED:-0}" ;;\n'
-            '  *--status=in_progress*) printf \'%s\\n\' "${GH_STUB_IN_PROGRESS:-0}" ;;\n'
-            '  *) exit 0 ;;\n'
-            "esac\n",
-            encoding="utf-8", newline="\n",
-        )
-        stub.chmod(0o755)
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
-
-    def run_image_wake(self, **env_overrides: str) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ, GH_TOKEN="sandbox-token", GH_CALLS=str(self.calls))
-        env.update(env_overrides)
-        env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
-        return subprocess.run(
-            [BASH, "-c", self.script], cwd=str(self.root), env=env,
-            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
-        )
-
-    def dispatched(self) -> bool:
-        if not self.calls.is_file():
-            return False
-        return "workflow run" in self.calls.read_text(encoding="utf-8")
-
-    def test_dispatches_the_image_cohort_when_idle(self) -> None:
-        result = self.run_image_wake()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(self.dispatched(), self.calls.read_text(encoding="utf-8"))
-        self.assertIn("image-localize-assets.yml", self.calls.read_text(encoding="utf-8"))
-
-    def test_a_running_image_cohort_is_not_stacked(self) -> None:
-        for name, value in (("GH_STUB_QUEUED", "1"), ("GH_STUB_IN_PROGRESS", "1")):
-            with self.subTest(status=name):
-                self.calls.unlink(missing_ok=True)
-                result = self.run_image_wake(**{name: value})
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertFalse(self.dispatched(), f"{name} must block the dispatch")
-
-    def test_an_unreadable_image_run_state_fails_closed(self) -> None:
-        result = self.run_image_wake(GH_STUB_FAIL="1")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertFalse(self.dispatched())
-        self.assertIn("cannot read the queued run state", result.stdout)
 
 
 if __name__ == "__main__":

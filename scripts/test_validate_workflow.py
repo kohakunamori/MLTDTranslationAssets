@@ -122,6 +122,10 @@ class SparseCheckoutTests(unittest.TestCase):
         self.assertNotIn("--dist loadfile", run)
         self.assertIn("pytest-xdist", REQUIREMENTS.read_text(encoding="utf-8"))
 
+    def test_bundle_incremental_regressions_are_in_the_publish_gate(self):
+        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
+        self.assertIn("scripts/test_bundle_incremental.py", run)
+
 
 if __name__ == "__main__":
     unittest.main()

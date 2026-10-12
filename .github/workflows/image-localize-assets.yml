@@ -20,31 +20,29 @@ name: image-localize-assets
 # in the Actions cache.  A run without cached state fails its preflight by name
 # rather than generating against an unknown cohort.
 #
-# Scope note: this workflow produces and audits images.  Publishing the image
-# surface (entries + official-index merge into generated/<asset_version>/) is a
-# separate writer call and is not performed here.
-#
-# Trigger: dispatched by vps_racknerd's mltd-asset-watch timer once every 24 hours,
-# which is exactly what the nightly `schedule` used to do (each run resumes the
-# cohort until it is finished).  The schedule was removed on 2026-10-12 so that a
-# single clock -- the VPS -- drives every unattended job in this repository;
-# GitHub's own scheduler was measured starting runs 4-7 hours late.
-
+# Called only from llm-translate-assets.yml. Image work and text translation
+# share one packaging hand-off. The checked-in feature policy currently disables
+# images because no suitable model provider has been selected.
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
+      enabled:
+        type: boolean
+        default: false
       max_seconds:
-        description: 'Stop cleanly after this many seconds (default 18000 = 5h).'
-        required: false
+        type: string
         default: '18000'
       max_items:
-        description: 'Generate at most this many images this run (0 = no limit).'
-        required: false
+        type: string
         default: '0'
       skip_generation:
-        description: 'Skip generation and only run tests + audit (true/false).'
-        required: false
-        default: 'false'
+        type: boolean
+        default: false
+    outputs:
+      ready:
+        value: ${{ jobs.localize.outputs.ready }}
+      published:
+        value: ${{ jobs.localize.outputs.published }}
 
 concurrency:
   # One writer at a time: two runs would both spend the same rate budget and
@@ -53,20 +51,40 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  localize:
+  policy:
     runs-on: ubuntu-latest
+    outputs:
+      images_enabled: ${{ steps.features.outputs.images_enabled }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Read shared localization policy
+        id: features
+        run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT"
+
+  localize:
+    needs: policy
+    if: inputs.enabled && needs.policy.outputs.images_enabled == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.batch.outputs.audit_ready }}
+      published: ${{ steps.publish.outputs.published }}
     timeout-minutes: 350
     env:
       WORK: work/image-localization-25
-      MAX_SECONDS: ${{ github.event.inputs.max_seconds || '18000' }}
-      MAX_ITEMS: ${{ github.event.inputs.max_items || '0' }}
-      SKIP_GENERATION: ${{ github.event.inputs.skip_generation || 'false' }}
+      MAX_SECONDS: ${{ inputs.max_seconds }}
+      MAX_ITEMS: ${{ inputs.max_items }}
+      SKIP_GENERATION: ${{ inputs.skip_generation }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -77,14 +95,13 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check \
-            -r pipelines/image/requirements-injection.txt pytest==8.4.2
+            -r pipelines/image/requirements-injection.txt pytest==8.4.2 msgpack pycryptodome
 
       - name: Verify reviewed outputs against the frozen cohort
         id: current
         run: python scripts/image_ci_state.py --report image-current-state.json --github-output "$GITHUB_OUTPUT"
 
       - name: Restore image work state
-        if: steps.current.outputs.needs_work == 'true'
         uses: actions/cache/restore@v4
         with:
           path: work/image-localization-25
@@ -110,7 +127,6 @@ jobs:
           PY
 
       - name: Preflight
-        if: steps.current.outputs.needs_work == 'true'
         run: |
           set -euo pipefail
           missing=0
@@ -141,7 +157,7 @@ jobs:
             pipelines/image/test_moderation_batch.py
 
       - name: Generate images (serial, at most one request per minute)
-        if: steps.current.outputs.needs_work == 'true' && github.event.inputs.skip_generation != 'true'
+        if: steps.current.outputs.needs_work == 'true' && !inputs.skip_generation
         run: |
           set -euo pipefail
           echo "time budget ${MAX_SECONDS}s, item cap ${MAX_ITEMS} (0 = unlimited)"
@@ -151,7 +167,6 @@ jobs:
 
       - name: Check whether the batch finished or needs another run
         id: batch
-        if: steps.current.outputs.needs_work == 'true'
         run: |
           python scripts/image_ci_state.py \
             --batch-progress "$WORK/reconstructed-preprocess/batch-progress.json" \
@@ -180,20 +195,57 @@ jobs:
             --bundle-root "$WORK/bundles" \
             --out "$WORK/release-prep/install-manifest.jsonl"
 
+      - name: Inject and independently verify the translated image bundles
+        if: steps.batch.outputs.audit_ready == 'true'
+        run: |
+          set -euo pipefail
+          python pipelines/image/inject_reviewed_textures.py \
+            --all --install-manifest "$WORK/release-prep/install-manifest.jsonl" \
+            --original-root "$WORK" --out "$WORK/injected-${GITHUB_RUN_ID}" \
+            --report "$WORK/release-prep/injection-report.json"
+          python pipelines/image/verify_bundle_repack.py \
+            --report "$WORK/release-prep/injection-report.json" \
+            --install-manifest "$WORK/release-prep/install-manifest.jsonl" \
+            --audit "$WORK/release-prep/repack-independent-audit.json"
+          python scripts/publish_image_overlay.py \
+            --version-manifest manifests/asset-version.json \
+            --report "$WORK/release-prep/injection-report.json" \
+            --audit "$WORK/release-prep/repack-independent-audit.json" \
+            --work "$WORK/release-prep"
+
+      - name: Commit audited image overlay for unified packaging
+        id: publish
+        if: steps.batch.outputs.audit_ready == 'true'
+        run: |
+          set -euo pipefail
+          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "image-overlay/${ASSET_VERSION}"
+          if git diff --cached --quiet; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "ci(images): stage audited overlay for unified release [skip ci]"
+          git push origin HEAD:main
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
       - name: Upload progress and audit report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: image-progress-${{ github.run_number }}
+          retention-days: 7
           path: |
             image-current-state.json
             work/image-localization-25/batch-status.json
             work/image-localization-25/reconstructed-preprocess/batch-progress.json
-            work/image-localization-25/release-prep/
+            work/image-localization-25/release-prep/*.json
+            work/image-localization-25/release-prep/*.jsonl
           if-no-files-found: warn
 
       - name: Save image work state
-        if: always() && steps.current.outputs.needs_work == 'true'
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: work/image-localization-25

@@ -238,10 +238,12 @@ class ReusePlan:
     changed_locale_files: tuple[str, ...] = ()
     #: Bundle count per reason it was not reused, for the build report.
     declined: dict[str, int] = field(default_factory=dict)
+    #: Verified bundles that previously produced no overlay and remain unchanged.
+    negative_reused: int = 0
 
     @property
     def incremental(self) -> bool:
-        return bool(self.reusable)
+        return bool(self.reusable) or self.negative_reused > 0
 
     def to_dict(self) -> dict[str, Any]:
         return {

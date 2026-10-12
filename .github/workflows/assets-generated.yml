@@ -12,6 +12,7 @@ name: Build generated Assets
       - 'pipelines/**'
       - 'scripts/**'
       - 'schema/**'
+      - 'configs/localization-pipeline.json'
   workflow_dispatch:
     inputs:
       force:
@@ -40,6 +41,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          # Keep manifests for the gate; fetch large binaries only for a build.
+          sparse-checkout: |
+            /*
+            !/generated/objects/
+            !/generated/build-inputs/
+            !/images/
+            !/image-overlay/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -77,11 +87,22 @@ jobs:
           build="$(python -c 'import json; print(str(json.load(open(".release-gate.json"))["build"]).lower())')"
           reason="$(python -c 'import json; print(json.load(open(".release-gate.json"))["reason"])')"
           echo "build=$build" >> "$GITHUB_OUTPUT"
+          python -c 'import json, os; value=json.load(open(".release-gate.json")); open(os.environ["GITHUB_OUTPUT"], "a").write("asset_version=" + str(value["asset_version"]) + "\n")'
           {
             echo '### Generated release'
             echo "- build: \`$build\`"
             echo "- reason: $reason"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Materialize build inputs after the gate
+        if: steps.gate.outputs.build == 'true'
+        run: |
+          python scripts/localization_features.py --report .localization-features.json
+          if python -c 'import json, sys; sys.exit(0 if json.load(open(".localization-features.json"))["images_enabled"] else 1)'; then
+            git sparse-checkout disable
+          else
+            git sparse-checkout set --no-cone '/*' '!/images/' '!/image-overlay/'
+          fi
 
       - name: Install asset pipeline dependencies
         if: steps.gate.outputs.build == 'true'
@@ -92,11 +113,12 @@ jobs:
         run: python scripts/validate_repo.py
 
       - name: Restore the official object cache
+        id: official-cache
         if: steps.gate.outputs.build == 'true'
         uses: actions/cache/restore@v4
         with:
           path: .generated-work/official-by-content
-          key: official-by-content-${{ hashFiles('manifests/asset-version.json') }}
+          key: official-by-content-v2-${{ steps.gate.outputs.asset_version }}
           restore-keys: |
             official-by-content-
 
@@ -113,8 +135,13 @@ jobs:
           SOURCE_COMMIT="$(git rev-parse HEAD)"
           ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
           image_args=()
+          IMAGES_ENABLED="$(python -c "import sys; sys.path.insert(0, 'scripts'); from localization_features import inspect; from pathlib import Path; print(str(inspect(Path('.'))['images_enabled']).lower())")"
           OVERLAY_MANIFEST="image-overlay/${ASSET_VERSION}/overlay-manifest.json"
-          if [ -f "$OVERLAY_MANIFEST" ]; then
+          if [ "$IMAGES_ENABLED" = "true" ]; then
+            if [ ! -f "$OVERLAY_MANIFEST" ]; then
+              echo "Image localization is enabled but its audited overlay is not ready for ${ASSET_VERSION}." >&2
+              exit 1
+            fi
             # An audited overlay exists for exactly this asset version, so the
             # image surface ships with the text surface in one release: same
             # catalogue, one writer, one push.
@@ -127,7 +154,7 @@ jobs:
             )
             echo "Image overlay found for ${ASSET_VERSION}; publishing the image surface."
           else
-            echo "No image overlay for ${ASSET_VERSION}; publishing the text surface only."
+            echo "Image localization disabled; publishing text and lyrics."
           fi
           reuse_args=()
           if [ "$FORCE_BUILD" = "true" ]; then
@@ -146,12 +173,12 @@ jobs:
             "${image_args[@]}"
 
       - name: Save the official object cache
-        if: always() && steps.gate.outputs.build == 'true'
+        if: success() && steps.gate.outputs.build == 'true' && steps.official-cache.outputs.cache-hit != 'true'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: .generated-work/official-by-content
-          key: official-by-content-${{ hashFiles('manifests/asset-version.json') }}
+          key: ${{ steps.official-cache.outputs.cache-primary-key }}
 
       - name: Verify generated release
         if: steps.gate.outputs.build == 'true'

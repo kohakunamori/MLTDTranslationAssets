@@ -55,6 +55,9 @@ jobs:
     # A cold cache re-verifies every tracked bundle (~1 hour); the memo makes a
     # normal run minutes. Anything past three hours is a hang, not progress.
     timeout-minutes: 180
+    outputs:
+      images_enabled: ${{ steps.features.outputs.images_enabled }}
+      published: ${{ steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,6 +68,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Read localization feature policy
+        id: features
+        run: |
+          python scripts/localization_features.py \
+            --github-output "$GITHUB_OUTPUT" --report .localization-features.json
+          echo 'Image localization currently defaults to disabled until a suitable provider is selected.'
 
       - name: Install translation dependencies
         shell: bash
@@ -307,23 +317,6 @@ jobs:
         shell: bash
         run: python scripts/commit_llm_drafts.py
 
-      - name: Trigger the generated Assets build
-        # Without this dispatch the freshly published rows would sit on main
-        # until some unrelated push happened to trigger assets-generated.yml:
-        # a GITHUB_TOKEN push never starts another workflow run.
-        #
-        # Either commit can be the one that published: the apply step now
-        # publishes the pending rows immediately, so the promotion step has
-        # nothing left to push whenever the two happen in one run.
-        if: steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          gh workflow run assets-generated.yml --ref main
-          echo 'Dispatched assets-generated.yml on main.'
-
       - name: Upload translation diagnostics
         # Always keep the evidence: the failed items and the accepted drafts are
         # otherwise lost with the runner, which is what made the 2026-10 outage
@@ -336,6 +329,7 @@ jobs:
           include-hidden-files: true
           retention-days: 14
           path: |
+            .localization-features.json
             .llm-summary.json
             .llm-failed.jsonl
             .llm-draft.jsonl
@@ -418,3 +412,34 @@ jobs:
           else
             gh issue create --title "$title" --body "$body" || echo 'warning: could not create a tracking issue'
           fi
+
+  images:
+    name: Localize images for the same release
+    needs: draft
+    if: needs.draft.result == 'success' && needs.draft.outputs.images_enabled == 'true'
+    uses: ./.github/workflows/image-localize-assets.yml
+    with:
+      enabled: true
+    secrets: inherit
+
+  package:
+    name: Package text, lyrics and completed images together
+    needs: [draft, images]
+    # An intentionally skipped image job must not suppress the text release.
+    # An enabled but incomplete/failed image batch cannot publish a partial overlay.
+    if: >-
+      always() && !cancelled() && needs.draft.result == 'success' &&
+      (needs.draft.outputs.images_enabled != 'true' ||
+       (needs.images.result == 'success' && needs.images.outputs.ready == 'true')) &&
+      (needs.draft.outputs.published == 'true' || needs.images.outputs.published == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger the generated Assets build
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run assets-generated.yml --ref main
+          echo 'Dispatched one generated build after all enabled localization stages finished.'

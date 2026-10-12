@@ -318,28 +318,5 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Wake the image localization run
-        # 图片汉化是个跨好几天、每次接着上次进度的长跑任务，所以只在兜底叫醒的那一轮
-        # 按一次（不是每个新版本都按），并且已经有任务在跑时不再叠一个。
-        if: ${{ github.event.inputs.daily_housekeeping == 'true' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          WORKFLOW="image-localize-assets.yml"
-
-          for status in queued in_progress; do
-            COUNT="$(gh run list --workflow="$WORKFLOW" --status="$status" --limit 10 \
-              --json databaseId --jq 'length' 2>/dev/null || true)"
-            if [ -z "$COUNT" ]; then
-              echo "cannot read the ${status} run state of ${WORKFLOW}; leaving the image wake to the next tick."
-              exit 0
-            fi
-            if [ "$COUNT" != "0" ]; then
-              echo "A ${WORKFLOW} run is already ${status} (${COUNT}); not dispatching another."
-              exit 0
-            fi
-          done
-
-          gh workflow run "$WORKFLOW" --ref main
-          echo "Dispatched ${WORKFLOW} for the daily image cohort."
+      # Images are an optional stage of llm-translate-assets.yml, currently
+      # disabled by configs/localization-pipeline.json. No separate image wake.

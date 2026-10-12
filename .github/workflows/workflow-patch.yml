@@ -26,7 +26,7 @@ on:
           - full
         default: chain
       daily_housekeeping:
-        description: '顺便收尾：重试在所有服务商上失败过的行、推进待审草稿、按一次图片汉化'
+        description: '顺便收尾：重试在所有服务商上失败过的行、推进待审草稿；图片阶段由翻译任务统一管理（目前禁用）'
         type: boolean
         default: true
       force_build:
