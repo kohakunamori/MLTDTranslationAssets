@@ -166,6 +166,7 @@ jobs:
             scripts/test_translation_prompt_policy.py \
             scripts/test_promote_merged_locales.py \
             scripts/test_build_generated_release.py \
+            scripts/test_bundle_incremental.py \
             scripts/test_image_ci_state.py \
             scripts/test_release_reuse.py \
             scripts/test_build_lyric_overlay.py \
