@@ -450,7 +450,8 @@ def bilingual_line(source: str, translation: str) -> str:
     ugly but not broken: the Chinese is still readable and nothing is lost.
     """
     clean_source = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", source).strip()
-    return f"{clean_source}\n{translation}"
+    clean_translation = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", translation).strip()
+    return f"{clean_source}\n{clean_translation}"
 
 
 def save_localized_bundle(source: Path, output: Path, translations: SlotTranslations) -> dict:
