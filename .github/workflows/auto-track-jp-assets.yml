@@ -14,19 +14,23 @@ name: Auto Track Japanese Assets
 # 翻译工作流。这里保留 bot 的底线：它不合并、也不直接推 main——只读、只冻结标签、
 # 只派发。
 #
-# 本流程的 schedule 现在只是兜底。主路径是 vps_racknerd 上的
-# mltd-asset-watch.timer：每 5 分钟查一次官方版本号，发现新版就派发本流程。
-# GitHub 自己的定时任务实测会被推迟 4~7 小时（16:00 UTC 的 cron 实际 19:48~21:03
-# UTC 才启动），所以它承担不了“立刻”。
+# 触发方式：只由 vps_racknerd 上的 mltd-asset-watch.timer 派发，两种情况——
+#   1. 官方出了新版本（每 5 分钟查一次）：本流程冻结离开的那一版，再叫醒翻译任务；
+#   2. 兜底叫醒（同一台机器每 24 小时按一次，带 daily_housekeeping=true）：没有新版本
+#      也叫一次翻译任务（重试失败过的行、推进待审草稿），并顺便按一次图片汉化。
+#
+# 仓库这边**不再有定时**：GitHub 的 cron 实测被推迟 4~7 小时（16:00 UTC 的那次实际
+# 19:48~21:03 UTC 才启动），同一天还出现过一次推送完全不产生任何事件。2026-10-12 起
+# 唯一的时钟在 VPS 上，整条链只有一个入口：
+#     本流程 → 翻译任务 → 产物构建 → CDN 网关 → 查阅站
+# 后面每一跳都是显式派发（workflow_dispatch），不依赖隐式事件——“出包派发网关”这一跳
+# 曾经挂在 workflow_run 上，四次由翻译任务派发的构建因此产出了四个从未上线的发布。
 #
 # 写路径全部绑定到 checkout 的固定提交：每个 job 都用 ref: ${{ github.sha }} 拉取，
 # 并在写操作前核对 git rev-parse HEAD 与 github.sha 一致，避免“用移动中的分支头
 # 冒充 source commit”。
 
 'on':
-  schedule:
-    # Run once daily at 16:00 UTC (01:00 JST / 00:00 CST)
-    - cron: '0 16 * * *'
   workflow_dispatch:
     inputs:
       force_check:
@@ -34,9 +38,13 @@ name: Auto Track Japanese Assets
         required: false
         default: true
         type: boolean
+      daily_housekeeping:
+        description: '兜底叫醒：没有新版本也要叫翻译任务重试失败过的行、推进待审草稿，并按一次图片汉化'
+        required: false
+        default: 'false'
 
 concurrency:
-  # 定时跟踪会推冻结标签与更新分支；手动运行排队等待，不与写者竞争。
+  # 冻结标签是写操作；手动运行排队等待，不与写者竞争。
   group: assets-track-jp-version
   cancel-in-progress: false
 
@@ -203,9 +211,12 @@ jobs:
           exit 1
 
   wake-translation:
-    name: Wake the translation run
+    name: Wake the downstream runs
     needs: resolve-target
-    if: needs.resolve-target.outputs.has_update == 'true'
+    # 注意：这里**没有** has_update 门槛。发现新版本时它负责把翻译任务叫起来；
+    # 没有新版本、但被“兜底叫醒”（daily_housekeeping）时，它同样要叫一次翻译任务
+    # ——重试那些在所有服务商上都失败过的行、推进待审草稿。这是整条链唯一的入口：
+    # VPS 只按这一个按钮，后面翻译→出包→网关→查阅站全靠连锁。
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -232,8 +243,10 @@ jobs:
       - name: Wake the translation workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAS_UPDATE: ${{ needs.resolve-target.outputs.has_update }}
           CURRENT_VER: ${{ needs.resolve-target.outputs.current_version }}
           LATEST_VER: ${{ needs.resolve-target.outputs.latest_version }}
+          DAILY_HOUSEKEEPING: ${{ github.event.inputs.daily_housekeeping || 'false' }}
         run: |
           set -euo pipefail
           MANIFEST="manifests/asset-version.json"
@@ -244,15 +257,26 @@ jobs:
           HEAD_VER=$(python3 -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
             || { echo "FAIL: cannot read ${MANIFEST}" >&2; exit 1; }
 
-          # 幂等：清单已经是目标版本（翻译工作流自己写过了），无事可做。
-          # 重跑、取消后重试、或本流程被更频繁地叫醒，都不会制造重复派发。
-          if [ "$HEAD_VER" = "$LATEST_VER" ]; then
-            echo "Already tracking ${LATEST_VER}; nothing to wake."
+          if [ "${HAS_UPDATE}" = "true" ]; then
+            # 幂等：清单已经是目标版本（翻译工作流自己写过了），无事可做。
+            # 重跑、取消后重试、或本流程被更频繁地叫醒，都不会制造重复派发。
+            if [ "$HEAD_VER" = "$LATEST_VER" ]; then
+              echo "Already tracking ${LATEST_VER}; nothing to wake."
+              exit 0
+            fi
+            if [ "$HEAD_VER" != "$CURRENT_VER" ]; then
+              echo "FAIL: checkout tracks ${HEAD_VER}, but the version check reported current ${CURRENT_VER}." >&2
+              exit 1
+            fi
+            REASON="asset version ${CURRENT_VER} -> ${LATEST_VER}"
+          elif [ "${DAILY_HOUSEKEEPING}" = "true" ]; then
+            # 没有新版本：这一轮只为“收尾”而叫醒翻译任务（重试失败过的行、推进待审
+            # 草稿）。以前这是 GitHub 每晚那次定时的工作，2026-10-12 起由 VPS 的兜底
+            # 叫醒承担。
+            REASON="daily housekeeping (no new asset version; retrying leftovers)"
+          else
+            echo "No new asset version and no daily housekeeping tick; nothing to wake."
             exit 0
-          fi
-          if [ "$HEAD_VER" != "$CURRENT_VER" ]; then
-            echo "FAIL: checkout tracks ${HEAD_VER}, but the version check reported current ${CURRENT_VER}." >&2
-            exit 1
           fi
 
           # 不叠班：已经有排队或运行中的翻译任务时，不再派发第二个。
@@ -284,12 +308,38 @@ jobs:
           fi
 
           gh workflow run "$WORKFLOW" --ref main
-          echo "Dispatched ${WORKFLOW} for asset version ${CURRENT_VER} -> ${LATEST_VER}."
+          echo "Dispatched ${WORKFLOW} (${REASON})."
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
-              echo "### Asset version ${CURRENT_VER} -> ${LATEST_VER}"
+              echo "### Wake: ${REASON}"
               echo "- source commit: \`${CHECKOUT_SHA}\`"
               echo "- dispatched: \`${WORKFLOW}\` on \`main\`"
-              echo "- freeze tag for the outgoing version: handled by the \`freeze\` job"
+              echo "- freeze tag for the outgoing version: handled by the \`freeze\` job when there is a new version"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Wake the image localization run
+        # 图片汉化是个跨好几天、每次接着上次进度的长跑任务，所以只在兜底叫醒的那一轮
+        # 按一次（不是每个新版本都按），并且已经有任务在跑时不再叠一个。
+        if: ${{ github.event.inputs.daily_housekeeping == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          WORKFLOW="image-localize-assets.yml"
+
+          for status in queued in_progress; do
+            COUNT="$(gh run list --workflow="$WORKFLOW" --status="$status" --limit 10 \
+              --json databaseId --jq 'length' 2>/dev/null || true)"
+            if [ -z "$COUNT" ]; then
+              echo "cannot read the ${status} run state of ${WORKFLOW}; leaving the image wake to the next tick."
+              exit 0
+            fi
+            if [ "$COUNT" != "0" ]; then
+              echo "A ${WORKFLOW} run is already ${status} (${COUNT}); not dispatching another."
+              exit 0
+            fi
+          done
+
+          gh workflow run "$WORKFLOW" --ref main
+          echo "Dispatched ${WORKFLOW} for the daily image cohort."

@@ -23,11 +23,14 @@ name: image-localize-assets
 # Scope note: this workflow produces and audits images.  Publishing the image
 # surface (entries + official-index merge into generated/<asset_version>/) is a
 # separate writer call and is not performed here.
+#
+# Trigger: dispatched by vps_racknerd's mltd-asset-watch timer once every 24 hours,
+# which is exactly what the nightly `schedule` used to do (each run resumes the
+# cohort until it is finished).  The schedule was removed on 2026-10-12 so that a
+# single clock -- the VPS -- drives every unattended job in this repository;
+# GitHub's own scheduler was measured starting runs 4-7 hours late.
 
 on:
-  schedule:
-    # Nightly.  Each run continues whatever the previous one left unfinished.
-    - cron: '23 4 * * *'
   workflow_dispatch:
     inputs:
       max_seconds:

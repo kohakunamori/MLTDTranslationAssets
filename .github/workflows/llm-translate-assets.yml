@@ -1,8 +1,11 @@
 name: Auto-apply LLM translations
 
+# 触发方式：全部由 vps_racknerd 上的 mltd-asset-watch.timer 派发，两种情形——
+#   1. 官方出了新版本：跟踪流程冻结旧标签后派发本流程，做这一版的增量翻译；
+#   2. 每 24 小时兜底派发一次：重试那些在所有服务商上都失败过的行、推进待审草稿。
+#      （这类“没有新版本也要做”的活以前由下面的 schedule 承担，2026-10-12 删掉了：
+#      GitHub 的定时实测被推迟 4~7 小时，02:17 UTC 的 cron 实际 08:36~09:13 才启动。）
 on:
-  schedule:
-    - cron: '17 2 * * *'
   workflow_dispatch:
     inputs:
       max_items:

@@ -166,7 +166,7 @@ class ReleaseGateTests(unittest.TestCase):
         with patch.object(tool, "ROOT", self.root), patch.object(
             tool, "RELEASE_INPUT_TREES", tool.RELEASE_INPUT_TREES + ("schema/extra",)
         ):
-            self.assertNotIsInstance(tool.digest(self.built_from, "schema/extra"), str)
+            self.assertIsInstance(tool.digest(self.built_from, "schema/extra"), str)
             decision = tool.decide()
         self.assertTrue(decision["build"])
         self.assertIn("schema/extra", decision["differences"])

@@ -167,6 +167,7 @@ jobs:
             scripts/test_build_generated_release.py \
             scripts/test_image_ci_state.py \
             scripts/test_release_reuse.py \
+            scripts/test_bundle_incremental.py \
             scripts/test_build_lyric_overlay.py \
             scripts/test_source_provenance.py \
             scripts/test_commit_llm_drafts.py \
