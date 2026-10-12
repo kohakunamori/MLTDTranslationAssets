@@ -84,11 +84,14 @@ class LyricTokenTests(unittest.TestCase):
             validate_lyric_tokens("{0}よ", "呀")
         self.assertIn("protected token", str(caught.exception))
 
-    def test_a_second_line_is_refused(self):
-        """One slot is one line on the device; no committed row carries a newline."""
+    def test_one_display_break_is_allowed_but_two_are_refused(self):
+        """The second newline hides everything following it in the game."""
+        validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n灯光亮起")
         with self.assertRaises(ValueError) as caught:
-            validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n（附注）")
-        self.assertIn("one line", str(caught.exception))
+            validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n灯光亮起\n歌声响起")
+        self.assertIn("at most one", str(caught.exception))
+        with self.assertRaises(ValueError):
+            validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\r\n灯光亮起\r\n歌声响起")
 
     def test_a_line_break_becomes_the_space_the_library_uses(self):
         """The join reproduces what the accepted rows already look like."""
