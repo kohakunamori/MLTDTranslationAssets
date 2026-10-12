@@ -71,7 +71,7 @@ def is_localizable_line(text: str) -> bool:
 def join_lyric_lines(source: str, translated: str) -> str:
     """Put a lyric translation on one line, the way the accepted rows already do.
 
-    The device renders a single line per lyric slot, so a ``SOURCE`` line break can
+    Source line breaks are formatting rather than mandatory translation breaks, so a ``SOURCE`` line break can
     only become a space.  Every committed row follows that: ``scrobj_braveh``
     (accepted 2026-09) renders ``わたしはもういないよ\\n(重なっていくよ Precious tone)``
     as ``我已经不复存在 （交叠相织吧 Precious tone）``, and ``scrobj_crilov`` renders
@@ -107,8 +107,8 @@ def validate_lyric_tokens(source: str, translated: str) -> None:
     * placeholders (``{...}``, ``%s``, ``\\n``) survive verbatim;
     * the number of ``<`` and ``>`` is preserved, so a dropped ``<size=24>`` tag
       is caught while emphasis text stays free to be translated;
-    * the translation is one line -- the device renders one line per slot, and no
-      committed row has ever needed a newline;
+    * the translation has at most one line break -- the game cannot display
+      content following a second line break;
     * it is not an essay: see :data:`LYRIC_LENGTH_MULTIPLE`.
 
     Called by ``scripts/validate_repo.py`` (the published repository) *and* by
@@ -128,8 +128,9 @@ def validate_lyric_tokens(source: str, translated: str) -> None:
             f"source=({source.count('<')},{source.count('>')}) "
             f"translation=({translated.count('<')},{translated.count('>')})"
         )
-    if "\n" in translated or "\r" in translated:
-        raise ValueError("lyric translation must stay on one line")
+    normalized_breaks = translated.replace("\r\n", "\n").replace("\r", "\n")
+    if normalized_breaks.count("\n") > 1:
+        raise ValueError("lyric translation may contain at most one line break")
     ceiling = max(LYRIC_LENGTH_FLOOR, LYRIC_LENGTH_MULTIPLE * len(source))
     if len(translated) > ceiling:
         raise ValueError(
