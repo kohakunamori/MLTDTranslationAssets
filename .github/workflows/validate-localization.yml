@@ -167,11 +167,11 @@ jobs:
             scripts/test_build_generated_release.py \
             scripts/test_image_ci_state.py \
             scripts/test_release_reuse.py \
-            scripts/test_bundle_incremental.py \
             scripts/test_build_lyric_overlay.py \
             scripts/test_source_provenance.py \
             scripts/test_commit_llm_drafts.py \
             scripts/test_should_build_release.py \
+            scripts/test_workflow_patch.py \
             scripts/test_assets_mirror.py \
             scripts/test_refresh_latest_official_catalogue.py \
             scripts/test_official_bundle_families.py \

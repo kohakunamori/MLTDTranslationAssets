@@ -1,0 +1,198 @@
+name: Workflow Patch (manual full run)
+
+# 手动一键：把这条自动化链按一遍。排障、补跑、验证改动时用。
+#
+# 平时整条链只有一个入口——跟踪流程，由 vps_racknerd 每 5 分钟按一次；这个流程就是给人
+# 用的同一个按钮，另外多一个“逐段强制跑一遍”的模式：
+#
+#   chain = 只按入口（默认）：跟踪流程 → 翻译任务 → 产物构建 → CDN 网关 → 查阅站，
+#           后面自动连锁。几秒钟就返回，适合“我感觉该更新了，催一下”。
+#   full  = 逐段跑并等结果：排障用。已经有在跑的那一段就等它跑完（不重复派发），
+#           没有的就自己派发；跑完会打印每一段的结论。真有大改动时翻译那段要 ~1 小时、
+#           出包 ~10 分钟，所以给足超时。
+#
+# 为什么两种都要：`chain` 走的正是生产路径（出事时能原样复现）；`full` 会强制重建产物、
+# 强制重部署网关，即使判断“没有变化、不用重建”。2026-10-12 那次“产物提交没上线”的故障
+# 就是靠手动逐段跑才定位到的。
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'chain = 只按入口按钮；full = 逐段强制跑一遍并等结果'
+        type: choice
+        options:
+          - chain
+          - full
+        default: chain
+      daily_housekeeping:
+        description: '顺便收尾：重试在所有服务商上失败过的行、推进待审草稿、按一次图片汉化'
+        type: boolean
+        default: true
+      force_build:
+        description: 'full 时强制重建产物（即使判断“不需要重建”）'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  # 派发运行需要 actions: write。用 GITHUB_TOKEN 派发的 workflow_dispatch 不在 GitHub
+  # 的“递归触发抑制”范围内，所以链式派发有效。
+  actions: write
+
+concurrency:
+  # 同时只允许一个人按这个按钮；排队等待，不打断正在跑的那次。
+  group: workflow-patch
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    name: Run the pipeline
+    runs-on: ubuntu-latest
+    # 最坏情况：跟踪 15 分 + 翻译 90 分 + 出包 30 分 + 网关 20 分。
+    timeout-minutes: 240
+    env:
+      # 不 checkout：这个流程只跟 GitHub 的“运行记录”打交道，不需要仓库内容。
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Print the plan
+        run: |
+          echo "mode=${{ github.event.inputs.mode }}"
+          echo "daily_housekeeping=${{ github.event.inputs.daily_housekeeping }}"
+          echo "force_build=${{ github.event.inputs.force_build }}"
+
+      - name: Press the one button (chain mode)
+        if: ${{ github.event.inputs.mode != 'full' }}
+        run: |
+          set -euo pipefail
+          gh workflow run auto-track-jp-assets.yml --ref main \
+            -f daily_housekeeping=${{ github.event.inputs.daily_housekeeping }}
+          echo "Dispatched auto-track-jp-assets.yml."
+          echo "The chain continues there: translation -> build -> gateway -> portal."
+
+      - name: Run every stage and wait (full mode)
+        if: ${{ github.event.inputs.mode == 'full' }}
+        env:
+          HOUSEKEEPING: ${{ github.event.inputs.daily_housekeeping }}
+          FORCE_BUILD: ${{ github.event.inputs.force_build }}
+          TRACK_WORKFLOW: auto-track-jp-assets.yml
+          TRANSLATE_WORKFLOW: llm-translate-assets.yml
+          BUILD_WORKFLOW: assets-generated.yml
+          GATEWAY_WORKFLOW: cloudflare-gateway.yml
+        run: |
+          set -euo pipefail
+
+          # 轮询间隔。生产固定 20 秒；测试调小到 0，免得每个阶段干等。
+          # STEP 是记账用的步长，永远大于零——POLL_SECONDS=0 时循环也要能走到上限。
+          POLL_SECONDS="${POLL_SECONDS:-20}"
+          STEP=$(( POLL_SECONDS > 0 ? POLL_SECONDS : 1 ))
+
+          SUMMARY=""
+          FAILED=""
+
+          # 「这段现在有没有在跑的」只问一次：latest_run 返回 "<id> <status> <conclusion>"，
+          # 没有运行记录（或读不出来）时返回 "none"。
+          # 解析必须写成单行：内嵌的多行脚本会把下面的 YAML 块折坏。
+          latest_run() {
+            gh run list --workflow="$1" --limit 1 --json databaseId,status,conclusion 2>/dev/null \
+              | python3 -c 'import json,sys; runs=json.load(sys.stdin); print("none" if not runs else "%s %s %s" % (runs[0].get("databaseId"), runs[0].get("status") or "", runs[0].get("conclusion") or ""))' \
+              || echo "none"
+          }
+
+          # 问一条具体的运行记录现在到哪了：返回 "<status> <conclusion>"。
+          run_state() {
+            gh run view "$1" --json status,conclusion 2>/dev/null \
+              | python3 -c 'import json,sys; run=json.load(sys.stdin); print("%s %s" % (run.get("status") or "unknown", run.get("conclusion") or ""))' \
+              || echo "unknown"
+          }
+
+          #   * 已经有排队/运行中的，就等那一个（不重复派发——翻译任务一次就够）
+          #   * 没有的，自己派发一个，等新记录出现
+          #   * 记下结论；失败不中断，后面几段照跑（修网关比“翻译失败了就什么都不做”更有用）
+          run_stage() {  # workflow label timeout_seconds [gh workflow run 的额外参数...]
+            local workflow="$1" label="$2" timeout="$3"
+            shift 3
+            local id status conclusion waited
+
+            read -r id status conclusion <<< "$(latest_run "$workflow")"
+            if [ -n "$id" ] && [ "$id" != "none" ]; then
+              case "$status" in
+                queued|in_progress|requested|waiting|pending)
+                  echo "== ${label}: a run is already ${status} (${id}); joining it instead of stacking another"
+                  ;;
+                *) id="" ;;
+              esac
+            else
+              id=""
+            fi
+
+            if [ -z "$id" ]; then
+              local previous
+              read -r previous _ _ <<< "$(latest_run "$workflow")"
+              echo "== ${label}: dispatching ${workflow} $*"
+              if ! gh workflow run "$workflow" --ref main "$@"; then
+                echo "== ${label}: FAILED to dispatch ${workflow}" >&2
+                SUMMARY="${SUMMARY}| ${label} | could not dispatch |"$'\n'
+                FAILED="yes"
+                return 0
+              fi
+              waited=0
+              while [ "$waited" -lt 300 ]; do
+                sleep "$POLL_SECONDS"
+                waited=$((waited + STEP))
+                read -r id status conclusion <<< "$(latest_run "$workflow")"
+                if [ -n "$id" ] && [ "$id" != "none" ] && [ "$id" != "$previous" ]; then
+                  break
+                fi
+                id=""
+              done
+              if [ -z "$id" ]; then
+                echo "== ${label}: the dispatched ${workflow} never appeared" >&2
+                SUMMARY="${SUMMARY}| ${label} | never appeared |"$'\n'
+                FAILED="yes"
+                return 0
+              fi
+            fi
+
+            waited=0
+            while [ "$waited" -lt "$timeout" ]; do
+              read -r status conclusion <<< "$(run_state "$id")"
+              if [ "$status" = "completed" ]; then
+                echo "== ${label}: ${conclusion} (run ${id})"
+                SUMMARY="${SUMMARY}| ${label} | ${conclusion} |"$'\n'
+                [ "$conclusion" = "success" ] || FAILED="yes"
+                return 0
+              fi
+              sleep "$POLL_SECONDS"
+              waited=$((waited + STEP))
+            done
+            echo "== ${label}: still ${status} after ${timeout}s (run ${id})" >&2
+            SUMMARY="${SUMMARY}| ${label} | timed out |"$'\n'
+            FAILED="yes"
+            return 0
+          }
+
+          run_stage "$TRACK_WORKFLOW" "1/4 track and freeze" 900 \
+            -f daily_housekeeping="$HOUSEKEEPING"
+          run_stage "$TRANSLATE_WORKFLOW" "2/4 translate" 5400
+          if [ "$FORCE_BUILD" = "true" ]; then
+            run_stage "$BUILD_WORKFLOW" "3/4 build the release (forced)" 1800 -f force=true
+          else
+            run_stage "$BUILD_WORKFLOW" "3/4 build the release" 1800
+          fi
+          run_stage "$GATEWAY_WORKFLOW" "4/4 deploy the CDN gateway" 1200
+
+          {
+            echo "### Workflow patch (full mode)"
+            echo ""
+            echo "| stage | result |"
+            echo "| --- | --- |"
+            printf '%s' "$SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -n "$FAILED" ]; then
+            echo "At least one stage did not finish successfully; see the table above." >&2
+            exit 1
+          fi
+          echo "Every stage finished successfully."
