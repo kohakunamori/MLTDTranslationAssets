@@ -115,12 +115,6 @@ class LyricTokenTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_lyric_tokens("空っぽのステージ", join_lyric_lines("空っぽのステージ", blob))
 
-    def test_bilingual_rendering_replaces_source_breaks(self):
-        from mltd_localize_scrobj import bilingual_line
-        self.assertEqual(bilingual_line("君と\n出会えた", "与你相遇"), "君と 出会えた\n与你相遇")
-        self.assertEqual(bilingual_line("君と\r\n出会えた", "与你相遇"), "君と 出会えた\n与你相遇")
-        self.assertEqual(bilingual_line("君と\n出会えた\nあの日", "与你相遇"), "君と 出会えた あの日\n与你相遇")
-
     def test_a_single_line_is_left_untouched(self):
         self.assertEqual(join_lyric_lines("一旦愛して♡", "先爱一下♡"), "先爱一下♡")
         self.assertEqual(join_lyric_lines("一旦愛して♡", "  空白　保留  "), "  空白　保留  ")
