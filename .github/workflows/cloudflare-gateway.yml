@@ -102,7 +102,22 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         # Real HTTPS, byte-for-byte against the object pool that was just
         # checked out: if the deploy did not take, this fails the run.
+        #
+        # Retry first.  Cloudflare keeps serving the previous worker version for a
+        # few seconds after a successful deploy, and gateway run #18 read
+        # live=f7de7355 twice while the deploy had in fact succeeded: the same URL
+        # reported the new commit a minute later and the VPS watcher agreed.  A
+        # false red here reads as a broken release and makes the watcher dispatch
+        # another deploy for nothing.
         run: |
           python -m pip install --quiet msgpack
-          python asset-server/cloudflare/check_gateway.py \
-            --base https://mltd-asset-cf.nyaneko.cn --samples 3
+          for attempt in 1 2 3 4 5 6; do
+            if python asset-server/cloudflare/check_gateway.py \
+                 --base https://mltd-asset-cf.nyaneko.cn --samples 3; then
+              exit 0
+            fi
+            echo "attempt ${attempt}: the edge has not picked this release up yet; retrying in 20s"
+            sleep 20
+          done
+          echo "the live gateway never served this release; failing the run" >&2
+          exit 1
