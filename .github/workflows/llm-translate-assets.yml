@@ -159,6 +159,25 @@ jobs:
           fi
           python scripts/refresh_lyrics_catalogue.py --index "$index" | tee .llm-lyrics.json
 
+      - name: Reuse approved lyric translations
+        # One Japanese line appears in several bundle renditions (scrobj_priam+.unity3d
+        # and scrobj_priam.unity3d carry the same slot).  Copying the approved Chinese is
+        # what this library already does: of the 2,651 sources that appear in more than
+        # one row, 2,324 carry byte-identical text and none diverge.
+        #
+        # Translating the copies again is not free.  It spends tokens, it makes one
+        # Japanese line read three ways across bundles, and it can fail a rule the
+        # original already satisfied: the "+" renditions were waiting on rows whose
+        # Japanese source contains a line break, which the model reproduces faithfully
+        # and the lyric validator always refuses.  Runs #26 and #27 of 2026-10-12
+        # returned the same two-line draft for those five rows, so retrying could never
+        # settle them.  Running this before the collector also keeps those lines out of
+        # the paid queue.
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/llm_translate_untranslated.py reuse --scope lyrics | tee .llm-reuse.json
+
       - name: Collect untranslated rows
         # scope=all covers both source trees: the generated text release
         # (locales/) and the song lyric library (lyrics/songs/).  English-bypass
@@ -327,6 +346,7 @@ jobs:
             .llm-discovery.json
             .llm-discovery-summary.json
             .llm-lyrics.json
+            .llm-reuse.json
 
       - name: Summarize translation outcome
         if: always()

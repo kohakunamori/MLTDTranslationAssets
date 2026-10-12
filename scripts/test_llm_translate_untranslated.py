@@ -497,5 +497,124 @@ class LlmDraftRejectionTests(unittest.TestCase):
             self.assertEqual(rows[42]["status"], "accepted")
 
 
+class LyricReuseTests(LlmLyricsScopeTests):
+    """One Japanese line, one Chinese line: a copy beats a second translation.
+
+    The library's own convention: of the 2,651 sources appearing in more than one
+    row, 2,324 carry byte-identical Chinese and none diverge.  The ``+`` renditions
+    are the counter-example the rule exists for -- they were stuck on rows whose
+    Japanese source contains a line break, which the model reproduces faithfully
+    and the lyric validator always refuses.
+    """
+
+    def _reuse(self, root: Path, *, dry_run=False, scope="lyrics"):
+        with patch.object(tool, "ROOT", root):
+            return tool.reuse(type("Args", (), {"scope": scope, "dry_run": dry_run})())
+
+    def test_a_line_approved_in_another_bundle_is_copied_verbatim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            text = "わたしはもういないよ\n(重なっていくよ Precious tone)"
+            approved = "我已经不复存在 （交叠相织吧 Precious tone）"
+            self._song(songs / "scrobj_braveh.unity3d.jsonl", [
+                self._lyric_row("scrobj_braveh.unity3d", 928, text,
+                                zh=approved, status="accepted", stage="human_translated"),
+            ])
+            waiting = songs / "scrobj_brave+.unity3d.jsonl"
+            self._song(waiting, [
+                self._lyric_row("scrobj_brave+.unity3d", 2038, text, stage="untranslated"),
+            ])
+            self.assertEqual(self._reuse(root), 0)
+            row = _read(waiting)[0]
+            self.assertEqual(row["zh"], approved)
+            self.assertEqual(row["status"], "accepted")
+            self.assertEqual(row["translation_stage"], "human_translated",
+                             "a copy keeps the provenance of the row it came from")
+
+    def test_the_copy_is_revalidated_so_a_legacy_twin_cannot_smuggle_a_bad_row(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            text = "ちょうだい"
+            # A row accepted before the one-line rule existed.
+            self._song(songs / "scrobj_old.unity3d.jsonl", [
+                self._lyric_row("scrobj_old.unity3d", 1, text,
+                                zh="给我嘛\n（附注）", status="accepted", stage="human_translated"),
+            ])
+            waiting = songs / "scrobj_x.unity3d.jsonl"
+            self._song(waiting, [self._lyric_row("scrobj_x.unity3d", 41, text, stage="untranslated")])
+            self.assertEqual(self._reuse(root), 0)
+            row = _read(waiting)[0]
+            self.assertEqual(row["status"], "untranslated", "an invalid copy is never written")
+            self.assertEqual(row["zh"], "")
+
+    def test_only_an_accepted_row_is_authority_for_a_copy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            text = "夜の駐車場で"
+            self._song(songs / "scrobj_other.unity3d.jsonl", [
+                self._lyric_row("scrobj_other.unity3d", 9, text,
+                                zh="在深夜的停车场里", status="pending", stage="llm_translated"),
+            ])
+            waiting = songs / "scrobj_suppa+.unity3d.jsonl"
+            self._song(waiting, [self._lyric_row("scrobj_suppa+.unity3d", 256, text, stage="untranslated")])
+            self._reuse(root)
+            row = _read(waiting)[0]
+            self.assertEqual(row["status"], "untranslated",
+                             "an unreviewed draft is not authority for a second row")
+
+    def test_a_twin_without_a_stage_leaves_the_copy_without_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            text = "そうです♪"
+            self._song(songs / "scrobj_old.unity3d.jsonl", [
+                self._lyric_row("scrobj_old.unity3d", 5, text, zh="就是这样♪", status="accepted"),
+            ])
+            waiting = songs / "scrobj_ahhan+.unity3d.jsonl"
+            self._song(waiting, [self._lyric_row("scrobj_ahhan+.unity3d", 471, text, stage="untranslated")])
+            self._reuse(root)
+            row = _read(waiting)[0]
+            self.assertEqual(row["status"], "accepted")
+            self.assertNotIn("translation_stage", row,
+                             "the stale 'untranslated' stage must not survive an accepted row")
+
+    def test_dry_run_reports_without_touching_the_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            text = "メロメロビューティー☆"
+            self._song(songs / "scrobj_old.unity3d.jsonl", [
+                self._lyric_row("scrobj_old.unity3d", 5, text, zh="神魂颠倒的美丽☆", status="accepted"),
+            ])
+            waiting = songs / "scrobj_ahhan+.unity3d.jsonl"
+            self._song(waiting, [self._lyric_row("scrobj_ahhan+.unity3d", 464, text, stage="untranslated")])
+            before = waiting.read_text(encoding="utf-8")
+            self._reuse(root, dry_run=True)
+            self.assertEqual(waiting.read_text(encoding="utf-8"), before)
+
+    def test_a_row_without_a_twin_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            waiting = songs / "scrobj_priam+.unity3d.jsonl"
+            self._song(waiting, [
+                self._lyric_row("scrobj_priam+.unity3d", 3296, "目指すはCharming×Coolよ \n美の道は未来に続く",
+                                stage="untranslated"),
+            ])
+            before = waiting.read_text(encoding="utf-8")
+            self._reuse(root)
+            self.assertEqual(waiting.read_text(encoding="utf-8"), before,
+                             "a line that exists nowhere else still needs a real translation")
+
+    def test_locale_rows_are_out_of_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaises(SystemExit):
+                self._reuse(root, scope="locales")
+
+
 if __name__ == "__main__":
     unittest.main()

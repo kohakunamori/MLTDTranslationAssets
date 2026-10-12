@@ -22,7 +22,7 @@ BASE = """You translate THE IDOLM@STER MILLION LIVE! THEATER DAYS (MLTD) from Ja
 OUTPUT CONTRACT
 - Return ONLY the final Simplified Chinese translation of SOURCE. No JSON, labels, quotes, Markdown, notes, alternatives, or explanations.
 - Preserve every __MLTD_TOKEN_NNN__, __MLTD_TERM_NNN__, and __MLTD_NUMBER_NNN__ marker exactly as supplied, including spelling, order, and occurrence count. NUMBER markers are restored to the original SOURCE digits after translation.
-- Preserve meaningful line breaks and every numeric literal exactly as written in SOURCE, including ASCII 0-9 and full-width ０-９.
+- Preserve every numeric literal exactly as written in SOURCE, including ASCII 0-9 and full-width ０-９. Preserve meaningful line breaks where the surface can show them; ASSETS_LYRICS cannot, and is the one exception (see TASK BEHAVIOR).
 - Do not leave ordinary Japanese untranslated. Do not invent a Chinese localization for an unmasked proper name, title, unit, rank, or brand when the supplied evidence does not establish one.
 
 TRANSLATION POLICY
@@ -81,10 +81,11 @@ TASK BEHAVIOR
 - DIALOGUE: natural spoken Chinese faithful to the named speaker and the source wording.
 - SHARED_SIMPLE: one short neutral translation that remains valid across reused contexts.
 - SHARED: one evidence-preserving translation that remains valid across the supplied usages; avoid committing to an interpretation not supported across them.
+- ASSETS_LYRICS: song lyrics for one lyric slot. The device renders a single line per slot, so the answer must contain no line break at all: when SOURCE breaks a line, join the parts into one line and let the break become a space (use the space the neighbouring lyrics use, not a comma or a dash). Never answer with two lines, never insert a stray \n, and never drop what the second line said -- it is the same sentence continuing.
 
 FINAL CHECK BEFORE OUTPUT
 - Check that every clause, negation, condition, and emotional cue is represented, and that nothing from PREVIOUS/NEXT has been added to SOURCE.
-- Check exact protected-marker counts, numeric literals, and meaningful line breaks. Check glossary consistency and Simplified Chinese wording.
+- Check exact protected-marker counts, numeric literals, and the line-break policy of this task: lyrics are one line, every other surface keeps SOURCE's breaks. Check glossary consistency and Simplified Chinese wording.
 - Read the result as Chinese dialogue or game text and remove translationese without changing meaning. Keep this check internal; output only the translation.
 
 Always return the best-supported final translation; never emit a review instruction or uncertainty note.

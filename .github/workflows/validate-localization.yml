@@ -163,6 +163,7 @@ jobs:
           python -m pytest -q -n 4 --dist worksteal \
             scripts/test_llm_translate_untranslated.py \
             scripts/test_llm_translate_workflow.py \
+            scripts/test_translation_prompt_policy.py \
             scripts/test_promote_merged_locales.py \
             scripts/test_build_generated_release.py \
             scripts/test_image_ci_state.py \

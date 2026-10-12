@@ -175,10 +175,11 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         pending rows as soon as they validate, so on a healthy run the promotion
         step has nothing left to push and only the apply step reports a publish.
         """
-        trigger = self.steps["Trigger the generated Assets build"]
-        self.assertEqual(
-            trigger["if"],
-            "steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true'")
+        package = self.workflow["jobs"]["package"]
+        trigger = next(step for step in package["steps"] if step.get("name") == "Trigger the generated Assets build")
+        self.assertEqual(package["needs"], ["draft", "images"])
+        self.assertIn("needs.draft.outputs.published == 'true'", package["if"])
+        self.assertIn("needs.images.outputs.published == 'true'", package["if"])
         self.assertIn("gh workflow run assets-generated.yml --ref main", trigger["run"])
         self.assertIn("published=true", Path(commit_llm_drafts.__file__).read_text(encoding="utf-8"))
         self.assertIn("actions: write", self.text)
@@ -195,6 +196,26 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertIn(".llm-publish.json", upload)
         summary = self.steps["Summarize translation outcome"]["run"]
         self.assertIn(".llm-publish.json", summary)
+
+    def test_a_lyric_line_that_already_has_an_approved_twin_is_copied_not_translated(self):
+        """The copy runs before the collector, so the paid queue never sees it.
+
+        The 2026-10-12 runs #26 and #27 spent tokens on five rows whose Japanese
+        source contains a line break, got the same two-line draft back both times
+        (which the lyric validator always refuses), and left the rows untranslated
+        -- while the approved Chinese for four of them was already in the library
+        under another bundle.
+        """
+        names = [step.get("name") for step in self.job["steps"]]
+        reuse = names.index("Reuse approved lyric translations")
+        extract = names.index("Extract new song lyrics")
+        collect = names.index("Collect untranslated rows")
+        self.assertLess(extract, reuse, "a new song's rows must exist before they can be matched")
+        self.assertLess(reuse, collect, "otherwise the collector pays for a line that is already approved")
+        run = self.steps["Reuse approved lyric translations"]["run"]
+        self.assertIn("scripts/llm_translate_untranslated.py reuse --scope lyrics", run)
+        upload = self.steps["Upload translation diagnostics"]["with"]["path"]
+        self.assertIn(".llm-reuse.json", upload)
 
 
 if __name__ == "__main__":

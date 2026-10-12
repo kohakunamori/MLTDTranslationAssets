@@ -237,6 +237,114 @@ def apply(args: argparse.Namespace) -> int:
     return 0
 
 
+def reuse(args: argparse.Namespace) -> int:
+    """Fill an untranslated lyric row from an accepted row with the same source.
+
+    One Japanese line appears in several bundle renditions (``scrobj_priam+.unity3d``
+    and ``scrobj_priam.unity3d`` carry the same slot).  The library's own convention
+    is that every copy carries the same Chinese: of the 2,651 sources that appear in
+    more than one row, 2,324 have byte-identical translations and none diverge.
+
+    Translating the copies again is not free.  It spends tokens, it makes one Japanese
+    line read three different ways across bundles, and it can fail a rule the original
+    already satisfied: the ``+`` renditions were stuck on rows whose Japanese source
+    contains a line break, which the model faithfully reproduces and
+    :func:`validate_draft` always refuses for lyrics.  Both runs of 2026-10-12
+    produced the same two-line draft for those five rows, so no amount of retrying
+    would have settled them.
+
+    A copy is written ``accepted`` and keeps the provenance of the row it came from
+    (``human_translated`` stays ``human_translated``); a twin that predates the
+    ``translation_stage`` field leaves the copy without one, exactly like its
+    neighbours.  Every copy is re-validated against *its own* row first, so this can
+    never publish text the repository would refuse.
+    """
+    scope = scope_of(args)
+    if scope != "lyrics":
+        raise SystemExit("reuse only applies to lyrics; a locale row's wording belongs to its own build")
+    dry_run = bool(getattr(args, "dry_run", False))
+
+    accepted: dict[str, tuple[str, str | None]] = {}
+    for path, _kind in scope_paths(ROOT, scope):
+        for _line_no, raw in enumerate(jsonl_lines(path.read_text(encoding="utf-8")), 1):
+            if not raw.strip():
+                continue
+            row = json.loads(raw)
+            if row.get("status") != "accepted":
+                continue
+            translation = str(row.get("zh", ""))
+            source = str(row.get("ja", ""))
+            sid = str(row.get("source_sha256", ""))
+            if not translation or not source or sid != sha256_text(source):
+                continue
+            stage = row.get("translation_stage")
+            accepted.setdefault(sid, (translation, stage if isinstance(stage, str) else None))
+
+    timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    updated = 0
+    reused: list[dict[str, str]] = []
+    rejected: list[dict[str, str]] = []
+    for path, kind in scope_paths(ROOT, scope):
+        lines = []
+        changed = False
+        for line in jsonl_lines(path.read_text(encoding="utf-8")):
+            if not line.strip():
+                lines.append(line)
+                continue
+            row: dict[str, Any] = json.loads(line)
+            if row.get("status") != "untranslated" or str(row.get("zh", "")):
+                lines.append(line)
+                continue
+            source = str(row.get("ja", ""))
+            sid = str(row.get("source_sha256", ""))
+            twin = accepted.get(sid)
+            if twin is None or not source or sid != sha256_text(source):
+                lines.append(line)
+                continue
+            translation, stage = twin
+            try:
+                validate_draft(kind, source, translation)
+            except ValueError as exc:
+                rejected.append({
+                    "source_sha256": sid,
+                    "file": path.name,
+                    "index": str(row.get("index", "")),
+                    "reason": str(exc),
+                })
+                lines.append(line)
+                continue
+            row["zh"] = translation
+            row["status"] = "accepted"
+            if stage:
+                row["translation_stage"] = stage
+            else:
+                row.pop("translation_stage", None)
+            row["updated_at"] = timestamp
+            changed = True
+            updated += 1
+            if len(reused) < REJECTION_SAMPLE:
+                reused.append({
+                    "source_sha256": sid,
+                    "file": path.name,
+                    "index": str(row.get("index", "")),
+                })
+            lines.append(json.dumps(row, ensure_ascii=False, separators=(",", ":")))
+        # Untouched rows keep their exact bytes: a copy touches a handful of lines, not
+        # the whole 13,729-row library.
+        if changed and not dry_run:
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    print(json.dumps({
+        "updated": updated,
+        "dry_run": dry_run,
+        "skipped_invalid": len(rejected),
+        "rejected": rejected[:REJECTION_SAMPLE],
+        "reused": reused,
+        "scope": scope,
+        "stage": "reused",
+    }, ensure_ascii=False))
+    return 0
+
+
 def _draft_source_ids(path: Path) -> set[str]:
     """Source identities carried by a draft file, for a bounded publish."""
     wanted: set[str] = set()
@@ -505,6 +613,19 @@ def main() -> int:
     apply_parser.add_argument("--draft", type=Path, required=True)
     apply_parser.add_argument("--scope", choices=SCOPES, default="locales")
     apply_parser.set_defaults(func=apply)
+    reuse_parser = sub.add_parser("reuse")
+    reuse_parser.add_argument(
+        "--scope",
+        choices=("lyrics",),
+        default="lyrics",
+        help="only lyrics: a locale row's wording belongs to its own build",
+    )
+    reuse_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="report the copies without writing any file",
+    )
+    reuse_parser.set_defaults(func=reuse)
     publish_parser = sub.add_parser("publish")
     publish_parser.add_argument(
         "--draft",
