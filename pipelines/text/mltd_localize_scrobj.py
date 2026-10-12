@@ -449,7 +449,9 @@ def bilingual_line(source: str, translation: str) -> str:
     MV.  On an unpatched client the two lines would be joined on one line, which is
     ugly but not broken: the Chinese is still readable and nothing is lost.
     """
-    return f"{source}\n{translation}"
+    clean_source = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", source).strip()
+    clean_translation = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", translation).strip()
+    return f"{clean_source}\n{clean_translation}"
 
 
 def save_localized_bundle(source: Path, output: Path, translations: SlotTranslations) -> dict:
