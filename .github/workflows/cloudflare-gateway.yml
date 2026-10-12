@@ -2,16 +2,21 @@ name: Deploy Cloudflare Gateway
 
 # Keeps the Cloudflare gateway in step with this repository.
 #
-# Why `workflow_run` and not `push`: the release commits that "Build generated
-# Assets" writes always carry `[skip ci]`, and GitHub suppresses push-triggered
-# workflows for exactly those commits.  A run that has *completed* still fires
-# this one, and by then main already contains the release commit.  A push that
-# only touches the gateway's own code is picked up by the `push` trigger below.
+# Where the trigger comes from: "Build generated Assets" dispatches this workflow
+# explicitly (it needs `actions: write` for that), only after it actually pushed a
+# release commit.
+#
+# Why not `push`: those release commits always carry `[skip ci]`, and GitHub
+# suppresses push-triggered workflows for exactly those commits.
+#
+# Why not `workflow_run` either (it used to be the trigger): a run that has
+# *completed* does fire this one, but only when the finishing run came from a
+# push.  Every build that the translation workflow dispatched by itself has been
+# silently skipped -- builds #40, #52, #54 and #62 on 2026-10-10..12 produced four
+# release commits and zero gateway deploys, so the live gateway was left anchored
+# two releases behind main (`/healthz` said `fe71c9c2` while main was `e54d92ad`).
+# The explicit dispatch is what makes both entry points behave the same.
 on:
-  workflow_run:
-    workflows: ["Build generated Assets"]
-    types: [completed]
-    branches: [main]
   push:
     branches: [main]
     paths:
@@ -28,7 +33,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     # The checkout pulls the whole content-addressed object pool (~1 GB, of which
     # this release references ~640 MiB) so that `build_index.py` can verify every

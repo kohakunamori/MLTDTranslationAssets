@@ -21,6 +21,11 @@ name: Build generated Assets
 
 permissions:
   contents: write
+  # 产物发布完之后要显式派发网关部署。不能靠 `workflow_run`：实测四次
+  # workflow_dispatch 触发的构建（#40/#52/#54/#62）一次都没有唤起网关工作流，
+  # 而发布提交带 `[skip ci]`、push 事件也被抑制——于是"由翻译任务派发出来的
+  # 新产物"永远到不了 CDN。详见 cloudflare-gateway.yml 顶部注释。
+  actions: write
 
 concurrency:
   group: assets-generated-main
@@ -164,6 +169,7 @@ jobs:
             --output manifests/portal-resource-manifest.json
 
       - name: Commit reviewed translations and generated release
+        id: publish
         if: steps.gate.outputs.build == 'true'
         run: |
           git config user.name 'github-actions[bot]'
@@ -171,6 +177,7 @@ jobs:
           git add generated/ locales/ manifests/portal-resource-manifest.json
           if git diff --cached --quiet; then
             echo 'No reviewed translation or generated release changes.'
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "build(assets): publish reviewed translations and generated release [skip ci]"
@@ -182,6 +189,7 @@ jobs:
               exit 1
             fi
             if git push origin HEAD:main; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "main advanced during generated publish (attempt ${attempt}); retrying."
@@ -189,3 +197,19 @@ jobs:
           done
           echo 'main continued advancing while publishing generated output.' >&2
           exit 1
+
+      - name: Deploy the CDN gateway onto the new release
+        # 必须在上一步真的推了提交之后才部署：网关的对照表锚定在"最后一次改动
+        # generated/<version>/manifest.json 的提交"上，没有新提交就没有新内容。
+        #
+        # 这一跳以前挂在 workflow_run 上（"上游构建完成"）。实测那条路对
+        # workflow_dispatch 触发的构建不生效，而发布提交又带 `[skip ci]` 导致 push
+        # 事件被抑制，所以由翻译任务派发出来的产物从来没有真正上线过——线上网关一度
+        # 落后主线两个发布。现在改成显式派发，两条入口（push 与 dispatch）都能走到。
+        if: steps.gate.outputs.build == 'true' && steps.publish.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run cloudflare-gateway.yml --ref main
+          echo "Dispatched cloudflare-gateway.yml on main for the release just committed."
