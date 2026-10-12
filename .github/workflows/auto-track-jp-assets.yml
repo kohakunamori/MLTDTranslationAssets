@@ -256,9 +256,15 @@ jobs:
           fi
 
           # 不叠班：已经有排队或运行中的翻译任务时，不再派发第二个。
+          # 读不到运行状态时**这一轮什么都不做**（fail closed）：宁可等下一次唤醒，
+          # 也不要在看不出有没有在跑的时候再派发一个。
           for status in queued in_progress; do
             COUNT="$(gh run list --workflow="$WORKFLOW" --status="$status" --limit 10 \
-              --json databaseId --jq 'length')"
+              --json databaseId --jq 'length' 2>/dev/null || true)"
+            if [ -z "$COUNT" ]; then
+              echo "cannot read the ${status} run state of ${WORKFLOW}; leaving this wake to the next one."
+              exit 0
+            fi
             if [ "$COUNT" != "0" ]; then
               echo "A ${WORKFLOW} run is already ${status} (${COUNT}); not dispatching another."
               exit 0

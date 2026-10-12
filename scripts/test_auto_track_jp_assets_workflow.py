@@ -31,6 +31,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -378,6 +379,119 @@ class FreezeSandboxTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("FAIL", result.stderr)
         self.assertEqual(self.remote_tag_sha("assets-1077500"), "")
+
+
+class WakeSandboxTest(unittest.TestCase):
+    """在沙箱里执行唤醒步骤：三个门槛与派发本身。
+
+    这一步现在承担“立刻”的接力（vps_racknerd 每 5 分钟派发本流程，本流程派发翻译
+    工作流），所以它不能只有形状断言。沙箱提供 ``gh`` 与 ``date``，清单用真实文件，
+    不访问网络、不接触真实仓库、不需要 git。
+
+    需要 POSIX 的 bash：Windows 解释器给出的临时目录是 ``C:\\...``，PATH 里的替身
+    在 WSL 的 bash 里找不到。CI 与手动核对都在 Linux 上跑这一套。
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if os.name == "nt":
+            raise unittest.SkipTest("needs a POSIX bash; run it on Linux (or under WSL python)")
+        if not WORKFLOW.is_file():
+            raise unittest.SkipTest(f"workflow not present: {WORKFLOW}")
+        if BASH is None:
+            raise unittest.SkipTest("bash is unavailable; cannot run the sandbox")
+        workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+        cls.script = _step_run(workflow["jobs"]["wake-translation"], "Wake the translation workflow")
+        if "gh workflow run" not in cls.script:
+            raise AssertionError("the wake step no longer dispatches anything")
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="wake-sandbox-")
+        self.root = Path(self._tmp.name)
+        self.calls = self.root / "gh-calls.log"
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        stub = self.bin / "gh"
+        stub.write_text(
+            "#!/bin/sh\n"
+            'printf \'%s\\n\' "$*" >> "$GH_CALLS"\n'
+            'if [ "${GH_STUB_FAIL:-0}" = "1" ]; then exit 1; fi\n'
+            'case "$*" in\n'
+            '  *--status=queued*) printf \'%s\\n\' "${GH_STUB_QUEUED:-0}" ;;\n'
+            '  *--status=in_progress*) printf \'%s\\n\' "${GH_STUB_IN_PROGRESS:-0}" ;;\n'
+            '  *--json\\ createdAt*) printf \'%s\\n\' "${GH_STUB_LAST_CREATED:-}" ;;\n'
+            '  *) exit 0 ;;\n'
+            "esac\n",
+            encoding="utf-8", newline="\n",
+        )
+        stub.chmod(0o755)
+        manifest = self.root / "manifests" / "asset-version.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text('{"asset_version": 1077500}\n', encoding="utf-8", newline="\n")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def run_wake(self, *, current: str = "1077500", latest: str = "1077600",
+                 manifest: str = "1077500", **env_overrides: str
+                 ) -> subprocess.CompletedProcess[str]:
+        (self.root / "manifests" / "asset-version.json").write_text(
+            f'{{"asset_version": {manifest}}}\n', encoding="utf-8", newline="\n"
+        )
+        env = dict(os.environ, GH_TOKEN="sandbox-token", CURRENT_VER=current,
+                   LATEST_VER=latest, GH_CALLS=str(self.calls))
+        env.update(env_overrides)
+        env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
+        return subprocess.run(
+            [BASH, "-c", self.script], cwd=str(self.root), env=env,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+        )
+
+    def dispatched(self) -> bool:
+        if not self.calls.is_file():
+            return False
+        return "workflow run" in self.calls.read_text(encoding="utf-8")
+
+    def test_dispatches_when_behind_and_idle(self) -> None:
+        result = self.run_wake(GH_STUB_LAST_CREATED="2000-01-01T00:00:00Z")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.dispatched(), self.calls.read_text(encoding="utf-8"))
+        self.assertIn("Dispatched llm-translate-assets.yml", result.stdout)
+
+    def test_already_tracked_is_a_noop(self) -> None:
+        """清单已经是目标版本：翻译工作流写过了，不再派发。"""
+        result = self.run_wake(current="1077500", latest="1077500", manifest="1077500")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.dispatched())
+        self.assertIn("Already tracking", result.stdout)
+
+    def test_a_queued_or_running_run_blocks_the_dispatch(self) -> None:
+        for name, value in (("GH_STUB_QUEUED", "1"), ("GH_STUB_IN_PROGRESS", "1")):
+            with self.subTest(status=name):
+                self.calls.unlink(missing_ok=True)
+                result = self.run_wake(GH_STUB_LAST_CREATED="2000-01-01T00:00:00Z", **{name: value})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertFalse(self.dispatched(), f"{name} must block the dispatch")
+                self.assertIn("not dispatching", result.stdout)
+
+    def test_a_run_that_just_started_gets_room_before_a_retry(self) -> None:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        result = self.run_wake(GH_STUB_LAST_CREATED=now)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.dispatched())
+        self.assertIn("leaving it room", result.stdout)
+
+    def test_an_unreadable_run_state_fails_closed(self) -> None:
+        result = self.run_wake(GH_STUB_FAIL="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.dispatched())
+        self.assertIn("cannot read the queued run state", result.stdout)
+
+    def test_a_checkout_that_disagrees_with_the_check_fails(self) -> None:
+        result = self.run_wake(current="1077400", latest="1077600", manifest="1077500")
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(self.dispatched())
+        self.assertIn("FAIL", result.stderr)
 
 
 if __name__ == "__main__":
