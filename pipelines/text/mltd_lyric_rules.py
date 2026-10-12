@@ -68,6 +68,37 @@ def is_localizable_line(text: str) -> bool:
     return not is_english_bypass(text)
 
 
+def join_lyric_lines(source: str, translated: str) -> str:
+    """Put a lyric translation on one line, the way the accepted rows already do.
+
+    The device renders a single line per lyric slot, so a ``SOURCE`` line break can
+    only become a space.  Every committed row follows that: ``scrobj_braveh``
+    (accepted 2026-09) renders ``わたしはもういないよ\\n(重なっていくよ Precious tone)``
+    as ``我已经不复存在 （交叠相织吧 Precious tone）``, and ``scrobj_crilov`` renders
+    ``衝動に沿って進んでいたら \\n本能 レッドランプ`` as
+    ``若顺着冲动一路向前 本能将亮起红灯``.
+
+    The model keeps mirroring the source break even when the prompt forbids it: runs
+    #26, #27 and #28 (2026-10-12) all returned a two-line draft for
+    ``scrobj_priam+.unity3d`` #3296, and the validator refused all three.  Joining the
+    halves keeps the whole translation instead of throwing away a sentence that is
+    otherwise correct, and it cannot lose content -- it only removes line breaks and
+    the spaces that surrounded them.
+
+    A break the source never had is *not* joined.  That is the shape of a reasoning
+    blob (``思考过程：`` and its bullet list), and the one-line length ceiling is too
+    loose to catch one on its own: the blob that
+    ``test_a_reasoning_blob_is_refused_and_the_other_drafts_are_kept`` pins passed
+    the ceiling as soon as its newlines were removed.  So the join applies only where
+    it is provably faithful -- the source broke the line and the answer mirrors it.
+    """
+    if "\n" not in source and "\r" not in source:
+        return translated
+    if "\n" not in translated and "\r" not in translated:
+        return translated
+    return re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", translated).strip()
+
+
 def validate_lyric_tokens(source: str, translated: str) -> None:
     """Everything a lyric translation must satisfy before it may be stored.
 

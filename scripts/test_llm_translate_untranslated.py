@@ -455,6 +455,45 @@ class LlmDraftRejectionTests(unittest.TestCase):
                 tool.apply(type("Args", (), {"draft": draft, "scope": "lyrics"})())
             self.assertEqual(_read(song)[0]["zh"], "<不知不觉间已经如此>")
 
+    def test_a_two_line_lyric_draft_is_joined_instead_of_discarded(self):
+        """The row the model has now failed three times, on 2026-10-12.
+
+        `目指すはCharming×Coolよ \\n美の道は未来に続く` came back as
+        `目标是Charming×Cool哦\\n美之道通向未来` in runs #26, #27 and #28 -- the
+        prompt forbids the break and the validator refuses it, so the row stayed
+        untranslated while three otherwise-correct translations were thrown away.
+        The applier now joins the halves, which is what every accepted row with a
+        line break already looks like.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_priam+.unity3d.jsonl"
+            source = "目指すはCharming×Coolよ \n美の道は未来に続く"
+            self._song(song, [self._lyric_row("scrobj_priam+.unity3d", 3296, source)])
+            draft = root / "draft.jsonl"
+            self._draft(draft, [(source, "目标是Charming×Cool哦\n美之道通向未来")])
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.apply(type("Args", (), {"draft": draft, "scope": "lyrics"})()), 0)
+            row = _read(song)[0]
+            self.assertEqual(row["zh"], "目标是Charming×Cool哦 美之道通向未来")
+            self.assertEqual(row["status"], "pending")
+            self.assertNotIn("\n", row["zh"])
+
+    def test_a_locale_draft_keeps_the_line_breaks_its_surface_needs(self):
+        """Locales render several lines, so the join must not touch them."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            locale = root / "locales" / "story" / "x.jsonl"
+            locale.parent.mkdir(parents=True)
+            source = "{$P$}、おはよう。\n今日もいい天気だね。"
+            _write(locale, [_row(source, item_key="a")])
+            draft = root / "draft.jsonl"
+            self._draft(draft, [(source, "{$P$}，早上好。\n今天天气也不错呢。")])
+            with patch.object(tool, "ROOT", root):
+                tool.apply(type("Args", (), {"draft": draft, "scope": "locales"})())
+            self.assertEqual(_read(locale)[0]["zh"], "{$P$}，早上好。\n今天天气也不错呢。")
+
     def test_a_locale_draft_that_drops_a_placeholder_is_still_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

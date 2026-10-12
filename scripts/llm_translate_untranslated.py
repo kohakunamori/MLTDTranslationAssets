@@ -36,7 +36,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
-from pipelines.text.mltd_lyric_rules import is_english_bypass, validate_lyric_tokens
+from pipelines.text.mltd_lyric_rules import is_english_bypass, join_lyric_lines, validate_lyric_tokens
 from pipelines.core.hashing import sha256_text
 
 
@@ -205,9 +205,18 @@ def apply(args: argparse.Namespace) -> int:
             translation = translations.get(sid)
             if row.get("status") == "untranslated" and translation is not None:
                 source_text = str(row.get("ja", ""))
+                candidate = translation
+                if kind == "lyrics":
+                    # A lyric slot renders one line, so the source's break can only
+                    # become a space.  The model mirrors that break even when the
+                    # prompt forbids it -- runs #26, #27 and #28 all answered
+                    # scrobj_priam+.unity3d #3296 with two lines -- and joining the
+                    # halves keeps a sentence that is otherwise correct.  A break the
+                    # source never had is left alone and still refused.
+                    candidate = join_lyric_lines(source_text, translation)
                 if source_text:
                     try:
-                        validate_draft(kind, source_text, translation)
+                        validate_draft(kind, source_text, candidate)
                     except ValueError as exc:
                         rejected.append({
                             "source_sha256": sid,
@@ -217,7 +226,7 @@ def apply(args: argparse.Namespace) -> int:
                         })
                         lines.append(line)
                         continue
-                row["zh"] = translation
+                row["zh"] = candidate
                 row["status"] = "pending"
                 row["translation_stage"] = "llm_translated"
                 row["updated_at"] = timestamp

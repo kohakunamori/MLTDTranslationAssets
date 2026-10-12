@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mltd_lyric_rules import (  # noqa: E402
     is_english_bypass,
     is_localizable_line,
+    join_lyric_lines,
     validate_lyric_tokens,
 )
 
@@ -88,6 +89,35 @@ class LyricTokenTests(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n（附注）")
         self.assertIn("one line", str(caught.exception))
+
+    def test_a_line_break_becomes_the_space_the_library_uses(self):
+        """The join reproduces what the accepted rows already look like."""
+        self.assertEqual(
+            join_lyric_lines("わたしはもういないよ\n(重なっていくよ Precious tone)",
+                             "我已经不在了哦\n(重叠起来吧 Precious tone)"),
+            "我已经不在了哦 (重叠起来吧 Precious tone)")
+        # A space next to the break disappears into the single joining space.
+        self.assertEqual(
+            join_lyric_lines("衝動に沿って進んでいたら \n本能 レッドランプ",
+                             "若顺着冲动一直前行 \n本能亮起红灯"),
+            "若顺着冲动一直前行 本能亮起红灯")
+        # The joined form is the form the validator accepts, and it keeps both halves.
+        source = "目指すはCharming×Coolよ \n美の道は未来に続く"
+        joined = join_lyric_lines(source, "目标是Charming×Cool哦\n美之道通向未来")
+        validate_lyric_tokens(source, joined)
+        self.assertEqual(joined, "目标是Charming×Cool哦 美之道通向未来")
+
+    def test_a_break_the_source_never_had_is_not_joined(self):
+        """That shape is a reasoning blob, and joining it would slip past the ceiling."""
+        blob = ("思考过程：\n- 空っぽのステージ：空无一人的舞台\n"
+                "采用直接自然翻译：空荡荡的舞台 （从这里开始才是）")
+        self.assertEqual(join_lyric_lines("空っぽのステージ", blob), blob)
+        with self.assertRaises(ValueError):
+            validate_lyric_tokens("空っぽのステージ", join_lyric_lines("空っぽのステージ", blob))
+
+    def test_a_single_line_is_left_untouched(self):
+        self.assertEqual(join_lyric_lines("一旦愛して♡", "先爱一下♡"), "先爱一下♡")
+        self.assertEqual(join_lyric_lines("一旦愛して♡", "  空白　保留  "), "  空白　保留  ")
 
     def test_an_explanation_instead_of_a_translation_is_refused(self):
         """The blob that failed run 38058410546, on one line: 10x the source."""
