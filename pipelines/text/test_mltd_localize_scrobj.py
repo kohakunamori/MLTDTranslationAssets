@@ -114,6 +114,53 @@ class BilingualLineTests(unittest.TestCase):
         self.assertEqual(composed.count("\n"), 1)
         self.assertEqual(composed.split("\n"), ["ちょうだい", "给我"])
 
+    def test_japanese_internal_line_breaks_are_spaces(self):
+        """Source formatting never consumes the bilingual separator."""
+        for source, expected_ja in (
+            ("君と\n出会えた", "君と 出会えた"),
+            ("君と\r\n出会えた", "君と 出会えた"),
+            ("君と\r出会えた", "君と 出会えた"),
+            ("君と \n 出会えた\nあの日から", "君と 出会えた あの日から"),
+        ):
+            with self.subTest(source=source):
+                composed = bilingual_line(source, "与你相遇")
+                self.assertEqual(composed, expected_ja + "\n与你相遇")
+                self.assertEqual(composed.count("\n"), 1)
+                self.assertNotIn("\r", composed)
+
+    def test_chinese_internal_line_breaks_are_spaces(self):
+        """Translation formatting never consumes the bilingual separator."""
+        for zh, expected_zh in (
+            ("自从相遇\n那天起", "自从相遇 那天起"),
+            ("自从相遇\r\n那天起", "自从相遇 那天起"),
+            ("自从相遇\r那天起", "自从相遇 那天起"),
+            ("自从相遇 \n 那天起\n直到今天", "自从相遇 那天起 直到今天"),
+        ):
+            with self.subTest(zh=zh):
+                composed = bilingual_line("君と出会えた", zh)
+                self.assertEqual(composed, "君と出会えた\n" + expected_zh)
+                self.assertEqual(composed.count("\n"), 1)
+                self.assertNotIn("\r", composed)
+
+    def test_both_languages_have_multiple_source_breaks(self):
+        """Only the intentional JA/ZH separator may survive in the Unity slot."""
+        ja = "君と\r\n出会えた\nあの日から"
+        zh = "自从\n与你相遇\r\n的那天起"
+        combined = bilingual_line(ja, zh)
+        self.assertEqual(combined, "君と 出会えた あの日から\n自从 与你相遇 的那天起")
+        self.assertEqual(combined.split("\n"), ["君と 出会えた あの日から", "自从 与你相遇 的那天起"])
+        self.assertNotIn("\r", combined)
+
+    def test_source_identity_remains_unmodified_for_slot_lookup(self):
+        """Only display output changes; hashes and source lookup use original JA."""
+        ja = "君と\n出会えた"
+        row = AcceptedSlotTranslationsTests._row(12, ja, "与你相遇")
+        translations = slot_translations([row])
+        self.assertEqual(translations.lookup(12, ja), "与你相遇")
+        self.assertEqual(bilingual_line(ja, translations.lookup(12, ja)), "君と 出会えた\n与你相遇")
+        self.assertEqual(row["ja"], ja)
+        self.assertEqual(row["source_sha256"], hashlib.sha256(ja.encode("utf-8")).hexdigest())
+
     def test_english_bypass_lines_are_left_alone_by_the_caller(self):
         # ``is_english_bypass`` keeps Latin-only lines untranslated, so the writer
         # never composes a pair for them; the helper itself is a plain join.

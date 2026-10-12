@@ -83,6 +83,18 @@ class ValidateLyricsTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             tool.validate_lyrics(self._root([dropped]))
 
+    def test_japanese_source_newline_is_allowed_for_original_hash(self):
+        """The original JA stays intact in JSONL; only the Unity writer normalizes it."""
+        root = self._root([row("scrobj_x.unity3d", 1, "君と\n出会えた", zh="与你相遇", status="accepted")])
+        self.assertEqual(tool.validate_lyrics(root)["accepted"], 1)
+
+    def test_chinese_translation_must_not_carry_a_newline(self):
+        for zh in ("与你\n相遇", "与你\r\n相遇", "与你\r相遇"):
+            with self.subTest(zh=zh):
+                broken = row("scrobj_x.unity3d", 1, "君と出会えた", zh=zh, status="accepted")
+                with self.assertRaises(SystemExit):
+                    tool.validate_lyrics(self._root([broken]))
+
     def test_unicode_line_separator_inside_a_string_is_not_a_line_break(self):
         """U+2028 is legal inside JSON and must not split a row in two."""
         root = self._root([row("scrobj_x.unity3d", 1, "モヤモヤするわ！\u2028", zh="真让人心烦意乱！",
