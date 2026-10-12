@@ -1,12 +1,23 @@
 name: Auto Track Japanese Assets
 
-# 每日跟踪日版资源版本（Matsurihi API）。检测到新版本时：
+# 跟踪日版资源版本（Matsurihi API）。检测到新版本时：
 #   1. 把“离开的那一版”冻结成单一标签 assets-<version>（immutable：已存在且指向
 #      其他提交时直接失败，绝不移动）；该标签是后续 generated/<asset_version>/
 #      manifest.json 记录的 source_commit。
-#   2. 通过 PR 更新 manifests/asset-version.json —— 不再由 bot 直接合并到 main。
-#      此前 `gh pr merge --squash` 会绕过任何开启中的分支保护/审核要求；无论保护
-#      当前是否开启，bot 都不应自行合并，main 的推进保留给 owner/审查。
+#   2. 立刻叫醒翻译工作流（workflow_dispatch）。本流程自己**不再**改
+#      manifests/asset-version.json，也不开 PR。
+#
+# 为什么不再开 PR：版本号只能有一个写者，而那个写者是翻译工作流本身——
+# scripts/commit_llm_drafts.py 会把 manifests/asset-version.json 和其它译料一起推上
+# main。旧流程既开一张“等 owner 合并”的申请单、又让翻译工作流直接推 main，结果是
+# 每个版本都留下一张永远追不上的申请单（例如 #40），而真正推进版本号的始终是
+# 翻译工作流。这里保留 bot 的底线：它不合并、也不直接推 main——只读、只冻结标签、
+# 只派发。
+#
+# 本流程的 schedule 现在只是兜底。主路径是 vps_racknerd 上的
+# mltd-asset-watch.timer：每 5 分钟查一次官方版本号，发现新版就派发本流程。
+# GitHub 自己的定时任务实测会被推迟 4~7 小时（16:00 UTC 的 cron 实际 19:48~21:03
+# UTC 才启动），所以它承担不了“立刻”。
 #
 # 写路径全部绑定到 checkout 的固定提交：每个 job 都用 ref: ${{ github.sha }} 拉取，
 # 并在写操作前核对 git rev-parse HEAD 与 github.sha 一致，避免“用移动中的分支头
@@ -191,31 +202,24 @@ jobs:
           echo "That tag does not record asset version ${OLD_VER} (it records '${FROZEN_VER:-unknown}'), so it cannot be reused." >&2
           exit 1
 
-  update-pr:
-    name: Update manifest and open PR
+  wake-translation:
+    name: Wake the translation run
     needs: resolve-target
     if: needs.resolve-target.outputs.has_update == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write       # 推更新分支
-      pull-requests: write  # 创建/查找 PR（不合并）
+      contents: read
+      # 派发运行要 actions: write。用 GITHUB_TOKEN 派发的 workflow_dispatch 不在
+      # GitHub 的“递归触发抑制”范围内（翻译工作流自己也是这样派发产物构建的）。
+      actions: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Update manifest and open pull request
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CURRENT_VER: ${{ needs.resolve-target.outputs.current_version }}
-          LATEST_VER: ${{ needs.resolve-target.outputs.latest_version }}
+      - name: Bind the resolved commit to this checkout
         run: |
           set -euo pipefail
           CHECKOUT_SHA="$(git rev-parse HEAD)"
@@ -223,19 +227,27 @@ jobs:
             echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
             exit 1
           fi
+          echo "CHECKOUT_SHA=${CHECKOUT_SHA}" >> "$GITHUB_ENV"
 
+      - name: Wake the translation workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_VER: ${{ needs.resolve-target.outputs.current_version }}
+          LATEST_VER: ${{ needs.resolve-target.outputs.latest_version }}
+        run: |
+          set -euo pipefail
           MANIFEST="manifests/asset-version.json"
-          BRANCH="chore/asset-update-${LATEST_VER}"
+          WORKFLOW="llm-translate-assets.yml"
+          # 上一次翻译任务刚起过头就失败时，不要每几分钟重试一次。
+          COOLDOWN_SECONDS=1800
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          HEAD_VER=$(python3 -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
+            || { echo "FAIL: cannot read ${MANIFEST}" >&2; exit 1; }
 
-          HEAD_VER=$(python -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
-            || { echo "FAIL: cannot read ${MANIFEST} at ${CHECKOUT_SHA}" >&2; exit 1; }
-
-          # 幂等：checkout 的 manifest 已是目标版本则无事可做（重跑/取消重试都不制造空提交）。
+          # 幂等：清单已经是目标版本（翻译工作流自己写过了），无事可做。
+          # 重跑、取消后重试、或本流程被更频繁地叫醒，都不会制造重复派发。
           if [ "$HEAD_VER" = "$LATEST_VER" ]; then
-            echo "Already tracking ${LATEST_VER} at ${CHECKOUT_SHA}; nothing to update."
+            echo "Already tracking ${LATEST_VER}; nothing to wake."
             exit 0
           fi
           if [ "$HEAD_VER" != "$CURRENT_VER" ]; then
@@ -243,79 +255,35 @@ jobs:
             exit 1
           fi
 
-          python scripts/track_jp_assets.py --update
-          NEW_VER=$(python -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
-            || { echo "FAIL: ${MANIFEST} unreadable after --update" >&2; exit 1; }
-          if [ "$NEW_VER" != "$LATEST_VER" ]; then
-            echo "FAIL: --update wrote ${NEW_VER}, expected ${LATEST_VER}" >&2
-            exit 1
-          fi
-          if git diff --quiet -- "${MANIFEST}"; then
-            echo "Manifest content already matches ${LATEST_VER}; no commit needed."
-            exit 0
-          fi
-
-          git checkout -b "$BRANCH"
-          git add "$MANIFEST"
-          git commit -m "chore(assets): track new Japanese asset version ${LATEST_VER}"
-
-          # 推分支：一律不带 force（含重试）。远端已存在同名分支时绝不重写它——
-          # 该分支只可能是本 bot 上一次运行留下的等价更新（`last_synced_at` 每次
-          # 不同，内容重复无意义），直接复用；若它包含任何非本 bot 的单文件提交，
-          # 显式失败退出，避免覆盖他人工。
-          REMOTE_LINE="$(git ls-remote origin "refs/heads/${BRANCH}" || true)"
-          REMOTE_SHA="$(printf '%s\n' "$REMOTE_LINE" | awk '{print $1}' | head -n1)"
-
-          if [ -z "$REMOTE_SHA" ]; then
-            git push -u origin "HEAD:refs/heads/${BRANCH}"
-          else
-            # 这里不能再用本地的提交遍历：本 job 是浅克隆（fetch-depth 1），
-            # `git rev-list <分支> --not HEAD` 会把分支历史里所有更早的提交都当成
-            # “本分支独有”，于是把 main 自己的旧提交误判成他人工，永远拒绝复用。
-            # 判定条件不变——只有本 bot 的单文件更新可以复用——但把“分支相对 main
-            # 多了什么”交给服务器回答，深度就再也不会影响结论。
-            git fetch --quiet --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --depth=1 || true
-            COMPARE="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${BRANCH}" \
-              --jq '[.ahead_by, ([.files[].filename] | join(",")), ([.commits[].commit.author.email] | unique | join(","))] | @tsv' \
-              2>/dev/null || true)"
-            AHEAD="$(printf '%s' "$COMPARE" | cut -f1)"
-            FILES="$(printf '%s' "$COMPARE" | cut -f2)"
-            AUTHORS="$(printf '%s' "$COMPARE" | cut -f3)"
-            if [ -z "$AHEAD" ]; then
-              echo "FAIL: cannot read how ${BRANCH} compares to main; refusing to reuse it." >&2
-              exit 1
+          # 不叠班：已经有排队或运行中的翻译任务时，不再派发第二个。
+          for status in queued in_progress; do
+            COUNT="$(gh run list --workflow="$WORKFLOW" --status="$status" --limit 10 \
+              --json databaseId --jq 'length')"
+            if [ "$COUNT" != "0" ]; then
+              echo "A ${WORKFLOW} run is already ${status} (${COUNT}); not dispatching another."
+              exit 0
             fi
-            if [ "$AHEAD" != "0" ] && { [ "$FILES" != "$MANIFEST" ] || \
-                 [ "$AUTHORS" != "github-actions[bot]@users.noreply.github.com" ]; }; then
-              echo "FAIL: remote ${BRANCH} is ${AHEAD} commit(s) ahead of main, changing [${FILES}] by [${AUTHORS}]" >&2
-              echo "Refusing to reuse a branch that is not purely this bot's single-file update." >&2
-              exit 1
-            fi
-            echo "Reusing existing tracker branch ${BRANCH} at ${REMOTE_SHA} (no push, no rewrite)."
-          fi
+          done
 
-          # 建档 PR（不合并）：main 的推进保留给 owner/审查。
-          PR_URL="$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url' 2>/dev/null || true)"
-          if [ -z "$PR_URL" ] && [ -n "$REMOTE_SHA" ]; then
-            # 分支已存在于远端：如果它与当前提交对 manifest 没有差异（例如已经被合并过），
-            # 就没有可开的 PR，直接结束。
-            if git diff --quiet "refs/remotes/origin/${BRANCH}" "${CHECKOUT_SHA}" -- "$MANIFEST"; then
-              echo "OK: ${BRANCH} adds no manifest change over ${CHECKOUT_SHA}; nothing to open."
+          LAST_CREATED="$(gh run list --workflow="$WORKFLOW" --limit 1 \
+            --json createdAt --jq '.[0].createdAt // empty')"
+          if [ -n "$LAST_CREATED" ]; then
+            LAST_EPOCH="$(date -u -d "$LAST_CREATED" +%s)"
+            NOW_EPOCH="$(date -u +%s)"
+            AGE=$((NOW_EPOCH - LAST_EPOCH))
+            if [ "$AGE" -lt "$COOLDOWN_SECONDS" ]; then
+              echo "The last ${WORKFLOW} run started ${AGE}s ago (< ${COOLDOWN_SECONDS}s); leaving it room before retrying."
               exit 0
             fi
           fi
-          if [ -z "$PR_URL" ]; then
-            PR_URL="$(gh pr create \
-              --title "chore(assets): detect and track Japanese asset version ${LATEST_VER}" \
-              --body "Detected new Japanese asset version ${LATEST_VER} from Matsurihi API (source commit ${CHECKOUT_SHA}). Updated manifests/asset-version.json. Freeze tag for the outgoing version is handled by the freeze job." \
-              --head "$BRANCH" --base main)"
-          fi
-          echo "PR: $PR_URL"
+
+          gh workflow run "$WORKFLOW" --ref main
+          echo "Dispatched ${WORKFLOW} for asset version ${CURRENT_VER} -> ${LATEST_VER}."
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
               echo "### Asset version ${CURRENT_VER} -> ${LATEST_VER}"
               echo "- source commit: \`${CHECKOUT_SHA}\`"
-              echo "- branch: \`${BRANCH}\`"
-              echo "- pull request (merge left to the owner): ${PR_URL}"
+              echo "- dispatched: \`${WORKFLOW}\` on \`main\`"
+              echo "- freeze tag for the outgoing version: handled by the \`freeze\` job"
             } >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""``auto-track-jp-assets.yml`` 的离线回归：冻结标签不可变、无 bot 自动合并。
+"""``auto-track-jp-assets.yml`` 的离线回归：冻结标签不可变、只派发不开申请单。
 
 B6 改动前的行为（问题）：
 
@@ -12,7 +12,9 @@ B6 改动前的行为（问题）：
 本套测试固定修复后的边界：
 
 1. 结构断言（YAML）：三个 job 的分工与权限、checkout 显式绑定 ``github.sha``、
-   不存在 ``gh pr merge``/``--squash``/``git tag -f``/任何带 force 的 push 命令行。
+   不存在 ``gh pr merge``/``gh pr create``/``gh pr list``/``--squash``/``git tag -f``/
+   任何带 force 的 push 命令行，也不存在任何写 ``manifests/asset-version.json``
+   或推分支的命令——版本号只有一个写者，就是翻译工作流自己。
 2. 行为断言（真实 bash 沙箱）：把冻结步骤的脚本抽出来，在临时目录里对着**本地**
    bare 远端执行——标签不存在则创建、已存在且同 SHA 明确 no-op、不同 SHA 直接失败
    且不改动远端、复合版本号拒绝、checkout 与 github.sha 不一致时失败。
@@ -73,15 +75,16 @@ class WorkflowShapeTest(unittest.TestCase):
     # -- 1. job 分工与权限 -------------------------------------------------- #
     def test_three_jobs_split_read_check_from_writes(self) -> None:
         self.assertEqual(
-            set(self.jobs), {"resolve-target", "freeze", "update-pr"}
+            set(self.jobs), {"resolve-target", "freeze", "wake-translation"}
         )
         self.assertEqual(self.jobs["resolve-target"]["permissions"], {"contents": "read"})
+        # 冻结标签仍然要写权限；唤醒 job 只读仓库，只多一个 actions: write（派发）。
         self.assertEqual(self.jobs["freeze"]["permissions"], {"contents": "write"})
         self.assertEqual(
-            self.jobs["update-pr"]["permissions"],
-            {"contents": "write", "pull-requests": "write"},
+            self.jobs["wake-translation"]["permissions"],
+            {"contents": "read", "actions": "write"},
         )
-        for name in ("freeze", "update-pr"):
+        for name in ("freeze", "wake-translation"):
             with self.subTest(job=name):
                 self.assertEqual(self.jobs[name]["needs"], "resolve-target")
                 self.assertIn(
@@ -130,14 +133,23 @@ class WorkflowShapeTest(unittest.TestCase):
         self.assertIn("workflow_dispatch", triggers)
         self.assertEqual(self.workflow["concurrency"]["cancel-in-progress"], False)
 
-    # -- 3. 不再有 bot 自动合并 ---------------------------------------------- #
-    def test_no_automatic_merge_remains(self) -> None:
-        merged = [line for line in self._command_lines(self.text) if "gh pr merge" in line]
-        self.assertEqual(merged, [], "the tracker must not merge pull requests")
-        commands = "\n".join(self._command_lines(self.text))
-        self.assertNotIn("--squash", commands)
-        self.assertIn("gh pr create", self.text)
-        self.assertIn("gh pr list", self.text)
+    # -- 3. bot 不再合并、也不再开申请单 -------------------------------------- #
+    def test_no_pull_request_machinery_remains(self) -> None:
+        """跟踪流程不再建分支、不再开 PR，也不再自己写版本号。
+
+        版本号只有一个写者（翻译工作流自己，经 ``scripts/commit_llm_drafts.py``
+        连清单一起推 main）。旧流程既开“等 owner 合并”的申请单、又让翻译工作流
+        直接推 main，于是每个版本都留下一张追不上的申请单（#40 就是一张）。
+        """
+        self.assertNotIn("gh pr merge", self.text)
+        self.assertNotIn("gh pr create", self.text)
+        self.assertNotIn("gh pr list", self.text)
+        self.assertNotIn("--squash", self.text)
+        # 跟踪流程不得自己改清单，也不得推分支。
+        self.assertNotIn("track_jp_assets.py --update", self.text)
+        self.assertNotIn("git add", self.text)
+        self.assertNotIn("git commit", self.text)
+        self.assertNotIn("refs/heads/", self.text)
 
     # -- 4. 错误退出不再被吞 ------------------------------------------------- #
     def test_version_check_fails_loudly_on_non_0_10(self) -> None:
@@ -160,20 +172,30 @@ class WorkflowShapeTest(unittest.TestCase):
         self.assertIn("2>/dev/null || true", run)
         self.assertIn("exit 1", run)
 
-    def test_branch_reuse_asks_the_server_instead_of_walking_a_shallow_clone(self) -> None:
-        """浅克隆里 ``rev-list --not HEAD`` 会把 main 自己的旧提交当成他人工。
+    def test_wake_dispatches_and_is_guarded_against_stacking(self) -> None:
+        """唤醒 job 只做一件事：派发翻译工作流；并且重复叫醒不会叠班。
 
-        复用判定必须与 runner 拿到的历史深度无关，所以它问服务器。
+        跟踪流程会被 vps_racknerd 每 5 分钟叫一次，所以它必须自己回答三个问题：
+        版本是不是已经被翻译工作流写过了（幂等）、是不是已经有任务在跑（不叠班）、
+        上一次是不是刚起过头就失败（冷却）。
         """
-        run = _step_run(self.jobs["update-pr"], "Update manifest")
-        self.assertIn("compare/main...${BRANCH}", run)
-        self.assertNotIn("$(git rev-list", run)
-        self.assertNotIn("git merge-base --is-ancestor", run)
-        self.assertIn("github-actions[bot]@users.noreply.github.com", run)
-        self.assertIn("refusing to reuse it", run)
+        run = _step_run(self.jobs["wake-translation"], "Wake the translation workflow")
+        self.assertIn("gh workflow run", run)
+        self.assertIn("llm-translate-assets.yml", run)
+        self.assertIn("--ref main", run)
+        # 幂等：清单已是目标版本就不再派发。
+        self.assertIn('"$HEAD_VER" = "$LATEST_VER"', run)
+        # 不叠班：排队中/运行中的任务都算。
+        self.assertIn("queued", run)
+        self.assertIn("in_progress", run)
+        # 冷却：上一次刚起头的运行不立刻重试。
+        self.assertIn("COOLDOWN_SECONDS", run)
+        self.assertIn("createdAt", run)
+        # 派发前必须证明 checkout 的版本号就是版本检查报告的当前版本。
+        self.assertIn('"$HEAD_VER" != "$CURRENT_VER"', run)
 
     def test_source_commit_is_the_checkout_not_a_moving_branch(self) -> None:
-        for job_name in ("resolve-target", "freeze", "update-pr"):
+        for job_name in ("resolve-target", "freeze", "wake-translation"):
             run = "\n".join(
                 step.get("run", "") for step in self.jobs[job_name].get("steps", [])
             )
