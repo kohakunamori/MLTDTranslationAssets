@@ -84,14 +84,11 @@ class LyricTokenTests(unittest.TestCase):
             validate_lyric_tokens("{0}よ", "呀")
         self.assertIn("protected token", str(caught.exception))
 
-    def test_one_display_break_is_allowed_but_two_are_refused(self):
-        """The second newline hides everything following it in the game."""
-        validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n灯光亮起")
+    def test_a_second_line_is_refused(self):
+        """One slot is one line on the device; no committed row carries a newline."""
         with self.assertRaises(ValueError) as caught:
-            validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n灯光亮起\n歌声响起")
-        self.assertIn("at most one", str(caught.exception))
-        with self.assertRaises(ValueError):
-            validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\r\n灯光亮起\r\n歌声响起")
+            validate_lyric_tokens("空っぽのステージ", "空荡荡的舞台\n（附注）")
+        self.assertIn("one line", str(caught.exception))
 
     def test_a_line_break_becomes_the_space_the_library_uses(self):
         """The join reproduces what the accepted rows already look like."""
@@ -117,6 +114,12 @@ class LyricTokenTests(unittest.TestCase):
         self.assertEqual(join_lyric_lines("空っぽのステージ", blob), blob)
         with self.assertRaises(ValueError):
             validate_lyric_tokens("空っぽのステージ", join_lyric_lines("空っぽのステージ", blob))
+
+    def test_bilingual_rendering_replaces_source_breaks(self):
+        from mltd_localize_scrobj import bilingual_line
+        self.assertEqual(bilingual_line("君と\n出会えた", "与你相遇"), "君と 出会えた\n与你相遇")
+        self.assertEqual(bilingual_line("君と\r\n出会えた", "与你相遇"), "君と 出会えた\n与你相遇")
+        self.assertEqual(bilingual_line("君と\n出会えた\nあの日", "与你相遇"), "君と 出会えた あの日\n与你相遇")
 
     def test_a_single_line_is_left_untouched(self):
         self.assertEqual(join_lyric_lines("一旦愛して♡", "先爱一下♡"), "先爱一下♡")
