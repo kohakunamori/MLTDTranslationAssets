@@ -177,6 +177,7 @@ jobs:
             scripts/test_source_provenance.py \
             scripts/test_commit_llm_drafts.py \
             scripts/test_should_build_release.py \
+            scripts/test_publish_generated_release.py \
             scripts/test_workflow_patch.py \
             scripts/test_assets_mirror.py \
             scripts/test_refresh_latest_official_catalogue.py \

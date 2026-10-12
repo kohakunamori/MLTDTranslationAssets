@@ -13,6 +13,7 @@ name: Build generated Assets
       - 'scripts/**'
       - 'schema/**'
       - 'configs/localization-pipeline.json'
+      - '.github/workflows/assets-generated.yml'
   workflow_dispatch:
     inputs:
       force:
@@ -20,6 +21,16 @@ name: Build generated Assets
         required: false
         type: boolean
         default: false
+      review_before:
+        description: 'Original reviewed push parent, carried when a stale build retries on main'
+        required: false
+        type: string
+        default: ''
+      review_after:
+        description: 'Original reviewed push commit, carried when a stale build retries on main'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -58,8 +69,8 @@ jobs:
 
       - name: Promote reviewed locale changes
         env:
-          BEFORE_SHA: ${{ github.event.before || '' }}
-          AFTER_SHA: ${{ github.sha }}
+          BEFORE_SHA: ${{ github.event.before || inputs.review_before || '' }}
+          AFTER_SHA: ${{ inputs.review_after || github.sha }}
         run: |
           if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
             echo 'No push parent is available (manual dispatch); nothing to promote.'
@@ -199,32 +210,28 @@ jobs:
       - name: Commit reviewed translations and generated release
         id: publish
         if: steps.gate.outputs.build == 'true'
+        env:
+          FORCE_BUILD: ${{ inputs.force || 'false' }}
         run: |
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add generated/ locales/ manifests/portal-resource-manifest.json
-          if git diff --cached --quiet; then
-            echo 'No reviewed translation or generated release changes.'
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git commit -m "build(assets): publish reviewed translations and generated release [skip ci]"
-          for attempt in 1 2 3; do
-            git fetch origin main
-            if ! git rebase origin/main; then
-              echo 'Unable to rebase generated output onto the latest main.' >&2
-              git rebase --abort || true
-              exit 1
-            fi
-            if git push origin HEAD:main; then
-              echo "pushed=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "main advanced during generated publish (attempt ${attempt}); retrying."
-            sleep $((attempt * 5))
-          done
-          echo 'main continued advancing while publishing generated output.' >&2
-          exit 1
+          python scripts/publish_generated_release.py --force "$FORCE_BUILD"
+
+      - name: Rebuild main after a release input changed
+        # A translation/version/writer update cannot inherit an older build.
+        # Dispatch explicitly: GITHUB_TOKEN source pushes may not start CI.
+        if: steps.publish.outputs.rebuild == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_BUILD: ${{ inputs.force || 'false' }}
+          REVIEW_BEFORE: ${{ github.event.before || inputs.review_before || '' }}
+          REVIEW_AFTER: ${{ inputs.review_after || github.sha }}
+        run: |
+          set -euo pipefail
+          gh workflow run assets-generated.yml --ref main -f force="$FORCE_BUILD" \
+            -f review_before="$REVIEW_BEFORE" -f review_after="$REVIEW_AFTER"
+          echo 'Main advanced during the build; queued a build of its new inputs.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy the CDN gateway onto the new release
         # 必须在上一步真的推了提交之后才部署：网关的对照表锚定在"最后一次改动

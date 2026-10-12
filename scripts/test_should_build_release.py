@@ -303,8 +303,8 @@ class WorkflowGateTests(unittest.TestCase):
         """
         steps = self._steps("assets-generated.yml")
         publish = next(s for s in steps if s.get("id") == "publish")
-        self.assertIn("pushed=true", publish["run"])
-        self.assertIn('pushed=false', publish["run"])
+        self.assertIn("scripts/publish_generated_release.py", publish["run"])
+        self.assertNotIn("git rebase", publish["run"])
 
         dispatch = next(s for s in steps if "cloudflare-gateway.yml" in str(s.get("run", "")))
         self.assertIn("gh workflow run cloudflare-gateway.yml --ref main", dispatch["run"])
