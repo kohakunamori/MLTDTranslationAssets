@@ -231,6 +231,36 @@ class WorkflowGateTests(unittest.TestCase):
         # also carry a version-manifest bump and drafts left from earlier runs.
         self.assertNotIn("queue_size", str(next(s for s in steps if s.get("id") == "publish").get("if", "")))
 
+    def test_the_build_hands_the_finished_release_to_the_gateway(self):
+        """The last mile must not depend on how the build was triggered.
+
+        It used to hang on `workflow_run`, which does not fire for the builds the
+        translation workflow dispatches by itself: builds #40, #52, #54 and #62
+        produced four release commits and zero gateway deploys, leaving the live
+        gateway anchored two releases behind main.  The build therefore dispatches
+        the gateway itself, and only after it really pushed a commit -- and the
+        `workflow_run` route is gone rather than kept alongside, which would have
+        deployed twice for every push-triggered build.
+        """
+        steps = self._steps("assets-generated.yml")
+        publish = next(s for s in steps if s.get("id") == "publish")
+        self.assertIn("pushed=true", publish["run"])
+        self.assertIn('pushed=false', publish["run"])
+
+        dispatch = next(s for s in steps if "cloudflare-gateway.yml" in str(s.get("run", "")))
+        self.assertIn("gh workflow run cloudflare-gateway.yml --ref main", dispatch["run"])
+        self.assertIn("steps.publish.outputs.pushed == 'true'", dispatch["if"])
+        self.assertEqual(
+            self._workflow("assets-generated.yml").get("permissions", {}).get("actions"),
+            "write",
+        )
+
+        gateway = self._workflow("cloudflare-gateway.yml")
+        # PyYAML 把裸 `on:` 读成布尔键 True，两种都取。
+        gateway_triggers = gateway.get("on", gateway.get(True))
+        self.assertNotIn("workflow_run", gateway_triggers)
+        self.assertIn("workflow_dispatch", gateway_triggers)
+
 
 class ReleaseGateCliTests(unittest.TestCase):
     def test_cli_prints_a_decision_object(self):
