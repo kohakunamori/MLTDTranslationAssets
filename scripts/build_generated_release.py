@@ -19,6 +19,12 @@ on disk is not an image artifact.  ``--require-images`` therefore fails closed
 immediately, before any version/input scan or side effect, instead of
 publishing a text-only release that is mislabelled as satisfying the image
 requirement.  The default (no flag) text path is unchanged.
+
+The release also publishes the official ``.data`` catalogue, because that is how
+the client learns each bundle's declared byte length, and the client requires the
+bytes it downloads to have exactly that length.  Because this release serves
+rewritten bytes for every bundle it covers, it publishes a *size-aligned copy* of
+the catalogue rather than the pristine download; see :func:`align_index_sizes`.
 """
 from __future__ import annotations
 
@@ -30,8 +36,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
 
 import msgpack
@@ -46,9 +54,19 @@ from assets_generated_index import GeneratedStore, GeneratedStoreError
 import build_lyric_overlay
 import merge_image_overlay
 import release_reuse
+import bundle_incremental as incremental
 import source_provenance
-from pipelines.core.hashing import sha256_file, sha256_text
+from pipelines.core.hashing import sha256_bytes, sha256_file, sha256_text
 from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
+from pipelines.text.mltd_localization_pipeline import (
+    build_resolver, resolve_translation, is_source_text,
+)
+
+#: Where the client requests every generated object, and therefore where the
+#: catalogue's remote names live.  It is the only namespace in which a released
+#: entry and a catalogue record can be compared at all.
+ASSET_PREFIX = "production/2018/Android/"
+
 
 def load_version_manifest(path: Path) -> dict:
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -70,7 +88,8 @@ def load_version_manifest(path: Path) -> dict:
             "index_name": index_name}
 
 
-def release_provenance(version: dict, root: Path = ROOT) -> str:
+def release_provenance(version: dict, root: Path | None = None,
+                       *, counts: Counter | None = None) -> str:
     """The client version this release describes, asked of the library itself.
 
     The locale rows carry ``source_client_version`` individually and the schema
@@ -79,12 +98,14 @@ def release_provenance(version: dict, root: Path = ROOT) -> str:
     hand-maintained copy which read as a version to keep in step with the game;
     nothing keeps it in step today, so it is gone.
 
-    This reads the library rather than the rows ``read_translation_rows``
-    returns: that projection deliberately keeps only what the applier needs, and
-    the first version of this function trusted it, so the release build failed
-    with "no locale row carries one" while 395,673 rows said 9.0.200.
+    The builder tallies every library row while reading translations, before
+    projecting accepted rows for the applier. Other callers can still ask the
+    library directly when they have no tally.
     """
-    provenance, _counts = source_provenance.from_library(root)
+    if counts is None:
+        provenance, _counts = source_provenance.from_library(root or ROOT)
+    else:
+        provenance = source_provenance.from_counts(counts)
     if provenance is None:
         provenance = version.get("legacy_client_version") or None
     if provenance is None:
@@ -122,7 +143,9 @@ def logical_name(bundle: str) -> str:
 
 
 def read_translation_rows(root: Path, asset_version: str,
-                          sources: dict[str, set[str]] | None = None) -> dict[str, list[dict]]:
+                          sources: dict[str, set[str]] | None = None,
+                          *, allow_empty: bool = False,
+                          provenance_counts: Counter | None = None) -> dict[str, list[dict]]:
     """Every accepted translation, grouped by the logical bundle it belongs to.
 
     ``sources``, when given, is filled with the reverse map the incremental path
@@ -131,7 +154,8 @@ def read_translation_rows(root: Path, asset_version: str,
     authority, so the map is collected here rather than guessed from file names.
     """
     grouped: dict[str, list[dict]] = {}
-    seen: dict[tuple[str, str, str], str] = {}
+    seen: dict[tuple[str, str, str, str], str] = {}
+    provenance_paths = set(root.glob(source_provenance.LIBRARY_GLOB)) if provenance_counts is not None else set()
     for path in sorted((root / "locales").rglob("*.jsonl")):
         relative = path.relative_to(root).as_posix()
         with path.open(encoding="utf-8") as stream:
@@ -139,13 +163,18 @@ def read_translation_rows(root: Path, asset_version: str,
                 if not line.strip():
                     continue
                 row = json.loads(line)
+                if provenance_counts is not None and path in provenance_paths:
+                    value = row.get("source_client_version")
+                    if isinstance(value, str) and value:
+                        provenance_counts[value] += 1
                 if row.get("status") != "accepted" or not str(row.get("zh", "")):
                     continue
                 source = str(row.get("ja", ""))
                 translation = str(row.get("zh", ""))
                 if not source or "|" in translation or "^" in translation:
                     raise ValueError(f"invalid accepted translation at {path}:{line_no}")
-                if str(row.get("source_sha256", "")).lower() != sha256_text(source):
+                source_hash = sha256_text(source)
+                if str(row.get("source_sha256", "")).lower() != source_hash:
                     raise ValueError(f"source hash mismatch at {path}:{line_no}")
                 bundle = str(row.get("bundle", ""))
                 key = str(row.get("item_key", ""))
@@ -155,7 +184,7 @@ def read_translation_rows(root: Path, asset_version: str,
                 # different asset versions.  Keep each source-bound candidate;
                 # the current official bundle selects the matching one below.
                 row_asset_version = str(row.get("asset_version", "")).strip()
-                identity = (logical_name(bundle), key, sha256_text(source), row_asset_version)
+                identity = (logical_name(bundle), key, source_hash, row_asset_version)
                 prior = seen.get(identity)
                 if prior is not None and prior != translation:
                     raise ValueError(f"conflicting translation for {identity}")
@@ -164,14 +193,14 @@ def read_translation_rows(root: Path, asset_version: str,
                     "bundle": bundle,
                     "key": key,
                     "source": source,
-                    "source_sha256": sha256_text(source),
+                    "source_sha256": source_hash,
                     "translation": translation,
                     "status": "accepted",
                     "asset_version": row_asset_version or asset_version,
                 })
                 if sources is not None:
                     sources.setdefault(identity[0], set()).add(relative)
-    if not grouped:
+    if not grouped and not allow_empty:
         raise ValueError("no accepted Assets translations were found")
     return grouped
 
@@ -205,6 +234,93 @@ def select_rows_for_current_sources(
         else:
             selected[key] = row
     return list(selected.values())
+
+
+def prepare_text_inputs(*, work: Path, store: GeneratedStore, version: dict,
+                        targets: dict, grouped: dict, previous: dict | None,
+                        official_cache: Path | None) -> tuple[dict, dict, Path, dict]:
+    """Resolve the entire text library; only Unity source cache misses are read.
+
+The ledger always includes unchanged bundles, so rebuilding a subset has the
+same translation-memory semantics as a full build. The resulting replacement
+set, rather than its JSONL file's timestamp/layout, is each bundle's input.
+    """
+    parser = incremental.writer_fingerprint(ROOT, incremental.PARSER_FILES)
+    writer = incremental.writer_fingerprint(ROOT, incremental.TEXT_FILES)
+    old = incremental.previous_state(previous).get("text", {})
+    documents, records, current_grouped = {}, {}, {}
+    outcomes = {}
+    missing = {}
+    for logical, row in targets.items():
+        document = incremental.load_sources(store.root, old.get(logical), row, parser)
+        if document is None:
+            missing[logical] = row
+        else:
+            documents[logical] = document
+            records[logical] = {key: old[logical][key] for key in (
+                "source_identity", "parser", "source_sha256", "source_records_sha256")}
+    archive = work / "archive" / "jp-android"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        futures = {logical: pool.submit(
+            download, f"{version['asset_root']}/{row['remote']}", archive / row["remote"],
+            row["declared_size"], row.get("catalog_hash"), official_cache)
+            for logical, row in missing.items()}
+        for logical, future in futures.items():
+            outcomes[logical] = future.result()
+    for logical, row in missing.items():
+        source = archive / row["remote"]
+        name, plain, _cipher = read_gtx(source)
+        documents[logical], records[logical] = incremental.save_sources(
+            store.root, row, parser, name, list(parse_records(plain)), sha256_file(source))
+    for logical in targets:
+        selected = select_rows_for_current_sources(
+            grouped[logical], dict(documents[logical]["records"]), str(version["asset_version"]))
+        if selected:
+            current_grouped[logical] = selected
+    ledger = work / "all-translations.jsonl"
+    with ledger.open("w", encoding="utf-8", newline="\n") as stream:
+        for logical in sorted(current_grouped):
+            for row in current_grouped[logical]:
+                stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+    resolver = build_resolver([ledger])
+    for logical, document in documents.items():
+        replacements = {}
+        routes = {"exact": 0, "memory": 0, "stale_exact": 0, "unresolved": 0}
+        # The full writer excludes bundles with no current source-bound rows.
+        if logical in current_grouped:
+            for key, source in document["records"]:
+                if not is_source_text(source):
+                    continue
+                translated, route = resolve_translation(resolver, document["name"], key, source)
+                routes[route] += 1
+                if translated is not None and translated != source:
+                    replacements[key] = translated
+        records[logical].update({
+            "fingerprint": incremental.digest({"source": document["source_sha256"],
+                                                "writer": writer, "replacements": replacements}),
+            "resolution": routes,
+        })
+    stats = {"total": len(outcomes),
+             "downloaded": sum(value == "fetched" for value in outcomes.values()),
+             "reused_from_cache": sum(value == "reused" for value in outcomes.values()),
+             "already_on_disk": sum(value == "present" for value in outcomes.values()),
+             "source_records_reused": len(targets) - len(missing)}
+    return current_grouped, records, ledger, stats
+
+
+def load_previous_release(store: GeneratedStore, asset_version: str) -> dict | None:
+    """Use this version's release, or the newest successful older version."""
+    versions = [asset_version] + sorted(
+        (v for v in store.list_releases() if v.isdigit() and int(v) < int(asset_version)),
+        key=int, reverse=True)
+    for candidate in versions:
+        try:
+            previous = store.load_manifest(candidate)
+        except GeneratedStoreError:
+            continue
+        if previous.get("build_status") == "success":
+            return previous
+    return None
 
 
 def download(url: str, destination: Path, declared_size: int | None,
@@ -294,7 +410,9 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
                      grouped: dict[str, list[dict]],
                      source_client: str,
                      official_cache: Path | None,
-                     overlay: Path | None = None) -> TextSurface:
+                     overlay: Path | None = None,
+                     selected_grouped: dict | None = None,
+                     full_ledger: Path | None = None) -> TextSurface:
     """Fetch, read and rewrite exactly ``targets``, then report what it resolved.
 
     The caller decides the target set: a full build passes every catalogue
@@ -313,6 +431,8 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
     # empty directory instead of inheriting the previous attempt's identity.
     shutil.rmtree(overlay, ignore_errors=True)
     overlay.mkdir(parents=True, exist_ok=True)
+    if selected_grouped is not None:
+        targets = {logical: row for logical, row in targets.items() if logical in selected_grouped}
     if not targets:
         # Nothing to regenerate: the store already holds every published bundle.
         # The overlay refuses a snapshot with no objects on purpose -- an empty
@@ -336,7 +456,9 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
                                 row["declared_size"],
                                 row.get("catalog_hash"),
                                 official_cache)
-                   for row in targets.values()]
+                   for row in targets.values()
+                   if not (archive / "jp-android" / row["remote"]).is_file()
+                   or (archive / "jp-android" / row["remote"]).stat().st_size != row["declared_size"]]
         fetched = [future.result() for future in futures]
     official_objects = {
         "total": len(fetched),
@@ -349,13 +471,14 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
     # translation for the same bundle/key from conflicting with a newer source.
     current_grouped: dict[str, list[dict]] = {}
     for logical, row in targets.items():
-        _name, plain, _cipher = read_gtx(archive / "jp-android" / row["remote"])
-        current_sources = dict(parse_records(plain))
-        selected_rows = select_rows_for_current_sources(
-            grouped[logical], current_sources, str(version["asset_version"])
-        )
-        if selected_rows:
-            current_grouped[logical] = selected_rows
+        if selected_grouped is not None:
+            current_grouped[logical] = selected_grouped[logical]
+        else:
+            _name, plain, _cipher = read_gtx(archive / "jp-android" / row["remote"])
+            selected_rows = select_rows_for_current_sources(
+                grouped[logical], dict(parse_records(plain)), str(version["asset_version"]))
+            if selected_rows:
+                current_grouped[logical] = selected_rows
     snapshot = work / "snapshot.json"
     write_snapshot(snapshot, version, work / version["index_name"],
                    {logical: targets[logical] for logical in current_grouped})
@@ -364,7 +487,7 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
         for logical in current_grouped:
             for row in current_grouped[logical]:
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
-    run_overlay(snapshot, archive, ledger, overlay,
+    run_overlay(snapshot, archive, full_ledger or ledger, overlay,
                 source_client, version["asset_version"])
     document = json.loads(
         (overlay / "localization-manifest.json").read_text(encoding="utf-8"))
@@ -373,13 +496,16 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
 
 
 def build_entries(overlay: Path, localization_manifest: Path, asset_version: str,
-                  source_client_version: str, *, index_name: str,
-                  index_path: Path, allow_empty: bool = False) -> list[dict]:
+                  source_client_version: str, *, allow_empty: bool = False) -> list[dict]:
     """Turn the overlay's own manifest into store entries.
 
     ``allow_empty`` is what an incremental build needs: reusing every text bundle
     leaves the overlay with nothing to write, and that is a success, not the
     "produced no changed bundles" failure a full build must still report.
+
+    The catalogue's own entry is *not* part of this list: it can only be built once
+    every surface's bundles are known (see :func:`align_index_sizes`), and this
+    function sees one surface.  The caller appends it afterwards.
     """
     document = json.loads(localization_manifest.read_text(encoding="utf-8"))
     entries: list[dict] = []
@@ -391,10 +517,10 @@ def build_entries(overlay: Path, localization_manifest: Path, asset_version: str
             raise ValueError(f"localization manifest names missing artifact: {artifact}")
         entries.append({
             "logical_key": logical,
-            "logical_path": f"production/2018/Android/{logical}",
+            "logical_path": f"{ASSET_PREFIX}{logical}",
             # The MLTD client reads the official .data catalog and requests
             # this hashed remote name, not the logical bundle name.
-            "runtime_path": f"production/2018/Android/{remote}",
+            "runtime_path": f"{ASSET_PREFIX}{remote}",
             "resource_kind": "bundle",
             "channel": "assets",
             "asset_version": asset_version,
@@ -408,23 +534,191 @@ def build_entries(overlay: Path, localization_manifest: Path, asset_version: str
         })
     if not entries and not allow_empty:
         raise ValueError("text overlay produced no changed bundles")
-    index_digest = sha256_file(index_path)
-    entries.append({
+    return entries
+
+
+@dataclass(frozen=True)
+class AlignedIndex:
+    """The size-aligned catalogue copy a release publishes.
+
+    ``covered_records`` counts the catalogue records whose remote name this release
+    serves -- every one of them now declares the published byte length -- and
+    ``changed_records`` the subset whose declared size differs from the catalogue the
+    call read; a published bundle may happen to have that length already.  Keeping
+    the two apart is what makes "we rewrote N records" checkable against "the release
+    serves M bundles".
+    """
+
+    #: the file the release publishes; never the pristine official file
+    path: Path
+    sha256: str
+    records: int
+    covered_records: int
+    changed_records: int
+
+    @property
+    def uncovered_records(self) -> int:
+        """Records this release does not serve, left as the official file had them."""
+        return self.records - self.covered_records
+
+    @property
+    def unchanged_records(self) -> int:
+        """Covered records that already declared the published length."""
+        return self.records - self.changed_records
+
+
+def _published_size(entry: Mapping[str, Any],
+                    object_file: Callable[[str], Path | None] | None) -> int:
+    """The byte length of the artifact this release publishes for one entry.
+
+    An entry naming ``artifact_file`` is about to be stored from exactly those
+    bytes; a reused entry names an object already in the store instead.  Both are
+    the bytes the client will receive, which is the only length a catalogue record
+    may declare.  Nothing is hashed here on purpose: the store re-reads and
+    re-hashes the same bytes before it accepts the entry, so a file that moved
+    underneath this call fails the build instead of publishing a wrong length.
+    """
+    artifact_file = entry.get("artifact_file")
+    if artifact_file:
+        path = Path(str(artifact_file))
+        if not path.is_file():
+            raise ValueError(f"released entry names a missing artifact: {path}")
+        return path.stat().st_size
+    digest = str(entry.get("artifact_sha256") or "")
+    found = object_file(digest) if object_file is not None else None
+    if found is None:
+        raise ValueError(
+            f"released entry {entry.get('logical_key')!r} carries neither an artifact_file nor a "
+            f"stored object for {digest!r}, so its published length is unknown")
+    return found.stat().st_size
+
+
+def align_index_sizes(catalogue_path: Path, entries: Sequence[Mapping[str, Any]], *,
+                      output_path: Path,
+                      object_file: Callable[[str], Path | None] | None = None) -> AlignedIndex:
+    """Publish a size-aligned copy of the catalogue instead of the pristine file.
+
+    The client requires ``Content-Length == declared_size`` for every object the
+    catalogue names (the official CDN answers a read-only GET with no
+    ``Content-Encoding`` and a ``Content-Length`` equal to the declared size), and
+    this release deliberately serves *rewritten* bytes for every bundle it covers.
+    A pristine catalogue therefore contradicts the release it ships with: the client
+    asks for the translated bundle, receives it, and rejects its own download
+    because the length is not the declared one.  The ``/cn/`` overlay catalogue
+    solved the same problem the same way -- same records, size patch only
+    (``local-data/build/runs/asset-archive/9.0.200/cn-overlay-index-build-20260924``).
+
+    So every record stays semantically identical -- same logical name, same
+    position, same catalog hash, same remote name -- except that the declared size
+    of a record whose remote name this release serves becomes the byte size of the
+    artifact published for that name.  A remote name shared by several records moves
+    all of them together, because the client resolves a name, not a record.
+
+    Byte-identity with the official file is impossible here and not required: that
+    file's msgpack is not canonically packed (part of its records use a fixed-width
+    encoding the reference encoder emits two bytes shorter), so the copy is
+    re-encoded, and the check that matters is that it decodes back to exactly the
+    same records.  ``catalogue_path`` is read, never written: the pristine official
+    catalogue has to survive the build, because a later build compares its digest
+    with the one the release recorded to decide what may be reused.
+
+    ``entries`` must be the *complete* set of entries the release publishes.  A
+    surface aligned on its own would leave every other surface's bundles
+    contradicting the catalogue, which is the failure this function exists to fix.
+
+    ``changed_records`` in the result counts against ``catalogue_path``, so a caller
+    that hands over a catalogue some other pass already patched (the image
+    surface's merged table) is told what *this* call moved, not how far the
+    published table is from the official one.
+    """
+    if catalogue_path.resolve() == output_path.resolve():
+        raise ValueError(
+            f"the aligned catalogue would replace the file it was read from "
+            f"({catalogue_path.resolve()}); the pristine official catalogue must survive "
+            "the build unchanged")
+    table = load_official_index(catalogue_path)
+    known_remotes = {row["remote"] for row in table.values()}
+
+    sizes: dict[str, int] = {}
+    for entry in entries:
+        runtime = str(entry.get("runtime_path") or "")
+        if not runtime.startswith(ASSET_PREFIX):
+            # Not a path the client looks up in the catalogue: the catalogue's own
+            # entry is appended after this call, never before it.
+            continue
+        remote = runtime[len(ASSET_PREFIX):]
+        if remote not in known_remotes:
+            raise ValueError(
+                f"released entry {entry.get('logical_key')!r} is served as {runtime!r}, which no "
+                "official catalogue record names; only a bundle the catalogue names can be "
+                "aligned, and the catalogue's own entry belongs after this call")
+        size = _published_size(entry, object_file)
+        prior = sizes.get(remote)
+        if prior is not None and prior != size:
+            raise ValueError(
+                f"two released entries are served as {remote} with different lengths ({prior} and "
+                f"{size}); one client path can only have one byte length")
+        sizes[remote] = size
+
+    aligned: dict[str, list] = {}
+    covered = changed = 0
+    for logical, row in table.items():
+        size = sizes.get(row["remote"])
+        if size is None:
+            aligned[logical] = [row["catalog_hash"], row["remote"], row["declared_size"]]
+            continue
+        covered += 1
+        changed += size != row["declared_size"]
+        aligned[logical] = [row["catalog_hash"], row["remote"], size]
+
+    payload = msgpack.packb([aligned], use_bin_type=True)
+    # Never publish a catalogue this build cannot read back to the same records: a
+    # re-encoding that dropped or reordered one would surface far from here, as a
+    # download the client never makes or a name it looks up in vain.
+    if msgpack.unpackb(payload, raw=False, strict_map_key=False) != [aligned]:
+        raise ValueError("the aligned catalogue does not round-trip through msgpack")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output_path.with_name(output_path.name + ".writing")
+    temporary.write_bytes(payload)
+    temporary.replace(output_path)
+    return AlignedIndex(path=output_path, sha256=sha256_bytes(payload), records=len(table),
+                        covered_records=covered, changed_records=changed)
+
+
+def index_entry(aligned: AlignedIndex, *, index_name: str, pristine_sha256: str,
+                asset_version: str, source_client_version: str) -> dict:
+    """The manifest entry that publishes a release's size-aligned catalogue.
+
+    ``source_sha256`` describes the pristine official catalogue -- the file this
+    build downloaded, and the one the release's ``reuse`` record is keyed on, so a
+    later build can still tell whether the official catalogue moved -- while
+    ``translated_sha256``, and therefore ``artifact_sha256``/``object_path``, which
+    the store derives from ``artifact_file``, describe the aligned file that is
+    actually served.  ``translation_status`` is ``modified`` and not ``reused``:
+    the published bytes are no longer the official bytes, because every covered
+    record's declared size was rewritten.  ``resource_kind`` stays ``other``,
+    because the catalogue is not one of the bundles it names.
+    """
+    if aligned.path.name != index_name:
+        raise ValueError(
+            f"the aligned catalogue is named {aligned.path.name!r} but the client requests "
+            f"{index_name!r}; the published file must carry the official index name")
+    runtime = f"{ASSET_PREFIX}{index_name}"
+    return {
         "logical_key": "__official_asset_index__",
-        "logical_path": f"production/2018/Android/{index_name}",
-        "runtime_path": f"production/2018/Android/{index_name}",
+        "logical_path": runtime,
+        "runtime_path": runtime,
         "resource_kind": "other",
         "channel": "assets",
         "asset_version": asset_version,
         "client_version": None,
         "source_client_version": source_client_version,
-        "source_sha256": index_digest,
-        "translated_sha256": index_digest,
+        "source_sha256": pristine_sha256,
+        "translated_sha256": aligned.sha256,
         "reuse_status": "exact",
-        "translation_status": "reused",
-        "artifact_file": str(index_path.resolve()),
-    })
-    return entries
+        "translation_status": "modified",
+        "artifact_file": str(aligned.path),
+    }
 
 
 def image_inputs_are_complete(root: Path) -> bool:
@@ -484,11 +778,12 @@ def main() -> int:
             "satisfying the image requirement.")
     version = load_version_manifest(args.version_manifest)
     images_ready = image_inputs_are_complete(ROOT)
-    bundle_sources: dict[str, set[str]] = {}
-    grouped = read_translation_rows(ROOT, version["asset_version"], sources=bundle_sources)
+    provenance_counts = Counter()
+    grouped = read_translation_rows(ROOT, version["asset_version"], allow_empty=True,
+                                    provenance_counts=provenance_counts)
     # The release's provenance is a property of the text it carries, so it is
     # read from the library instead of from a field somebody has to keep current.
-    source_client = release_provenance(version)
+    source_client = release_provenance(version, counts=provenance_counts)
     work = args.work_root.resolve()
     work.mkdir(parents=True, exist_ok=True)
     store = GeneratedStore(args.output_root.resolve())
@@ -500,7 +795,6 @@ def main() -> int:
     index_sha256 = sha256_file(index_path)
     targets: dict[str, dict] = {}
     canonical_grouped: dict[str, list[dict]] = {}
-    canonical_sources: dict[str, set[str]] = {}
     index_by_fold = {name.casefold(): name for name in index}
     for logical, rows in grouped.items():
         canonical = index_by_fold.get(logical.casefold())
@@ -511,91 +805,56 @@ def main() -> int:
         # have to stay attached to the name the rest of the build looks up.
         if canonical in targets:
             canonical_grouped[canonical].extend(rows)
-            canonical_sources[canonical] |= bundle_sources[logical]
             continue
         targets[canonical] = index[canonical]
         canonical_grouped[canonical] = list(rows)
-        canonical_sources[canonical] = set(bundle_sources[logical])
     if args.max_bundles:
         targets = dict(list(sorted(targets.items()))[:args.max_bundles])
         canonical_grouped = {name: canonical_grouped[name] for name in targets}
-        canonical_sources = {name: canonical_sources[name] for name in targets}
     official_cache = args.official_cache.resolve() if args.official_cache else None
 
-    # What did this build really have to regenerate?  The release already in the
-    # store answers for every bundle whose own rows and official object are
-    # unchanged; see scripts/release_reuse.py for why that is provable and why a
-    # release that is not provably free of cross-bundle answers is not reused.
-    previous = None
-    if not args.no_reuse:
-        try:
-            previous = store.load_manifest(version["asset_version"])
-        except GeneratedStoreError as error:
-            # No published release for this version is the ordinary first build
-            # of a version, not a failure; anything else is reported and then
-            # answered the same safe way -- regenerate everything.
-            print(f"no reusable release manifest for {version['asset_version']}: {error}",
-                  file=sys.stderr)
-    plan = release_reuse.plan_reuse(
-        root=ROOT, manifest=previous, asset_version=version["asset_version"],
-        index=targets, bundle_sources=canonical_sources, index_sha256=index_sha256,
-        object_file=store.object_file)
+    previous = load_previous_release(store, version["asset_version"])
+    current_grouped, text_records, full_ledger, source_stats = prepare_text_inputs(
+        work=work, store=store, version=version, targets=targets,
+        grouped=canonical_grouped, previous=previous, official_cache=official_cache)
+    plan = incremental.plan(
+        surface="text", records=text_records, rows=targets, previous=previous,
+        object_file=store.object_file, force=args.no_reuse, asset_version=version["asset_version"])
     print(json.dumps({"reuse_plan": plan.to_dict()}, ensure_ascii=False), file=sys.stderr)
-
-    surface = run_text_surface(work=work, version=version,
-                               targets=dict(plan.rebuild), grouped=canonical_grouped,
-                               source_client=source_client, official_cache=official_cache)
-    resolution = release_reuse.Resolution.from_overlay(surface.document)
-    subset_is_exclusive = resolution is not None and resolution.exclusive
-    if plan.reusable and not subset_is_exclusive:
-        # A regenerated bundle answered a key without its own row, so in this
-        # subset run the global translation-memory table was smaller than the one
-        # a full build would have used.  Its bytes could differ from what the
-        # release would otherwise contain, and nothing cheap can tell which
-        # bundles that reached; redo the whole surface before publishing.
-        print(json.dumps({
-            "reuse_fallback": "the subset resolved keys without their own row; "
-                               "rebuilding every bundle to keep the release identical "
-                               "to a full build",
-            "resolution": resolution.to_dict() if resolution else None},
-            ensure_ascii=False), file=sys.stderr)
-        plan = release_reuse.ReusePlan(
-            rebuild={name: dict(row) for name, row in targets.items()},
-            reason="the subset run was not exclusive")
-        surface = run_text_surface(work=work, version=version, targets=plan.rebuild,
-                                   grouped=canonical_grouped, source_client=source_client,
-                                   official_cache=official_cache)
-        resolution = release_reuse.Resolution.from_overlay(surface.document)
-    if resolution is None:
-        # The overlay predates the route counters.  Publish anyway -- the release
-        # is not at stake -- but record no reuse block, so the next build rebuilds
-        # everything instead of inheriting an unprovable claim.
-        print("the overlay did not report how it resolved its keys; this release "
-              "records no reuse block and the next build will be a full rebuild",
-              file=sys.stderr)
+    surface = run_text_surface(
+        work=work, version=version, targets=dict(plan.rebuild), grouped=canonical_grouped,
+        source_client=source_client, official_cache=official_cache,
+        selected_grouped=current_grouped, full_ledger=full_ledger)
+    for key in ("total", "downloaded", "reused_from_cache", "already_on_disk"):
+        source_stats[key] += surface.official_objects[key]
+    surface.official_objects = source_stats
+    counters = {route: sum(record["resolution"][route] for record in text_records.values())
+                for route in ("exact", "memory", "stale_exact", "unresolved")}
+    resolution = release_reuse.Resolution(**counters)
     text_scope = "regenerated" if plan.reusable else "release"
-    selected = {**{logical: targets[logical] for logical in surface.grouped},
-                **{logical: targets[logical] for logical in plan.reusable}}
-    if not selected:
-        raise ValueError("no accepted translations match the current official source")
+    selected = {logical: targets[logical] for logical in current_grouped}
     overlay = surface.overlay
-    # Song lyrics are the second translatable surface and, until now, the one the
-    # client never received: the library carried 11,065 accepted Chinese lines
-    # that no published bundle contained.  Patch the lyric bundles into the same
-    # overlay and let the manifest below publish them like text bundles.
-    #
-    # Reading the library costs a few hundred small file reads and downloading the
-    # official lyric bundles costs minutes, so the library is read first and the
-    # songs whose own lyric file did not move are neither fetched nor rewritten:
-    # their entries come from the published release, exactly like a reused text
-    # bundle.  A song that is left out is still counted by the summary, so the
-    # report cannot look like the whole library was packaged.
     lyric_pending, _lyric_library = build_lyric_overlay.pending_songs(
         index=index, lyrics_root=ROOT / "lyrics")
-    lyric_plan = release_reuse.plan_lyric_reuse(
-        root=ROOT, manifest=previous, asset_version=version["asset_version"],
-        bundles={bundle: row for bundle, row, _translations in lyric_pending},
-        index_sha256=index_sha256, object_file=store.object_file)
+    lyric_writer = incremental.writer_fingerprint(ROOT, incremental.LYRIC_FILES)
+    lyric_records = {}
+    lyric_rows = {}
+    for bundle, row, translations in lyric_pending:
+        lyric_rows[bundle] = row
+        # SlotTranslations is already the accepted, song-local projection. It
+        # excludes timestamps, pending rows and aggregate lyric metadata.
+        lyric_records[bundle] = {
+            "source_identity": incremental.source_identity(row),
+            "fingerprint": incremental.digest({
+                "source": incremental.source_identity(row), "writer": lyric_writer,
+                "translations": sorted((position, source, zh)
+                                       for (position, source), zh in translations.by_position.items()),
+                "by_text": translations.by_text,
+            }),
+        }
+    lyric_plan = incremental.plan(
+        surface="lyrics", records=lyric_records, rows=lyric_rows, previous=previous,
+        object_file=store.object_file, force=args.no_reuse, asset_version=version["asset_version"])
     print(json.dumps({"lyric_reuse_plan": lyric_plan.to_dict()}, ensure_ascii=False),
           file=sys.stderr)
     lyric_summary = build_lyric_overlay.run(
@@ -612,17 +871,18 @@ def main() -> int:
     )
     entries_path = work / "entries.json"
     entries = build_entries(overlay, overlay / "localization-manifest.json",
-                            version["asset_version"], source_client,
-                            index_name=version["index_name"], index_path=index_path,
-                            allow_empty=bool(plan.reusable or lyric_plan.reusable))
+                            version["asset_version"], source_client, allow_empty=True)
     # The reused bundles were never handed to the overlay, so their entries come
     # from the release already in the store: same bytes, same digest, and the
     # store re-hashes the object before it accepts the entry.  The songs the lyric
     # pass was told to leave alone are carried over by the same rule.
     entries.extend(plan.reusable.values())
     entries.extend(lyric_plan.reusable.values())
-    entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     image_bundles = 0
+    # The image surface writes its own size patch into a merged table, and the
+    # alignment below has to carry that patch as well, so it patches the merged
+    # table rather than the pristine one.
+    catalogue_to_align = index_path
     if args.image_overlay_manifest is not None:
         overlay_manifest = args.image_overlay_manifest.resolve()
         overlay_root = (args.image_overlay_root or overlay_manifest.parent / "jp-android").resolve()
@@ -639,33 +899,29 @@ def main() -> int:
         image_entries = merge_image_overlay.build_entries(
             records, overlay_root, version["asset_version"], source_client)
         image_bundles = len(image_entries)
-        # The client reads one declared size per runtime_path, so the catalogue
-        # carries both patches or neither: the pass-through official index entry
-        # is replaced by the merged catalogue, then the image bundles are added.
-        entries = [entry for entry in entries if entry["logical_key"] != "__official_asset_index__"]
+        # The client reads one declared size per runtime_path, so one catalogue
+        # carries every surface's sizes: the image bundles join this entry list,
+        # and the alignment below adds the text and lyric sizes to this table.
         entries.extend(image_entries)
+        catalogue_to_align = merged_index
         merged_digest = sha256_file(merged_index)
-        entries.append({
-            "logical_key": "__official_asset_index__",
-            "logical_path": f"production/2018/Android/{version['index_name']}",
-            "runtime_path": f"production/2018/Android/{version['index_name']}",
-            "resource_kind": "other",
-            "channel": "assets",
-            "asset_version": version["asset_version"],
-            "client_version": None,
-            "source_client_version": source_client,
-            "source_sha256": merged_digest,
-            "translated_sha256": merged_digest,
-            "reuse_status": "exact",
-            "translation_status": "reused",
-            "artifact_file": str(merged_index.resolve()),
-        })
-        entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
-                                encoding="utf-8")
         print(json.dumps({"image_surface": "merged_into_release",
                           "image_bundles": image_bundles,
                           "text_patch_rows": text_patch_rows,
                           "merged_index_sha256": merged_digest}, ensure_ascii=False))
+    # The catalogue is aligned here, once, because this is the only point at which
+    # the release's complete entry set is known: text, lyrics, images and everything
+    # reuse carried over.  Aligning per surface would leave whichever surface was
+    # aligned last contradicting the catalogue for all the others.
+    aligned = align_index_sizes(catalogue_to_align, entries,
+                                output_path=work / "catalogue" / version["index_name"],
+                                object_file=store.object_file)
+    entries.append(index_entry(aligned, index_name=version["index_name"],
+                               pristine_sha256=index_sha256,
+                               asset_version=version["asset_version"],
+                               source_client_version=source_client))
+    entries_path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
+                            encoding="utf-8")
     # One client path, one logical name, one set of bytes.  The text pass, the
     # lyric pass and the reused entries are three sources feeding one entry list,
     # and an incremental build is the first time a reused entry can collide with a
@@ -679,14 +935,19 @@ def main() -> int:
                 "surfaces must not publish the same bundle")
         seen_keys.add(logical)
 
-    # What the next build may reuse, recorded with the release it describes.
-    # `text_scope` says what the counters cover: every published bundle on a full
-    # build, only the regenerated subset on an incremental one.  No counters at
-    # all means no claim, and a build that makes no claim is rebuilt in full.
-    reuse_record = None
-    if resolution is not None:
-        reuse_record = release_reuse.reuse_block(
-            index_sha256=index_sha256, resolution=resolution, scope=text_scope)
+    # Persist both successful outputs and verified no-output results. Source
+    # parse records live in generated/build-inputs/ and are checksummed by the
+    # manifest, so a fresh runner can plan without fetching unchanged bundles.
+    state_entries = [dict(entry, artifact_sha256=(
+        sha256_file(Path(entry["artifact_file"])) if entry.get("artifact_file")
+        else entry["artifact_sha256"])) for entry in entries]
+    incremental.finish_records(text_records, state_entries)
+    incremental.finish_records(lyric_records, state_entries)
+    reuse_record = release_reuse.reuse_block(
+        index_sha256=index_sha256, resolution=resolution, scope="release")
+    reuse_record[incremental.STATE_KEY] = {
+        "schema": incremental.SCHEMA, "text": text_records, "lyrics": lyric_records,
+    }
     result = store.build_release(
         version["asset_version"], entries,
         source_commit=args.source_commit,
@@ -708,6 +969,17 @@ def main() -> int:
                           ("ready_for_injection" if images_ready
                            else "blocked_missing_reviewed_inputs")),
         "official_index_sha256": index_sha256,
+        "index_alignment": {
+            "published_index": str(aligned.path),
+            "published_index_sha256": aligned.sha256,
+            # What the counts below were measured against: the official catalogue,
+            # or the image surface's merged table when that surface ran.
+            "aligned_from": str(catalogue_to_align),
+            "catalogue_records": aligned.records,
+            "covered_records": aligned.covered_records,
+            "changed_records": aligned.changed_records,
+            "uncovered_records": aligned.uncovered_records,
+        },
         "official_objects": surface.official_objects,
         "reuse": {**plan.to_dict(), "objects_written": result.objects_written,
                   "objects_deduped": result.objects_deduped,
@@ -715,7 +987,9 @@ def main() -> int:
                   "text_scope": text_scope,
                   "lyric_scope": "regenerated" if lyric_plan.reusable else "release",
                   "lyric_reused_bundles": len(lyric_plan.reusable),
-                  "lyric_rebuilt_bundles": len(lyric_plan.rebuild)},
+                  "lyric_rebuilt_bundles": len(lyric_plan.rebuild),
+                  "text_no_output_reused": plan.negative_reused,
+                  "lyric_no_output_reused": lyric_plan.negative_reused},
         "lyrics": {key: value for key, value in lyric_summary.items() if key != "patched_bundles"},
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))

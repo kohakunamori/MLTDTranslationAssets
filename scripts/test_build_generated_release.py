@@ -108,7 +108,8 @@ def _fabricate_overlay(_snapshot, _archive, _ledger, output, *_args, **_kwargs) 
     (Path(output) / "localization-manifest.json").write_text(json.dumps({"bundles": [{
         "logical": "story.gtx.unity3d",
         "remote": "remote-hash.unity3d",
-        "source_bundle_sha256": "a" * 64,
+        "source_bundle_sha256": hashlib.sha256(
+            (Path(_archive) / "jp-android/remote-hash.unity3d").read_bytes()).hexdigest(),
         "output_plain_sha256": "b" * 64,
     }]}), encoding="utf-8")
 
@@ -330,7 +331,8 @@ class IncrementalReuseRegression(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(b"translated:" + row["logical"].encode("utf-8"))
             rows.append({"logical": row["logical"], "remote": row["remote"],
-                         "source_bundle_sha256": "a" * 64,
+                         "source_bundle_sha256": hashlib.sha256(
+                             (Path(_archive) / "jp-android" / row["remote"]).read_bytes()).hexdigest(),
                          "output_plain_sha256": "b" * 64})
         (Path(output) / "localization-manifest.json").write_text(json.dumps({
             "source_candidates": len(rows), "resolved_exact": len(rows),
@@ -360,9 +362,8 @@ class IncrementalReuseRegression(unittest.TestCase):
                                        *_args, **_kwargs):
         """A subset run that answers one key from the memory table.
 
-        The real overlay's ledger holds every accepted row of the bundles it was
-        given, so a subset run can resolve a key that a full run resolves from the
-        bundle's own row.  The builder must notice and rebuild everything.
+        A memory route is legitimate in a subset: its ledger still contains
+        all unchanged bundles, so it must not force a second full overlay pass.
         """
         requested = json.loads(Path(snapshot).read_text(encoding="utf-8"))["objects"]
         Path(output).mkdir(parents=True, exist_ok=True)
@@ -373,7 +374,8 @@ class IncrementalReuseRegression(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(b"translated:" + row["logical"].encode("utf-8"))
             rows.append({"logical": row["logical"], "remote": row["remote"],
-                         "source_bundle_sha256": "a" * 64,
+                         "source_bundle_sha256": hashlib.sha256(
+                             (Path(_archive) / "jp-android" / row["remote"]).read_bytes()).hexdigest(),
                          "output_plain_sha256": "b" * 64})
         from_memory = 1 if len(rows) == 1 else 0
         (Path(output) / "localization-manifest.json").write_text(json.dumps({
@@ -391,15 +393,19 @@ class IncrementalReuseRegression(unittest.TestCase):
             if destination.suffix == ".data":
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(msgpack.packb([{
-                    logical: ["catalog-" + remote, remote, 9]
-                    for logical, remote, _digest in index_rows}], use_bin_type=True))
+                    logical: [content_hash, remote, len(logical.encode("utf-8"))]
+                    for logical, remote, content_hash in index_rows}], use_bin_type=True))
                 return "fetched"
-            return _fake_download(url, destination, *args, **kwargs)
+            logical = next(name for name, remote, _hash in index_rows if remote == destination.name)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(logical.encode("utf-8"))
+            return "fetched"
 
         return counted_download
 
     def _build_once(self, root: Path, work: Path, output: Path, commit: str,
-                    index_rows=((("story.gtx.unity3d"), "remote-hash.unity3d", "a" * 64),)):
+                    index_rows=((("story.gtx.unity3d"), "remote-hash.unity3d", "a" * 64),),
+                    lyric_writer=None, force=False):
         from assets_generated_index import GeneratedStore
         argv = [
             "--version-manifest", str(root / "manifests" / "asset-version.json"),
@@ -411,6 +417,11 @@ class IncrementalReuseRegression(unittest.TestCase):
         downloads: list[str] = []
 
         counted_download = self._downloader(downloads, index_rows)
+        lyric_context = (mock.patch.object(build.build_lyric_overlay, "save_localized_bundle",
+                                          side_effect=lyric_writer)
+                         if lyric_writer else contextlib.nullcontext())
+        if force:
+            argv.append("--no-reuse")
 
         with mock.patch.object(build, "ROOT", root), \
                 mock.patch.object(build, "download", side_effect=counted_download), \
@@ -418,27 +429,17 @@ class IncrementalReuseRegression(unittest.TestCase):
                                   side_effect=self._overlay_from_snapshot) as overlay, \
                 mock.patch.object(build, "GeneratedStore",
                                   return_value=GeneratedStore(output)), \
-                mock.patch.object(build, "read_gtx",
-                                  return_value=("name", "k^原文", b"cipher")), \
+                mock.patch.object(build, "read_gtx", side_effect=lambda source: (
+                    next(name[:-len(".unity3d")] for name, remote, _hash in index_rows
+                         if remote == Path(source).name), "k^原文", b"cipher")), \
                 mock.patch.object(sys, "argv", ["build_generated_release.py", *argv]), \
-                contextlib.redirect_stdout(stdout):
+                contextlib.redirect_stdout(stdout), lyric_context:
             self.assertEqual(build.main(), 0)
         return json.loads(stdout.getvalue()), downloads, overlay.call_count
 
     def _layout(self, base: Path, bundles=("story.gtx",)):
         root = base / "repo"
         _write_synthetic_root(root, images_complete=False)
-        subprocess.run(["git", "-C", str(root), "init", "-q"], check=True,
-                       capture_output=True)
-        for key, value in (("user.email", "tests@example.invalid"),
-                           ("user.name", "reuse tests"),
-                           ("commit.gpgsign", "false")):
-            subprocess.run(["git", "-C", str(root), "config", key, value],
-                           check=True, capture_output=True)
-        subprocess.run(["git", "-C", str(root), "add", "-A"], check=True,
-                       capture_output=True)
-        subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", "inputs"],
-                       check=True, capture_output=True)
         for name in bundles[1:]:
             source = "原文"
             (root / "locales" / "story" / f"{name}.jsonl").write_text(json.dumps({
@@ -448,14 +449,10 @@ class IncrementalReuseRegression(unittest.TestCase):
                 "source_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
                 "ja": source, "zh": "译文", "status": "accepted",
             }, ensure_ascii=False) + "\n", encoding="utf-8")
-        if len(bundles) > 1:
-            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True,
-                           capture_output=True)
-            subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", "more inputs"],
-                           check=True, capture_output=True)
-        commit = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
-                                check=True, capture_output=True,
-                                text=True).stdout.strip()
+        # Package fingerprints read the actual inputs; Git history is no longer
+        # part of planning. Publication still needs a syntactically valid input
+        # commit, just like the other synthetic store fixtures in this module.
+        commit = "f" * 40
         return root, commit
 
     def test_an_unchanged_bundle_is_neither_downloaded_nor_rewritten(self):
@@ -483,7 +480,7 @@ class IncrementalReuseRegression(unittest.TestCase):
             self.assertEqual(entries["story.gtx.unity3d"]["runtime_path"],
                              "production/2018/Android/remote-hash.unity3d")
             self.assertTrue((output / entries["story.gtx.unity3d"]["object_path"]).is_file())
-            self.assertEqual(manifest["reuse"]["text_scope"], "regenerated")
+            self.assertEqual(manifest["reuse"]["text_scope"], "release")
             self.assertTrue(manifest["reuse"]["every_key_resolved_exactly"])
 
     def test_a_locale_file_may_spell_the_bundle_differently_from_the_catalogue(self):
@@ -510,6 +507,69 @@ class IncrementalReuseRegression(unittest.TestCase):
             self.assertIn("cd_jp.gtx.unity3d", entries)
             self.assertEqual(entries["cd_jp.gtx.unity3d"]["runtime_path"],
                              "production/2018/Android/cd-remote.unity3d")
+
+    def test_the_published_catalogue_declares_the_bytes_the_release_serves(self):
+        """Every released object, not only the ones this run rewrote.
+
+        The client requires the bytes it downloads to have the length the
+        catalogue declares.  An incremental build publishes one rebuilt bundle
+        and carries the other one over from the store, so this pins both halves of
+        the entry list: aligning only the bundles a surface produced would leave
+        every reused bundle contradicting the catalogue.
+        """
+        index_rows = (("story.gtx.unity3d", "remote-hash.unity3d", "a" * 64),
+                      ("other.gtx.unity3d", "other-remote.unity3d", "b" * 64))
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base, bundles=("story.gtx", "other.gtx"))
+            output = base / "out"
+            self._build_once(root, base / "work-1", output, commit, index_rows=index_rows)
+
+            row = json.loads((root / "locales/story/story.gtx.jsonl")
+                             .read_text(encoding="utf-8").strip())
+            row["zh"] = "新译文"
+            (root / "locales/story/story.gtx.jsonl").write_text(
+                json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+
+            report, _downloads, overlays = self._build_once(
+                root, base / "work-2", output, commit, index_rows=index_rows)
+            self.assertEqual(overlays, 1)
+            self.assertEqual(report["reuse"]["reused_bundles"], 1)
+            self.assertEqual(report["index_alignment"],
+                             {"published_index": str(base / "work-2" / "catalogue" / "index.data"),
+                              "published_index_sha256":
+                                  build.sha256_file(base / "work-2" / "catalogue" / "index.data"),
+                              "aligned_from": str(base / "work-2" / "index.data"),
+                              "catalogue_records": 2, "covered_records": 2,
+                              "changed_records": 2, "uncovered_records": 0})
+
+            manifest = json.loads(
+                (output / "1077640" / "manifest.json").read_text(encoding="utf-8"))
+            entries = {e["logical_key"]: e for e in manifest["entries"]}
+            catalog_entry = entries["__official_asset_index__"]
+            pristine = base / "work-2" / "index.data"
+            self.assertEqual(catalog_entry["source_sha256"], build.sha256_file(pristine))
+            self.assertEqual(catalog_entry["translated_sha256"],
+                             catalog_entry["artifact_sha256"])
+            self.assertNotEqual(catalog_entry["translated_sha256"],
+                                catalog_entry["source_sha256"])
+            self.assertEqual(catalog_entry["translation_status"], "modified")
+
+            # The object the gateway serves at the client's catalogue path is the
+            # aligned copy: same records, sizes from the released bytes.
+            catalog = msgpack.unpackb(
+                (output / catalog_entry["object_path"]).read_bytes(),
+                raw=False, strict_map_key=False)[0]
+            self.assertEqual(list(catalog), ["story.gtx.unity3d", "other.gtx.unity3d"])
+            for logical, remote in (("story.gtx.unity3d", "remote-hash.unity3d"),
+                                    ("other.gtx.unity3d", "other-remote.unity3d")):
+                entry = entries[logical]
+                self.assertEqual(catalog[logical][1], remote)
+                self.assertEqual(catalog[logical][2],
+                                 (output / entry["object_path"]).stat().st_size)
+                # The fixture's official object is the logical name's length, which
+                # no translated bundle of this release has.
+                self.assertNotEqual(catalog[logical][2], len(logical))
 
     def test_only_the_changed_bundle_is_fetched_and_rewritten_again(self):
         index_rows = (("story.gtx.unity3d", "remote-hash.unity3d", "a" * 64),
@@ -544,7 +604,7 @@ class IncrementalReuseRegression(unittest.TestCase):
             self.assertEqual(entries["other.gtx.unity3d"]["runtime_path"],
                              "production/2018/Android/other-remote.unity3d")
 
-    def test_a_subset_that_answered_from_memory_falls_back_to_a_full_rebuild(self):
+    def test_a_subset_uses_the_complete_ledger_without_full_rebuild(self):
         index_rows = (("story.gtx.unity3d", "remote-hash.unity3d", "a" * 64),
                       ("other.gtx.unity3d", "other-remote.unity3d", "b" * 64))
         with tempfile.TemporaryDirectory() as raw:
@@ -582,15 +642,17 @@ class IncrementalReuseRegression(unittest.TestCase):
                     mock.patch.object(sys, "argv", ["build_generated_release.py", *argv]), \
                     contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 self.assertEqual(build.main(), 0)
-            # The risky subset run happened, was rejected, and the whole surface
-            # ran again -- in the same work directory, which the overlay would
-            # refuse if the builder handed it the previous attempt's directory.
-            self.assertEqual(overlay.call_count, 2)
-            self.assertIn("reuse_fallback", stderr.getvalue())
+            # A memory route no longer forces a second overlay pass: unchanged
+            # bundles remain in the complete source-bound resolver ledger.
+            self.assertEqual(overlay.call_count, 1)
+            self.assertNotIn("reuse_fallback", stderr.getvalue())
+            ledger_rows = [json.loads(line) for line in
+                           (base / "work-2/all-translations.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertEqual({r["bundle"] for r in ledger_rows}, {"story.gtx", "other.gtx"})
             report = json.loads(stdout.getvalue())
-            self.assertEqual(report["reuse"]["mode"], "full")
-            self.assertEqual(report["reuse"]["reused_bundles"], 0)
-            self.assertEqual(report["reuse"]["text_scope"], "release")
+            self.assertEqual(report["reuse"]["mode"], "incremental")
+            self.assertEqual(report["reuse"]["reused_bundles"], 1)
+            self.assertEqual(report["reuse"]["text_scope"], "regenerated")
             manifest = json.loads(
                 (output / "1077640" / "manifest.json").read_text(encoding="utf-8"))
             entries = {e["logical_key"]: e for e in manifest["entries"]}
@@ -613,8 +675,110 @@ class IncrementalReuseRegression(unittest.TestCase):
 
             second, downloads, second_overlays = self._build_once(root, base / "work-2", output, commit)
             self.assertEqual(second["reuse"]["mode"], "full")
-            self.assertIn("outside locales/", second["reuse"]["reason"])
+            self.assertIn("per-bundle", second["reuse"]["reason"])
             self.assertTrue([d for d in downloads if d.endswith(".unity3d")])
+
+
+    def test_one_row_in_a_shared_file_rebuilds_one_bundle(self):
+        index_rows = (("story.gtx.unity3d", "a.unity3d", "a" * 64),
+                      ("other.gtx.unity3d", "b.unity3d", "b" * 64))
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base, bundles=("story.gtx", "other.gtx"))
+            paths = sorted((root / "locales/story").glob("*.jsonl"))
+            shared = root / "locales/story/shared.jsonl"
+            shared.write_text("".join(p.read_text(encoding="utf-8") for p in paths), encoding="utf-8")
+            for p in paths:
+                p.unlink()
+            self._build_once(root, base / "work-1", base / "out", commit, index_rows=index_rows)
+            rows = [json.loads(line) for line in shared.read_text(encoding="utf-8").splitlines()]
+            rows[0]["zh"] = "修改单个包"
+            shared.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
+                              encoding="utf-8")
+            report, downloads, overlays = self._build_once(
+                root, base / "work-2", base / "out", commit, index_rows=index_rows)
+            self.assertEqual(report["reuse"]["rebuilt_bundles"], 1)
+            self.assertEqual(report["reuse"]["reused_bundles"], 1)
+            self.assertEqual(overlays, 1)
+            self.assertEqual(len([p for p in downloads if p.endswith(".unity3d")]), 1)
+
+    def test_version_rename_only_republishes_existing_objects(self):
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base)
+            self._build_once(root, base / "work-1", base / "out", commit)
+            path = root / "manifests/asset-version.json"
+            version = json.loads(path.read_text(encoding="utf-8"))
+            version["asset_version"] = 1077650
+            path.write_text(json.dumps(version), encoding="utf-8")
+            report, downloads, overlays = self._build_once(
+                root, base / "work-2", base / "out", commit,
+                index_rows=(("story.gtx.unity3d", "new-remote.unity3d", "a" * 64),))
+            self.assertEqual(report["reuse"]["reused_bundles"], 1)
+            self.assertEqual(overlays, 0)
+            self.assertFalse([p for p in downloads if p.endswith(".unity3d")])
+            manifest = json.loads((base / "out/1077650/manifest.json").read_text(encoding="utf-8"))
+            entry = next(e for e in manifest["entries"] if e["resource_kind"] == "bundle")
+            self.assertEqual(entry["runtime_path"], "production/2018/Android/new-remote.unity3d")
+            self.assertEqual(entry["asset_version"], "1077650")
+
+    def test_only_edited_song_is_built_and_forced_build_matches(self):
+        index_rows = (("story.gtx.unity3d", "text.unity3d", "a" * 64),
+                      ("scrobj_a.unity3d", "song-a.unity3d", "b" * 64),
+                      ("scrobj_b.unity3d", "song-b.unity3d", "c" * 64))
+        def lyric_writer(source, output, translations):
+            output.parent.mkdir(parents=True, exist_ok=True)
+            payload = json.dumps(sorted(translations.by_position.values())).encode()
+            output.write_bytes(payload)
+            return {"changed": len(translations), "output_bytes": len(payload),
+                    "source_bundle_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    "output_plain_sha256": hashlib.sha256(payload).hexdigest(),
+                    "slots_total": len(translations), "unmatched_texts": []}
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base)
+            songs = root / "lyrics/songs"
+            songs.mkdir(parents=True)
+            for name in ("scrobj_a.unity3d", "scrobj_b.unity3d"):
+                (songs / f"{name}.jsonl").write_text(json.dumps({
+                    "index": 0, "ja": "歌詞", "zh": "歌词", "status": "accepted",
+                    "source_sha256": hashlib.sha256("歌詞".encode()).hexdigest(),
+                }, ensure_ascii=False) + "\n", encoding="utf-8")
+            self._build_once(root, base / "work-1", base / "out", commit,
+                             index_rows=index_rows, lyric_writer=lyric_writer)
+            edited = songs / "scrobj_a.unity3d.jsonl"
+            row = json.loads(edited.read_text(encoding="utf-8"))
+            row["zh"] = "新歌词"
+            edited.write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+            report, downloads, overlays = self._build_once(
+                root, base / "work-2", base / "out", commit,
+                index_rows=index_rows, lyric_writer=lyric_writer)
+            self.assertEqual(overlays, 0)
+            self.assertEqual(report["reuse"]["lyric_rebuilt_bundles"], 1)
+            self.assertEqual(report["reuse"]["lyric_reused_bundles"], 1)
+            self.assertEqual([Path(p).name for p in downloads if p.endswith(".unity3d")],
+                             ["song-a.unity3d"])
+            def outputs():
+                manifest = json.loads((base / "out/1077640/manifest.json").read_text(encoding="utf-8"))
+                return {e["logical_key"]: e["artifact_sha256"] for e in manifest["entries"]}
+            incremental_outputs = outputs()
+            self._build_once(root, base / "work-3", base / "out", commit,
+                             index_rows=index_rows, lyric_writer=lyric_writer, force=True)
+            self.assertEqual(outputs(), incremental_outputs)
+
+    def test_removing_the_last_accepted_text_removes_the_old_overlay(self):
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root, commit = self._layout(base)
+            self._build_once(root, base / "work-1", base / "out", commit)
+            path = root / "locales/story/story.gtx.jsonl"
+            row = json.loads(path.read_text(encoding="utf-8"))
+            row["status"] = "pending"
+            path.write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+            report, downloads, overlays = self._build_once(root, base / "work-2", base / "out", commit)
+            self.assertEqual(overlays, 0)
+            self.assertEqual(report["generated_entries"], 1)  # Official catalogue only.
+            self.assertFalse([p for p in downloads if p.endswith(".unity3d")])
 
 
 class GeneratedReleaseContracts(unittest.TestCase):
@@ -692,15 +856,13 @@ class GeneratedReleaseContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             build.select_rows_for_current_sources(rows, {"k": "同一原文"}, "1077640")
 
-    def test_generated_entries_keep_client_runtime_name_and_index(self):
+    def test_generated_entries_keep_client_runtime_name(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             overlay = root / "overlay" / "jp-android"
             overlay.mkdir(parents=True)
             bundle = overlay / "remote-hash.unity3d"
             bundle.write_bytes(b"translated")
-            index = root / "index.data"
-            index.write_bytes(b"official-index")
             manifest = root / "localization-manifest.json"
             manifest.write_text(json.dumps({"bundles": [{
                 "logical": "story.gtx.unity3d",
@@ -708,16 +870,365 @@ class GeneratedReleaseContracts(unittest.TestCase):
                 "source_bundle_sha256": "a" * 64,
                 "output_plain_sha256": "b" * 64,
             }]}), encoding="utf-8")
-            entries = build.build_entries(
-                root / "overlay", manifest, "1077640", "9.0.200",
-                index_name="index.data", index_path=index,
-            )
+            entries = build.build_entries(root / "overlay", manifest, "1077640", "9.0.200")
             translated = next(e for e in entries if e["logical_key"] == "story.gtx.unity3d")
             self.assertEqual(translated["runtime_path"],
                              "production/2018/Android/remote-hash.unity3d")
-            catalog = next(e for e in entries if e["logical_key"] == "__official_asset_index__")
-            self.assertEqual(catalog["runtime_path"], "production/2018/Android/index.data")
-            self.assertEqual(catalog["translated_sha256"], build.sha256_file(index))
+            # The catalogue entry is deliberately not this function's business: it
+            # can only be built once every surface's bundles are known, so the
+            # caller appends it (see IndexSizeAlignment).
+            self.assertEqual(
+                [e for e in entries if e["logical_key"] == "__official_asset_index__"], [])
+
+
+def _catalogue(rows: dict) -> bytes:
+    """One official-style msgpack catalogue document."""
+    return msgpack.packb([rows], use_bin_type=True)
+
+
+class IndexSizeAlignment(unittest.TestCase):
+    """The published catalogue must describe the bytes the release serves.
+
+    The client requires ``Content-Length == declared_size`` for every object the
+    catalogue names, and this release serves rewritten bytes for every bundle it
+    covers, so a pristine catalogue makes the client reject its own download.
+    These tests pin the replacement: a copy that differs from the official one
+    exactly where the release does, and nowhere else.
+    """
+
+    def _layout(self, root: Path) -> tuple[Path, list[dict]]:
+        """A four-record catalogue, three of its records served by this release.
+
+        ``shared``/``alias`` name the same remote, which is the case a
+        name-addressed client cannot tell apart; ``untouched`` is not published.
+        """
+        index = root / "index.data"
+        index.write_bytes(_catalogue({
+            "story.gtx.unity3d": ["catalog-a", "remote-a.unity3d", 12],
+            "shared.gtx.unity3d": ["catalog-b", "remote-b.unity3d", 99],
+            "alias.gtx.unity3d": ["catalog-b", "remote-b.unity3d", 99],
+            "untouched.gtx.unity3d": ["catalog-c", "remote-c.unity3d", 7],
+        }))
+        overlay = root / "overlay"
+        (overlay / "jp-android").mkdir(parents=True)
+        (overlay / "jp-android" / "remote-a.unity3d").write_bytes(b"translated-a")
+        (overlay / "jp-android" / "remote-b.unity3d").write_bytes(b"translated-bb")
+        (overlay / "localization-manifest.json").write_text(json.dumps({"bundles": [
+            {"logical": "story.gtx.unity3d", "remote": "remote-a.unity3d",
+             "source_bundle_sha256": "a" * 64, "output_plain_sha256": "b" * 64},
+            {"logical": "shared.gtx.unity3d", "remote": "remote-b.unity3d",
+             "source_bundle_sha256": "c" * 64, "output_plain_sha256": "d" * 64},
+        ]}), encoding="utf-8")
+        entries = build.build_entries(overlay, overlay / "localization-manifest.json",
+                                      "1077640", "9.0.200")
+        return index, entries
+
+    def test_only_covered_records_move_and_the_pristine_file_survives(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index, entries = self._layout(root)
+            pristine = index.read_bytes()
+            out = root / "catalogue" / "index.data"
+
+            aligned = build.align_index_sizes(index, entries, output_path=out)
+
+            self.assertEqual(index.read_bytes(), pristine, "the pristine index was written to")
+            self.assertEqual(build.sha256_file(index),
+                             hashlib.sha256(pristine).hexdigest())
+            table = msgpack.unpackb(out.read_bytes(), raw=False, strict_map_key=False)[0]
+            self.assertEqual(table, {
+                # published bytes are 12 long, so this record keeps its size
+                "story.gtx.unity3d": ["catalog-a", "remote-a.unity3d", 12],
+                # both records naming the served remote move together
+                "shared.gtx.unity3d": ["catalog-b", "remote-b.unity3d", 13],
+                "alias.gtx.unity3d": ["catalog-b", "remote-b.unity3d", 13],
+                "untouched.gtx.unity3d": ["catalog-c", "remote-c.unity3d", 7],
+            })
+            # Same records in the same order: the client looks names up, and a
+            # reordering would only make the two catalogues harder to compare.
+            self.assertEqual(list(table), ["story.gtx.unity3d", "shared.gtx.unity3d",
+                                           "alias.gtx.unity3d", "untouched.gtx.unity3d"])
+            self.assertEqual((aligned.records, aligned.covered_records,
+                              aligned.changed_records, aligned.uncovered_records,
+                              aligned.unchanged_records), (4, 3, 2, 1, 2))
+            self.assertEqual(aligned.path, out)
+            self.assertEqual(aligned.sha256, build.sha256_file(out))
+
+    def test_the_manifest_entry_describes_both_files_truthfully(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index, entries = self._layout(root)
+            out = root / "catalogue" / "index.data"
+            aligned = build.align_index_sizes(index, entries, output_path=out)
+
+            entry = build.index_entry(aligned, index_name="index.data",
+                                      pristine_sha256=build.sha256_file(index),
+                                      asset_version="1077640",
+                                      source_client_version="9.0.200")
+
+            self.assertEqual(entry["runtime_path"], "production/2018/Android/index.data")
+            self.assertEqual(entry["logical_path"], entry["runtime_path"])
+            self.assertEqual(entry["resource_kind"], "other")
+            self.assertEqual(entry["reuse_status"], "exact")
+            # The published bytes are no longer the official ones, so the entry
+            # may not claim the catalogue was reused as it was.
+            self.assertEqual(entry["translation_status"], "modified")
+            self.assertEqual(entry["source_sha256"], build.sha256_file(index))
+            self.assertEqual(entry["translated_sha256"], build.sha256_file(out))
+            self.assertEqual(entry["artifact_file"], str(out))
+            self.assertNotEqual(entry["source_sha256"], entry["translated_sha256"])
+
+            # The store, which is what the gateway reads, derives the digests from
+            # the bytes of artifact_file: the manifest has to agree with the file,
+            # or the gateway would index a catalogue nobody serves.
+            store = root / "store"
+            result = build.GeneratedStore(store).build_release(
+                "1077640", [*entries, entry], source_client_version="9.0.200",
+                source_commit="a" * 40, translation_commit="b" * 40,
+                generated_commit="c" * 40, ci_run_id="12345", entries_base=root)
+            self.assertTrue(result.written)
+            manifest = json.loads(
+                (store / "1077640" / "manifest.json").read_text(encoding="utf-8"))
+            stored = next(e for e in manifest["entries"]
+                          if e["logical_key"] == "__official_asset_index__")
+            self.assertEqual(stored["artifact_sha256"], aligned.sha256)
+            self.assertEqual(stored["translated_sha256"], aligned.sha256)
+            self.assertEqual(stored["source_sha256"], build.sha256_file(index))
+            self.assertEqual((store / stored["object_path"]).read_bytes(), out.read_bytes())
+            # The release gate must still accept the release as a whole: a
+            # modified catalogue entry is admissible, a mislabelled one is not.
+            report = build.GeneratedStore(store).verify_release("1077640")
+            self.assertTrue(report.ok, report.failures)
+            self.assertEqual(report.failures, [])
+
+    def test_a_remote_name_shared_by_two_records_moves_both(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index = root / "index.data"
+            index.write_bytes(_catalogue({
+                "first.gtx.unity3d": ["catalog", "shared-remote.unity3d", 2],
+                "second.gtx.unity3d": ["catalog", "shared-remote.unity3d", 3],
+            }))
+            artifact = root / "shared-remote.unity3d"
+            artifact.write_bytes(b"published-bytes")
+            out = root / "catalogue" / "index.data"
+
+            aligned = build.align_index_sizes(
+                index, [{"logical_key": "first.gtx.unity3d", "artifact_file": str(artifact),
+                         "runtime_path": "production/2018/Android/shared-remote.unity3d"}],
+                output_path=out)
+
+            table = msgpack.unpackb(out.read_bytes(), raw=False, strict_map_key=False)[0]
+            self.assertEqual(table["first.gtx.unity3d"][2], 15)
+            self.assertEqual(table["second.gtx.unity3d"][2], 15)
+            self.assertEqual((aligned.covered_records, aligned.changed_records), (2, 2))
+
+    def test_a_reused_entry_is_sized_from_the_stored_object(self):
+        """A reused bundle has no overlay file; its bytes are the store's object."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index = root / "index.data"
+            index.write_bytes(_catalogue({
+                "story.gtx.unity3d": ["catalog", "remote-a.unity3d", 3],
+            }))
+            pool = root / "objects" / "sha256"
+            pool.mkdir(parents=True)
+            digest = hashlib.sha256(b"a-published-bundle").hexdigest()
+            (pool / digest).write_bytes(b"a-published-bundle")
+            out = root / "catalogue" / "index.data"
+
+            aligned = build.align_index_sizes(
+                index, [{"logical_key": "story.gtx.unity3d", "artifact_sha256": digest,
+                         "runtime_path": "production/2018/Android/remote-a.unity3d"}],
+                output_path=out,
+                object_file=lambda wanted: (pool / wanted) if (pool / wanted).is_file() else None)
+
+            table = msgpack.unpackb(out.read_bytes(), raw=False, strict_map_key=False)[0]
+            self.assertEqual(table["story.gtx.unity3d"][2], len(b"a-published-bundle"))
+            self.assertEqual((aligned.covered_records, aligned.changed_records), (1, 1))
+
+    def test_a_released_bundle_no_record_names_is_refused(self):
+        """The catalogue cannot be aligned with a bundle it does not describe."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index = root / "index.data"
+            index.write_bytes(_catalogue({
+                "story.gtx.unity3d": ["catalog", "remote-a.unity3d", 3],
+            }))
+            with self.assertRaises(ValueError) as caught:
+                build.align_index_sizes(
+                    index, [{"logical_key": "ghost.gtx.unity3d",
+                             "artifact_sha256": "a" * 64,
+                             "runtime_path": "production/2018/Android/ghost-remote.unity3d"}],
+                    output_path=root / "catalogue" / "index.data")
+            self.assertIn("ghost-remote.unity3d", str(caught.exception))
+
+    def test_an_entry_whose_published_length_is_unknown_is_refused(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index = root / "index.data"
+            index.write_bytes(_catalogue({
+                "story.gtx.unity3d": ["catalog", "remote-a.unity3d", 3],
+            }))
+            with self.assertRaises(ValueError) as caught:
+                build.align_index_sizes(
+                    index, [{"logical_key": "story.gtx.unity3d",
+                             "runtime_path": "production/2018/Android/remote-a.unity3d"}],
+                    output_path=root / "catalogue" / "index.data")
+            self.assertIn("published length is unknown", str(caught.exception))
+
+    def test_the_aligned_copy_never_replaces_the_file_it_read(self):
+        """The pristine download is the release's own reuse key; it must survive."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index, entries = self._layout(root)
+            pristine = index.read_bytes()
+            with self.assertRaises(ValueError) as caught:
+                build.align_index_sizes(index, entries, output_path=index)
+            self.assertIn("must survive", str(caught.exception))
+            self.assertEqual(index.read_bytes(), pristine)
+
+    def test_an_entry_runtime_name_must_be_the_official_index_name(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            index, entries = self._layout(root)
+            aligned = build.align_index_sizes(
+                index, entries, output_path=root / "catalogue" / "renamed.data")
+            with self.assertRaises(ValueError) as caught:
+                build.index_entry(aligned, index_name="index.data",
+                                  pristine_sha256=build.sha256_file(index),
+                                  asset_version="1077640", source_client_version="9.0.200")
+            self.assertIn("renamed.data", str(caught.exception))
+
+
+class ImageSurfaceAlignment(unittest.TestCase):
+    """The image surface's bundles reach the client through the same one catalogue.
+
+    The image overlay patches bundles the text surface never touches, and both
+    surfaces change declared sizes, so a release can only carry one table.  This
+    pins that the published table hold both patches -- and that the image bundles
+    are covered by the alignment like any other released object, which is what a
+    per-surface alignment would have missed.
+    """
+
+    INDEX_ROWS = (("story.gtx.unity3d", "remote-hash.unity3d", "a" * 64),
+                  ("icon_tex.gtx.unity3d", "image-remote.unity3d", "b" * 64))
+    IMAGE_BYTES = b"image-bytes"
+    VERSION = "1077640"
+
+    def _repo(self, base: Path) -> Path:
+        """A synthetic repository with a reviewed image overlay for one bundle."""
+        root = base / "repo"
+        _write_synthetic_root(root, images_complete=False)
+        overlay = root / "image-overlay" / self.VERSION
+        artifacts = overlay / "jp-android"
+        artifacts.mkdir(parents=True)
+        (artifacts / "image-remote.unity3d").write_bytes(self.IMAGE_BYTES)
+        (overlay / "overlay-manifest.json").write_text(json.dumps({"records": [{
+            "logical": "icon_tex.gtx.unity3d", "remote": "image-remote.unity3d",
+            "original_sha256": "c" * 64,
+            "translated_sha256": hashlib.sha256(self.IMAGE_BYTES).hexdigest(),
+            "original_bytes": len("icon_tex.gtx.unity3d"),
+            "translated_bytes": len(self.IMAGE_BYTES),
+        }]}), encoding="utf-8")
+        # The catalogue shipped with the overlay: the official sizes plus the
+        # image patch, which is the shape merge_image_overlay expects.
+        (artifacts / "index.data").write_bytes(_catalogue({
+            logical: [content_hash, remote,
+                      len(self.IMAGE_BYTES) if remote == "image-remote.unity3d" else len(logical)]
+            for logical, remote, content_hash in self.INDEX_ROWS}))
+        return root
+
+    def _download(self, url, destination, declared_size, content_key=None, cache_root=None):
+        destination = Path(destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.suffix == ".data":
+            destination.write_bytes(_catalogue({
+                logical: [content_hash, remote, len(logical)]
+                for logical, remote, content_hash in self.INDEX_ROWS}))
+        else:
+            destination.write_bytes(b"official-bytes")
+        return "fetched"
+
+    def _overlay(self, snapshot, _archive, _ledger, output, *_args, **_kwargs):
+        requested = json.loads(Path(snapshot).read_text(encoding="utf-8"))["objects"]
+        Path(output).mkdir(parents=True, exist_ok=True)
+        rows = []
+        for row in requested:
+            target = Path(output) / "jp-android" / row["remote"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"translated:" + row["logical"].encode("utf-8"))
+            rows.append({"logical": row["logical"], "remote": row["remote"],
+                         "source_bundle_sha256": hashlib.sha256(
+                             (Path(_archive) / "jp-android" / row["remote"]).read_bytes()).hexdigest(),
+                         "output_plain_sha256": "e" * 64})
+        (Path(output) / "localization-manifest.json").write_text(
+            json.dumps({"bundles": rows}), encoding="utf-8")
+
+    def test_both_surfaces_sizes_land_in_the_published_catalogue(self):
+        from assets_generated_index import GeneratedStore
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root = self._repo(base)
+            work, output = base / "work", base / "out"
+            overlay = root / "image-overlay" / self.VERSION
+            argv = [
+                "--version-manifest", str(root / "manifests" / "asset-version.json"),
+                "--work-root", str(work), "--output-root", str(output),
+                "--source-commit", "a" * 40, "--translation-commit", "b" * 40,
+                "--generated-commit", "c" * 40, "--ci-run-id", "12345",
+                "--image-overlay-manifest", str(overlay / "overlay-manifest.json"),
+                "--image-overlay-root", str(overlay / "jp-android"),
+                "--image-index", str(overlay / "jp-android" / "index.data"),
+            ]
+            stdout = io.StringIO()
+            with mock.patch.object(build, "ROOT", root), \
+                    mock.patch.object(build, "download", side_effect=self._download), \
+                    mock.patch.object(build, "run_overlay", side_effect=self._overlay), \
+                    mock.patch.object(build, "GeneratedStore",
+                                      return_value=GeneratedStore(output)), \
+                    mock.patch.object(build, "read_gtx",
+                                      return_value=("name", "k^原文", b"cipher")), \
+                    mock.patch.object(sys, "argv", ["build_generated_release.py", *argv]), \
+                    contextlib.redirect_stdout(stdout):
+                self.assertEqual(build.main(), 0)
+            # The image surface reports itself on one line, then the build report.
+            lines = stdout.getvalue().splitlines()
+            image_report = json.loads(lines[0])
+            self.assertEqual(image_report["image_surface"], "merged_into_release")
+            self.assertEqual(image_report["image_bundles"], 1)
+            report = json.loads("\n".join(lines[1:]))
+            self.assertEqual(report["image_surface"], "published_1_bundles")
+            self.assertEqual(report["index_alignment"],
+                             {"published_index": str(work / "catalogue" / "index.data"),
+                              "published_index_sha256":
+                                  build.sha256_file(work / "catalogue" / "index.data"),
+                              # The image patch was already in the table this build
+                              # aligned, so only the text record's size moved here.
+                              "aligned_from": str(work / "merged-index.data"),
+                              "catalogue_records": 2, "covered_records": 2,
+                              "changed_records": 1, "uncovered_records": 0})
+
+            manifest = json.loads(
+                (output / self.VERSION / "manifest.json").read_text(encoding="utf-8"))
+            entries = {e["logical_key"]: e for e in manifest["entries"]}
+            self.assertEqual(len(entries), 3)
+            catalog_entry = entries["__official_asset_index__"]
+            self.assertEqual(catalog_entry["source_sha256"],
+                             build.sha256_file(work / "index.data"))
+            catalog = msgpack.unpackb(
+                (output / catalog_entry["object_path"]).read_bytes(),
+                raw=False, strict_map_key=False)[0]
+            for logical, remote in (("story.gtx.unity3d", "remote-hash.unity3d"),
+                                    ("icon_tex.gtx.unity3d", "image-remote.unity3d")):
+                self.assertEqual(catalog[logical][1], remote)
+                self.assertEqual(catalog[logical][2],
+                                 (output / entries[logical]["object_path"]).stat().st_size)
+            # The text patch is in this table because of the alignment: the merged
+            # catalogue the image surface produces carries only its own patch.
+            self.assertEqual(catalog["story.gtx.unity3d"][2],
+                             len(b"translated:story.gtx.unity3d"))
+            self.assertEqual(catalog["icon_tex.gtx.unity3d"][2], len(self.IMAGE_BYTES))
 
 
 class OfficialObjectCache(unittest.TestCase):
