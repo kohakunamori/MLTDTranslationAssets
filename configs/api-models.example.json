@@ -2,7 +2,8 @@
   "schema_version": 3,
   "_comment": [
     "Public provider/model settings for the hosted LLM draft workflow; credentials belong in GitHub Actions secrets.",
-    "The workflow creates api-runtime.local.json in the ephemeral runner temp directory."
+    "The workflow creates api-runtime.local.json in the ephemeral runner temp directory.",
+    "2026-10-13: imas-trans overrides api_protocol to chat_completions. The free StepFun model behind this alias answers normally on the chat route but the Responses route returns an empty response object with no output, so every request on that route failed and silently fell back to the image-model failover. The failover model works on both routes; the chat route also accepts the no-reasoning task settings."
   ],
   "defaults": {
     "preset": "mltd-balanced",
@@ -18,6 +19,9 @@
     }
   },
   "models": {
-    "imas-trans": "imas-trans"
+    "imas-trans": {
+      "model": "imas-trans",
+      "api_protocol": "chat_completions"
+    }
   }
 }
