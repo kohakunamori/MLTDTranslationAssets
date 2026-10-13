@@ -75,3 +75,13 @@ and facial expressions still changed. Prompt instructions alone did not enforce
 pixel preservation. Before production use, text-region masks and deterministic
 restoration from the source image are necessary; the experimental output stays
 outside the approved image library.
+
+`scripts/image_text_regions.py` demonstrates source-bound restoration on the
+exact sampled `ex4c00968` archive. It checks input/output hashes, verifies the
+comparison original against the submitted input pixels, applies explicit text
+masks, preserves source alpha, and proves zero changed pixels outside the masks
+and in protected name/logo/face regions. It also splits the result back into
+the original six PNG texture sizes. The map is deliberately restricted to this
+verified source archive; a changed upstream source is rejected. The resulting
+candidate remains `generated_unreviewed`, because pixel preservation does not
+validate Chinese glyphs, translation quality or mask-edge appearance.
