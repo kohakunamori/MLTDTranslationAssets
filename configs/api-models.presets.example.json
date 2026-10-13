@@ -11,11 +11,11 @@
       "timeout": 180,
       "retries": 2,
       "request_params_by_task": {
-        "UI": {"reasoning_effort": "none", "max_tokens": 256},
-        "TITLE": {"reasoning_effort": "none", "max_tokens": 256},
-        "SHARED_SIMPLE": {"reasoning_effort": "none", "max_tokens": 256},
-        "DESCRIPTION": {"reasoning_effort": "low", "max_tokens": 1024},
-        "DIALOGUE": {"reasoning_effort": "low", "max_tokens": 1024},
+        "UI": {"reasoning_effort": "none", "max_tokens": 2048},
+        "TITLE": {"reasoning_effort": "none", "max_tokens": 2048},
+        "SHARED_SIMPLE": {"reasoning_effort": "none", "max_tokens": 2048},
+        "DESCRIPTION": {"reasoning_effort": "low", "max_tokens": 2048},
+        "DIALOGUE": {"reasoning_effort": "low", "max_tokens": 2048},
         "SHARED": {"reasoning_effort": "high", "max_tokens": 2048}
       },
       "cache_warmup": false,
