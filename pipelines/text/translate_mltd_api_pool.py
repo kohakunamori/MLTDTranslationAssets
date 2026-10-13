@@ -879,6 +879,16 @@ def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "
 def extract_chat_text(doc: dict[str, Any]) -> str:
     choices = doc.get("choices")
     if not isinstance(choices, list) or not choices:
+        # Some gateways forward an upstream envelope unchanged instead of
+        # re-encoding it as an OpenAI chat completion
+        # ({"success": true, "data": {"choices": [...]}}).  Accept that
+        # shape so a real provider answer is not discarded as empty.
+        nested = doc.get("data")
+        if isinstance(nested, dict):
+            nested_choices = nested.get("choices")
+            if isinstance(nested_choices, list) and nested_choices:
+                choices = nested_choices
+    if not isinstance(choices, list) or not choices:
         raise ValueError("response missing choices[]")
     message = choices[0].get("message", {}) if isinstance(choices[0], dict) else {}
     content = message.get("content") if isinstance(message, dict) else None
