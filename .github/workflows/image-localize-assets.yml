@@ -56,6 +56,10 @@ permissions:
 jobs:
   policy:
     runs-on: ubuntu-latest
+    # One checkout and one policy read. Bounded so a stalled clone cannot hold
+    # the `image-localize-assets` group (and, through the reusable call, the
+    # Assets packaging hand-off) open indefinitely.
+    timeout-minutes: 10
     outputs:
       images_enabled: ${{ steps.features.outputs.images_enabled }}
     steps:

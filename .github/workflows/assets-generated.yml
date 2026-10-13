@@ -47,6 +47,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Bounded so a stalled cache restore or a wedged Unity3D assembly cannot hold
+    # the `assets-generated-main` group for the default six hours and block every
+    # later release behind it. Measured runs on 2026-10-13: 1.7-3.4 minutes, so
+    # this is ~13x the observed worst case and only fires on a hang.
+    timeout-minutes: 45
     steps:
       - name: Checkout source commit
         uses: actions/checkout@v4
