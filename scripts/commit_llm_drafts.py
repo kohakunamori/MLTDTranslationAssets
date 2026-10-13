@@ -40,6 +40,8 @@ OPTIONAL_PATHS = (
     # resource family, and that is exactly the event worth committing.
     "manifests/official-bundle-index.json",
     "manifests/official-asset-inventory.json",
+    "manifests/event-unit-source-index.json",
+    "manifests/localization-coverage.json",
 )
 
 #: A push can lose a race with the generated-assets workflow writing to main.

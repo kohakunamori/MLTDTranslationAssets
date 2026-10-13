@@ -34,10 +34,9 @@ DEFAULT_REGISTRY = ROOT / "manifests" / "localizable-bundle-families.json"
 
 SCHEMA_VERSION = 1
 
-#: Match operators a family may declare.  Kept intentionally small: a pattern
-#: that needs globbing or regex would be hard to review, and reviewability is the
-#: whole point of moving the selection rule out of the script.
-MATCH_OPERATORS = ("exact", "prefix", "suffix", "contains")
+#: Regex uses fullmatch, so a numeric JSON family cannot admit texture atlases
+#: sharing its prefix. Invalid expressions are rejected when loading the registry.
+MATCH_OPERATORS = ("exact", "prefix", "suffix", "contains", "regex")
 
 _DIGITS = re.compile(r"\d+")
 
@@ -109,6 +108,11 @@ def load_registry(path: Path | str = DEFAULT_REGISTRY) -> dict:
                 raise RegistryError(
                     f"{path}: family {family_id!r} has an empty {operator} pattern"
                 )
+            if operator == "regex":
+                try:
+                    re.compile(value)
+                except re.error as exc:
+                    raise RegistryError(f"{path}: invalid family regex: {exc}") from exc
     for key in ("exclude", "reviewed_unclassified"):
         value = document.get(key, [])
         if not isinstance(value, list) or any(not isinstance(v, str) for v in value):
@@ -127,6 +131,8 @@ def _matches(match: dict, name: str) -> bool:
         if operator == "suffix" and not lowered.endswith(needle):
             return False
         if operator == "contains" and needle not in lowered:
+            return False
+        if operator == "regex" and re.fullmatch(pattern, name, re.I) is None:
             return False
     return True
 

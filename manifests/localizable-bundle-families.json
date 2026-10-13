@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "mltd-localizable-bundle-families",
-  "description": "官方 assets 索引里哪些逻辑包属于「可汉化面」。discover_official_bundles.py 用它把索引里的包分成 localizable / unclassified；refresh_latest_official_catalogue.py 与 refresh_lyrics_catalogue.py 用它决定下载与抽取范围。新增一个面 = 在这里加一条 family，必须先确认回写链路存在。exclude 为永不纳入的官方自测包（scrobj_00test.unity3d 不含任何歌词行）。reviewed_unclassified 是「已人工抽查、确认不是可翻译文本面」的家族签名前缀，不再计入 unclassified 与「新资源类型」告警：ACB 音频（Criware @UTF 容器，语音）、fhout_event_*_story_*.json（动画曲线 + TextId 引用，正文在已覆盖的 gtx 里）、纯图片家族（Sprite/Texture2D，画面上文字来自已覆盖的主数据表）。抽查证据见 docs/ARCHITECTURE.md 的「未纳入面审计」表。",
+  "description": "已具备抽取与回写链路的文本家族。图片家族仅做覆盖检测，不参与自动汉化；纹理可能包含日文，不再假定其文字来自 GTX 表。覆盖与缺口记录于 manifests/localization-coverage.json。reviewed_unclassified 只抑制资源类型告警，不代表已汉化。",
   "families": [
     {
       "id": "gtx_text",
@@ -19,7 +19,16 @@
       "match": {
         "prefix": "scrobj_"
       },
-      "reason": "歌曲歌词包：MonoBehaviour 的 scenario[*].str。目前只落 lyrics/ 源库供门户与人工审校；回写进客户端资源面的注入器尚未接入。"
+      "reason": "歌曲歌词 MonoBehaviour scenario[*].str，由歌词抽取及 build_lyric_overlay 回写进入 generated 发布。"
+    },
+    {
+      "id": "event_unit_dialogue",
+      "pipeline": "event_units",
+      "queue": "locales/event-unit/<bundle>.jsonl",
+      "match": {
+        "regex": "event_unit_talk_\\d+\\.unity3d"
+      },
+      "reason": "commands[index].text；event_unit_localization 仅处理数字编号对话包，按位置与源哈希回写并验证整个 JSON 和其余 Unity 对象。"
     }
   ],
   "exclude": [

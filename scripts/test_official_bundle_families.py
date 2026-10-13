@@ -128,7 +128,7 @@ class CommittedRegistryTests(unittest.TestCase):
         self.assertIsNone(families.classify(document, "costume_icon_0001.unity3d"))
         self.assertEqual(
             sorted(families.registry_families(document)),
-            ["gtx_text", "song_lyrics"],
+            ["event_unit_dialogue", "gtx_text", "song_lyrics"],
         )
 
     def test_reviewed_prefixes_suppress_known_non_text_surfaces(self):

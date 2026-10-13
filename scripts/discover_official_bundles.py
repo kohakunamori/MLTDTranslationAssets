@@ -127,7 +127,9 @@ def memo_bundle_names(root: Path) -> set[str]:
 
 def tracked_bundle_names(root: Path) -> set[str]:
     """Union of every source of "we already have this bundle"."""
-    return locale_bundle_names(root) | lyrics_bundle_names(root) | memo_bundle_names(root)
+    event_memo = root / "manifests/event-unit-source-index.json"
+    events = set(json.loads(event_memo.read_text(encoding="utf-8")).get("bundles", {})) if event_memo.is_file() else set()
+    return locale_bundle_names(root) | lyrics_bundle_names(root) | memo_bundle_names(root) | events
 
 
 def load_inventory(path: Path) -> dict[str, int]:

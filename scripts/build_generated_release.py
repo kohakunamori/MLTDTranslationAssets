@@ -36,11 +36,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 import msgpack
 
@@ -52,6 +54,7 @@ if str(ROOT / "scripts") not in sys.path:
 
 from assets_generated_index import GeneratedStore, GeneratedStoreError
 import build_lyric_overlay
+import event_unit_localization
 import merge_image_overlay
 import release_reuse
 import bundle_incremental as incremental
@@ -177,6 +180,8 @@ def read_translation_rows(root: Path, asset_version: str,
                 if str(row.get("source_sha256", "")).lower() != source_hash:
                     raise ValueError(f"source hash mismatch at {path}:{line_no}")
                 bundle = str(row.get("bundle", ""))
+                if event_unit_localization.is_bundle(logical_name(bundle)):
+                    continue
                 key = str(row.get("item_key", ""))
                 if not bundle or not key:
                     raise ValueError(f"accepted row lacks bundle/item_key at {path}:{line_no}")
@@ -354,8 +359,18 @@ def download(url: str, destination: Path, declared_size: int | None,
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".part")
     request = Request(url, headers={"User-Agent": "MLTDTranslationAssets-generated/1"})
-    with urlopen(request, timeout=90) as response, temporary.open("wb") as stream:
-        shutil.copyfileobj(response, stream, length=1 << 20)
+    for attempt in range(3):
+        try:
+            with urlopen(request, timeout=90) as response, temporary.open("wb") as stream:
+                shutil.copyfileobj(response, stream, length=1 << 20)
+            break
+        except (URLError, TimeoutError, ConnectionError) as exc:
+            temporary.unlink(missing_ok=True)
+            if isinstance(exc, HTTPError) and exc.code not in (408, 429, 500, 502, 503, 504):
+                raise
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
     if declared_size is not None and temporary.stat().st_size != declared_size:
         temporary.unlink(missing_ok=True)
         raise ValueError(f"official object size mismatch for {url}")
@@ -870,6 +885,10 @@ def main() -> int:
         targets=lyric_plan.rebuild,
     )
     entries_path = work / "entries.json"
+    event_plan, event_records = event_unit_localization.build_overlay(
+        root=ROOT, index=index, work=work, overlay=overlay, version=version,
+        previous=previous, store=store, downloader=download,
+        cache_root=official_cache, force=args.no_reuse)
     entries = build_entries(overlay, overlay / "localization-manifest.json",
                             version["asset_version"], source_client, allow_empty=True)
     # The reused bundles were never handed to the overlay, so their entries come
@@ -878,6 +897,7 @@ def main() -> int:
     # pass was told to leave alone are carried over by the same rule.
     entries.extend(plan.reusable.values())
     entries.extend(lyric_plan.reusable.values())
+    entries.extend(event_plan.reusable.values())
     image_bundles = 0
     # The image surface writes its own size patch into a merged table, and the
     # alignment below has to carry that patch as well, so it patches the merged
@@ -943,10 +963,12 @@ def main() -> int:
         else entry["artifact_sha256"])) for entry in entries]
     incremental.finish_records(text_records, state_entries)
     incremental.finish_records(lyric_records, state_entries)
+    incremental.finish_records(event_records, state_entries)
     reuse_record = release_reuse.reuse_block(
         index_sha256=index_sha256, resolution=resolution, scope="release")
     reuse_record[incremental.STATE_KEY] = {
         "schema": incremental.SCHEMA, "text": text_records, "lyrics": lyric_records,
+        "event_units": event_records,
     }
     result = store.build_release(
         version["asset_version"], entries,

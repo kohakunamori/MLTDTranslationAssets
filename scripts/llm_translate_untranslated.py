@@ -2,9 +2,10 @@
 """Prepare, apply and publish resumable LLM translation drafts.
 
 This adapter deliberately keeps the existing translation pool as the provider
-implementation.  It only converts the public Assets JSONL shape to the pool's
-queue shape and writes machine output back as ``pending`` rows.  It never
-changes an accepted row and never treats an LLM result as human-reviewed.
+implementation. It converts the public Assets JSONL shape to the pool's queue
+and writes machine output as pending rows. Accepted text is preserved except
+for narrowly identified copied-Japanese repairs; a failed repair keeps the old
+accepted row. It never treats machine output as human-reviewed.
 
 ``publish`` is the separate, explicit step that admits those machine drafts to
 the generated build.  It flips only ``pending`` + ``translation_stage=
@@ -38,6 +39,7 @@ if str(_REPO_ROOT) not in sys.path:
 from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
 from pipelines.text.mltd_lyric_rules import is_english_bypass, join_lyric_lines, validate_lyric_tokens
 from pipelines.core.hashing import sha256_text
+from scripts.japanese_residue import repair_reason
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -119,8 +121,9 @@ def collect(args: argparse.Namespace) -> int:
     count = 0
     seen: set[str] = set()
     with output.open("w", encoding="utf-8", newline="\n") as stream:
-        for path, line_no, row, kind in rows(ROOT, scope):
-            if row.get("status") != "untranslated" or str(row.get("zh", "")):
+        for path, line_no, row, kind in queue_rows(ROOT, scope):
+            repair = repair_reason(row) if kind == "locales" else None
+            if not repair and (row.get("status") != "untranslated" or str(row.get("zh", ""))):
                 continue
             source = str(row.get("ja", ""))
             if kind == "lyrics" and is_english_bypass(source):
@@ -146,12 +149,23 @@ def collect(args: argparse.Namespace) -> int:
                 "source_client_version": row.get("source_client_version"),
                 "translation": "",
                 "status": "pending",
+                "repair_reason": repair,
             }, ensure_ascii=False, separators=(",", ":")) + "\n")
             count += 1
     print(json.dumps({"queue": str(output), "items": count,
                       "scope": scope,
                       "asset_version": wanted_version or None}, ensure_ascii=False))
     return 0
+
+
+def queue_rows(root: Path, scope: str):
+    """Repair confirmed published defects before draining new source backlog."""
+    for candidate in rows(root, scope):
+        if candidate[3] == "locales" and repair_reason(candidate[2]):
+            yield candidate
+    for candidate in rows(root, scope):
+        if candidate[2].get("status") == "untranslated":
+            yield candidate
 
 
 def apply(args: argparse.Namespace) -> int:
@@ -203,8 +217,11 @@ def apply(args: argparse.Namespace) -> int:
             row: dict[str, Any] = json.loads(line)
             sid = str(row.get("source_sha256", ""))
             translation = translations.get(sid)
-            if row.get("status") == "untranslated" and translation is not None:
+            repair = repair_reason(row) if kind == "locales" else None
+            if (row.get("status") == "untranslated" or repair) and translation is not None:
                 source_text = str(row.get("ja", ""))
+                if sha256_text(source_text) != sid:
+                    raise ValueError(f"source hash mismatch at {path}")
                 candidate = translation
                 if kind == "lyrics":
                     # A lyric slot renders one line, so the source's break can only
@@ -217,6 +234,8 @@ def apply(args: argparse.Namespace) -> int:
                 if source_text:
                     try:
                         validate_draft(kind, source_text, candidate)
+                        if kind == "locales" and repair_reason(dict(row, status="accepted", zh=candidate)):
+                            raise ValueError("draft still contains copied Japanese")
                     except ValueError as exc:
                         rejected.append({
                             "source_sha256": sid,

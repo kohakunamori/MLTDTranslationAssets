@@ -105,6 +105,25 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
     def test_job_cannot_hang_forever(self):
         self.assertEqual(self.job["timeout-minutes"], 180)
 
+    def test_same_version_and_full_rescan_always_synchronize(self):
+        run = self.steps["Extract new source rows from official latest assets"]["run"]
+        self.assertNotIn('if [ "$has_update"', run)
+        self.assertIn("inputs.full_rescan", run)
+        self.assertIn('python "${args[@]}"', run)
+        names = [step.get("name") for step in self.job["steps"]]
+        self.assertLess(names.index("Extract event-unit dialogue"), names.index("Discover new localizable bundles"))
+        self.assertLess(names.index("Verify source synchronization and detect image coverage"), names.index("Collect untranslated rows"))
+        self.assertIn("--require-source-sync", self.steps["Verify source synchronization and detect image coverage"]["run"])
+
+    def test_backfill_is_bounded_and_continues_only_after_real_progress(self):
+        self.assertIn('then limit=500; fi', self.steps["Translate with the existing provider pool"]["run"])
+        followup = self.workflow["jobs"]["continue-backlog"]
+        self.assertIn("needs.draft.outputs.updated != '0'", followup["if"])
+        self.assertIn("needs.draft.outputs.remaining != '0'", followup["if"])
+        self.assertIn("inputs.max_items == '0'", followup["if"])
+        self.assertEqual(self.steps["Refresh translation backlog report"]["id"], "backlog")
+        self.assertIn(".llm-apply.json", self.steps["Apply LLM translations"]["run"])
+
     def test_new_bundles_are_discovered_and_lyrics_extracted_before_translation(self):
         """The steps that used to be missing, and their order.
 
@@ -124,11 +143,11 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         discovery_run = self.steps["Discover new localizable bundles"]["run"]
         self.assertIn("scripts/discover_official_bundles.py", discovery_run)
         self.assertIn("--report .llm-discovery.json", discovery_run)
-        # A missing index means "no version update today", not a red run.
-        self.assertIn('if [ ! -f "$index" ]', discovery_run)
+        # A missing index is a synchronization failure, even at the same version.
+        self.assertIn('test -f "$index"', discovery_run)
         lyrics_run = self.steps["Extract new song lyrics"]["run"]
         self.assertIn("scripts/refresh_lyrics_catalogue.py", lyrics_run)
-        self.assertIn('if [ ! -f "$index" ]', lyrics_run)
+        self.assertIn('test -f "$index"', lyrics_run)
 
     def test_the_queue_and_the_commit_cover_the_lyric_source_tree(self):
         collect = self.steps["Collect untranslated rows"]["run"]

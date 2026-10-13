@@ -63,13 +63,16 @@ def validate_locales(root: Path) -> dict[str, int]:
 
     counts = {"total_rows": 0, "accepted": 0, "pending": 0, "untranslated": 0, "bundles": 0}
 
-    for cat in CATEGORIES:
+    # Required legacy directories still form the baseline, but newly admitted
+    # surfaces (for example event-unit) must pass the exact same row gates.
+    categories = set(CATEGORIES) | {path.name for path in locales_dir.iterdir() if path.is_dir()}
+    for cat in sorted(categories):
         cat_dir = locales_dir / cat
         if not cat_dir.is_dir():
             print(f"ERROR: Missing category directory {cat_dir}", file=sys.stderr)
             sys.exit(1)
 
-        jsonl_files = list(cat_dir.glob("*.jsonl"))
+        jsonl_files = list(cat_dir.rglob("*.jsonl"))
         if not jsonl_files:
             print(f"WARNING: No .jsonl files in {cat_dir}", file=sys.stderr)
             continue

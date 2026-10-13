@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       max_items:
-        description: 'Optional queue limit for a smoke run'
+        description: 'Explicit smoke-run limit; 0 processes the backlog in resumable 500-item runs'
         required: false
         default: '0'
       max_bundles:
@@ -58,6 +58,8 @@ jobs:
     outputs:
       images_enabled: ${{ steps.features.outputs.images_enabled }}
       published: ${{ steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true' }}
+      remaining: ${{ steps.backlog.outputs.remaining }}
+      updated: ${{ steps.apply.outputs.updated }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -114,9 +116,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          has_update=$(python -c 'import json; print(str(json.load(open(".llm-asset-check.json"))["has_update"]).lower())')
-          if [ "$has_update" = true ]; then
-            args=(scripts/refresh_latest_official_catalogue.py
+          # Observing a version is independent of completing source extraction.
+          # Always synchronize; the content memo keeps unchanged runs cheap.
+          args=(scripts/refresh_latest_official_catalogue.py
                   --bundle-index manifests/official-bundle-index.json)
             bundle_limit='${{ inputs.max_bundles }}'
             if [ -n "$bundle_limit" ] && [ "$bundle_limit" != 0 ]; then
@@ -129,10 +131,17 @@ jobs:
             if [ '${{ inputs.full_rescan }}' = 'true' ]; then
               args+=(--full-rescan)
             fi
-            python "${args[@]}"
-          else
-            echo 'Official asset version unchanged; skip bundle download.'
-          fi
+          python "${args[@]}"
+
+      - name: Extract event-unit dialogue
+        shell: bash
+        run: |
+          set -euo pipefail
+          index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
+          test -f "$index"
+          args=(scripts/event_unit_localization.py --index "$index")
+          if [ '${{ inputs.full_rescan }}' = 'true' ]; then args+=(--full-rescan); fi
+          python "${args[@]}" | tee .llm-event-units.json
 
       - name: Discover new localizable bundles
         # The step that used to be missing.  The refresh above can only re-verify
@@ -147,10 +156,7 @@ jobs:
         run: |
           set -euo pipefail
           index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
-          if [ ! -f "$index" ]; then
-            echo "No official index at $index (no version update in this run); nothing to discover."
-            exit 0
-          fi
+          test -f "$index"
           python scripts/discover_official_bundles.py \
             --index "$index" \
             --report .llm-discovery.json | tee .llm-discovery-summary.json
@@ -163,11 +169,17 @@ jobs:
         run: |
           set -euo pipefail
           index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
-          if [ ! -f "$index" ]; then
-            echo "No official index at $index (no version update in this run); no new lyrics to extract."
-            exit 0
-          fi
-          python scripts/refresh_lyrics_catalogue.py --index "$index" | tee .llm-lyrics.json
+          test -f "$index"
+          args=(scripts/refresh_lyrics_catalogue.py --index "$index")
+          if [ '${{ inputs.full_rescan }}' = 'true' ]; then args+=(--full-rescan); fi
+          python "${args[@]}" | tee .llm-lyrics.json
+
+      - name: Verify source synchronization and detect image coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
+          python scripts/localization_coverage.py --index "$index" --require-source-sync | tee .llm-coverage.json
 
       - name: Reuse approved lyric translations
         # One Japanese line appears in several bundle renditions (scrobj_priam+.unity3d
@@ -230,6 +242,9 @@ jobs:
             exit 0
           fi
           limit='${{ inputs.max_items }}'
+          # Large recovered surfaces must survive the three-hour job timeout.
+          # Default runs drain the backlog through bounded follow-up runs.
+          if [ -z "$limit" ] || [ "$limit" = 0 ]; then limit=500; fi
           args=(
             --input .llm-queue.jsonl
             --output .llm-draft.jsonl
@@ -263,8 +278,10 @@ jobs:
             echo 'No draft output.'
             exit 0
           fi
-          python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl --scope all
+          python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl --scope all | tee .llm-apply.json
+          echo "updated=$(python -c 'import json; print(json.load(open(".llm-apply.json"))["updated"])')" >> "$GITHUB_OUTPUT"
           python scripts/validate_repo.py
+
           # Publish what just validated, before anything else can fail.  These
           # rows are still `pending`, so no release reads them until the
           # promotion below; committing them here is what makes a night's work
@@ -299,6 +316,19 @@ jobs:
           # Promotion turns on the accepted-row protected-token gate, so the
           # repository must be revalidated between promotion and the commit.
           python scripts/validate_repo.py
+
+      - name: Refresh translation backlog report
+        id: backlog
+        if: >-
+          (success() || steps.apply.outcome == 'success') &&
+          steps.publish.outcome != 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          index=".llm-official-work/$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["index_name"])')"
+          python scripts/localization_coverage.py --index "$index" --require-source-sync | tee .llm-coverage.json
+          python scripts/llm_translate_untranslated.py collect --scope all --output .llm-remaining.jsonl
+          echo "remaining=$(wc -l < .llm-remaining.jsonl)" >> "$GITHUB_OUTPUT"
 
       - name: Commit LLM translations to main
         # Runs whenever the apply step itself validated, even if a few queue
@@ -341,12 +371,21 @@ jobs:
             .llm-discovery-summary.json
             .llm-lyrics.json
             .llm-reuse.json
+            .llm-event-units.json
+            .llm-apply.json
+            .llm-remaining.jsonl
+            .llm-coverage.json
+            manifests/localization-coverage.json
 
       - name: Summarize translation outcome
         if: always()
         shell: bash
         run: |
           set -euo pipefail
+          if [ -f .llm-coverage.json ]; then
+            cat .llm-coverage.json
+            echo 'Image coverage was inventoried only; image generation remains disabled by policy.'
+          fi
           # The promotion runs even when this run's queue was empty, so report it
           # before the translation summary's early exit.
           if [ -f .llm-publish.json ]; then
@@ -421,6 +460,31 @@ jobs:
     with:
       enabled: true
     secrets: inherit
+
+  continue-backlog:
+    name: Continue verified text backlog
+    needs: draft
+    # Explicit smoke limits stop after one batch. Default backfills continue
+    # only when the previous batch actually changed source rows. A provider or
+    # validation outage cannot create a no-progress dispatch loop.
+    if: >-
+      needs.draft.result == 'success' && needs.draft.outputs.remaining != '' &&
+      needs.draft.outputs.remaining != '0' && needs.draft.outputs.updated != '' &&
+      needs.draft.outputs.updated != '0' &&
+      (inputs.max_items == '0' || inputs.max_items == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch the next bounded text batch
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_DRAFTS: ${{ inputs.publish_drafts }}
+        run: |
+          set -euo pipefail
+          args=(llm-translate-assets.yml --ref main -f max_items=0)
+          if [ "$PUBLISH_DRAFTS" = false ]; then args+=(-f publish_drafts=false); fi
+          gh workflow run "${args[@]}"
 
   package:
     name: Package text, lyrics and completed images together

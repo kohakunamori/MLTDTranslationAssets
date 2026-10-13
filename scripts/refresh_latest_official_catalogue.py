@@ -93,6 +93,9 @@ def select_bundles(
     selected: dict = {}
     discovered: list[str] = []
     for logical, row in index.items():
+        family = classify(registry, logical)
+        if family is not None and family not in allowed:
+            continue
         if logical.casefold() in known_bundles:
             selected[logical] = row
             continue

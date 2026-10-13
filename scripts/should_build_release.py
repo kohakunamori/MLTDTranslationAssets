@@ -51,6 +51,7 @@ RELEASE_INPUT_FILES = (
     "scripts/promote_merged_locales.py",
     "scripts/build_portal_resource_manifest.py",
     "scripts/build_lyric_overlay.py",
+    "scripts/event_unit_localization.py",
     "scripts/bundle_incremental.py",
     "scripts/merge_image_overlay.py",
     "scripts/source_provenance.py",
@@ -63,6 +64,7 @@ RELEASE_INPUT_FILES = (
 # look out of date one build later: the gate would never skip anything.
 DERIVED_OUTPUTS = (
     "manifests/portal-resource-manifest.json",
+    "manifests/localization-coverage.json",
 )
 
 

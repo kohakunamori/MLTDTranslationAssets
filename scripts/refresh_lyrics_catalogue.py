@@ -37,6 +37,7 @@ performed by this command.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import sys
 from datetime import datetime, timezone
@@ -145,6 +146,7 @@ def main() -> int:
                         help="report what would be extracted without downloading or writing")
     parser.add_argument("--no-aggregate", action="store_true",
                         help="skip rewriting all_lyrics.jsonl / lyrics_manifest.json")
+    parser.add_argument("--full-rescan", action="store_true")
     args = parser.parse_args()
 
     version = load_version_manifest(args.version_manifest)
@@ -160,24 +162,16 @@ def main() -> int:
     present = set(song_names(args.lyrics_root))
     missing, known = select_songs(index, registry, present)
     memo = load_source_memo(args.source_memo)
-    # A missing memo must not force a full re-download of every song: record the
-    # current remotes and treat what is already extracted as current.  From then
-    # on, only genuinely changed objects are re-extracted.
-    first_run = not memo
-    if first_run:
-        for name in known:
-            logical = name
-            row = index.get(logical)
-            if row is not None:
-                memo[logical] = str(row.get("remote", ""))
-    changed = [] if first_run else [name for name in changed_songs(index, memo)]
+    # A missing memo is evidence of missing verification, never evidence that
+    # existing source rows already describe the current official object.
+    changed = [name for name in known if args.full_rescan or memo.get(name) != str(index[name].get("remote", ""))]
 
     total_bytes = sum(int(index[name].get("declared_size", 0) or 0) for name in missing if name in index)
     refused = None
     if args.max_new_bundles and len(missing) > args.max_new_bundles:
         refused = f"{len(missing)} new lyric bundles exceed the cap of {args.max_new_bundles}"
-    elif args.max_new_bytes and total_bytes > args.max_new_bytes:
-        refused = f"{total_bytes} new lyric bytes exceed the cap of {args.max_new_bytes}"
+    elif args.max_new_bytes and sum(int(index[name].get("declared_size", 0) or 0) for name in missing + changed) > args.max_new_bytes:
+        refused = f"lyric refresh bytes exceed the cap of {args.max_new_bytes}"
 
     report = {
         "asset_version": version["asset_version"],
@@ -205,17 +199,28 @@ def main() -> int:
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     archive = Path(args.work_root) / "archive" / "jp-android"
     to_process = [(name, False) for name in missing] + [(name, True) for name in changed]
+    from build_generated_release import download
+    failed_downloads = set()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        futures = {pool.submit(download, f"{version['asset_root']}/{index[name]['remote']}",
+                               archive / str(index[name]["remote"]), index[name].get("declared_size")): name
+                   for name, _ in to_process}
+        for future in concurrent.futures.as_completed(futures):
+            name = futures[future]
+            try:
+                future.result()
+            except (OSError, ValueError) as exc:
+                failed_downloads.add(name)
+                report["failures"].append({"bundle": name, "error": f"{type(exc).__name__}: {exc}"})
     for name, is_update in to_process:
+        if name in failed_downloads:
+            continue
         row = index.get(name)
         if row is None:
             report["failures"].append({"bundle": name, "error": "not in the official index"})
             continue
         destination = archive / str(row.get("remote", ""))
         try:
-            from build_generated_release import download  # imported late: tests patch the index only
-
-            if not destination.is_file():
-                download(f"{version['asset_root']}/{row['remote']}", destination, row.get("declared_size"))
             slots = read_slots(destination)
         except (LyricBundleError, OSError, ValueError) as exc:
             report["failures"].append({"bundle": name, "error": f"{type(exc).__name__}: {exc}"})
