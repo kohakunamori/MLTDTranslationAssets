@@ -161,6 +161,15 @@ def load_inventory(path: Path) -> dict[str, int]:
 def write_inventory(path: Path, asset_version: str, families: dict[str, int], observed_at: str) -> None:
     """Write the inventory deterministically so an unchanged index is no diff."""
     path = Path(path)
+    if path.is_file():
+        try:
+            previous = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            previous = {}
+        if (isinstance(previous, dict) and previous.get("schema_version") == INVENTORY_SCHEMA_VERSION
+                and previous.get("asset_version") == str(asset_version)
+                and previous.get("families") == families):
+            return
     path.parent.mkdir(parents=True, exist_ok=True)
     document = {
         "schema_version": INVENTORY_SCHEMA_VERSION,

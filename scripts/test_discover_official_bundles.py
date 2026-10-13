@@ -168,8 +168,10 @@ class InventoryTests(unittest.TestCase):
             first = path.read_text(encoding="utf-8")
             self.assertEqual(discovery.load_inventory(path), counts)
             discovery.write_inventory(path, "1077720", {"costume_icon": 6827, "scrobj_#": 492},
-                                      "2026-10-09T00:00:00+00:00")
+                                      "2026-10-10T00:00:00+00:00")
             self.assertEqual(path.read_text(encoding="utf-8"), first)
+            discovery.write_inventory(path, "1077750", counts, "2026-10-10T00:00:00+00:00")
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["asset_version"], "1077750")
 
     def test_unusable_inventory_degrades_to_empty(self):
         with tempfile.TemporaryDirectory() as tmp:
