@@ -28,7 +28,7 @@
     "mode": "coverage_detection_only",
     "generation_enabled": false,
     "measurement": "bundle inventory including thumbnails; Japanese presence requires visual/OCR review",
-    "generated_source_commit": "85488fb97f62b7e31f7260c10321c5b730f7288e",
+    "generated_source_commit": "b90c79ad2f58130990a7d62cff6a6b97ca7a72cc",
     "families": {
       "event_banners": {
         "official_bundles": 638,
