@@ -2,7 +2,7 @@
   "schema_version": 1,
   "kind": "mltd-official-asset-inventory",
   "asset_version": "1077750",
-  "observed_at": "2026-10-13T07:15:20+00:00",
+  "observed_at": "2026-10-13T07:31:05+00:00",
   "note": "家族签名 = 逻辑包名把数字折叠成 #；只记录出现过的资源类型与数量，不记录 16.8 万个名字。unclassified 家族即「新资源类型」，需要人工判断是否可汉化。",
   "families": {
     "#_#_nf_grst_ltone": 1,
