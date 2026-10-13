@@ -190,5 +190,6 @@ jobs:
             scripts/test_validate_workflow.py \
             pipelines/text/test_mltd_localize_scrobj.py \
             pipelines/text/test_mltd_lyric_rules.py \
+            pipelines/text/test_provider_text_closure.py \
             asset-server \
             server/tests

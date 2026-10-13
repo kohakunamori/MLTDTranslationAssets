@@ -18,8 +18,7 @@ if str(REPO) not in sys.path:
 
 from pipelines.core.hashing import sha256_text
 from pipelines.core.jsonl import read_jsonl, write_jsonl
-from pipelines.text.mltd_localize_gtx import KANA_RE
-from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE, validate_translation
+from pipelines.text.translation_tokens import KANA_RE, PROTECTED_TOKEN_RE, validate_translation
 
 NUMBER_RE = re.compile(r"\d+(?:\.\d+)?%?")
 JP_PERCENT_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)パーセント")

@@ -39,12 +39,13 @@ from pipelines.core.jsonl import jsonl_lines, read_jsonl, write_jsonl
 
 try:  # package import (``pipelines.text``)
     from .translation_tokens import (  # type: ignore[import-not-found]
+        KANA_RE,
         PROTECTED_TOKEN_RE,
         protected_tokens,
         validate_translation,
     )
 except ImportError:  # direct script/module import from this directory
-    from translation_tokens import PROTECTED_TOKEN_RE, protected_tokens, validate_translation  # noqa: E402
+    from translation_tokens import KANA_RE, PROTECTED_TOKEN_RE, protected_tokens, validate_translation  # noqa: E402
 
 PASSWORD = b"Millicon"
 SALT = b"DAISUL___"
@@ -54,7 +55,9 @@ IV_BYTES = 16
 
 # Include CJK so Kanji-only JP labels are not omitted from the translation queue.
 SOURCE_TEXT_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
-KANA_RE = re.compile(r"[\u3040-\u30ff]")
+# KANA_RE is imported from ``translation_tokens`` above and re-exported here
+# unchanged, so extractors and review tools that still read it from this module
+# keep working without defining the range twice.
 
 
 def derive_key_iv() -> tuple[bytes, bytes]:

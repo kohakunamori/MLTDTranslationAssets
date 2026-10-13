@@ -17,7 +17,8 @@ REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from pipelines.text.mltd_localize_gtx import read_jsonl, validate_translation
+from pipelines.core.jsonl import read_jsonl
+from pipelines.text.translation_tokens import validate_translation
 
 FULL_NAME_RE = re.compile(r"^ld_idol_fullname_(\d+)$")
 SPEAKER_SUFFIX_RE = re.compile(r"(?:^|_)(?P<code>\d{3}[a-z]{3}|p)$", re.IGNORECASE)

@@ -19,10 +19,9 @@ REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from pipelines.text.mltd_localize_gtx import read_jsonl
+from pipelines.core.jsonl import read_jsonl, write_jsonl
 from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE
 from pipelines.text.mltd_translation_quality import source_id
-from pipelines.core.jsonl import write_jsonl
 
 DIALOGUE_CATEGORIES = {
     "birth", "card", "event", "job", "main", "memory", "season", "special", "live_mc"

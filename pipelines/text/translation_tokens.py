@@ -1,13 +1,23 @@
-"""Shared protection rules for MLTD translation placeholders.
+"""Shared plain-text rules for MLTD translation rows.
 
-The same token contract is used by extraction, quality review, promotion, and
-repository validation. Keeping it here prevents rule drift and avoids making
-the validator import a full Unity bundle reader.
+The token contract is used by extraction, quality review, promotion, and
+repository validation.  Keeping it here prevents rule drift and avoids making
+any plain-text consumer import a full Unity bundle reader.
+
+``KANA_RE`` lives here for the same reason: the bundle codec used to be its only
+definition, so the quality reviewer and the translation pool pulled UnityPy and
+AES in just to test whether a row still contains kana.  The range is unchanged
+and the codec re-exports the name, so every existing importer still works.
 """
 from __future__ import annotations
 
 import re
 from collections import Counter
+
+
+# Hiragana + katakana blocks, U+3040-U+30FF.  Deliberately not "all CJK":
+# kanji-only sources are expected in the queue and must not be flagged here.
+KANA_RE = re.compile(r"[\u3040-\u30ff]")
 
 
 PROTECTED_TOKEN_RE = re.compile(
@@ -40,6 +50,7 @@ def validate_translation(source: str, translated: str) -> None:
 validate_translation_tokens = validate_translation
 
 __all__ = [
+    "KANA_RE",
     "PROTECTED_TOKEN_RE",
     "protected_tokens",
     "validate_translation",

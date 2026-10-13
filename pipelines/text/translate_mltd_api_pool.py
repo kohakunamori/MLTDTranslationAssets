@@ -21,7 +21,8 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from pipelines.core.hashing import sha256_bytes, sha256_text
-from pipelines.text.mltd_localize_gtx import read_jsonl, validate_translation
+from pipelines.core.jsonl import read_jsonl
+from pipelines.text.translation_tokens import validate_translation
 from pipelines.text.mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
 from pipelines.text.mltd_translation_prompt import compile_prompt_bundle, snapshot_status
 from pipelines.text.translate_gtx_queue import (

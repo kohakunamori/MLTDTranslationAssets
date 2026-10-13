@@ -9,10 +9,18 @@
 # Keep in sync with asset-server/requirements.txt: the suite imports requests.
 # pytest-xdist is what makes the workflow's `-n 4 --dist loadfile` legal; drop it
 # and the suite fails with an unrecognised argument.
+#
+# httpx is the translation pool's only non-stdlib import besides the encoding
+# helpers, and the Client's `llm-translate-client` job installs exactly
+# `requirements-provider.txt` (httpx, msgpack) -- not this file.  Without httpx
+# here, pipelines/text/test_provider_text_closure.py could not import the
+# provider at all, so a re-introduced UnityPy/AES dependency in its import
+# closure would only surface in that consumer's job.
 pytest
 pytest-xdist
 pyyaml
 msgpack
+httpx
 UnityPy
 Pillow
 pycryptodome
