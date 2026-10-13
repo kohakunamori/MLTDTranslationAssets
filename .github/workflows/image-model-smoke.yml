@@ -11,6 +11,10 @@ on:
         description: 'Use exact Chinese translations to test rendering quality separately'
         type: boolean
         default: false
+      strict_preservation:
+        description: 'Test stronger artwork, character-label and English-logo locks on one stitched comic'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,10 +46,12 @@ jobs:
           MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
           IMAGE_MODEL: ${{ inputs.model }}
           GUIDED: ${{ inputs.guided }}
+          STRICT_PRESERVATION: ${{ inputs.strict_preservation }}
           PYTHONPATH: ${{ github.workspace }}
         run: |
           args=(scripts/test_image_model.py --model "$IMAGE_MODEL" --output "$RUNNER_TEMP/image-model-smoke")
           if [ "$GUIDED" = true ]; then args+=(--guided); fi
+          if [ "$STRICT_PRESERVATION" = true ]; then args+=(--strict-preservation); fi
           python "${args[@]}"
       - name: Upload source and generated comparison images
         if: always()

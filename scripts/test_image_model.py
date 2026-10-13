@@ -67,6 +67,24 @@ Fit the Chinese only into the original text regions. Do not enlarge the
 lettering over the character's face, hands, dress or bottles.
 """,
 }
+STRICT_PROMPT = """Use case: text-localization. Perform a minimal text-only edit
+of the provided PNG, not a redraw. The source image is the immutable master.
+Priority 1: copy all artwork, character faces, eyes, mouths, expressions,
+hands, costumes, hair, poses, toys, backgrounds, borders and panel geometry
+exactly. A closed mouth MUST remain closed. Do not regenerate any illustration.
+Priority 2: copy the English game logo and copyright pixel-for-pixel. Keep the
+pink 菊地 真 and blue 真壁 瑞希 name labels exactly as in the original image;
+do not redraw or typeset these labels. The English logo reads THE IDOLM@STER
+MILLION LIVE! THEATER DAYS. Never rewrite these protected regions.
+Priority 3: replace only Japanese title, speech-bubble text, the 腹話術 note,
+laugh lettering and 登場人物 footer heading with the provided Chinese below.
+Do not translate or alter any text outside these specified text regions.
+Keep text inside its original bubble; shrinking the font is preferable to
+moving, resizing or covering artwork. Preserve white padding and canvas ratio.
+Typeset 小熊 with 熊 (U+718A), never 能 (U+80FD). Follow every supplied Chinese
+sentence exactly, without paraphrasing, omissions, extra words or Japanese.
+Return a single edited image. Keep all other source pixels untouched.
+"""
 
 
 def assemble(parts):
@@ -145,6 +163,7 @@ def main(argv=None):
     parser.add_argument("--model", default="gemini-3.1-flash-image")
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--guided", action="store_true", help="supply exact Chinese text to separate translation and rendering quality")
+    parser.add_argument("--strict-preservation", action="store_true", help="test stronger protected artwork and label constraints on the stitched comic only")
     parser.add_argument("--index", type=Path)
     parser.add_argument("--archive", type=Path)
     args = parser.parse_args(argv)
@@ -165,8 +184,10 @@ def main(argv=None):
         raise ValueError("existing MLTD_LLM_API_KEY secret is unavailable")
     summary = {"model": args.model, "provider": base, "endpoint": endpoint,
                "asset_version": version["asset_version"], "mode": "experiment_only",
-               "guided_translation": args.guided, "samples": []}
-    for logical in SAMPLES:
+               "guided_translation": args.guided or args.strict_preservation,
+               "strict_preservation": args.strict_preservation, "samples": []}
+    samples = SAMPLES[:1] if args.strict_preservation else SAMPLES
+    for logical in samples:
         folder = out / logical.removesuffix(".unity3d")
         folder.mkdir(exist_ok=True)
         row = index[logical]
@@ -181,7 +202,7 @@ def main(argv=None):
         canvas = Image.new("RGB", (original.width, height), "white")
         canvas.paste(original, (0, 0), original.getchannel("A"))
         canvas.save(folder / "input.png")
-        prompt = PROMPT + (GUIDED_TEXT[logical] if args.guided else "")
+        prompt = (STRICT_PROMPT if args.strict_preservation else PROMPT) + (GUIDED_TEXT[logical] if args.guided or args.strict_preservation else "")
         (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         sample = {"logical": logical, "source_bundle_sha256": sha256_file(source),
                   "input_sha256": sha256_file(folder / "input.png"), "original_size": list(original.size),
