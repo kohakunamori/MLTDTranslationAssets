@@ -44,6 +44,29 @@ Preserve the entire canvas including its white padding, without cropping,
 stretching, moving artwork, adding labels or inventing extra dialogue.
 Return ONE edited image of the same composition, not an explanation.
 """
+GUIDED_TEXT = {
+    "ex4c00968.unity3d": """Mandatory approved text, use it verbatim rather than retranslating:
+Title: 会动的毛绒玩偶
+Panel 1 dialogue: 啊～要是小玩偶真能像舞台剧里那样动起来就好了呢～
+Panel 2 dialogue: 菊地小姐，菊地小姐。小熊先生，小熊先生。
+Panel 3 dialogue: 就算不在舞台剧里也能动哦！来，试试看！
+Panel 3 annotation: （腹语术）
+Panel 4 right dialogue: 谢谢！我也让它动起来了！
+Panel 4 center dialogue: 是吧！
+Panel 4 left dialogue: 瑞希真温柔呢。
+Panel 4 laugh: 啊哈哈！
+Character labels and footer: 菊地 真 / 真壁 瑞希 / 登场人物.
+Preserve the English game logo and copyright exactly, letter for letter.
+The word 小熊 must contain 熊, never 能. The name is 真壁, never 真璧.
+""",
+    "hitokoma_100.unity3d": """Mandatory approved text, use it verbatim rather than retranslating:
+Right bubble: 迷、迷迭香、薄荷和巧克力的香味，可以帮助集中注意力……
+Left bubble: 疲惫的时候，请试着用用看哦……♪
+Replace the display sound effect ずらっ with 一排排.
+Fit the Chinese only into the original text regions. Do not enlarge the
+lettering over the character's face, hands, dress or bottles.
+""",
+}
 
 
 def assemble(parts):
@@ -121,6 +144,7 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", default="gemini-3.1-flash-image")
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--guided", action="store_true", help="supply exact Chinese text to separate translation and rendering quality")
     parser.add_argument("--index", type=Path)
     parser.add_argument("--archive", type=Path)
     args = parser.parse_args(argv)
@@ -140,7 +164,8 @@ def main(argv=None):
     if not args.prepare_only and not key:
         raise ValueError("existing MLTD_LLM_API_KEY secret is unavailable")
     summary = {"model": args.model, "provider": base, "endpoint": endpoint,
-               "asset_version": version["asset_version"], "mode": "experiment_only", "samples": []}
+               "asset_version": version["asset_version"], "mode": "experiment_only",
+               "guided_translation": args.guided, "samples": []}
     for logical in SAMPLES:
         folder = out / logical.removesuffix(".unity3d")
         folder.mkdir(exist_ok=True)
@@ -156,14 +181,15 @@ def main(argv=None):
         canvas = Image.new("RGB", (original.width, height), "white")
         canvas.paste(original, (0, 0), original.getchannel("A"))
         canvas.save(folder / "input.png")
-        (folder / "prompt.txt").write_text(PROMPT, encoding="utf-8")
+        prompt = PROMPT + (GUIDED_TEXT[logical] if args.guided else "")
+        (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         sample = {"logical": logical, "source_bundle_sha256": sha256_file(source),
                   "input_sha256": sha256_file(folder / "input.png"), "original_size": list(original.size),
                   "input_size": list(canvas.size), "aspect_ratio": aspect, "layout": layout,
                   "status": "prepared"}
         summary["samples"].append(sample)
         if not args.prepare_only:
-            body = json.dumps(payload(PROMPT, png(canvas), aspect, "2K" if aspect == "1:4" else "1K")).encode("utf-8")
+            body = json.dumps(payload(prompt, png(canvas), aspect, "2K" if aspect == "1:4" else "1K")).encode("utf-8")
             request = urllib.request.Request(endpoint, data=body, method="POST",
                       headers={"Authorization": f"Bearer {key}", "x-goog-api-key": key, "Content-Type": "application/json"})
             started = time.monotonic()

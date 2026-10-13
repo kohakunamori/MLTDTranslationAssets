@@ -7,6 +7,10 @@ on:
         description: 'Explicit image model to test on two official comic samples'
         required: true
         default: 'gemini-3.1-flash-image'
+      guided:
+        description: 'Use exact Chinese translations to test rendering quality separately'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,8 +41,12 @@ jobs:
         env:
           MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
           IMAGE_MODEL: ${{ inputs.model }}
+          GUIDED: ${{ inputs.guided }}
           PYTHONPATH: ${{ github.workspace }}
-        run: python scripts/test_image_model.py --model "$IMAGE_MODEL" --output "$RUNNER_TEMP/image-model-smoke"
+        run: |
+          args=(scripts/test_image_model.py --model "$IMAGE_MODEL" --output "$RUNNER_TEMP/image-model-smoke")
+          if [ "$GUIDED" = true ]; then args+=(--guided); fi
+          python "${args[@]}"
       - name: Upload source and generated comparison images
         if: always()
         uses: actions/upload-artifact@v4
