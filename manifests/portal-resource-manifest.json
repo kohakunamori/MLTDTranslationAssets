@@ -49710,8 +49710,8 @@
         "liveresult_017kth_004_5000_jp.gtx": {
           "pending": 0,
           "total": 1,
-          "translated": 0,
-          "untranslated": 1
+          "translated": 1,
+          "untranslated": 0
         },
         "liveresult_018ele_001_1000_jp.gtx": {
           "pending": 0,
@@ -50922,8 +50922,8 @@
         "liveresult_040tam_004_5000_jp.gtx": {
           "pending": 0,
           "total": 1,
-          "translated": 0,
-          "untranslated": 1
+          "translated": 1,
+          "untranslated": 0
         },
         "liveresult_041fuk_001_1000_jp.gtx": {
           "pending": 0,
@@ -51674,9 +51674,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 473,
-      "translated": 471,
+      "translated": 473,
       "unit": "句",
-      "untranslated": 2
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -52584,8 +52584,8 @@
         "MB_jp.gtx": {
           "pending": 5,
           "total": 9994,
-          "translated": 9957,
-          "untranslated": 32
+          "translated": 9989,
+          "untranslated": 0
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -52598,9 +52598,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 9994,
-      "translated": 9957,
+      "translated": 9989,
       "unit": "句",
-      "untranslated": 32
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -54252,8 +54252,8 @@
         "MD_jp.gtx": {
           "pending": 18,
           "total": 117527,
-          "translated": 117508,
-          "untranslated": 1
+          "translated": 117509,
+          "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -54282,8 +54282,8 @@
         "igp_021mat_jp.gtx": {
           "pending": 0,
           "total": 1790,
-          "translated": 1566,
-          "untranslated": 224
+          "translated": 1790,
+          "untranslated": 0
         },
         "igp_033sih_jp.gtx": {
           "pending": 0,
@@ -76850,9 +76850,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 178027,
-      "translated": 177784,
+      "translated": 178009,
       "unit": "句",
-      "untranslated": 225
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -76898,8 +76898,8 @@
       "id": "dialogue",
       "pending": 75,
       "total": 37530,
-      "translated": 37421,
-      "untranslated": 34
+      "translated": 37455,
+      "untranslated": 0
     },
     {
       "id": "story",
@@ -76912,28 +76912,28 @@
       "id": "system",
       "pending": 18,
       "total": 178027,
-      "translated": 177784,
-      "untranslated": 225
+      "translated": 178009,
+      "untranslated": 0
     }
   ],
   "generated_at": "2026-10-11T19:57:19.783213+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1077750",
-    "assets_commit": "c42df998497b516b1a756bd13bc58e8e2af14cf2",
+    "assets_commit": "1945b0ff360230efd947ddca8712f91ca9b72e19",
     "release_id": "assets-1077750",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "b4e69b15587a8b8ea16c012bf6b26ad2f04a7952de4be55b478ff69ff7e55b6c",
+    "source_manifest_sha256": "6d9527338f4d1cf188de731e81dee024128faad8845dcee7fbd16c6a870faffd",
     "status": "published",
     "updated_at": "2026-10-12T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "c42df998497b516b1a756bd13bc58e8e2af14cf2",
-    "generated_entry_count": 11894,
-    "generated_manifest_sha256": "b4e69b15587a8b8ea16c012bf6b26ad2f04a7952de4be55b478ff69ff7e55b6c",
+    "commit": "1945b0ff360230efd947ddca8712f91ca9b72e19",
+    "generated_entry_count": 11897,
+    "generated_manifest_sha256": "6d9527338f4d1cf188de731e81dee024128faad8845dcee7fbd16c6a870faffd",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "0a9369a52c1aad35db82f0e18844dc4c47cae386a0727bb0973a167d71d52450",
+    "source_catalogue_sha256": "3169beae201be68462d33f19388b1d80efec1dc355488f0c873bf17c473156aa",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -76943,7 +76943,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 411218,
-    "translated": 410860,
-    "untranslated": 259
+    "translated": 411119,
+    "untranslated": 0
   }
 }
