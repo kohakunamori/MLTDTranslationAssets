@@ -1467,6 +1467,12 @@
           "translated": 2,
           "untranslated": 0
         },
+        "birth_ent_013hib_010_jp.gtx": {
+          "pending": 0,
+          "total": 2,
+          "translated": 0,
+          "untranslated": 2
+        },
         "birth_ent_014mir_003_jp.gtx": {
           "pending": 0,
           "total": 1,
@@ -5989,10 +5995,10 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 2925,
+      "total": 2927,
       "translated": 2925,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 2
     },
     {
       "blocked": 0,
@@ -6398,6 +6404,12 @@
           "total": 5,
           "translated": 5,
           "untranslated": 0
+        },
+        "birth_bdl2_013hib_010_jp.gtx": {
+          "pending": 0,
+          "total": 5,
+          "translated": 0,
+          "untranslated": 5
         },
         "birth_bdl2_014mir_005_jp.gtx": {
           "pending": 0,
@@ -8115,6 +8127,12 @@
           "translated": 9,
           "untranslated": 0
         },
+        "birth_bdl_013hib_010_jp.gtx": {
+          "pending": 0,
+          "total": 9,
+          "translated": 0,
+          "untranslated": 9
+        },
         "birth_bdl_014mir_004_jp.gtx": {
           "pending": 0,
           "total": 7,
@@ -9757,10 +9775,10 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 3800,
+      "total": 3814,
       "translated": 3800,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 14
     },
     {
       "blocked": 0,
@@ -11162,6 +11180,12 @@
           "total": 23,
           "translated": 23,
           "untranslated": 0
+        },
+        "card_blst_017kth0754_jp.gtx": {
+          "pending": 0,
+          "total": 22,
+          "translated": 0,
+          "untranslated": 22
         },
         "card_blst_018ele0064_jp.gtx": {
           "pending": 0,
@@ -13089,6 +13113,12 @@
           "translated": 23,
           "untranslated": 0
         },
+        "card_blst_040tam0664_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 0,
+          "untranslated": 20
+        },
         "card_blst_041fuk0034_jp.gtx": {
           "pending": 0,
           "total": 17,
@@ -14107,10 +14137,10 @@
       "pending": 1,
       "reused": 0,
       "suggested": 0,
-      "total": 15538,
+      "total": 15580,
       "translated": 15537,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 42
     },
     {
       "blocked": 0,
@@ -15627,6 +15657,12 @@
           "translated": 21,
           "untranslated": 0
         },
+        "card_episode_006mak0663_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 0,
+          "untranslated": 20
+        },
         "card_episode_007ior0011_jp.gtx": {
           "pending": 0,
           "total": 8,
@@ -16131,6 +16167,12 @@
           "translated": 24,
           "untranslated": 0
         },
+        "card_episode_008tak0663_jp.gtx": {
+          "pending": 0,
+          "total": 16,
+          "translated": 0,
+          "untranslated": 16
+        },
         "card_episode_009rit0011_jp.gtx": {
           "pending": 0,
           "total": 6,
@@ -16604,6 +16646,12 @@
           "total": 20,
           "translated": 20,
           "untranslated": 0
+        },
+        "card_episode_010azu0622_jp.gtx": {
+          "pending": 0,
+          "total": 10,
+          "translated": 0,
+          "untranslated": 10
         },
         "card_episode_011ami0011_jp.gtx": {
           "pending": 0,
@@ -18471,6 +18519,12 @@
           "translated": 18,
           "untranslated": 0
         },
+        "card_episode_017kth0754_jp.gtx": {
+          "pending": 0,
+          "total": 21,
+          "translated": 0,
+          "untranslated": 21
+        },
         "card_episode_018ele0011_jp.gtx": {
           "pending": 0,
           "total": 6,
@@ -19274,6 +19328,12 @@
           "total": 18,
           "translated": 18,
           "untranslated": 0
+        },
+        "card_episode_020meg0713_jp.gtx": {
+          "pending": 0,
+          "total": 17,
+          "translated": 0,
+          "untranslated": 17
         },
         "card_episode_021mat0011_jp.gtx": {
           "pending": 0,
@@ -24783,6 +24843,12 @@
           "translated": 17,
           "untranslated": 0
         },
+        "card_episode_040tam0664_jp.gtx": {
+          "pending": 0,
+          "total": 22,
+          "translated": 0,
+          "untranslated": 22
+        },
         "card_episode_041fuk0011_jp.gtx": {
           "pending": 0,
           "total": 8,
@@ -26883,6 +26949,12 @@
           "translated": 17,
           "untranslated": 0
         },
+        "card_episode_048rei0683_jp.gtx": {
+          "pending": 0,
+          "total": 19,
+          "translated": 0,
+          "untranslated": 19
+        },
         "card_episode_049mom0011_jp.gtx": {
           "pending": 0,
           "total": 7,
@@ -27955,10 +28027,10 @@
       "pending": 1,
       "reused": 0,
       "suggested": 0,
-      "total": 43205,
+      "total": 43330,
       "translated": 43204,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 125
     },
     {
       "blocked": 0,
@@ -40743,6 +40815,5190 @@
           "translated": 36,
           "untranslated": 0
         },
+        "event_unit_talk_1000.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1001.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1002.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1003.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1004.unity3d": {
+          "pending": 0,
+          "total": 25,
+          "translated": 1,
+          "untranslated": 24
+        },
+        "event_unit_talk_1005.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 0,
+          "untranslated": 16
+        },
+        "event_unit_talk_1006.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1007.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1008.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1009.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_1010.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1011.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1012.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1013.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1014.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1015.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1016.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1017.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1018.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1019.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1020.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_1021.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1022.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1023.unity3d": {
+          "pending": 0,
+          "total": 24,
+          "translated": 2,
+          "untranslated": 22
+        },
+        "event_unit_talk_1024.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1025.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1026.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1027.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1028.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1029.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1030.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1031.unity3d": {
+          "pending": 0,
+          "total": 25,
+          "translated": 3,
+          "untranslated": 22
+        },
+        "event_unit_talk_1032.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1033.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1034.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1035.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1036.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 4,
+          "untranslated": 9
+        },
+        "event_unit_talk_1037.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 3,
+          "untranslated": 16
+        },
+        "event_unit_talk_1038.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 2,
+          "untranslated": 9
+        },
+        "event_unit_talk_1039.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 3,
+          "untranslated": 17
+        },
+        "event_unit_talk_1040.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1041.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1042.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1043.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1044.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1045.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1046.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1047.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 3,
+          "untranslated": 13
+        },
+        "event_unit_talk_1048.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1049.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1050.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1051.unity3d": {
+          "pending": 0,
+          "total": 24,
+          "translated": 3,
+          "untranslated": 21
+        },
+        "event_unit_talk_1052.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1053.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1054.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1055.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1056.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1057.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 3,
+          "untranslated": 18
+        },
+        "event_unit_talk_1058.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1059.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1060.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1061.unity3d": {
+          "pending": 0,
+          "total": 24,
+          "translated": 2,
+          "untranslated": 22
+        },
+        "event_unit_talk_1062.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1063.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1064.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1065.unity3d": {
+          "pending": 0,
+          "total": 23,
+          "translated": 2,
+          "untranslated": 21
+        },
+        "event_unit_talk_1066.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1067.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1068.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1069.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1070.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 3,
+          "untranslated": 17
+        },
+        "event_unit_talk_1071.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1072.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1073.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 2,
+          "untranslated": 19
+        },
+        "event_unit_talk_1074.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1075.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1076.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_1077.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1078.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 3,
+          "untranslated": 17
+        },
+        "event_unit_talk_1079.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1080.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_1081.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1082.unity3d": {
+          "pending": 0,
+          "total": 27,
+          "translated": 1,
+          "untranslated": 26
+        },
+        "event_unit_talk_1083.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1084.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1085.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1086.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1087.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1088.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1089.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1090.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1091.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1092.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1093.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1094.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1095.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 3,
+          "untranslated": 14
+        },
+        "event_unit_talk_1096.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1097.unity3d": {
+          "pending": 0,
+          "total": 23,
+          "translated": 2,
+          "untranslated": 21
+        },
+        "event_unit_talk_1098.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1099.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1100.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1101.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 3,
+          "untranslated": 13
+        },
+        "event_unit_talk_1102.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1103.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1104.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1105.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1106.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1107.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1108.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1109.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1110.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1111.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1112.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_1113.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1114.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_1115.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1116.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1117.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1118.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1119.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1120.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1121.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1122.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1123.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1124.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 3,
+          "untranslated": 14
+        },
+        "event_unit_talk_1125.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1126.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1127.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1128.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1129.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1130.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1131.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1132.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1133.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1134.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1135.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1136.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1137.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1138.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1139.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1140.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1141.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1142.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1143.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1144.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1145.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1146.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1147.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1148.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1149.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1150.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1151.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1152.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1153.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1154.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1155.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_1156.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1157.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1158.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 3,
+          "untranslated": 11
+        },
+        "event_unit_talk_1159.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1160.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1161.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1162.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1163.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1164.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1165.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1166.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1167.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1168.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1169.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1170.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1171.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1172.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1173.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 3,
+          "untranslated": 11
+        },
+        "event_unit_talk_1174.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1175.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1227.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1228.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1229.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1230.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1231.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1232.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1233.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1234.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1235.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1236.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1237.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1238.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1239.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1240.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1241.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1242.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1243.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_1244.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1245.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1246.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1247.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1248.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1249.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1250.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1251.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1252.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1253.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1254.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1255.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1256.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1257.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1258.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1259.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1260.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1261.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1262.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1263.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1264.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1265.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1266.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1267.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1268.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_1269.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1270.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1271.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1272.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1273.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1274.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1275.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 2,
+          "untranslated": 9
+        },
+        "event_unit_talk_1276.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1277.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1278.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1279.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1280.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1281.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1282.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1283.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1284.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1285.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1286.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1287.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1288.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1289.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1290.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 3,
+          "untranslated": 12
+        },
+        "event_unit_talk_1291.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1292.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1293.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1294.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1295.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1296.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1297.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1298.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1299.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1300.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1301.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1302.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_1303.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1304.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1305.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1306.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1307.unity3d": {
+          "pending": 0,
+          "total": 23,
+          "translated": 4,
+          "untranslated": 19
+        },
+        "event_unit_talk_1308.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1309.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1310.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1311.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1312.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1313.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1314.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1315.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1316.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1317.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1318.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1319.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1320.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1321.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1322.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1323.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1324.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1325.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1326.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1327.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1328.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1329.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1330.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1331.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1332.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1333.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1334.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1335.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1336.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1337.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1338.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1339.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_1340.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1341.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1342.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1343.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1344.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1345.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1346.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1347.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1348.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1349.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1350.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1351.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1352.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1353.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1354.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1355.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1356.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1357.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1358.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1359.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1360.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1361.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1362.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1363.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1364.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1365.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1366.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1367.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1368.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1369.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1370.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1371.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1372.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1373.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1374.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1375.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1376.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1377.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1378.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1379.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1380.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1381.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1382.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1383.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1384.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1385.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1403.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1404.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1405.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1406.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1407.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 2,
+          "untranslated": 19
+        },
+        "event_unit_talk_1408.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1409.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_1410.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1411.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1412.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1413.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1414.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1415.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1416.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1417.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1418.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 3,
+          "untranslated": 10
+        },
+        "event_unit_talk_1419.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1420.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1421.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1422.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1423.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1424.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1425.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1426.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1427.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1428.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 3,
+          "untranslated": 14
+        },
+        "event_unit_talk_1429.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1430.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1431.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1432.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1433.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1434.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1435.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1436.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1437.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1438.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1439.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1440.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1441.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1442.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1443.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1444.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1445.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1446.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1447.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1448.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1449.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1450.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1451.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1452.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1453.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1454.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1455.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1456.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1457.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1458.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 2,
+          "untranslated": 19
+        },
+        "event_unit_talk_1459.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1460.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1461.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1462.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1463.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1464.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1465.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1466.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1467.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1468.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1469.unity3d": {
+          "pending": 0,
+          "total": 23,
+          "translated": 1,
+          "untranslated": 22
+        },
+        "event_unit_talk_1470.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1471.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1472.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1473.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1474.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1475.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1476.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 3,
+          "untranslated": 11
+        },
+        "event_unit_talk_1477.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1478.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1479.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1480.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1481.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1482.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1483.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1484.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1485.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1486.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1487.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1488.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1489.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1490.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1491.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1492.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1493.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1494.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1495.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1496.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1497.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1498.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1499.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1500.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1501.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1502.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1503.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1504.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1505.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1506.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1507.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 2,
+          "untranslated": 19
+        },
+        "event_unit_talk_1508.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1509.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1510.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1511.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1512.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1513.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1514.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1515.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1516.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1517.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1518.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1519.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1520.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1521.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1522.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 2,
+          "untranslated": 20
+        },
+        "event_unit_talk_1523.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1524.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1525.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1526.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1527.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1528.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1529.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1530.unity3d": {
+          "pending": 0,
+          "total": 25,
+          "translated": 1,
+          "untranslated": 24
+        },
+        "event_unit_talk_1531.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1532.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1533.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1534.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1535.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1536.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1537.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1538.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1539.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1540.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1541.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1542.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1543.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1544.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1545.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1546.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1547.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1548.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1549.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1550.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_1551.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1552.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1553.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1554.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1555.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1582.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1583.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1584.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1585.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1586.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1587.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1588.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1589.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1590.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1591.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1592.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1593.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1594.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1595.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1596.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1597.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1598.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1599.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1600.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1601.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1602.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1603.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1604.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1605.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1606.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1607.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1608.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1609.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1610.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1611.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 3,
+          "untranslated": 11
+        },
+        "event_unit_talk_1612.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1613.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1614.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1615.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1616.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1617.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_1618.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1619.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1620.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1621.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1622.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1623.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1624.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1625.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1626.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1627.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1628.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1629.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1630.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1631.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1632.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_1633.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1634.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1635.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1636.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1637.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1638.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1639.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1640.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1641.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1642.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1643.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1644.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1645.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1646.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1647.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1648.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1649.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1650.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1651.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1652.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1653.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1654.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1655.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1656.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1657.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1658.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1659.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1660.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1661.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1662.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1663.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1664.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1665.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 3,
+          "untranslated": 17
+        },
+        "event_unit_talk_1666.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1667.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1668.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1669.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1670.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1671.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1672.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1673.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1674.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1675.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1676.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1677.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1678.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1679.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_1680.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1681.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1682.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1683.unity3d": {
+          "pending": 0,
+          "total": 24,
+          "translated": 2,
+          "untranslated": 22
+        },
+        "event_unit_talk_1684.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1685.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1686.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1687.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1688.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1689.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1690.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1691.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1692.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1693.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1694.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1695.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1696.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1697.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1698.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1699.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1700.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1701.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1702.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1703.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1704.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1705.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1706.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1707.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1708.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1709.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1710.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1711.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1712.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1713.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1714.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1715.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1716.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_1717.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1718.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1719.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1720.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1721.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1722.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1723.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1724.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1725.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1726.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1727.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_1728.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1729.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1730.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1731.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1732.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1733.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1734.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1735.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1736.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1737.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1738.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1739.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_1740.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1741.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_1742.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1743.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1744.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1745.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1746.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1747.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1748.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1749.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1750.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1751.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_1752.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1753.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1754.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1755.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1756.unity3d": {
+          "pending": 0,
+          "total": 26,
+          "translated": 1,
+          "untranslated": 25
+        },
+        "event_unit_talk_1757.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1758.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1759.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1760.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1761.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1762.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1763.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1764.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1765.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1766.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1767.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 2,
+          "untranslated": 20
+        },
+        "event_unit_talk_1768.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1769.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1770.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1771.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_1772.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1773.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1774.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1775.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1776.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1777.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1778.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1779.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1780.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1781.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1782.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1783.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1784.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1785.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1786.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1787.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1788.unity3d": {
+          "pending": 0,
+          "total": 23,
+          "translated": 1,
+          "untranslated": 22
+        },
+        "event_unit_talk_1789.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1790.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_1791.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1792.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1793.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 2,
+          "untranslated": 18
+        },
+        "event_unit_talk_1794.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_1795.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_1796.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_1797.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_1798.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_1799.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_1800.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_1801.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1802.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_1803.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_1804.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_1805.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_1806.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_822.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_823.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_824.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_825.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_826.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_827.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_828.unity3d": {
+          "pending": 0,
+          "total": 9,
+          "translated": 1,
+          "untranslated": 8
+        },
+        "event_unit_talk_829.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_830.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_831.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_832.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_833.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_834.unity3d": {
+          "pending": 0,
+          "total": 8,
+          "translated": 1,
+          "untranslated": 7
+        },
+        "event_unit_talk_835.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 0,
+          "untranslated": 11
+        },
+        "event_unit_talk_836.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_845.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_846.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_847.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_848.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_849.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_850.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_851.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_852.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_853.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_854.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_855.unity3d": {
+          "pending": 0,
+          "total": 9,
+          "translated": 1,
+          "untranslated": 8
+        },
+        "event_unit_talk_856.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_857.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 0,
+          "untranslated": 10
+        },
+        "event_unit_talk_858.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 0,
+          "untranslated": 12
+        },
+        "event_unit_talk_859.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 0,
+          "untranslated": 13
+        },
+        "event_unit_talk_860.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 0,
+          "untranslated": 14
+        },
+        "event_unit_talk_861.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 0,
+          "untranslated": 17
+        },
+        "event_unit_talk_862.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 0,
+          "untranslated": 13
+        },
+        "event_unit_talk_863.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_864.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_865.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_866.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_867.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_868.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_870.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_871.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_872.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_873.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_874.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_875.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 1,
+          "untranslated": 17
+        },
+        "event_unit_talk_876.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_877.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_878.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_879.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_880.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_881.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_900.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_901.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_902.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 2,
+          "untranslated": 13
+        },
+        "event_unit_talk_903.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_904.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_905.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_906.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_907.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_908.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_909.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_910.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_911.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_912.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_913.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_914.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_915.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_916.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_917.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_918.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_919.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_920.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_921.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_922.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_923.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_924.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_925.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_926.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_927.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_928.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_929.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 2,
+          "untranslated": 16
+        },
+        "event_unit_talk_930.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_931.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_932.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_933.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_934.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_935.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_936.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_937.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_938.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_939.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_940.unity3d": {
+          "pending": 0,
+          "total": 8,
+          "translated": 1,
+          "untranslated": 7
+        },
+        "event_unit_talk_941.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_942.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 2,
+          "untranslated": 11
+        },
+        "event_unit_talk_943.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_944.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_945.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_946.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_947.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_948.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 2,
+          "untranslated": 10
+        },
+        "event_unit_talk_949.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_950.unity3d": {
+          "pending": 0,
+          "total": 10,
+          "translated": 1,
+          "untranslated": 9
+        },
+        "event_unit_talk_951.unity3d": {
+          "pending": 0,
+          "total": 12,
+          "translated": 1,
+          "untranslated": 11
+        },
+        "event_unit_talk_952.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_953.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_954.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_955.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_956.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_957.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_958.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_959.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 2,
+          "untranslated": 12
+        },
+        "event_unit_talk_960.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_961.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_962.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_963.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_964.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_965.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 1,
+          "untranslated": 20
+        },
+        "event_unit_talk_966.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_967.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_968.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_969.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_970.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_971.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 2,
+          "untranslated": 19
+        },
+        "event_unit_talk_972.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_973.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 2,
+          "untranslated": 14
+        },
+        "event_unit_talk_974.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 2,
+          "untranslated": 17
+        },
+        "event_unit_talk_975.unity3d": {
+          "pending": 0,
+          "total": 11,
+          "translated": 1,
+          "untranslated": 10
+        },
+        "event_unit_talk_976.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_977.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_978.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_979.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 2,
+          "untranslated": 15
+        },
+        "event_unit_talk_980.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_981.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_982.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_983.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 1,
+          "untranslated": 14
+        },
+        "event_unit_talk_984.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 1,
+          "untranslated": 12
+        },
+        "event_unit_talk_985.unity3d": {
+          "pending": 0,
+          "total": 15,
+          "translated": 3,
+          "untranslated": 12
+        },
+        "event_unit_talk_986.unity3d": {
+          "pending": 0,
+          "total": 25,
+          "translated": 2,
+          "untranslated": 23
+        },
+        "event_unit_talk_987.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 1,
+          "untranslated": 13
+        },
+        "event_unit_talk_988.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 1,
+          "untranslated": 16
+        },
+        "event_unit_talk_989.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_990.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_991.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 1,
+          "untranslated": 19
+        },
+        "event_unit_talk_992.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 3,
+          "untranslated": 17
+        },
+        "event_unit_talk_993.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_994.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
+        "event_unit_talk_995.unity3d": {
+          "pending": 0,
+          "total": 24,
+          "translated": 1,
+          "untranslated": 23
+        },
+        "event_unit_talk_996.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 1,
+          "untranslated": 18
+        },
+        "event_unit_talk_997.unity3d": {
+          "pending": 0,
+          "total": 25,
+          "translated": 1,
+          "untranslated": 24
+        },
+        "event_unit_talk_998.unity3d": {
+          "pending": 0,
+          "total": 22,
+          "translated": 1,
+          "untranslated": 21
+        },
+        "event_unit_talk_999.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 1,
+          "untranslated": 15
+        },
         "job_story_001har_1000_jp.gtx": {
           "pending": 0,
           "total": 8,
@@ -43561,10 +48817,10 @@
       "pending": 1,
       "reused": 0,
       "suggested": 0,
-      "total": 82095,
-      "translated": 82094,
+      "total": 95632,
+      "translated": 83134,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 12497
     },
     {
       "blocked": 0,
@@ -44450,6 +49706,12 @@
           "total": 1,
           "translated": 1,
           "untranslated": 0
+        },
+        "liveresult_017kth_004_5000_jp.gtx": {
+          "pending": 0,
+          "total": 1,
+          "translated": 0,
+          "untranslated": 1
         },
         "liveresult_018ele_001_1000_jp.gtx": {
           "pending": 0,
@@ -45657,6 +50919,12 @@
           "translated": 1,
           "untranslated": 0
         },
+        "liveresult_040tam_004_5000_jp.gtx": {
+          "pending": 0,
+          "total": 1,
+          "translated": 0,
+          "untranslated": 1
+        },
         "liveresult_041fuk_001_1000_jp.gtx": {
           "pending": 0,
           "total": 1,
@@ -46405,10 +51673,10 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 471,
+      "total": 473,
       "translated": 471,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 2
     },
     {
       "blocked": 0,
@@ -47315,9 +52583,9 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 5,
-          "total": 9962,
+          "total": 9994,
           "translated": 9957,
-          "untranslated": 0
+          "untranslated": 32
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -47329,10 +52597,10 @@
       "pending": 5,
       "reused": 0,
       "suggested": 0,
-      "total": 9962,
+      "total": 9994,
       "translated": 9957,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 32
     },
     {
       "blocked": 0,
@@ -48983,9 +54251,9 @@
       "bundles": {
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 117526,
+          "total": 117527,
           "translated": 117508,
-          "untranslated": 0
+          "untranslated": 1
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -49010,6 +54278,12 @@
           "total": 33,
           "translated": 33,
           "untranslated": 0
+        },
+        "igp_021mat_jp.gtx": {
+          "pending": 0,
+          "total": 1790,
+          "translated": 0,
+          "untranslated": 1790
         },
         "igp_033sih_jp.gtx": {
           "pending": 0,
@@ -71575,10 +76849,10 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 176236,
+      "total": 178027,
       "translated": 176218,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 1791
     },
     {
       "blocked": 0,
@@ -71609,57 +76883,57 @@
     {
       "id": "birth",
       "pending": 0,
-      "total": 6725,
+      "total": 6741,
       "translated": 6725,
-      "untranslated": 0
+      "untranslated": 16
     },
     {
       "id": "card",
       "pending": 5,
-      "total": 84159,
+      "total": 84326,
       "translated": 84154,
-      "untranslated": 0
+      "untranslated": 167
     },
     {
       "id": "dialogue",
       "pending": 75,
-      "total": 37496,
+      "total": 37530,
       "translated": 37421,
-      "untranslated": 0
+      "untranslated": 34
     },
     {
       "id": "story",
       "pending": 1,
-      "total": 91057,
-      "translated": 91056,
-      "untranslated": 0
+      "total": 104594,
+      "translated": 92096,
+      "untranslated": 12497
     },
     {
       "id": "system",
       "pending": 18,
-      "total": 176236,
+      "total": 178027,
       "translated": 176218,
-      "untranslated": 0
+      "untranslated": 1791
     }
   ],
   "generated_at": "2026-10-11T19:57:19.783213+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1077750",
-    "assets_commit": "85488fb97f62b7e31f7260c10321c5b730f7288e",
+    "assets_commit": "b90c79ad2f58130990a7d62cff6a6b97ca7a72cc",
     "release_id": "assets-1077750",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "69f60f32c0a536a1b121f725dcebaf817f98645f46989109aa978b8f2a08eefc",
+    "source_manifest_sha256": "e93d3146c7d75cb94a4f4203f946e9696e8eef93ea56d749a14111f38e3256c9",
     "status": "published",
     "updated_at": "2026-10-12T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "85488fb97f62b7e31f7260c10321c5b730f7288e",
-    "generated_entry_count": 11017,
-    "generated_manifest_sha256": "69f60f32c0a536a1b121f725dcebaf817f98645f46989109aa978b8f2a08eefc",
+    "commit": "b90c79ad2f58130990a7d62cff6a6b97ca7a72cc",
+    "generated_entry_count": 11873,
+    "generated_manifest_sha256": "e93d3146c7d75cb94a4f4203f946e9696e8eef93ea56d749a14111f38e3256c9",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "de6f6bb40451b829ae35cefa2128fda860adf9c9b18e5276b5f31940d0cd773b",
+    "source_catalogue_sha256": "dcd1dd3bde6ec44f599ec7ce893e28a1338a118a2a0bac487081b4d5b574e990",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -71668,8 +76942,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 395673,
-    "translated": 395574,
-    "untranslated": 0
+    "total": 411218,
+    "translated": 396614,
+    "untranslated": 14505
   }
 }
