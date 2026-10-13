@@ -1470,8 +1470,8 @@
         "birth_ent_013hib_010_jp.gtx": {
           "pending": 0,
           "total": 2,
-          "translated": 0,
-          "untranslated": 2
+          "translated": 2,
+          "untranslated": 0
         },
         "birth_ent_014mir_003_jp.gtx": {
           "pending": 0,
@@ -5996,9 +5996,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 2927,
-      "translated": 2925,
+      "translated": 2927,
       "unit": "句",
-      "untranslated": 2
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -6408,8 +6408,8 @@
         "birth_bdl2_013hib_010_jp.gtx": {
           "pending": 0,
           "total": 5,
-          "translated": 0,
-          "untranslated": 5
+          "translated": 5,
+          "untranslated": 0
         },
         "birth_bdl2_014mir_005_jp.gtx": {
           "pending": 0,
@@ -8130,8 +8130,8 @@
         "birth_bdl_013hib_010_jp.gtx": {
           "pending": 0,
           "total": 9,
-          "translated": 0,
-          "untranslated": 9
+          "translated": 9,
+          "untranslated": 0
         },
         "birth_bdl_014mir_004_jp.gtx": {
           "pending": 0,
@@ -9776,9 +9776,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 3814,
-      "translated": 3800,
+      "translated": 3814,
       "unit": "句",
-      "untranslated": 14
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -11184,8 +11184,8 @@
         "card_blst_017kth0754_jp.gtx": {
           "pending": 0,
           "total": 22,
-          "translated": 0,
-          "untranslated": 22
+          "translated": 22,
+          "untranslated": 0
         },
         "card_blst_018ele0064_jp.gtx": {
           "pending": 0,
@@ -13116,8 +13116,8 @@
         "card_blst_040tam0664_jp.gtx": {
           "pending": 0,
           "total": 20,
-          "translated": 0,
-          "untranslated": 20
+          "translated": 20,
+          "untranslated": 0
         },
         "card_blst_041fuk0034_jp.gtx": {
           "pending": 0,
@@ -14138,9 +14138,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 15580,
-      "translated": 15537,
+      "translated": 15579,
       "unit": "句",
-      "untranslated": 42
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -15660,8 +15660,8 @@
         "card_episode_006mak0663_jp.gtx": {
           "pending": 0,
           "total": 20,
-          "translated": 0,
-          "untranslated": 20
+          "translated": 20,
+          "untranslated": 0
         },
         "card_episode_007ior0011_jp.gtx": {
           "pending": 0,
@@ -16170,8 +16170,8 @@
         "card_episode_008tak0663_jp.gtx": {
           "pending": 0,
           "total": 16,
-          "translated": 0,
-          "untranslated": 16
+          "translated": 16,
+          "untranslated": 0
         },
         "card_episode_009rit0011_jp.gtx": {
           "pending": 0,
@@ -16650,8 +16650,8 @@
         "card_episode_010azu0622_jp.gtx": {
           "pending": 0,
           "total": 10,
-          "translated": 0,
-          "untranslated": 10
+          "translated": 10,
+          "untranslated": 0
         },
         "card_episode_011ami0011_jp.gtx": {
           "pending": 0,
@@ -18522,8 +18522,8 @@
         "card_episode_017kth0754_jp.gtx": {
           "pending": 0,
           "total": 21,
-          "translated": 0,
-          "untranslated": 21
+          "translated": 21,
+          "untranslated": 0
         },
         "card_episode_018ele0011_jp.gtx": {
           "pending": 0,
@@ -19332,8 +19332,8 @@
         "card_episode_020meg0713_jp.gtx": {
           "pending": 0,
           "total": 17,
-          "translated": 0,
-          "untranslated": 17
+          "translated": 2,
+          "untranslated": 15
         },
         "card_episode_021mat0011_jp.gtx": {
           "pending": 0,
@@ -28028,9 +28028,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 43330,
-      "translated": 43204,
+      "translated": 43273,
       "unit": "句",
-      "untranslated": 125
+      "untranslated": 56
     },
     {
       "blocked": 0,
@@ -45660,8 +45660,8 @@
         "event_unit_talk_943.unity3d": {
           "pending": 0,
           "total": 14,
-          "translated": 13,
-          "untranslated": 1
+          "translated": 14,
+          "untranslated": 0
         },
         "event_unit_talk_944.unity3d": {
           "pending": 0,
@@ -45732,14 +45732,14 @@
         "event_unit_talk_955.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 17,
-          "untranslated": 2
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_956.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 18,
-          "untranslated": 1
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_957.unity3d": {
           "pending": 0,
@@ -45756,8 +45756,8 @@
         "event_unit_talk_959.unity3d": {
           "pending": 0,
           "total": 14,
-          "translated": 10,
-          "untranslated": 4
+          "translated": 14,
+          "untranslated": 0
         },
         "event_unit_talk_960.unity3d": {
           "pending": 0,
@@ -45870,134 +45870,134 @@
         "event_unit_talk_978.unity3d": {
           "pending": 0,
           "total": 15,
-          "translated": 7,
-          "untranslated": 8
+          "translated": 15,
+          "untranslated": 0
         },
         "event_unit_talk_979.unity3d": {
           "pending": 0,
           "total": 17,
-          "translated": 2,
-          "untranslated": 15
+          "translated": 17,
+          "untranslated": 0
         },
         "event_unit_talk_980.unity3d": {
           "pending": 0,
           "total": 16,
-          "translated": 1,
-          "untranslated": 15
+          "translated": 16,
+          "untranslated": 0
         },
         "event_unit_talk_981.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 1,
-          "untranslated": 18
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_982.unity3d": {
           "pending": 0,
           "total": 20,
-          "translated": 1,
-          "untranslated": 19
+          "translated": 20,
+          "untranslated": 0
         },
         "event_unit_talk_983.unity3d": {
           "pending": 0,
           "total": 15,
-          "translated": 1,
-          "untranslated": 14
+          "translated": 15,
+          "untranslated": 0
         },
         "event_unit_talk_984.unity3d": {
           "pending": 0,
           "total": 13,
-          "translated": 1,
-          "untranslated": 12
+          "translated": 13,
+          "untranslated": 0
         },
         "event_unit_talk_985.unity3d": {
           "pending": 0,
           "total": 15,
-          "translated": 3,
-          "untranslated": 12
+          "translated": 15,
+          "untranslated": 0
         },
         "event_unit_talk_986.unity3d": {
           "pending": 0,
           "total": 25,
-          "translated": 2,
-          "untranslated": 23
+          "translated": 25,
+          "untranslated": 0
         },
         "event_unit_talk_987.unity3d": {
           "pending": 0,
           "total": 14,
-          "translated": 1,
-          "untranslated": 13
+          "translated": 14,
+          "untranslated": 0
         },
         "event_unit_talk_988.unity3d": {
           "pending": 0,
           "total": 17,
-          "translated": 1,
-          "untranslated": 16
+          "translated": 17,
+          "untranslated": 0
         },
         "event_unit_talk_989.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 1,
-          "untranslated": 18
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_990.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 1,
-          "untranslated": 18
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_991.unity3d": {
           "pending": 0,
           "total": 20,
-          "translated": 1,
-          "untranslated": 19
+          "translated": 20,
+          "untranslated": 0
         },
         "event_unit_talk_992.unity3d": {
           "pending": 0,
           "total": 20,
-          "translated": 3,
-          "untranslated": 17
+          "translated": 20,
+          "untranslated": 0
         },
         "event_unit_talk_993.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 1,
-          "untranslated": 18
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_994.unity3d": {
           "pending": 0,
           "total": 16,
-          "translated": 1,
-          "untranslated": 15
+          "translated": 16,
+          "untranslated": 0
         },
         "event_unit_talk_995.unity3d": {
           "pending": 0,
           "total": 24,
-          "translated": 2,
-          "untranslated": 22
+          "translated": 24,
+          "untranslated": 0
         },
         "event_unit_talk_996.unity3d": {
           "pending": 0,
           "total": 19,
-          "translated": 1,
-          "untranslated": 18
+          "translated": 19,
+          "untranslated": 0
         },
         "event_unit_talk_997.unity3d": {
           "pending": 0,
           "total": 25,
-          "translated": 1,
-          "untranslated": 24
+          "translated": 25,
+          "untranslated": 0
         },
         "event_unit_talk_998.unity3d": {
           "pending": 0,
           "total": 22,
-          "translated": 1,
-          "untranslated": 21
+          "translated": 22,
+          "untranslated": 0
         },
         "event_unit_talk_999.unity3d": {
           "pending": 0,
           "total": 16,
-          "translated": 1,
-          "untranslated": 15
+          "translated": 16,
+          "untranslated": 0
         },
         "job_story_001har_1000_jp.gtx": {
           "pending": 0,
@@ -48818,9 +48818,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 95632,
-      "translated": 95253,
+      "translated": 95631,
       "unit": "句",
-      "untranslated": 378
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -76884,15 +76884,15 @@
       "id": "birth",
       "pending": 0,
       "total": 6741,
-      "translated": 6725,
-      "untranslated": 16
+      "translated": 6741,
+      "untranslated": 0
     },
     {
       "id": "card",
       "pending": 5,
       "total": 84326,
-      "translated": 84154,
-      "untranslated": 167
+      "translated": 84265,
+      "untranslated": 56
     },
     {
       "id": "dialogue",
@@ -76905,8 +76905,8 @@
       "id": "story",
       "pending": 1,
       "total": 104594,
-      "translated": 104215,
-      "untranslated": 378
+      "translated": 104593,
+      "untranslated": 0
     },
     {
       "id": "system",
@@ -76920,20 +76920,20 @@
   "kind": "assets",
   "release": {
     "asset_version": "1077750",
-    "assets_commit": "f27108e8971a9e14274562708494bb9964505bb0",
+    "assets_commit": "f3bc89e324e90b59208576f651cb46204118ce31",
     "release_id": "assets-1077750",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "73433077643852b7ed6fca39523d124fe3f312405ad404f3adf11f4a451208e4",
+    "source_manifest_sha256": "cc157379f6428900b0cac313bfe71105e69aba1b002073fed3d9f45f1f2ea0b0",
     "status": "published",
     "updated_at": "2026-10-12T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "f27108e8971a9e14274562708494bb9964505bb0",
-    "generated_entry_count": 11882,
-    "generated_manifest_sha256": "73433077643852b7ed6fca39523d124fe3f312405ad404f3adf11f4a451208e4",
+    "commit": "f3bc89e324e90b59208576f651cb46204118ce31",
+    "generated_entry_count": 11892,
+    "generated_manifest_sha256": "cc157379f6428900b0cac313bfe71105e69aba1b002073fed3d9f45f1f2ea0b0",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "92656d3f6849c59d42ba3080b77af3957894199b97158649e9cd867802062576",
+    "source_catalogue_sha256": "655fe83ccdf036ebda70300c8d66683ea04435714b2bede98f3d15c5685c81ab",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -76943,7 +76943,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 411218,
-    "translated": 408736,
-    "untranslated": 2383
+    "translated": 409241,
+    "untranslated": 1878
   }
 }
