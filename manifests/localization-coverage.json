@@ -19,26 +19,11 @@
   },
   "locales": {
     "accepted": 396614,
-    "accepted_with_kana_candidates": 4191,
+    "accepted_with_kana_candidates": 4189,
     "pending": 99,
     "untranslated": 14505
   },
-  "repair_candidates": [
-    {
-      "file": "locales/card/card_episode_052kao0584_jp.gtx.jsonl",
-      "line": 14,
-      "item_key": "card_episode_052kao0584_1013_p",
-      "source_sha256": "1bae3d238d9294827df4dbbb4d177fcf620ea8b05f7bff1354733599c99b52fc",
-      "reason": "identical Japanese verb question"
-    },
-    {
-      "file": "locales/master/MB_jp.gtx.jsonl",
-      "line": 5809,
-      "item_key": "mail_028ari_310200_text",
-      "source_sha256": "93d69431621e812c1b5f4e06ea4207fb895212d8fd4f98bc6e41cd43267f8ed7",
-      "reason": "copied Japanese sentence"
-    }
-  ],
+  "repair_candidates": [],
   "images": {
     "mode": "coverage_detection_only",
     "generation_enabled": false,
