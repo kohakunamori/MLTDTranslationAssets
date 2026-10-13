@@ -18,17 +18,17 @@
     }
   },
   "locales": {
-    "accepted": 407744,
-    "accepted_with_kana_candidates": 4211,
+    "accepted": 408244,
+    "accepted_with_kana_candidates": 4215,
     "pending": 99,
-    "untranslated": 3375
+    "untranslated": 2875
   },
   "repair_candidates": [],
   "images": {
     "mode": "coverage_detection_only",
     "generation_enabled": false,
     "measurement": "bundle inventory including thumbnails; Japanese presence requires visual/OCR review",
-    "generated_source_commit": "6c08328c6f1d394f87f09f22626f9da40a16f4e9",
+    "generated_source_commit": "3dcda408968a9eac54697a9c88ce789ce54c6fdf",
     "families": {
       "event_banners": {
         "official_bundles": 638,
