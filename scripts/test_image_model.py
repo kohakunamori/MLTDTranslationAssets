@@ -1,0 +1,202 @@
+"""Manual, bounded provider experiment. Never approves or publishes images.
+
+Unpack current official textures, assemble a comic, submit the PNG edit target
+to the explicitly selected model and retain source/result pairs for inspection.
+Credentials are read only from the workflow's existing secret environment.
+"""
+from __future__ import annotations
+
+import argparse
+import base64
+import io
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+import UnityPy
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[1]
+for entry in (ROOT, ROOT / "scripts"):
+    if str(entry) not in sys.path:
+        sys.path.insert(0, str(entry))
+from build_generated_release import download, load_official_index, load_version_manifest
+from pipelines.core.hashing import sha256_file
+
+SAMPLES = ("ex4c00968.unity3d", "hitokoma_100.unity3d")
+PROMPT = """Use case: text-localization.
+The input PNG is the edit target: an official Japanese game comic, already
+assembled in its original reading order. Translate ALL Japanese dialogue,
+captions, character names and sound effects into fluent Simplified Chinese.
+Use Chinese text inside the existing speech bubbles, with readable lettering
+and the original reading order. Preserve the meaning, emotion and register.
+Translate 菊地真 as 菊地真 and プロデューサー as 制作人.
+Keep English branding, logos, copyright text, art style, character faces,
+hair, costumes, hands, poses, props, colors, backgrounds, panel borders and
+panel positions unchanged. Never add, remove or reorder panels or characters.
+Replace Japanese lettering cleanly, retaining the surrounding artwork.
+Preserve the entire canvas including its white padding, without cropping,
+stretching, moving artwork, adding labels or inventing extra dialogue.
+Return ONE edited image of the same composition, not an explanation.
+"""
+
+
+def assemble(parts):
+    if not parts:
+        raise ValueError("no texture parts")
+    if len({image.width for _, image in parts}) != 1:
+        raise ValueError("comic part widths disagree")
+    canvas = Image.new("RGBA", (parts[0][1].width, sum(image.height for _, image in parts)), "white")
+    layout, y = [], 0
+    for name, image in parts:
+        canvas.paste(image, (0, y))
+        layout.append({"texture": name, "box": [0, y, image.width, y + image.height]})
+        y += image.height
+    return canvas, layout
+
+
+def extract(source, logical, output):
+    parts = []
+    output.mkdir(parents=True, exist_ok=True)
+    for obj in UnityPy.load(str(source)).objects:
+        if obj.type.name != "Texture2D":
+            continue
+        texture = obj.read()
+        name = str(texture.m_Name)
+        if not re.fullmatch(r"[A-Za-z0-9_+-]+", name):
+            raise ValueError("unsafe texture filename")
+        image = texture.image.convert("RGBA")
+        image.save(output / f"{name}.png")
+        parts.append((name, image))
+    if logical.startswith("ex4c"):
+        parts.sort(key=lambda part: int(part[0].rsplit("_", 1)[1]))
+        if [int(name.rsplit("_", 1)[1]) for name, _ in parts] != list(range(6)):
+            raise ValueError("comic does not have the expected six ordered parts")
+    elif len(parts) != 1:
+        raise ValueError("single-panel sample must have exactly one texture")
+    return assemble(parts)
+
+
+def png(image):
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def payload(prompt, source, aspect, size):
+    return {"contents": [{"role": "user", "parts": [{"text": prompt},
+            {"inlineData": {"mimeType": "image/png", "data": base64.b64encode(source).decode("ascii")}}]}],
+            "generationConfig": {"responseModalities": ["TEXT", "IMAGE"],
+                                 "imageConfig": {"aspectRatio": aspect, "imageSize": size}}}
+
+
+def decode_response(doc):
+    images, text = [], []
+    for candidate in doc.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            if part.get("thought"):
+                continue
+            inline = part.get("inlineData", part.get("inline_data", {}))
+            if inline.get("data"):
+                mime = inline.get("mimeType", inline.get("mime_type", ""))
+                if not mime.startswith("image/"):
+                    raise ValueError("provider returned non-image inline data")
+                images.append(base64.b64decode(inline["data"], validate=True))
+            if part.get("text"):
+                text.append(part["text"])
+    if len(images) != 1:
+        raise ValueError(f"expected one generated image, got {len(images)}")
+    image = Image.open(io.BytesIO(images[0]))
+    image.load()
+    return image, "\n".join(text)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--model", default="gemini-3.1-flash-image")
+    parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--index", type=Path)
+    parser.add_argument("--archive", type=Path)
+    args = parser.parse_args(argv)
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.model):
+        raise ValueError("invalid model ID")
+    out = args.output.resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    version = load_version_manifest(ROOT / "manifests/asset-version.json")
+    index_path = args.index or out / version["index_name"]
+    if not args.index:
+        download(f"{version['asset_root']}/{version['index_name']}", index_path, None)
+    index = load_official_index(index_path)
+    public = json.loads((ROOT / "configs/api-models.example.json").read_text(encoding="utf-8"))
+    base = public["defaults"]["base_url"].removesuffix("/v1")
+    endpoint = f"{base}/v1beta/models/{args.model}:generateContent"
+    key = os.environ.get("MLTD_LLM_API_KEY", "")
+    if not args.prepare_only and not key:
+        raise ValueError("existing MLTD_LLM_API_KEY secret is unavailable")
+    summary = {"model": args.model, "provider": base, "endpoint": endpoint,
+               "asset_version": version["asset_version"], "mode": "experiment_only", "samples": []}
+    for logical in SAMPLES:
+        folder = out / logical.removesuffix(".unity3d")
+        folder.mkdir(exist_ok=True)
+        row = index[logical]
+        source = (args.archive or out / "bundles") / row["remote"]
+        download(f"{version['asset_root']}/{row['remote']}", source, row["declared_size"])
+        original, layout = extract(source, logical, folder / "parts")
+        original.save(folder / "original.png")
+        # Pad rather than distort to a documented Gemini aspect ratio. The
+        # original texture coordinates are retained for later split/review.
+        aspect = "1:4" if logical.startswith("ex4c") else "4:3"
+        height = original.width * 4 if aspect == "1:4" else (original.width * 3 + 3) // 4
+        canvas = Image.new("RGB", (original.width, height), "white")
+        canvas.paste(original, (0, 0), original.getchannel("A"))
+        canvas.save(folder / "input.png")
+        (folder / "prompt.txt").write_text(PROMPT, encoding="utf-8")
+        sample = {"logical": logical, "source_bundle_sha256": sha256_file(source),
+                  "input_sha256": sha256_file(folder / "input.png"), "original_size": list(original.size),
+                  "input_size": list(canvas.size), "aspect_ratio": aspect, "layout": layout,
+                  "status": "prepared"}
+        summary["samples"].append(sample)
+        if not args.prepare_only:
+            body = json.dumps(payload(PROMPT, png(canvas), aspect, "2K" if aspect == "1:4" else "1K")).encode("utf-8")
+            request = urllib.request.Request(endpoint, data=body, method="POST",
+                      headers={"Authorization": f"Bearer {key}", "x-goog-api-key": key, "Content-Type": "application/json"})
+            started = time.monotonic()
+            try:
+                with urllib.request.urlopen(request, timeout=360) as response:
+                    result = json.load(response)
+                edited, caption = decode_response(result)
+                edited.save(folder / "generated.png")
+                (folder / "response-text.txt").write_text(caption, encoding="utf-8")
+                sample.update(status="generated", output_size=list(edited.size),
+                              output_sha256=sha256_file(folder / "generated.png"),
+                              model_version=result.get("modelVersion"), usage=result.get("usageMetadata"))
+                ratio_error = abs(edited.width / edited.height / (canvas.width / canvas.height) - 1)
+                sample["aspect_ratio_error"] = ratio_error
+                if ratio_error <= .01:
+                    normalized = edited.convert("RGB").resize(canvas.size, Image.Resampling.LANCZOS).crop((0, 0, *original.size))
+                    normalized.save(folder / "localized-preview.png")
+                    pair = Image.new("RGB", (original.width * 2, original.height), "white")
+                    pair.paste(original, (0, 0), original.getchannel("A"))
+                    pair.paste(normalized, (original.width, 0))
+                    pair.save(folder / "comparison.png")
+                else:
+                    sample["geometry_warning"] = "model changed canvas ratio; no automatic crop or injection"
+            except urllib.error.HTTPError as exc:
+                sample.update(status="failed", http_status=exc.code,
+                              error=exc.read(4096).decode("utf-8", "replace").replace(key, "[redacted]"))
+            except Exception as exc:
+                sample.update(status="failed", error=f"{type(exc).__name__}: {exc}".replace(key, "[redacted]"))
+            sample["elapsed_seconds"] = round(time.monotonic() - started, 2)
+        (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({key: value for key, value in sample.items() if key not in ("layout", "error")}), flush=True)
+    return 1 if any(sample["status"] == "failed" for sample in summary["samples"]) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

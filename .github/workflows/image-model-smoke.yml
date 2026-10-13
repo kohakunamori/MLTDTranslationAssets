@@ -1,0 +1,49 @@
+name: Test image localization model
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Explicit image model to test on two official comic samples'
+        required: true
+        default: 'gemini-3.1-flash-image'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-model-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            pipelines
+            manifests
+            configs
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image extraction dependencies
+        run: python -m pip install UnityPy Pillow msgpack pycryptodome
+      - name: Extract, stitch and test the selected model
+        env:
+          MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
+          IMAGE_MODEL: ${{ inputs.model }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python scripts/test_image_model.py --model "$IMAGE_MODEL" --output "$RUNNER_TEMP/image-model-smoke"
+      - name: Upload source and generated comparison images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-model-smoke
+          path: ${{ runner.temp }}/image-model-smoke
+          if-no-files-found: error
+          retention-days: 14
