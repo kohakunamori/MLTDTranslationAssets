@@ -54282,8 +54282,8 @@
         "igp_021mat_jp.gtx": {
           "pending": 0,
           "total": 1790,
-          "translated": 1043,
-          "untranslated": 747
+          "translated": 1566,
+          "untranslated": 224
         },
         "igp_033sih_jp.gtx": {
           "pending": 0,
@@ -76850,9 +76850,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 178027,
-      "translated": 177261,
+      "translated": 177784,
       "unit": "句",
-      "untranslated": 748
+      "untranslated": 225
     },
     {
       "blocked": 0,
@@ -76912,28 +76912,28 @@
       "id": "system",
       "pending": 18,
       "total": 178027,
-      "translated": 177261,
-      "untranslated": 748
+      "translated": 177784,
+      "untranslated": 225
     }
   ],
   "generated_at": "2026-10-11T19:57:19.783213+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1077750",
-    "assets_commit": "a4ddce69c95d5ab5f134ec784a57629dd800c2a1",
+    "assets_commit": "c42df998497b516b1a756bd13bc58e8e2af14cf2",
     "release_id": "assets-1077750",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "152d5fd0634a3c760d034eff2096917dd0a403308b5cac661ef2d2b0083fa061",
+    "source_manifest_sha256": "b4e69b15587a8b8ea16c012bf6b26ad2f04a7952de4be55b478ff69ff7e55b6c",
     "status": "published",
     "updated_at": "2026-10-12T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "a4ddce69c95d5ab5f134ec784a57629dd800c2a1",
+    "commit": "c42df998497b516b1a756bd13bc58e8e2af14cf2",
     "generated_entry_count": 11894,
-    "generated_manifest_sha256": "152d5fd0634a3c760d034eff2096917dd0a403308b5cac661ef2d2b0083fa061",
+    "generated_manifest_sha256": "b4e69b15587a8b8ea16c012bf6b26ad2f04a7952de4be55b478ff69ff7e55b6c",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "172b002d2fd0cec64ccafae61f360123721494c35e62e4b6d556e7bcf6adfe25",
+    "source_catalogue_sha256": "0a9369a52c1aad35db82f0e18844dc4c47cae386a0727bb0973a167d71d52450",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -76943,7 +76943,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 411218,
-    "translated": 410337,
-    "untranslated": 782
+    "translated": 410860,
+    "untranslated": 259
   }
 }
