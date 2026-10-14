@@ -1,3 +1,4 @@
+# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
 name: Auto Track Japanese Assets
 
 # 跟踪日版资源版本（Matsurihi API）。检测到新版本时：
@@ -51,7 +52,7 @@ concurrency:
 jobs:
   resolve-target:
     name: Resolve track target
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -127,7 +128,7 @@ jobs:
     name: Freeze outgoing asset version
     needs: resolve-target
     if: needs.resolve-target.outputs.has_update == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 15
     permissions:
       contents: write  # 只用于推送冻结标签；不推分支、不建 PR
@@ -217,7 +218,7 @@ jobs:
     # 没有新版本、但被“兜底叫醒”（daily_housekeeping）时，它同样要叫一次翻译任务
     # ——重试那些在所有服务商上都失败过的行、推进待审草稿。这是整条链唯一的入口：
     # VPS 只按这一个按钮，后面翻译→出包→网关→查阅站全靠连锁。
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 15
     permissions:
       contents: read

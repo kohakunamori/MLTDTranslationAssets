@@ -1,3 +1,4 @@
+# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
 name: image-localize-assets
 
 # Unattended image localization.
@@ -55,7 +56,7 @@ permissions:
 
 jobs:
   policy:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     # One checkout and one policy read. Bounded so a stalled clone cannot hold
     # the `image-localize-assets` group (and, through the reusable call, the
     # Assets packaging hand-off) open indefinitely.
@@ -73,7 +74,7 @@ jobs:
   localize:
     needs: policy
     if: inputs.enabled && needs.policy.outputs.images_enabled == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     outputs:
       ready: ${{ steps.batch.outputs.audit_ready }}
       published: ${{ steps.publish.outputs.published }}

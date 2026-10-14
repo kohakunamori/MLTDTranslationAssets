@@ -1,3 +1,4 @@
+# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
 name: Test image localization model
 
 on:
@@ -25,7 +26,7 @@ concurrency:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

@@ -1,3 +1,4 @@
+# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
 name: Validate Localization Repository
 
 on:
@@ -49,7 +50,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "X64", "racknerd-light"]') }}
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -97,7 +98,7 @@ jobs:
 
   regression:
     name: Offline regression
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "X64", "racknerd-light"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -151,7 +152,8 @@ jobs:
         # drives bash+git sandboxes that are environment sensitive.  Neither is
         # silently claimed as covered here; they are run manually.
         #
-        # -n 4 is the runner's vCPU count; --dist worksteal hands a free worker
+        # Hosted PRs retain four workers; RackNerd uses one worker.
+        # --dist worksteal hands a free worker
         # the next pending test instead of pinning a whole file to one process.
         # That is safe here because every test builds its own fixtures in a temp
         # directory, the only setUpClass hooks parse YAML read-only, and the
@@ -161,8 +163,9 @@ jobs:
         # workers idle under the previous loadfile rule: 27.6 s vs 18.8 s.
         env:
           PYTHONPATH: ${{ github.workspace }}
+          PYTEST_WORKERS: ${{ runner.environment == 'self-hosted' && '1' || '4' }}
         run: |
-          python -m pytest -q -n 4 --dist worksteal \
+          python -m pytest -q -n "$PYTEST_WORKERS" --dist worksteal \
             scripts/test_llm_translate_untranslated.py \
             scripts/test_llm_translate_workflow.py \
             scripts/test_translation_prompt_policy.py \

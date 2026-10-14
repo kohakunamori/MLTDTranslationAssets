@@ -1,3 +1,4 @@
+# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
 name: Auto-apply LLM translations
 
 # 触发方式：全部由 vps_racknerd 上的 mltd-asset-watch.timer 派发，两种情形——
@@ -48,10 +49,10 @@ env:
 
 jobs:
   draft:
-    # GitHub-hosted Linux is intentional: the provider is the public HTTPS
+    # The resource-limited RackNerd runner calls the public HTTPS
     # gateway configured in configs/api-models.example.json. Only the API key
     # is imported from Actions secrets into an ephemeral runner-temp file.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     # A cold cache re-verifies every tracked bundle (~1 hour); the memo makes a
     # normal run minutes. Anything past three hours is a hang, not progress.
     timeout-minutes: 180
@@ -472,7 +473,7 @@ jobs:
       needs.draft.outputs.remaining != '0' && needs.draft.outputs.updated != '' &&
       needs.draft.outputs.updated != '0' &&
       (inputs.max_items == '0' || inputs.max_items == '')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 5
     steps:
       - name: Dispatch the next bounded text batch
@@ -496,7 +497,7 @@ jobs:
       (needs.draft.outputs.images_enabled != 'true' ||
        (needs.images.result == 'success' && needs.images.outputs.ready == 'true')) &&
       (needs.draft.outputs.published == 'true' || needs.images.outputs.published == 'true')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 5
     steps:
       - name: Trigger the generated Assets build
