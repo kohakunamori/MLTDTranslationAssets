@@ -4,11 +4,20 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import text_job_handoff as handoff
 
 
 class HandoffTests(unittest.TestCase):
+    def test_expanded_budget_refuses_transfer_before_any_publish(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root / 'source')
+            with patch.object(handoff, 'MAX_BYTES', 1), self.assertRaises(ValueError):
+                handoff.pack(root / 'source', root / 'transfer', 'abc')
+            self.assertFalse((root / 'transfer/identity.json').exists())
+
     def fixture(self, root):
         for name, content in {
             'manifests/asset-version.json': json.dumps({'asset_version': '1077750', 'index_name': 'index.data'}),
