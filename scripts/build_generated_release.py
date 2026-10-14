@@ -120,22 +120,38 @@ def release_provenance(version: dict, root: Path | None = None,
 
 
 def load_official_index(path: Path) -> dict[str, dict]:
-    raw = msgpack.unpackb(path.read_bytes(), raw=False, strict_map_key=False)
-    if not isinstance(raw, list) or len(raw) != 1 or not isinstance(raw[0], dict):
-        raise ValueError("official asset index is not the expected one-table format")
+    # The catalogue has hundreds of thousands of rows. Decode each pair into
+    # its final representation instead of holding raw and normalized maps together.
     result: dict[str, dict] = {}
-    for logical, row in raw[0].items():
-        if not isinstance(logical, str) or not isinstance(row, list) or len(row) != 3:
-            raise ValueError(f"malformed official asset index row: {logical!r}")
-        catalog_hash, remote, declared_size = row
-        remote = str(remote)
-        declared_size = int(declared_size)
-        if not remote.endswith(".unity3d") or not remote.isascii() or "/" in remote or "\\" in remote:
-            raise ValueError(f"unsafe official remote object name: {remote!r}")
-        if declared_size < 0:
-            raise ValueError(f"negative declared size for {logical!r}")
-        result[logical] = {"catalog_hash": str(catalog_hash), "remote": remote,
-                           "declared_size": declared_size}
+    length = path.stat().st_size
+    with path.open('rb') as stream:
+        unpacker = msgpack.Unpacker(stream, raw=False, strict_map_key=False,
+                                   read_size=min(65536, max(length, 1)),
+                                   max_buffer_size=max(length, 1))
+        try:
+            if unpacker.read_array_header() != 1:
+                raise ValueError("official asset index is not the expected one-table format")
+            count = unpacker.read_map_header()
+        except (ValueError, msgpack.OutOfData) as error:
+            raise ValueError("official asset index is not the expected one-table format") from error
+        try:
+            for _ in range(count):
+                logical, row = unpacker.unpack(), unpacker.unpack()
+                if not isinstance(logical, str) or not isinstance(row, list) or len(row) != 3:
+                    raise ValueError(f"malformed official asset index row: {logical!r}")
+                catalog_hash, remote, declared_size = row
+                remote = str(remote)
+                declared_size = int(declared_size)
+                if not remote.endswith(".unity3d") or not remote.isascii() or "/" in remote or "\\" in remote:
+                    raise ValueError(f"unsafe official remote object name: {remote!r}")
+                if declared_size < 0:
+                    raise ValueError(f"negative declared size for {logical!r}")
+                result[logical] = {"catalog_hash": str(catalog_hash), "remote": remote,
+                                   "declared_size": declared_size}
+        except msgpack.OutOfData as error:
+            raise ValueError('official asset index is incomplete') from error
+        if unpacker.tell() != length:
+            raise ValueError('official asset index contains trailing data')
     if not result:
         raise ValueError("official asset index is empty")
     return result

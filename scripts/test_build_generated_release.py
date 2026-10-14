@@ -782,6 +782,18 @@ class IncrementalReuseRegression(unittest.TestCase):
 
 
 class GeneratedReleaseContracts(unittest.TestCase):
+    def test_streamed_catalogue_rejects_invalid_shape_truncation_and_trailing_bytes(self):
+        good = msgpack.packb([{'foo': ['catalog', 'remote.unity3d', 12]}], use_bin_type=True)
+        invalid = [msgpack.packb({}), msgpack.packb([{}, {}]), msgpack.packb([{}]),
+                   msgpack.packb([{'foo': ['short']}]), good[:-1], good + b'\x00']
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / 'index.data'
+            for payload in invalid:
+                with self.subTest(payload=payload):
+                    path.write_bytes(payload)
+                    with self.assertRaises(ValueError):
+                        build.load_official_index(path)
+
     def test_official_index_is_normalized_and_rejects_unsafe_remote(self):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "index.data"

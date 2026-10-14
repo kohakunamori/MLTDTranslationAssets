@@ -83,17 +83,18 @@ def build_report(index, root, version, index_sha):
     sources = source_coverage(index, root)
     backlog, repairs = Counter(), []
     for path in sorted((root / "locales").rglob("*.jsonl")):
-        for line_no, line in enumerate(path.read_text(encoding="utf-8").split("\n"), 1):
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            backlog[row["status"]] += 1
-            if row["status"] == "accepted" and KANA.search(row.get("zh", "")):
-                backlog["accepted_with_kana_candidates"] += 1
-            reason = repair_reason(row)
-            if reason:
-                repairs.append({"file": path.relative_to(root).as_posix(), "line": line_no,
-                                "item_key": row["item_key"], "source_sha256": row["source_sha256"], "reason": reason})
+        with path.open(encoding='utf-8') as source:
+            for line_no, line in enumerate(source, 1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                backlog[row["status"]] += 1
+                if row["status"] == "accepted" and KANA.search(row.get("zh", "")):
+                    backlog["accepted_with_kana_candidates"] += 1
+                reason = repair_reason(row)
+                if reason:
+                    repairs.append({"file": path.relative_to(root).as_posix(), "line": line_no,
+                                    "item_key": row["item_key"], "source_sha256": row["source_sha256"], "reason": reason})
     return {"schema_version": 1, "asset_version": version, "official_index_sha256": index_sha,
             "source_sync_complete": not any(row["unsynchronized_bundles"] for row in sources.values()),
             "sources": sources, "locales": dict(backlog), "repair_candidates": repairs,
