@@ -48,7 +48,8 @@ concurrency:
 jobs:
   patch:
     name: Run the pipeline
-    runs-on: ubuntu-latest
+    # Full mode waits for child workflows and must leave the one RackNerd slot free.
+    runs-on: ${{ inputs.mode == 'full' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "X64", "racknerd-light"]') }}
     # 最坏情况：跟踪 15 分 + 翻译 90 分 + 出包 30 分 + 网关 20 分。
     timeout-minutes: 240
     env:

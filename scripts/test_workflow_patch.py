@@ -109,6 +109,10 @@ def _step_run(job: dict, name_prefix: str) -> str:
 
 
 class WorkflowPatchShapeTest(unittest.TestCase):
+    def test_full_mode_cannot_hold_the_runner_its_children_need(self) -> None:
+        doc = yaml.safe_load(WORKFLOW.read_text(encoding='utf-8'))
+        self.assertEqual(doc['jobs']['patch']['runs-on'], "${{ inputs.mode == 'full' && 'ubuntu-latest' || fromJSON('[\"self-hosted\", \"Linux\", \"X64\", \"racknerd-light\"]') }}")
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
