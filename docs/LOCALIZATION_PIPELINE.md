@@ -17,6 +17,19 @@ selected. A skipped image stage does not block text/lyric releases. The generate
 build also reads this policy and omits the image overlay while disabled. Existing
 image source files, reviewed PNGs, progress and overlays are preserved.
 
+Within one generated-release run, the release gate owns the selected
+`asset_version` and the materialization step owns the `images_enabled` policy
+result. Build, verification and Portal manifest steps consume those outputs.
+They do not independently select another version or reinterpret the image
+policy. Publication still checks the latest upstream inputs before committing;
+the frozen step outputs do not replace the stale-input and retry guards.
+
+Queue translation and independent review share the durable JSONL appender in
+`pipelines/core/jsonl.py`. Their historical `append_rows` exports remain usable.
+Appending still flushes and fsyncs each batch; it is distinct from the atomic
+whole-file writer. The reviewer reads JSONL through this core module rather
+than importing the Unity bundle codec.
+
 The image workflow has only `workflow_call`, with an `enabled` input defaulting
 to false and its own check of the shared policy before any provider-related
 steps. It cannot be dispatched independently by the timer or a manual button.

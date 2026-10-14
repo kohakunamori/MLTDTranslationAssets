@@ -111,9 +111,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Materialize build inputs after the gate
+        id: features
         if: steps.gate.outputs.build == 'true'
         run: |
-          python scripts/localization_features.py --report .localization-features.json
+          python scripts/localization_features.py --report .localization-features.json --github-output "$GITHUB_OUTPUT"
           if python -c 'import json, sys; sys.exit(0 if json.load(open(".localization-features.json"))["images_enabled"] else 1)'; then
             git sparse-checkout disable
           else
@@ -142,6 +143,8 @@ jobs:
         if: steps.gate.outputs.build == 'true'
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
+          ASSET_VERSION: ${{ steps.gate.outputs.asset_version }}
+          IMAGES_ENABLED: ${{ steps.features.outputs.images_enabled }}
           # Same value the gate above decides with: a forced dispatch rebuilds
           # everything, and an incremental build here would silently keep the
           # bundles the force was meant to regenerate.
@@ -149,9 +152,7 @@ jobs:
         run: |
           set -euo pipefail
           SOURCE_COMMIT="$(git rev-parse HEAD)"
-          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
           image_args=()
-          IMAGES_ENABLED="$(python -c "import sys; sys.path.insert(0, 'scripts'); from localization_features import inspect; from pathlib import Path; print(str(inspect(Path('.'))['images_enabled']).lower())")"
           OVERLAY_MANIFEST="image-overlay/${ASSET_VERSION}/overlay-manifest.json"
           if [ "$IMAGES_ENABLED" = "true" ]; then
             if [ ! -f "$OVERLAY_MANIFEST" ]; then
@@ -198,16 +199,18 @@ jobs:
 
       - name: Verify generated release
         if: steps.gate.outputs.build == 'true'
+        env:
+          ASSET_VERSION: ${{ steps.gate.outputs.asset_version }}
         run: |
-          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
           python scripts/assets_generated_index.py verify \
             --root generated \
             --asset-version "$ASSET_VERSION"
 
       - name: Build portal resource manifest
         if: steps.gate.outputs.build == 'true'
+        env:
+          ASSET_VERSION: ${{ steps.gate.outputs.asset_version }}
         run: |
-          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
           python scripts/build_portal_resource_manifest.py \
             --generated-manifest "generated/${ASSET_VERSION}/manifest.json" \
             --output manifests/portal-resource-manifest.json

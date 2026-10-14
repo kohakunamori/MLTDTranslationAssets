@@ -104,8 +104,12 @@ def test_image_overlay_is_exported_only_after_independent_repack_audit():
 
 def test_release_packaging_also_respects_the_disabled_image_policy():
     steps = workflow("assets-generated.yml")["jobs"]["build"]["steps"]
-    command = next(step["run"] for step in steps if step.get("name") == "Build generated Unity3D release")
+    build = next(step for step in steps if step.get("name") == "Build generated Unity3D release")
+    policy = next(step for step in steps if step.get("id") == "features")
+    command = build["run"]
     assert '"$IMAGES_ENABLED" = "true"' in command
-    assert "localization_features" in command
+    assert build["env"]["IMAGES_ENABLED"] == "${{ steps.features.outputs.images_enabled }}"
+    assert "localization_features.py" in policy["run"]
+    assert '--github-output "$GITHUB_OUTPUT"' in policy["run"]
     assert 'if [ ! -f "$OVERLAY_MANIFEST" ]; then' in command
     assert "its audited overlay is not ready" in command

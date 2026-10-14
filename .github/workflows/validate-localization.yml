@@ -188,6 +188,7 @@ jobs:
             scripts/test_refresh_lyrics_catalogue.py \
             scripts/test_validate_repo_lyrics.py \
             scripts/test_validate_workflow.py \
+            pipelines/core/test_core.py \
             pipelines/text/test_mltd_localize_scrobj.py \
             pipelines/text/test_mltd_lyric_rules.py \
             pipelines/text/test_provider_text_closure.py \

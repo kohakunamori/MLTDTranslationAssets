@@ -45,7 +45,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from pipelines.core.hashing import sha256_text
-from pipelines.core.jsonl import read_jsonl
+from pipelines.core.jsonl import append_rows, read_jsonl
 from pipelines.text.translation_tokens import PROTECTED_TOKEN_RE, validate_translation
 from pipelines.text.mltd_translation_quality import applicable_glossary, evaluate_row, load_glossary
 from pipelines.text.build_character_voice_evidence import (
@@ -425,13 +425,6 @@ def load_completed(path: Path) -> dict[str, dict]:
     return completed
 
 
-def append_rows(path: Path, rows: list[dict]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
-        handle.flush()
-        os.fsync(handle.fileno())
 
 
 def build_parser() -> argparse.ArgumentParser:

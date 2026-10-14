@@ -27,6 +27,7 @@ PROVIDER_MODULES = (
     "pipelines.text.translate_mltd_api_pool",
     "pipelines.text.translate_gtx_queue",
     "pipelines.text.mltd_translation_quality",
+    "pipelines.text.review_gtx_translations",
     "pipelines.core.jsonl",
     "pipelines.text.translation_tokens",
 )
@@ -40,13 +41,17 @@ import pipelines.text.translation_tokens as tokens
 import pipelines.text.mltd_translation_quality as quality
 import pipelines.text.translate_gtx_queue as queue
 import pipelines.text.translate_mltd_api_pool as pool
+import pipelines.text.review_gtx_translations as review
 print(json.dumps({{
     "codec_loaded": {CODEC!r} in sys.modules,
     "unitypy_loaded": "UnityPy" in sys.modules,
     "crypto_loaded": any(n == "Crypto" or n.startswith("Crypto.") for n in sys.modules),
     "jsonl_reader_shared": pool.read_jsonl is core_jsonl.read_jsonl
         and queue.read_jsonl is core_jsonl.read_jsonl
-        and quality.read_jsonl is core_jsonl.read_jsonl,
+        and quality.read_jsonl is core_jsonl.read_jsonl
+        and review.read_jsonl is core_jsonl.read_jsonl,
+    "jsonl_appender_shared": queue.append_rows is core_jsonl.append_rows
+        and review.append_rows is core_jsonl.append_rows,
     "validator_shared": pool.validate_translation is tokens.validate_translation
         and queue.validate_translation is tokens.validate_translation
         and quality.validate_translation is tokens.validate_translation,
@@ -107,6 +112,7 @@ class ProviderTextClosureTests(unittest.TestCase):
         self.assertTrue(report["jsonl_reader_shared"], "read_jsonl is not shared")
         self.assertTrue(report["validator_shared"], "validate_translation is not shared")
         self.assertTrue(report["kana_shared"], "KANA_RE is not shared")
+        self.assertTrue(report["jsonl_appender_shared"], "append_rows is not shared")
 
     def test_the_probe_would_see_a_loaded_codec(self):
         """Guard the guard: the probe must report a codec that really is loaded."""

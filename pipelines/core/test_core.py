@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from pipelines.core.hashing import sha256_bytes, sha256_file, sha256_text
-from pipelines.core.jsonl import jsonl_lines, read_jsonl, write_jsonl
+from pipelines.core.jsonl import append_rows, jsonl_lines, read_jsonl, write_jsonl
 
 
 def test_hashing_primitives_share_one_digest_contract(tmp_path: Path) -> None:
@@ -50,3 +50,14 @@ def test_write_jsonl_removes_partial_file_when_row_serialization_fails(tmp_path:
 
     assert not path.exists()
     assert not path.with_suffix(path.suffix + ".tmp").exists()
+
+
+def test_append_rows_keeps_previous_bytes_and_unicode_record_boundaries(tmp_path: Path) -> None:
+    path = tmp_path / "nested" / "rows.jsonl"
+    first = {"id": 1, "text": "歌词\u2028仍是一行"}
+    append_rows(path, [first])
+    previous = path.read_bytes()
+    second = {"id": 2, "text": "中文"}
+    append_rows(path, [second])
+    assert path.read_bytes() == previous + (json.dumps(second, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    assert read_jsonl(path) == [first, second]
