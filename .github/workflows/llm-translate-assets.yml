@@ -66,6 +66,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          filter: blob:none
+          # Generated release bundles belong to the hosted packaging job.
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/generated/
 
       - name: Set up Python
         uses: actions/setup-python@v5

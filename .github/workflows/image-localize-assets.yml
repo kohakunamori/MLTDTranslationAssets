@@ -67,6 +67,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          filter: blob:none
+          sparse-checkout: |
+            configs
+            scripts
       - name: Read shared localization policy
         id: features
         run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT"
@@ -90,6 +94,11 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/generated/
 
       - name: Set up Python
         uses: actions/setup-python@v5
