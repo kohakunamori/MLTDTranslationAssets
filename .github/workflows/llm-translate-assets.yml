@@ -48,30 +48,20 @@ env:
   PYTHONPATH: ${{ github.workspace }}
 
 jobs:
-  draft:
-    # The resource-limited RackNerd runner calls the public HTTPS
-    # gateway configured in configs/api-models.example.json. Only the API key
-    # is imported from Actions secrets into an ephemeral runner-temp file.
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
-    # A cold cache re-verifies every tracked bundle (~1 hour); the memo makes a
-    # normal run minutes. Anything past three hours is a hang, not progress.
+  prepare:
+    name: Synchronize official sources on hosted disk
+    runs-on: ubuntu-latest
     timeout-minutes: 180
+    permissions:
+      contents: read
     outputs:
-      images_enabled: ${{ steps.features.outputs.images_enabled }}
-      published: ${{ steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true' }}
-      remaining: ${{ steps.backlog.outputs.remaining }}
-      updated: ${{ steps.apply.outputs.updated }}
+      source_commit: ${{ steps.handoff.outputs.source_commit }}
+      sha256: ${{ steps.handoff.outputs.sha256 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          filter: blob:none
-          # Generated release bundles belong to the hosted packaging job.
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !/generated/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -88,32 +78,6 @@ jobs:
       - name: Install translation dependencies
         shell: bash
         run: python -m pip install --disable-pip-version-check httpx msgpack UnityPy Pillow pycryptodome
-
-      - name: Materialize provider configuration from secrets
-        shell: bash
-        env:
-          MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$MLTD_LLM_API_KEY"
-          cfg_dir="$RUNNER_TEMP/mltd-llm"
-          install -d -m 700 "$cfg_dir"
-          cp configs/api-models.example.json "$cfg_dir/api-models.local.json"
-          cp configs/api-models.presets.example.json "$cfg_dir/api-models.presets.json"
-          python - "$cfg_dir/api-runtime.local.json" "$MLTD_LLM_API_KEY" <<'PY'
-          import json
-          import pathlib
-          import sys
-          out = pathlib.Path(sys.argv[1])
-          key = sys.argv[2]
-          out.write_text(json.dumps({
-              "schema_version": 3,
-              "environment": {"api_key": {"MLTD_API_KEY": key}},
-          }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-          PY
-          chmod 600 "$cfg_dir/api-models.local.json" "$cfg_dir/api-models.presets.json" "$cfg_dir/api-runtime.local.json"
-          echo "MLTD_LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
-          echo "LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
 
       - name: Detect latest official asset version
         shell: bash
@@ -206,6 +170,104 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/llm_translate_untranslated.py reuse --scope lyrics | tee .llm-reuse.json
+
+      - name: Freeze bounded text handoff
+        id: handoff
+        run: |
+          python scripts/text_job_handoff.py pack \
+            --directory .mltd-text-handoff --source-commit "$GITHUB_SHA"
+
+      - name: Save exact-run text handoff
+        uses: actions/cache/save@v4
+        with:
+          path: .mltd-text-handoff
+          key: text-handoff-${{ github.run_id }}-${{ github.run_attempt }}
+
+  draft:
+    needs: prepare
+    # The resource-limited RackNerd runner calls the public HTTPS
+    # gateway configured in configs/api-models.example.json. Only the API key
+    # is imported from Actions secrets into an ephemeral runner-temp file.
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    # A cold cache re-verifies every tracked bundle (~1 hour); the memo makes a
+    # normal run minutes. Anything past three hours is a hang, not progress.
+    timeout-minutes: 180
+    outputs:
+      images_enabled: ${{ steps.features.outputs.images_enabled }}
+      published: ${{ steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true' }}
+      remaining: ${{ steps.backlog.outputs.remaining }}
+      updated: ${{ steps.apply.outputs.updated }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          # Generated release bundles belong to the hosted packaging job.
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/generated/
+            !/images/
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Restore exact-run text handoff
+        uses: actions/cache/restore@v4
+        with:
+          path: .mltd-text-handoff
+          key: text-handoff-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: true
+
+      - name: Verify and materialize synchronized text sources
+        env:
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
+          HANDOFF_SHA256: ${{ needs.prepare.outputs.sha256 }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          python scripts/text_job_handoff.py restore \
+            --directory .mltd-text-handoff \
+            --source-commit "$SOURCE_COMMIT" --sha256 "$HANDOFF_SHA256"
+
+      - name: Read localization feature policy
+        id: features
+        run: |
+          python scripts/localization_features.py \
+            --github-output "$GITHUB_OUTPUT" --report .localization-features.json
+          echo 'Image localization currently defaults to disabled until a suitable provider is selected.'
+
+      - name: Install translation dependencies
+        shell: bash
+        run: python -m pip install --disable-pip-version-check httpx msgpack UnityPy Pillow pycryptodome
+
+      - name: Materialize provider configuration from secrets
+        shell: bash
+        env:
+          MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$MLTD_LLM_API_KEY"
+          cfg_dir="$RUNNER_TEMP/mltd-llm"
+          install -d -m 700 "$cfg_dir"
+          cp configs/api-models.example.json "$cfg_dir/api-models.local.json"
+          cp configs/api-models.presets.example.json "$cfg_dir/api-models.presets.json"
+          python - "$cfg_dir/api-runtime.local.json" "$MLTD_LLM_API_KEY" <<'PY'
+          import json
+          import pathlib
+          import sys
+          out = pathlib.Path(sys.argv[1])
+          key = sys.argv[2]
+          out.write_text(json.dumps({
+              "schema_version": 3,
+              "environment": {"api_key": {"MLTD_API_KEY": key}},
+          }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+          chmod 600 "$cfg_dir/api-models.local.json" "$cfg_dir/api-models.presets.json" "$cfg_dir/api-runtime.local.json"
+          echo "MLTD_LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
+          echo "LLM_CONFIG_PATH=$cfg_dir/api-models.local.json" >> "$GITHUB_ENV"
 
       - name: Collect untranslated rows
         # scope=all covers both source trees: the generated text release

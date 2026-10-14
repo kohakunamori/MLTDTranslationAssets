@@ -49,7 +49,26 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         cls.text = WORKFLOW.read_text(encoding="utf-8")
         cls.workflow = yaml.safe_load(cls.text)
         cls.job = cls.workflow["jobs"]["draft"]
-        cls.steps = {step.get("name"): step for step in cls.job["steps"]}
+        cls.prepare = cls.workflow["jobs"]["prepare"]
+        cls.steps = {step.get("name"): step for step in cls.prepare["steps"] + cls.job["steps"]}
+
+    def test_official_bundles_never_reach_the_limited_translation_job(self):
+        self.assertEqual(self.prepare['runs-on'], 'ubuntu-latest')
+        self.assertIn('racknerd-light', self.job['runs-on'])
+        self.assertEqual(self.job['needs'], 'prepare')
+        prepare_names = [step.get('name') for step in self.prepare['steps']]
+        draft_names = [step.get('name') for step in self.job['steps']]
+        self.assertIn('Extract event-unit dialogue', prepare_names)
+        self.assertNotIn('Extract event-unit dialogue', draft_names)
+        verify = self.steps['Verify and materialize synchronized text sources']['run']
+        self.assertIn('--sha256 "$HANDOFF_SHA256"', verify)
+        save = self.steps['Save exact-run text handoff']['with']
+        restore = self.steps['Restore exact-run text handoff']['with']
+        self.assertEqual(save['key'], restore['key'])
+        self.assertEqual(save['path'], '.mltd-text-handoff')
+        self.assertEqual(restore['path'], save['path'])
+        self.assertNotIn('restore-keys', restore)
+        self.assertIs(restore['fail-on-cache-miss'], True)
 
     def test_partial_item_failures_do_not_discard_accepted_rows(self):
         translate = self.steps["Translate with the existing provider pool"]
@@ -110,7 +129,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertNotIn('if [ "$has_update"', run)
         self.assertIn("inputs.full_rescan", run)
         self.assertIn('python "${args[@]}"', run)
-        names = [step.get("name") for step in self.job["steps"]]
+        names = [step.get("name") for step in self.prepare["steps"] + self.job["steps"]]
         self.assertLess(names.index("Extract event-unit dialogue"), names.index("Discover new localizable bundles"))
         self.assertLess(names.index("Verify source synchronization and detect image coverage"), names.index("Collect untranslated rows"))
         self.assertIn("--require-source-sync", self.steps["Verify source synchronization and detect image coverage"]["run"])
@@ -132,7 +151,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         the refresh (it reads the index the refresh downloads) and before the
         queue is collected, and lyric extraction must sit in the same window.
         """
-        names = [step.get("name") for step in self.job["steps"]]
+        names = [step.get("name") for step in self.prepare["steps"] + self.job["steps"]]
         refresh = names.index("Extract new source rows from official latest assets")
         discover = names.index("Discover new localizable bundles")
         lyrics = names.index("Extract new song lyrics")
@@ -174,7 +193,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
 
     def test_machine_drafts_are_admitted_by_one_explicit_step(self):
         """C: machine output reaches generated/<ver>/ only through `publish`."""
-        names = [step.get("name") for step in self.job["steps"]]
+        names = [step.get("name") for step in self.prepare["steps"] + self.job["steps"]]
         self.assertLess(names.index("Apply LLM translations"), names.index("Publish machine drafts for the generated build"))
         self.assertLess(names.index("Publish machine drafts for the generated build"), names.index("Commit LLM translations to main"))
         publish = self.steps["Publish machine drafts for the generated build"]
@@ -225,7 +244,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         -- while the approved Chinese for four of them was already in the library
         under another bundle.
         """
-        names = [step.get("name") for step in self.job["steps"]]
+        names = [step.get("name") for step in self.prepare["steps"] + self.job["steps"]]
         reuse = names.index("Reuse approved lyric translations")
         extract = names.index("Extract new song lyrics")
         collect = names.index("Collect untranslated rows")
