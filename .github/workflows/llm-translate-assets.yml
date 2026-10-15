@@ -209,6 +209,7 @@ jobs:
             /*
             !/generated/
             !/images/
+            !/image-overlay/
 
       - name: Set up Python
         uses: actions/setup-python@v5

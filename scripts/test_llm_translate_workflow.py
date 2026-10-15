@@ -53,6 +53,8 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         cls.steps = {step.get("name"): step for step in cls.prepare["steps"] + cls.job["steps"]}
 
     def test_official_bundles_never_reach_the_limited_translation_job(self):
+        checkout = self.job['steps'][0]['with']
+        self.assertIn('!/image-overlay/', checkout['sparse-checkout'])
         self.assertEqual(self.prepare['runs-on'], 'ubuntu-latest')
         self.assertIn('racknerd-light', self.job['runs-on'])
         self.assertEqual(self.job['needs'], 'prepare')
