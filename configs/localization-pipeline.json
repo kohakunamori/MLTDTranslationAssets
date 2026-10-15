@@ -3,7 +3,7 @@
   "images": {
     "generation_enabled": true,
     "publication_enabled": true,
-    "model": "imas-trans-image",
+    "model": "gemini-3.1-flash-image",
     "api_protocol": "gemini_generate_content",
     "requests_per_minute": 2,
     "concurrency": 1,

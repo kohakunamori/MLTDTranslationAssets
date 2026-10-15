@@ -18,7 +18,7 @@ The translation workflow owns three stages:
 
 The image policy has two independent switches in
 `configs/localization-pipeline.json` (schema 2): `generation_enabled=true` and
-`publication_enabled=true`. The provider is `imas-trans-image`, concurrency 1,
+`publication_enabled=true`. The provider is `gemini-3.1-flash-image`, concurrency 1,
 RPM 2 (every edit, including retries, passes the 30-second gate). Existing source
 files, reviewed PNGs, progress and overlays are preserved.
 

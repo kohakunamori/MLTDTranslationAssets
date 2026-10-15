@@ -7,7 +7,7 @@ on:
       model:
         description: 'Explicit image model to test on two official comic samples'
         required: true
-        default: 'imas-trans-image'
+        default: 'gemini-3.1-flash-image'
       guided:
         description: 'Use exact Chinese translations to test rendering quality separately'
         type: boolean

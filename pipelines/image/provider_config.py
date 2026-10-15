@@ -20,8 +20,8 @@ from time import monotonic, sleep
 
 CONFIG_PATH=Path(__file__).with_name("config.json")
 DEFAULTS={
- "image_provider":{"base_url":"http://127.0.0.1:15721/v1","mode":"images_edits",
-  "model":"imas-trans-image","api_key":"","api_key_env":"CLIPROXY_API_KEY",
+ "image_provider":{"base_url":"http://127.0.0.1:15721/v1","mode":"gemini_generate_content",
+  "model":"gemini-3.1-flash-image","api_key":"","api_key_env":"CLIPROXY_API_KEY",
   "require_api_key":False,"quality":"high","size":"auto","output_format":"png",
   "timeout_seconds":330,"min_request_interval_seconds":30,
   "legacy_controller_model":"gpt-5.6-luna"},
@@ -63,6 +63,14 @@ def gemini_image_parts(result):
  candidates=result.get('candidates') or []
  if not isinstance(candidates,list) or any(not isinstance(c,dict) for c in candidates):
   raise ProviderImageResponseError({'reason':'invalid_candidates'})
+ # Antigravity can omit finishReason on a filtered image. CLIProxyAPI v8
+ # defaults that missing field to STOP while preserving this explicit message.
+ # Match the observed provider refusal, never arbitrary text-only completions.
+ for candidate in candidates:
+  message=candidate.get('finishMessage',candidate.get('finish_message',''))
+  if isinstance(message,str) and ' '.join(message.casefold().split()).startswith(
+     "unable to show the generated image. the image was filtered out because it violated google's "):
+   raise ProviderImageDeclined('Gemini explicitly declined this image')
  reasons=[c.get('finishReason',c.get('finish_reason','')) for c in candidates]
  if any(isinstance(reason,str) and reason in refused for reason in reasons):
   raise ProviderImageDeclined('Gemini explicitly declined this image')

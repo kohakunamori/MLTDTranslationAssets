@@ -1,8 +1,9 @@
 # 图片增量汉化
 
 生产入口 `auto-track-jp-assets.yml` 的 `stage=images` 可以独立补图片积压；
-日常 `translate/full` 也调用同一图片阶段。配置为 `imas-trans-image`、串行、RPM 2。
-该别名使用 Gemini 原生 `generateContent` 接口；服务端不允许它走 `/v1/images/edits`。
+日常 `translate/full` 也调用同一图片阶段。配置为 `gemini-3.1-flash-image`、串行、RPM 2。
+直接请求模型名，使用 Gemini 原生 `/v1beta/models/gemini-3.1-flash-image:generateContent` 接口，
+不经过 `imas-trans-image` 别名，也不走 OpenAI `/v1/images/edits`。
 提交前按模型支持的画布比例补白，校验返回比例后去除补白，原图不拉伸，也不替换模型。
 不再执行只有 937 张固定基线的旧批处理入口，已有 937 张汉化 PNG 和对应发布成果继续保留。
 
@@ -39,6 +40,9 @@ Gemini 空响应、纯文字、多图或损坏图片最多尝试 3 次，每次�
 不更换模型或提示词。诊断只记录结束原因、候选/图片数量和文字长度，不记录响应正文或 Base64。
 重试耗尽则保存 `results.json` 并失败，未成功输入保持待处理，不能冒充已完成或人工复查决定；
 重跑复用该队列已有的生成结果。显式安全/内容拒绝不重试，进入待复查。
+RackNerd 的 CLIProxyAPI v8.0.29 可能给缺失的结束原因补上 `STOP`，同时保留 Google 的
+`finishMessage` 图片过滤说明。客户端识别这条明确拒绝，即使结束原因为 `STOP` 也只进入待复查；
+普通空响应和临时错误仍走有界重试。服务端模型名切换不保证被过滤的图片可以生成。
 阶段交接使用当前 run 的短期 Actions artifacts（输入/输出 3 天，审计 7 天），
 汉化发布的 Bundle 长期存储在独立 R2 bucket；GitHub 不再作为发布 Bundle 的存储源。
 

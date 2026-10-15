@@ -7,7 +7,7 @@ RackNerd 只执行串行 API。固定 937 张批次的脚本保留供历史检�
 
 ## 1. 架构与模型规范
 
-- **图像生成与编辑模型**：`imas-trans-image`，生产端走 Gemini 原生 `generateContent`。调用串行，启动间隔至少 30 秒（RPM 2），所有调用经过 `provider_config.throttle_image_request()`。源透明度由宿主端恢复，不采用模型透明度。
+- **图像生成与编辑模型**：`gemini-3.1-flash-image`，生产端走 Gemini 原生 `generateContent`。调用串行，启动间隔至少 30 秒（RPM 2），所有调用经过 `provider_config.throttle_image_request()`。源透明度由宿主端恢复，不采用模型透明度。
 - **视觉审校与布局识别模型**：`gpt-5.6-luna`（用于识别多 Sprite 布局、文本区域分类与质量检测）
 - **底层纹理编码**：ASTC (Adaptive Scalable Texture Compression) 与 RGB24/RGBA32，保持 UnityFS 资源包非目标像素完全不变。
 
@@ -28,7 +28,7 @@ export OPENAI_API_KEY="your_api_key_here"
 
 ### `config.example.json` 字段说明
 - `image_provider.base_url`: 上游代理网关地址（默认 `http://127.0.0.1:15721/v1` 或兼容 OpenAI images 接口的端点）
-- `image_provider.model`: 固定为 `imas-trans-image`
+- `image_provider.model`: 固定为 `gemini-3.1-flash-image`
 - `image_provider.api_key_env`: 读取 API 密钥的环境变量名（默认 `CLIPROXY_API_KEY`）
 - `vision.model`: 固定为 `gpt-5.6-luna`
 
@@ -37,7 +37,7 @@ export OPENAI_API_KEY="your_api_key_here"
 | 脚本 | 功能说明 |
 |---|---|
 | `preprocess_mltd_image25.py` | 提取并解析 Unity Sprite 图集，根据 Sprite 几何结构重组整幅原始画面 |
-| `run_mltd_image25_batch.py` | 批量调度 `imas-trans-image` 进行图像去日文与简中重绘（`--workers` 固定为 1，串行） |
+| `run_mltd_image25_batch.py` | 批量调度 `gemini-3.1-flash-image` 进行图像去日文与简中重绘（`--workers` 固定为 1，串行） |
 | `build_mltd_image25_review_gallery.py` | 生成用于人工审查的 Web HTML 对照画廊 (Original vs Localized) |
 | `stage_reviewed_images.py` | 将离线人工审核 CSV 转为 **SHA 绑定的待装审批清单**（`--review-csv` 必填，`--work`/`--output` 选填）。**不修改、不创建 Unity3D Bundle**；每一行的 `review_status` 固定写 `approved_for_staging_not_installed`，且不会自动接受模型结果 |
 | `auto_approve_reconstructed.py` | 自动放行：把审计通过的候选转成可注入的 install manifest（`review_status=auto_approved_no_human_signoff`）。审计有任何 error、有被上游拒绝的图、或有失败任务即拒绝；不是人工 CSV 的替代品，而是它的无人值守对应物 |

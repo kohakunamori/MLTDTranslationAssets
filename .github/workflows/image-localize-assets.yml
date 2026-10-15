@@ -129,7 +129,7 @@ jobs:
             work/image-api/results.json
             work/image-api/request-time.json
             work/image-api/tasks/**/*-generated.png
-      - name: Translate serially using imas-trans-image at RPM 2
+      - name: Translate serially using gemini-3.1-flash-image at RPM 2
         env:
           MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
         run: python -u scripts/incremental_images.py generate --work work/image-api --max-seconds 7200

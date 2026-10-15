@@ -217,8 +217,10 @@ def generate(work, max_seconds=7200):
     policy = read(ROOT / 'configs/localization-pipeline.json')['images']
     public = read(ROOT / 'configs/api-models.example.json')
     config = {key: dict(value) for key, value in provider_config.DEFAULTS.items()}
-    if policy['model'] != 'imas-trans-image' or policy['requests_per_minute'] != 2 or policy['concurrency'] != 1:
-        raise ValueError('Image API policy must be serial imas-trans-image at RPM 2')
+    if (policy['model'] != 'gemini-3.1-flash-image' or policy['requests_per_minute'] != 2
+            or policy['concurrency'] != 1
+            or policy.get('api_protocol', 'gemini_generate_content') != 'gemini_generate_content'):
+        raise ValueError('Image API policy must be serial gemini-3.1-flash-image via Gemini at RPM 2')
     config['image_provider'].update(base_url=public['defaults']['base_url'], model=policy['model'],
         mode=policy.get('api_protocol', 'gemini_generate_content'),
         api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)

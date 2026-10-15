@@ -160,7 +160,7 @@ def decode_response(doc):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--model", default="imas-trans-image")
+    parser.add_argument("--model", default="gemini-3.1-flash-image")
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--guided", action="store_true", help="supply exact Chinese text to separate translation and rendering quality")
     parser.add_argument("--strict-preservation", action="store_true", help="test stronger protected artwork and label constraints on the stitched comic only")
@@ -215,7 +215,7 @@ def main(argv=None):
                       headers={"Authorization": f"Bearer {key}", "x-goog-api-key": key, "Content-Type": "application/json"})
             started = time.monotonic()
             try:
-                if args.model == 'imas-trans-image':
+                if args.model == 'gemini-3.1-flash-image':
                     sys.path.insert(0, str(ROOT / 'pipelines/image'))
                     import provider_config
                     config = {k: dict(v) for k, v in provider_config.DEFAULTS.items()}

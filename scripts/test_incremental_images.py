@@ -42,7 +42,7 @@ def task_fixture(tmp_path, monkeypatch):
          'archive': 'archive.unity3d', 'tasks': [task]}]}
     images.write(source.parent / 'queue.json', queue)
     results = {'tasks': {digest: {'status': 'generated', 'output': 'edited.png', 'sha256': images.sha(output),
-                                  'provider': {'requested_image_model': 'imas-trans-image'}}}}
+                                  'provider': {'requested_image_model': 'gemini-3.1-flash-image'}}}}
     return source.parent, source, output, results
 
 
@@ -120,15 +120,15 @@ def test_api_stage_uses_required_model_and_restores_completed_tasks(tmp_path, mo
     import provider_config
     work, _, output, results = task_fixture(tmp_path, monkeypatch)
     images.write(tmp_path / 'configs/localization-pipeline.json', {'images': {
-        'model': 'imas-trans-image', 'requests_per_minute': 2, 'concurrency': 1}})
+        'model': 'gemini-3.1-flash-image', 'requests_per_minute': 2, 'concurrency': 1}})
     images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
     monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-key')
     called = []
     def edit(config, raw, prompt):
         called.append(config)
         assert config['image_provider']['min_request_interval_seconds'] == 30
-        assert config['image_provider']['model'] == 'imas-trans-image'
-        return output.read_bytes(), {'requested_image_model': 'imas-trans-image'}
+        assert config['image_provider']['model'] == 'gemini-3.1-flash-image'
+        return output.read_bytes(), {'requested_image_model': 'gemini-3.1-flash-image'}
     monkeypatch.setattr(provider_config, 'image_edit', edit)
     images.generate(work)
     images.generate(work)
@@ -151,16 +151,16 @@ def test_rate_gate_serializes_every_start_including_retries(monkeypatch):
     assert waits == [30, 30, 30]
 
 
-def test_native_image_alias_protocol_pads_without_distortion_then_removes_padding(monkeypatch):
+def test_native_image_model_protocol_pads_without_distortion_then_removes_padding(monkeypatch):
     import provider_config as provider
     config = copy.deepcopy(provider.DEFAULTS)
-    config['image_provider'].update(base_url='https://api.test/v1', model='imas-trans-image',
+    config['image_provider'].update(base_url='https://api.test/v1', model='gemini-3.1-flash-image',
                                     mode='gemini_generate_content', api_key='test-secret')
     original = Image.new('RGBA', (20, 60), (255, 0, 0, 128))
     source = io.BytesIO(); original.save(source, format='PNG')
     calls = []
     def send(config, request, timeout):
-        assert request.full_url == 'https://api.test/v1beta/models/imas-trans-image:generateContent'
+        assert request.full_url == 'https://api.test/v1beta/models/gemini-3.1-flash-image:generateContent'
         payload = json.loads(request.data)
         assert payload['generationConfig']['imageConfig']['aspectRatio'] == '1:4'
         raw = base64.b64decode(payload['contents'][0]['parts'][1]['inlineData']['data'])
@@ -172,7 +172,7 @@ def test_native_image_alias_protocol_pads_without_distortion_then_removes_paddin
     raw, meta = provider.image_edit(config, source.getvalue(), 'Translate Japanese')
     assert Image.open(io.BytesIO(raw)).size == (20, 60)
     assert calls == ['rate-gate']
-    assert meta['requested_image_model'] == 'imas-trans-image' and meta['padding_removed']
+    assert meta['requested_image_model'] == 'gemini-3.1-flash-image' and meta['padding_removed']
 
 
 def test_native_moderation_decision_is_never_retried_as_transport_failure(monkeypatch):
@@ -233,7 +233,7 @@ def test_corrupt_image_is_a_retryable_response_without_raw_content(monkeypatch, 
 
 def configure_api_fixture(tmp_path, monkeypatch):
     images.write(tmp_path / 'configs/localization-pipeline.json', {'images': {
-        'model': 'imas-trans-image', 'requests_per_minute': 2, 'concurrency': 1}})
+        'model': 'gemini-3.1-flash-image', 'requests_per_minute': 2, 'concurrency': 1}})
     images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
     monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-key')
     now = [1000.0]
@@ -311,6 +311,47 @@ def test_explicit_decline_is_not_retried_and_budget_does_not_start_late_attempt(
     assert len(calls) == 1
     result = next(iter(images.read(work / 'results.json')['tasks'].values()))
     assert result == {'status': 'manual_review', 'reason': 'provider_safety_decision'}
+
+
+@pytest.mark.parametrize('field', ['finishMessage', 'finish_message'])
+def test_stop_with_explicit_google_filter_message_is_held_once_then_other_inputs_continue(tmp_path, monkeypatch, field):
+    import provider_config as provider
+    work, _, output, _ = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    queue = images.read(work / 'queue.json')
+    other = work / 'other.png'
+    Image.new('RGB', (20, 20), 'yellow').save(other)
+    second = dict(queue['bundles'][0]['tasks'][0], input=other.name, sha256=images.sha(other))
+    queue['bundles'].append(dict(queue['bundles'][0], logical='hitokoma_2.unity3d', tasks=[second]))
+    images.write(work / 'queue.json', queue)
+    calls = []
+    def send(config, request, timeout):
+        calls.append(request.full_url)
+        assert request.full_url.endswith('/v1beta/models/gemini-3.1-flash-image:generateContent')
+        if len(calls) == 1:
+            return {'candidates': [{'finishReason': 'STOP', 'content': {'parts': []}, field:
+                "Unable to show the generated image. The image was filtered out because it violated Google's policy."}]}
+        return {'candidates': [{'content': {'parts': [{'inlineData': {
+            'data': base64.b64encode(output.read_bytes()).decode()}}]}}]}
+    monkeypatch.setattr(provider, 'send', send)
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda _: None)
+    images.generate(work)
+    progress = images.read(work / 'results.json')
+    assert len(calls) == 2  # one refusal, then one request for the next input
+    first_sha = queue['bundles'][0]['tasks'][0]['sha256']
+    assert progress['tasks'][first_sha] == {'status': 'manual_review', 'reason': 'provider_safety_decision'}
+    assert progress['tasks'][second['sha256']]['status'] == 'generated'
+    assert 'provider_error' not in progress
+    images.generate(work)
+    assert len(calls) == 2
+
+
+def test_generic_finish_message_is_not_misclassified_as_moderation():
+    import provider_config as provider
+    with pytest.raises(provider.ProviderImageResponseError):
+        provider.gemini_image_parts({'candidates': [{'finishReason': 'STOP',
+            'finishMessage': 'Unable to show the generated image due to a temporary backend error.',
+            'content': {'parts': []}}]})
 
 
 def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():
