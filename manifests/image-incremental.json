@@ -5027,6 +5027,109 @@
           "confidence": 91.026466
         }
       ]
+    },
+    "ex4c00959.unity3d": {
+      "identity": [
+        "af813056a7c6c0e8396c7739a6730d28514169f9",
+        "84851e2569f1846508a51825667ebcbe23743419.unity3d",
+        329472
+      ],
+      "archive_sha256": "8fe7fcd98716928340a295cc16e513ecce6f432c217585b9dc755956dfac1972",
+      "status": "translated",
+      "asset_version": "1077750",
+      "review_status": "user_approved_for_isolated_install_staging",
+      "human_approval_manifest": "manifests/image-human-approvals.json",
+      "textures": [
+        {
+          "id": -4115818147691196034,
+          "localized": "images/localized/bb31bb8f9bdd6bbc202bf127d89238ff79fb46796abdbf81d1abc475fc65963d.png",
+          "sha256": "bb31bb8f9bdd6bbc202bf127d89238ff79fb46796abdbf81d1abc475fc65963d",
+          "source_sha256": "c37813928f13bf02671006de3e75bb6efa1000b658e7fb1d3716b15ee49d29bc",
+          "composite_box": [
+            0,
+            0,
+            640,
+            125
+          ],
+          "text_map": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0"
+        },
+        {
+          "id": 6621877750307131827,
+          "localized": "images/localized/a38eb8a275ee82dbc229d3b2fd769a7126286b370a4f0a7ba1ebf17470c93c4f.png",
+          "sha256": "a38eb8a275ee82dbc229d3b2fd769a7126286b370a4f0a7ba1ebf17470c93c4f",
+          "source_sha256": "842816637f4ffc264a36693efc4644fab6539c66507df61ee97de362dda9ebd2",
+          "composite_box": [
+            0,
+            125,
+            640,
+            591
+          ],
+          "text_map": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0"
+        },
+        {
+          "id": 4376501243624852801,
+          "localized": "images/localized/bc397e7fcfa6e3ee4681a4d05a4e042387f3a6a99b7f51b5a1bc574d290298fb.png",
+          "sha256": "bc397e7fcfa6e3ee4681a4d05a4e042387f3a6a99b7f51b5a1bc574d290298fb",
+          "source_sha256": "df0095d36bcf9c8e90af01f2fbaa5f34b0087778603604b25f0d5abfe9755750",
+          "composite_box": [
+            0,
+            591,
+            640,
+            1057
+          ],
+          "text_map": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0"
+        },
+        {
+          "id": 8107709785619479715,
+          "localized": "images/localized/ca31b2b5da5f374bd7d9d74f20922743b89a7796c6b3a41cc5cc274e9d5fbd3c.png",
+          "sha256": "ca31b2b5da5f374bd7d9d74f20922743b89a7796c6b3a41cc5cc274e9d5fbd3c",
+          "source_sha256": "511145c692aeeb735a391c70da0823d5f78d6c3f95901fb43177985209de4939",
+          "composite_box": [
+            0,
+            1057,
+            640,
+            1523
+          ],
+          "text_map": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0"
+        },
+        {
+          "id": -7209288226080868410,
+          "localized": "images/localized/2359b9795832f113c3e858cb9192a8ce4d28cacc5d7b76c68dfa98531643d2b9.png",
+          "sha256": "2359b9795832f113c3e858cb9192a8ce4d28cacc5d7b76c68dfa98531643d2b9",
+          "source_sha256": "99a24e526558e55ad2c327166b50219ec8bd9fc5d1d8c220106c1840a3bcaedc",
+          "composite_box": [
+            0,
+            1523,
+            640,
+            2013
+          ],
+          "text_map": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0"
+        },
+        {
+          "id": -9001653330388000540,
+          "localized": "images/localized/6c1c571717a6afa5bddc819a0629353139a4109ad6ef1f40b1f52a6a9b2ad79d.png",
+          "sha256": "6c1c571717a6afa5bddc819a0629353139a4109ad6ef1f40b1f52a6a9b2ad79d",
+          "source_sha256": "eceaee3c0bce47519445339fe415871e351b3a914fb56f85cc66c15e75ba75f0",
+          "composite_box": [
+            0,
+            2013,
+            640,
+            2193
+          ],
+          "text_map": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0"
+        }
+      ],
+      "text_maps": {
+        "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0": {
+          "input_sha256": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0",
+          "size": [
+            640,
+            2193
+          ],
+          "human_approved": true,
+          "approval_manifest": "manifests/image-human-approvals.json"
+        }
+      }
     }
   }
 }

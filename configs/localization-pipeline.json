@@ -15,6 +15,6 @@
     "requests_per_minute": 2,
     "concurrency": 1,
     "batch_bundles": 12,
-    "disabled_reason": "Bounded GPT image translation and Gemini visual acceptance tests; reuse existing generations before new calls."
+    "disabled_reason": "Automatic image generation remains disabled at the user's request; publish existing and explicitly human-approved image sources only."
   }
 }
