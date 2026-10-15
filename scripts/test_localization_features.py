@@ -31,8 +31,8 @@ def condition(expression, values):
     return eval(compile(tree, "workflow condition", "eval"), {"__builtins__": {}})
 
 
-def test_image_generation_and_publication_are_enabled():
-    assert features.inspect(ROOT)["images_generation_enabled"] is True
+def test_image_generation_pauses_for_sample_review_without_disabling_publication():
+    assert features.inspect(ROOT)["images_generation_enabled"] is False
     assert features.inspect(ROOT)["images_publication_enabled"] is True
     policy = json.loads((ROOT / 'configs/localization-pipeline.json').read_text())['images']
     assert (policy['model'], policy['requests_per_minute'], policy['concurrency']) == ('gemini-3.1-flash-image', 2, 1)

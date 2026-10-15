@@ -2,6 +2,7 @@
 
 生产入口 `auto-track-jp-assets.yml` 的 `stage=images` 可以独立补图片积压；
 日常 `translate/full` 也调用同一图片阶段。配置为 `gemini-3.1-flash-image`、串行、RPM 2。
+目前按用户要求暂停自动生成，先检查已有样本并调整提示词；既有图片发布仍开启，生成结果保留供续用。
 直接请求模型名，使用 Gemini 原生 `/v1beta/models/gemini-3.1-flash-image:generateContent` 接口，
 不经过 `imas-trans-image` 别名，也不走 OpenAI `/v1/images/edits`。
 提交前按模型支持的画布比例补白，校验返回比例后去除补白，原图不拉伸，也不替换模型。

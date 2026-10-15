@@ -1,12 +1,13 @@
 {
   "schema_version": 2,
   "images": {
-    "generation_enabled": true,
+    "generation_enabled": false,
     "publication_enabled": true,
     "model": "gemini-3.1-flash-image",
     "api_protocol": "gemini_generate_content",
     "requests_per_minute": 2,
     "concurrency": 1,
-    "batch_bundles": 12
+    "batch_bundles": 12,
+    "disabled_reason": "Paused after initial Gemini samples for prompt and quality review; reuse completed outputs."
   }
 }
