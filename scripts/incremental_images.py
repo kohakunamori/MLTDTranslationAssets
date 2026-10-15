@@ -188,6 +188,30 @@ def prepare(work, limit):
     return document
 
 
+def request_image(config, work, progress, task, source, prompt, deadline):
+    """Bound transient response failures; keep failed tasks pending on exhaustion."""
+    import provider_config
+    for attempt in range(1, 4):
+        # Persist UTC pacing across interrupted processes and all retry starts.
+        last = read(work / 'request-time.json', {'started': 0})['started']
+        wait = max(0, 30 - (time.time() - last))
+        if time.monotonic() + wait >= deadline:
+            write(work / 'results.json', progress)
+            return None
+        time.sleep(wait)
+        write(work / 'request-time.json', {'started': time.time()})
+        try:
+            return provider_config.image_edit(config, source.read_bytes(), prompt)
+        except provider_config.ProviderImageResponseError as error:
+            progress['provider_error'] = {'input_sha256': task['sha256'], 'attempt': attempt,
+                                          'max_attempts': 3, **error.diagnostics}
+            write(work / 'results.json', progress)
+            print('IMAGE_RESPONSE_ERROR', json.dumps(progress['provider_error'], sort_keys=True), flush=True)
+            if attempt == 3:
+                raise RuntimeError('Image response failed after 3 attempts; generated progress retained; '
+                                   'failed input remains pending (see results.json)') from None
+
+
 def generate(work, max_seconds=7200):
     import provider_config
     policy = read(ROOT / 'configs/localization-pipeline.json')['images']
@@ -213,17 +237,16 @@ def generate(work, max_seconds=7200):
             source = work / task['input']
             if sha(source) != task['sha256']:
                 raise ValueError('Image input changed before provider call')
-            # Persist UTC pacing across interrupted process retries too.
-            last = read(work / 'request-time.json', {'started': 0})['started']
-            time.sleep(max(0, 30 - (time.time() - last)))
-            write(work / 'request-time.json', {'started': time.time()})
             prompt = ('Translate all Japanese lettering into fluent Simplified Chinese. '
                       'Every dialogue, caption and sound effect must be fully translated; never leave Japanese kana. '
                       'Preserve artwork, characters, logo, panel order and exact canvas geometry. '
                       'Edit text only inside its original regions. Return one PNG. Source OCR: ' +
                       json.dumps([r['source_text'] for r in task['regions']], ensure_ascii=False))
             try:
-                raw, metadata = provider_config.image_edit(config, source.read_bytes(), prompt)
+                response = request_image(config, work, progress, task, source, prompt, start + max_seconds)
+                if response is None:
+                    return
+                raw, metadata = response
                 image = Image.open(io.BytesIO(raw)); image.load()
                 original = Image.open(source)
                 if abs(image.width / image.height / (original.width / original.height) - 1) > .01:

@@ -36,6 +36,60 @@ PNG_SIGNATURE=b"\x89PNG\r\n\x1a\n"
 class ProviderImageDeclined(RuntimeError):
  """An explicit provider safety decision; retain for review, never retry."""
 
+
+class ProviderImageResponseError(RuntimeError):
+ """An unusable response, with structural diagnostics and no response content."""
+ def __init__(self,diagnostics):
+  self.diagnostics=diagnostics
+  super().__init__('Gemini image response unusable: '+json.dumps(diagnostics,sort_keys=True))
+
+
+def gemini_image_parts(result):
+ """Extract final images and classify explicit refusals before any retry.
+
+ Do not include free-form text, inline data, IDs or arbitrary provider values
+ in diagnostics: any of those could echo the prompt or credentials.
+ """
+ refused={'SAFETY','IMAGE_SAFETY','PROHIBITED_CONTENT','IMAGE_PROHIBITED_CONTENT',
+          'BLOCKLIST','SPII','RECITATION','IMAGE_RECITATION','ESCALATION','PUP_LIMITED_DISABLED'}
+ known=refused|{'STOP','MAX_TOKENS','OTHER','IMAGE_OTHER','NO_IMAGE','LANGUAGE',
+       'FINISH_REASON_UNSPECIFIED','MALFORMED_FUNCTION_CALL','UNEXPECTED_TOOL_CALL',
+       'TOO_MANY_TOOL_CALLS','MISSING_THOUGHT_SIGNATURE','MALFORMED_RESPONSE'}
+ if not isinstance(result,dict):
+  raise ProviderImageResponseError({'reason':'invalid_envelope'})
+ feedback=result.get('promptFeedback',result.get('prompt_feedback')) or {}
+ if isinstance(feedback,dict) and (feedback.get('blockReason') or feedback.get('block_reason')):
+  raise ProviderImageDeclined('Gemini explicitly declined this image')
+ candidates=result.get('candidates') or []
+ if not isinstance(candidates,list) or any(not isinstance(c,dict) for c in candidates):
+  raise ProviderImageResponseError({'reason':'invalid_candidates'})
+ reasons=[c.get('finishReason',c.get('finish_reason','')) for c in candidates]
+ if any(isinstance(reason,str) and reason in refused for reason in reasons):
+  raise ProviderImageDeclined('Gemini explicitly declined this image')
+ outputs=[]
+ diagnostics={'reason':'image_count','candidate_count':len(candidates),
+    'finish_reasons':[r if isinstance(r,str) and r in known else 'UNKNOWN' for r in reasons],
+    'text_parts':0,'text_characters':0,'thought_parts':0,'inline_parts':0}
+ for candidate in candidates:
+  content=candidate.get('content') or {}
+  parts=content.get('parts',[]) if isinstance(content,dict) else []
+  if not isinstance(parts,list):parts=[]
+  for part in parts:
+   if not isinstance(part,dict):continue
+   if part.get('thought'):
+    diagnostics['thought_parts']+=1
+    continue
+   if isinstance(part.get('text'),str):
+    diagnostics['text_parts']+=1;diagnostics['text_characters']+=len(part['text'])
+   inline=part.get('inlineData',part.get('inline_data')) or {}
+   if isinstance(inline,dict) and inline.get('data'):
+    diagnostics['inline_parts']+=1
+    if inline.get('mimeType',inline.get('mime_type','image/png')) in ('image/png','image/jpeg','image/webp'):
+     outputs.append(inline)
+ diagnostics['image_count']=len(outputs)
+ if len(outputs)!=1:raise ProviderImageResponseError(diagnostics)
+ return outputs
+
 # The upstream image service enforces a requests-per-minute ceiling, so image
 # edits leave this client at most once per min_request_interval_seconds.  The
 # gate is process-global: extra threads queue behind it instead of stacking
@@ -270,18 +324,15 @@ def gemini_edit(config:dict,source:bytes,prompt:str,
  request=urllib.request.Request(url,data=json.dumps(payload).encode(),method='POST',
     headers={**headers(config,'application/json'),'x-goog-api-key':api_key(config)})
  throttle_image_request(config)
- result=send(config,request,timeout)
- outputs=[part.get('inlineData',part.get('inline_data',{}))
-    for candidate in result.get('candidates',[]) for part in candidate.get('content',{}).get('parts',[])
-    if not part.get('thought') and part.get('inlineData',part.get('inline_data',{})).get('data')]
- if len(outputs)!=1:
-  blocked=result.get('promptFeedback',{}).get('blockReason')
-  reasons={str(c.get('finishReason','')) for c in result.get('candidates',[])}
-  if blocked or reasons & {'SAFETY','IMAGE_SAFETY','PROHIBITED_CONTENT','BLOCKLIST'}:
-   raise ProviderImageDeclined('Gemini explicitly declined this image')
-  raise RuntimeError('Gemini did not return exactly one edited image')
- raw=base64.b64decode(outputs[0]['data'],validate=True)
- edited=Image.open(io.BytesIO(raw));edited.load()
+ try:result=send(config,request,timeout)
+ except json.JSONDecodeError:
+  raise ProviderImageResponseError({'reason':'invalid_json'}) from None
+ outputs=gemini_image_parts(result)
+ try:
+  raw=base64.b64decode(outputs[0]['data'],validate=True)
+  edited=Image.open(io.BytesIO(raw));edited.load()
+ except (ValueError,TypeError,OSError):
+  raise ProviderImageResponseError({'reason':'invalid_image'}) from None
  error=abs((edited.width/edited.height)/(a/b)-1)
  if error>.01:raise ValueError('Gemini changed the padded canvas aspect ratio')
  normalized=edited.convert('RGB').resize(canvas.size,Image.Resampling.LANCZOS).crop((0,0,*original.size))

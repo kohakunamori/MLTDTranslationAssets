@@ -186,6 +186,133 @@ def test_native_moderation_decision_is_never_retried_as_transport_failure(monkey
         provider.image_edit(config, source.getvalue(), 'Translate Japanese')
 
 
+@pytest.mark.parametrize('result,expected', [
+    ({}, {'candidate_count': 0, 'image_count': 0}),
+    ({'candidates': [{'finishReason': 'NO_IMAGE', 'content': {'parts': [{'text': 'secret'}]}}]},
+     {'finish_reasons': ['NO_IMAGE'], 'text_characters': 6, 'image_count': 0}),
+    ({'candidates': [{'finishReason': 'secret', 'content': {'parts': [
+        {'inlineData': {'data': 'secret'}}, {'inlineData': {'data': 'secret'}}]}}]},
+     {'finish_reasons': ['UNKNOWN'], 'image_count': 2}),
+    ({'candidates': [{'content': {'parts': [{'thought': True, 'inlineData': {'data': 'secret'}},
+        {'inline_data': {'data': 'secret', 'mime_type': 'audio/wav'}}]}}]},
+     {'thought_parts': 1, 'inline_parts': 1, 'image_count': 0}),
+    ({'candidates': 'secret'}, {'reason': 'invalid_candidates'}),
+    (['secret'], {'reason': 'invalid_envelope'}),
+])
+def test_unusable_native_responses_have_structural_diagnostics_only(result, expected):
+    import provider_config as provider
+    with pytest.raises(provider.ProviderImageResponseError) as caught:
+        provider.gemini_image_parts(result)
+    assert expected.items() <= caught.value.diagnostics.items()
+    assert 'secret' not in str(caught.value)
+
+
+@pytest.mark.parametrize('reason', ['SAFETY', 'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT',
+    'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION', 'IMAGE_RECITATION',
+    'ESCALATION', 'PUP_LIMITED_DISABLED'])
+def test_explicit_refusals_are_classified_even_with_an_image(reason):
+    import provider_config as provider
+    with pytest.raises(provider.ProviderImageDeclined):
+        provider.gemini_image_parts({'candidates': [{'finishReason': reason, 'content': {
+            'parts': [{'inlineData': {'data': 'secret'}}]}}]})
+
+
+@pytest.mark.parametrize('encoded', ['not-base64!', base64.b64encode(b'not an image').decode()])
+def test_corrupt_image_is_a_retryable_response_without_raw_content(monkeypatch, encoded):
+    import provider_config as provider
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider']['mode'] = 'gemini_generate_content'
+    source = io.BytesIO(); Image.new('RGB', (20, 20)).save(source, format='PNG')
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda _: None)
+    monkeypatch.setattr(provider, 'send', lambda *args: {'candidates': [{'content': {
+        'parts': [{'inlineData': {'data': encoded}}]}}]})
+    with pytest.raises(provider.ProviderImageResponseError) as caught:
+        provider.image_edit(config, source.getvalue(), 'Translate Japanese')
+    assert caught.value.diagnostics == {'reason': 'invalid_image'}
+
+
+def configure_api_fixture(tmp_path, monkeypatch):
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': {
+        'model': 'imas-trans-image', 'requests_per_minute': 2, 'concurrency': 1}})
+    images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
+    monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-key')
+    now = [1000.0]
+    monkeypatch.setattr(images.time, 'time', lambda: now[0])
+    monkeypatch.setattr(images.time, 'monotonic', lambda: now[0])
+    monkeypatch.setattr(images.time, 'sleep', lambda delay: now.__setitem__(0, now[0] + delay))
+    return now
+
+
+def test_empty_native_response_retries_at_rpm_two_then_resumes_without_new_call(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, _, output, _ = task_fixture(tmp_path, monkeypatch)
+    now = configure_api_fixture(tmp_path, monkeypatch)
+    calls, gates = [], []
+    def send(*_):
+        calls.append(now[0])
+        if len(calls) == 1:
+            return {'candidates': [{'finishReason': 'NO_IMAGE', 'content': {'parts': [{'text': 'no image'}]}}]}
+        return {'candidates': [{'finishReason': 'STOP', 'content': {'parts': [
+            {'inline_data': {'mime_type': 'image/png', 'data': base64.b64encode(output.read_bytes()).decode()}}]}}]}
+    monkeypatch.setattr(provider, 'send', send)
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda _: gates.append(now[0]))
+    images.generate(work)
+    progress = images.read(work / 'results.json')
+    assert next(iter(progress['tasks'].values()))['status'] == 'generated'
+    assert 'provider_error' not in progress
+    assert calls == gates == [1000, 1030]
+    images.generate(work)
+    assert len(calls) == 2
+
+
+def test_exhaustion_preserves_good_outputs_and_failed_input_remains_pending(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, source, output, results = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    images.write(work / 'results.json', results)
+    queue = images.read(work / 'queue.json')
+    other = work / 'other.png'
+    Image.new('RGB', (20, 20), 'yellow').save(other)
+    task = dict(queue['bundles'][0]['tasks'][0], input=other.name, sha256=images.sha(other))
+    queue['bundles'][0]['tasks'].append(task)
+    images.write(work / 'queue.json', queue)
+    calls = []
+    def fail(*args):
+        calls.append(args[1])
+        raise provider.ProviderImageResponseError({'reason': 'image_count', 'image_count': 0})
+    monkeypatch.setattr(provider, 'image_edit', fail)
+    with pytest.raises(RuntimeError, match='after 3 attempts'):
+        images.generate(work)
+    progress = images.read(work / 'results.json')
+    assert len(calls) == 3 and all(raw == other.read_bytes() for raw in calls)
+    assert progress['tasks'] == results['tasks'] and output.exists()
+    assert progress['provider_error']['attempt'] == 3
+    assert progress['provider_error']['input_sha256'] == task['sha256']
+    assert task['sha256'] not in progress['tasks']
+    monkeypatch.setattr(provider, 'image_edit', lambda *args: (output.read_bytes(), {}))
+    images.generate(work)
+    progress = images.read(work / 'results.json')
+    assert len(progress['tasks']) == 2 and 'provider_error' not in progress
+
+
+def test_explicit_decline_is_not_retried_and_budget_does_not_start_late_attempt(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, _, _, _ = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    calls = []
+    def decline(*args):
+        calls.append(True)
+        raise provider.ProviderImageDeclined('explicit decision')
+    monkeypatch.setattr(provider, 'image_edit', decline)
+    images.write(work / 'request-time.json', {'started': 1000})
+    images.generate(work, max_seconds=20)
+    assert calls == [] and images.read(work / 'results.json')['tasks'] == {}
+    images.generate(work)
+    assert len(calls) == 1
+    result = next(iter(images.read(work / 'results.json')['tasks'].values()))
+    assert result == {'status': 'manual_review', 'reason': 'provider_safety_decision'}
+
+
 def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():
     from UnityPy.export import Texture2DConverter as converter
     from UnityPy.enums import TextureFormat
