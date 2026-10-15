@@ -139,5 +139,66 @@ def test_openai_comparison_records_http_failure_without_fallback_or_retry(tmp_pa
     assert len(calls) == 3 and 'test-secret' not in (out / 'summary.json').read_text()
 
 
+def test_mixed_comparison_sends_identical_unpadded_input_over_native_routes(tmp_path, monkeypatch):
+    provider = comparison.provider
+    source = tmp_path / 'source.png'
+    raw = experiment.png(Image.new('RGB', (24, 80), 'red'))
+    source.write_bytes(raw)
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider'].update(base_url='https://api.test/v1', mode='images_edits', api_key='test-secret')
+    prompt, calls = 'Fixed Chinese text: 果肉酸酸的', []
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda c: None)
+    monkeypatch.setattr(comparison.time, 'sleep', lambda _: None)
+    def send(config, request, timeout):
+        calls.append(request.full_url)
+        if request.full_url.endswith('/images/edits'):
+            assert raw in request.data and prompt.encode() in request.data
+            assert b'name="mask"' not in request.data
+            return {'data': [{'b64_json': base64.b64encode(raw).decode()}]}
+        assert request.full_url == 'https://api.test/v1beta/models/gemini-3.1-flash-image:generateContent'
+        assert request.get_header('X-goog-api-key') == 'test-secret'
+        body = json.loads(request.data)
+        parts = body['contents'][0]['parts']
+        assert parts[0]['text'] == prompt
+        assert base64.b64decode(parts[1]['inlineData']['data']) == raw
+        assert body['generationConfig'] == {'responseModalities': ['TEXT', 'IMAGE'], 'imageConfig': {'imageSize': '2K'}}
+        return {'candidates': [{'content': {'parts': [{'inlineData': {'mimeType': 'image/png', 'data': base64.b64encode(raw).decode()}}]}}]}
+    monkeypatch.setattr(provider, 'send', send)
+    models = ('gpt-image-2.5', comparison.GEMINI_MODEL)
+    out = tmp_path / 'comparison'
+    result = comparison.compare(source, prompt, out, config, models)
+    assert len(calls) == 2 and all(v['status'] == 'generated' for v in result['models'].values())
+    assert result['request']['model_protocols'] == {'gpt-image-2.5': 'images_edits', comparison.GEMINI_MODEL: 'gemini_generate_content'}
+    assert (out / (comparison.GEMINI_MODEL + '.png')).read_bytes() == raw
+    comparison.compare(source, prompt, out, config, models)
+    assert len(calls) == 2
+
+
+def test_gemini_jpeg_is_preserved_without_conversion_and_invalid_bytes_retained(tmp_path, monkeypatch):
+    source = tmp_path / 'source.png'
+    source.write_bytes(experiment.png(Image.new('RGB', (24, 80), 'red')))
+    buffer = io.BytesIO()
+    Image.new('RGB', (48, 160), 'blue').save(buffer, format='JPEG')
+    jpeg = buffer.getvalue()
+    config = copy.deepcopy(comparison.provider.DEFAULTS)
+    config['image_provider'].update(base_url='https://api.test/v1', mode='images_edits', api_key='test-secret')
+    calls = []
+    def edit(*args):
+        calls.append(True)
+        return jpeg, {'mode': 'gemini_generate_content'}
+    monkeypatch.setattr(comparison, 'raw_gemini_edit', edit)
+    out = tmp_path / 'jpeg'
+    result = comparison.compare(source, 'Fixed text', out, config, (comparison.GEMINI_MODEL,))
+    row = result['models'][comparison.GEMINI_MODEL]
+    assert row['output_size'] == [48, 160] and row['output'].endswith('.jpg')
+    assert (out / row['output']).read_bytes() == jpeg
+    comparison.compare(source, 'Fixed text', out, config, (comparison.GEMINI_MODEL,))
+    assert len(calls) == 1
+    monkeypatch.setattr(comparison, 'raw_gemini_edit', lambda *args: (b'unsupported image', {}))
+    out = tmp_path / 'invalid'
+    row = comparison.compare(source, 'Fixed text', out, config, (comparison.GEMINI_MODEL,))['models'][comparison.GEMINI_MODEL]
+    assert row['status'] == 'failed' and (out / row['raw_output']).read_bytes() == b'unsupported image'
+
+
 if __name__ == "__main__":
     unittest.main()

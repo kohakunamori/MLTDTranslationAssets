@@ -1,0 +1,58 @@
+Use case: text-localization. Edit the provided Japanese game comic into Simplified Chinese. This is a controlled lettering comparison: render the exact supplied Chinese text below, rather than translating or paraphrasing it yourself. The source PNG is the edit target, not a loose reference.
+
+Preserve the entire canvas, white margins, panel borders, panel order and composition. Preserve all non-text artwork: faces, expressions, mouths, hair, hands, costumes, props, scenery and colors. Do not redraw characters, add objects, enlarge speech bubbles, cover artwork or invent extra dialogue. Replace Japanese lettering cleanly inside its existing text regions; adjust line wrapping and font size to fit. Keep English logos, Latin character labels and copyright exactly unchanged. Preserve ellipses and the small handwritten aside next to the wine glass. Return exactly one edited image, without explanatory text. Keep the original canvas aspect ratio without adding borders or black padding.
+
+All required Chinese text, in reading order. Render every region exactly; region labels are instructions, not text to print:
+
+Title: 柠檬味
+
+Panel 1, upper-right pink thought bubble:
+唔～～～
+初恋是柠檬味，
+到底是什么意思呢……
+
+Panel 1, lower-left pink thought bubble:
+皮虽然很苦，
+果肉却酸酸的……
+
+Panel 2, upper-right pink thought bubble:
+等长大了，
+也会觉得它
+好吃吗……
+
+Panel 2, lower-left small pink thought bubble:
+……
+
+Panel 3, upper-right thought text:
+……不过，既然要尝，
+还是像妈妈做的柠檬蛋糕
+那样甜甜的更好啊……
+
+Panel 3, lower-left thought text:
+要是那样的话，
+就想多多体验一下……
+
+Panel 3, large pink sound-effect lettering:
+飘飘然……♡♡
+
+Panel 4, right pink thought bubble:
+……唔～～～
+以前我也有过
+这样可爱的时期呢……
+
+Panel 4, small handwritten aside beside the wine glass, do not omit:
+那时可真是纯情啊……
+
+Panel 4, lower-center pink speech bubble:
+诶……那你最后
+知道初恋的味道了吗？
+
+Panel 4, left pink speech bubble:
+…………
+…………
+无可奉告！
+
+Blue character name label and matching footer name: 百濑莉绪
+Orange character name label and matching footer name: 马场木实
+Black footer heading: 登场人物
+Keep Latin labels Rio Momose and KONOMI BABA unchanged. Names must match the supplied Chinese exactly. Do not change 木实 into 木之美. Do not change 酸酸的 into 多汁 or 清爽. Preserve all artwork and the original reading order.

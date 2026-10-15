@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "models": {
+    "gpt-image-2.5": {
+      "status": "generated",
+      "output": "images/candidates/d5c6c477678cfdb3dea21d51c7bf670a4e6d821e09891c5f115693d20a731903.png",
+      "sha256": "d5c6c477678cfdb3dea21d51c7bf670a4e6d821e09891c5f115693d20a731903",
+      "output_size": [
+        724,
+        2172
+      ],
+      "aspect_ratio_error": 0.1421874999999999,
+      "geometry_matches": false,
+      "provider": {
+        "response_id": null,
+        "requested_image_model": "gpt-image-2.5",
+        "endpoint": "/v1/images/edits",
+        "mode": "images_edits",
+        "quality": "high",
+        "size_requested": "auto",
+        "output_format": "png"
+      },
+      "elapsed_seconds": 118.13,
+      "preview_normalization": {
+        "removed_full_height_near_black_columns": [
+          44,
+          45
+        ],
+        "aspect_ratio_error_after_margin_removal": 0.0017804730662984714,
+        "display_size": [
+          640,
+          2193
+        ],
+        "approved_for_installation": false
+      }
+    },
+    "gemini-3.1-flash-image": {
+      "status": "generated",
+      "output": "images/candidates/37429251b980f134bb897b6ff97cbcc7aea6b2e298d898d5bc56118a45fce092.jpg",
+      "sha256": "37429251b980f134bb897b6ff97cbcc7aea6b2e298d898d5bc56118a45fce092",
+      "output_size": [
+        1120,
+        3838
+      ],
+      "aspect_ratio_error": 6.513809275665583e-05,
+      "geometry_matches": true,
+      "provider": {
+        "requested_image_model": "gemini-3.1-flash-image",
+        "endpoint": "/v1beta/models/gemini-3.1-flash-image:generateContent",
+        "mode": "gemini_generate_content",
+        "image_size": "2K",
+        "aspect_ratio_requested": "auto",
+        "padding_removed": false
+      },
+      "elapsed_seconds": 50.71,
+      "preview_normalization": {
+        "removed_full_height_near_black_columns": [
+          0,
+          0
+        ],
+        "aspect_ratio_error_after_margin_removal": 6.513809275665583e-05,
+        "display_size": [
+          640,
+          2193
+        ],
+        "approved_for_installation": false
+      }
+    }
+  },
+  "request": {
+    "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+    "prompt_sha256": "ba967b5a810be8e77cc1d3c110938232cf6c9ff57674fb4b6b82d63a18aa06b3",
+    "endpoint": "http://127.0.0.1:21318/v1",
+    "mode": "native_model_protocols",
+    "quality": "high",
+    "size": "auto",
+    "output_format": "png",
+    "n": 1,
+    "min_request_interval_seconds": 30,
+    "model_protocols": {
+      "gpt-image-2.5": "images_edits",
+      "gemini-3.1-flash-image": "gemini_generate_content"
+    },
+    "gemini_image_size": "2K",
+    "gemini_aspect_ratio": "auto"
+  },
+  "source_size": [
+    640,
+    2193
+  ],
+  "review_status": "unapproved",
+  "mask_applied": false,
+  "attempt_history": [
+    {
+      "model": "gemini-3.1-flash-image",
+      "status": "failed",
+      "error_type": "ValueError",
+      "elapsed_seconds": 16.82,
+      "review_note": "Client rejected first image; raw bytes were not retained. One explicit retry after preserving JPEG/unknown outputs. GPT result is reused."
+    }
+  ],
+  "source_logical": "ex4c00964.unity3d",
+  "asset_version": "1077750",
+  "date": "2026-10-16",
+  "experiment": "fixed Chinese reference text, native routes, raw images without OCR masks",
+  "request_parameter_scope": "quality,size,output_format,n refer to OpenAI; gemini_* refer to Gemini",
+  "notes": "One GPT request; two Gemini attempts, first rejected by client validation and raw bytes not retained; one explicit retry after raw JPEG support. No bulk generation, fallback or release approval."
+}

@@ -1,4 +1,4 @@
-# Bounded OpenAI image comparison
+# Bounded native image comparison
 
 Automatic generation stays paused while samples are reviewed. The comparison
 command edits one existing PNG with the same prompt through each explicitly
@@ -33,6 +33,27 @@ image can still fail geometry, translation, character or artwork preservation
 checks. All outputs remain unapproved candidates. The first comparison uses
 the existing `ex4c00964` source and unchanged Gemini sample prompt, so the
 previous Gemini result can be inspected alongside it without another call.
+
+To compare GPT with the original Gemini model using fixed Chinese reference
+text, select both models explicitly:
+
+```powershell
+python scripts/compare_image_models.py --input source.png --prompt-file manifests/image-model-comparisons/2026-10-16-ex4c00964-fixed-text-prompt.txt --output fixed-text-comparison --model gpt-image-2.5 --model gemini-3.1-flash-image
+```
+
+GPT uses OpenAI multipart image edits. Gemini uses native
+`/v1beta/models/gemini-3.1-flash-image:generateContent`, with the exact same
+PNG bytes and prompt text in `inlineData`/`text`. Gemini requests a 2K image
+with automatic aspect ratio; GPT retains `quality=high` and `size=auto`.
+The comparison deliberately bypasses the production Gemini padding and crop
+helper so the saved raw outputs can be judged directly. It performs no
+input padding, output resizing or OCR masking. The mixed request manifest
+records each model's protocol and both models' settings. Reference wording
+is an experiment input, not an approval to publish the resulting image.
+Gemini may return JPEG instead of PNG; native JPEG bytes are retained with
+their original extension and dimensions. Decoded images with unsupported
+formats are retained as `.bin` for offline diagnosis before validation fails,
+so a format issue does not require another generation merely to inspect it.
 
 ## 2026-10-16 sample review
 
@@ -70,3 +91,32 @@ and approval state are recorded in
 [`2026-10-16-ex4c00964.json`](../manifests/image-model-comparisons/2026-10-16-ex4c00964.json),
 with the exact prompt alongside it. Comparison records are separate from the
 production generation cache, so they cannot replace a completed translation.
+
+## Fixed-text GPT / Gemini follow-up
+
+The second experiment uses the identical original PNG and a new fixed Chinese
+reference prompt for both models, including every bubble, sound effect,
+character name and the handwritten aside. Neither model receives a mask or
+input padding. Raw outputs and the first failed Gemini attempt are recorded in
+[`2026-10-16-ex4c00964-fixed-text.json`](../manifests/image-model-comparisons/2026-10-16-ex4c00964-fixed-text.json).
+
+| Check | GPT-image-2.5 | Gemini-3.1-flash-image |
+| --- | --- | --- |
+| Raw output | PNG, 724×2172, newly added side black bars | JPEG, 1120×3838, no black bars |
+| Raw aspect-ratio error | 14.22%; 0.178% after preview-only black-margin removal | 0.0065% without cropping |
+| Main dialogue | Keeps the sour-flesh wording; fourth-panel question repeats 知道 and omits 味道 | Repeats 柠檬蛋糕 in panel 3, 验 in 体验, and parts of the fourth-panel question |
+| Handwritten aside | Present; 那时可真是纯情啊…… follows the reference wording | Present but repeats 真是 |
+| Artwork / labels | Overall composition retained by eye; fine details and labels still require review | Overall composition retained by eye; Latin name label beneath 马场木实 is visibly corrupted |
+
+GPT is the better lettering candidate on this sample; Gemini follows the
+original canvas ratio more closely. Fixed Chinese text reduces semantic
+paraphrasing but does not ensure exact transcription. Both remain unapproved,
+and this single comic is insufficient to select a production model.
+
+There was one GPT request. The first Gemini response failed the client's
+PNG-only validation with `ValueError`; those decoded bytes were not retained,
+so its exact format cannot now be proven. After adding raw JPEG preservation,
+one explicitly reviewed Gemini-only retry returned JPEG successfully. GPT
+was reused. The failure and retry remain in the manifest's attempt history;
+there were no automatic retries or fallback models. Future unsupported
+decoded formats are saved before validation, avoiding this data loss.
