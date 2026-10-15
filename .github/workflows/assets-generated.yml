@@ -139,9 +139,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .generated-work/official-by-content
-          # v4 saves image/event sources scoped by logical name: the catalogue
+          # v5 scopes text, image and event sources by logical name: the catalogue
           # fingerprint alone can collide across distinct official bundles.
-          key: official-by-content-v4-${{ steps.gate.outputs.asset_version }}-images-${{ steps.features.outputs.images_publication_enabled }}
+          key: official-by-content-v5-${{ steps.gate.outputs.asset_version }}-images-${{ steps.features.outputs.images_publication_enabled }}
           restore-keys: |
             official-by-content-
 

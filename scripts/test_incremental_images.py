@@ -27,6 +27,7 @@ def test_discovery_expands_beyond_frozen_cohort_and_changes_are_requeued():
 
 def task_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(images, 'ROOT', tmp_path)
+    monkeypatch.setattr(images, 'text_regions', lambda _: [])
     images.write(tmp_path / 'manifests/asset-version.json', {'asset_version': '100'})
     source = tmp_path / 'work/source.png'
     source.parent.mkdir()
@@ -55,7 +56,8 @@ def test_package_keeps_artwork_and_alpha_and_commits_sources_independent_of_rele
     assert localized.getpixel((0, 0)) == original.getpixel((0, 0))
     assert localized.getpixel((3, 3)) == (0, 0, 255, 128)
     assert list(localized.getchannel('A').getdata()) == list(original.getchannel('A').getdata())
-    assert state['textures'][0]['audit']['outside_mask_changed_pixels'] == 0
+    assert state['text_maps'][state['textures'][0]['text_map']]['audit']['outside_mask_changed_pixels'] == 0
+    assert len(state['text_maps']) == 1
     assert len((work / 'install.jsonl').read_text().splitlines()) == 1
 
 
@@ -64,6 +66,43 @@ def test_incomplete_batch_does_not_mark_source_complete(tmp_path, monkeypatch):
     images.package(work)
     assert images.read(work / 'next-state.json')['bundles'] == {}
     assert not (work / 'install.jsonl').read_text()
+
+
+def test_remaining_japanese_keeps_candidates_but_cannot_publish_partial_bundle(tmp_path, monkeypatch):
+    work, _, _, results = task_fixture(tmp_path, monkeypatch)
+    images.write(work / 'results.json', results)
+    monkeypatch.setattr(images, 'text_regions', lambda _: [{'box': [1, 1, 5, 5],
+        'source_text': '\u305d\u3046\u3067\u3057\u3087', 'confidence': 99}])
+    images.package(work)
+    state = images.read(work / 'next-state.json')['bundles']['hitokoma_1.unity3d']
+    assert state['status'] == 'manual_review' and state['review_reason'] == 'remaining_japanese'
+    assert not (work / 'install.jsonl').read_text()
+    assert state['textures'][0]['localized'].startswith('images/candidates/')
+    assert not (tmp_path / 'images/localized').exists()
+
+
+def test_bad_second_texture_cannot_publish_a_good_first_texture(tmp_path, monkeypatch):
+    work, _, _, results = task_fixture(tmp_path, monkeypatch)
+    queue = images.read(work / 'queue.json')
+    second = copy.deepcopy(queue['bundles'][0]['tasks'][0])
+    original = work / 'source-two.png'
+    Image.new('RGBA', (20, 20), 'green').save(original)
+    second.update(input=original.name, sha256=images.sha(original))
+    second['layout'][0].update(id=2, original=original.name, source_sha256=second['sha256'])
+    queue['bundles'][0]['tasks'].append(second)
+    results['tasks'][second['sha256']] = copy.deepcopy(next(iter(results['tasks'].values())))
+    images.write(work / 'queue.json', queue)
+    images.write(work / 'results.json', results)
+    count = [0]
+    def ocr(_):
+        count[0] += 1
+        return [] if count[0] == 1 else [{'source_text': '\u305d\u3046\u3067\u3057\u3087', 'confidence': 99}]
+    monkeypatch.setattr(images, 'text_regions', ocr)
+    images.package(work)
+    record = images.read(work / 'next-state.json')['bundles']['hitokoma_1.unity3d']
+    assert record['status'] == 'manual_review' and len(record['textures']) == 2
+    assert not (work / 'install.jsonl').read_text()
+    assert not (tmp_path / 'images/localized').exists()
 
 
 def test_altered_result_or_changed_version_cannot_reach_injector(tmp_path, monkeypatch):

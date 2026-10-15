@@ -8,12 +8,12 @@
         354939
       ],
       "archive_sha256": "b4e84b197c705d597ada2987d938c004b96370f9d4875a2f2979698c7d36a6f9",
-      "status": "translated",
+      "status": "manual_review",
       "asset_version": "1077750",
       "textures": [
         {
           "id": -3113216890991078634,
-          "localized": "images/localized/fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236.png",
+          "localized": "images/candidates/fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236.png",
           "sha256": "fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236",
           "source_sha256": "fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236",
           "text_regions": [
@@ -687,7 +687,7 @@
         },
         {
           "id": -4357508997105649588,
-          "localized": "images/localized/0b37653300beee68761ba915c3ed6d97f6b60edb75c17edeaf9c64dd9efed1d9.png",
+          "localized": "images/candidates/0b37653300beee68761ba915c3ed6d97f6b60edb75c17edeaf9c64dd9efed1d9.png",
           "sha256": "0b37653300beee68761ba915c3ed6d97f6b60edb75c17edeaf9c64dd9efed1d9",
           "source_sha256": "f941fc4ea5c7a1158ebf972a68ce87dcc2840d4f7aeabb12d80c43cac3c9f1ce",
           "text_regions": [
@@ -1361,7 +1361,7 @@
         },
         {
           "id": 822815053325277865,
-          "localized": "images/localized/8c70ab61815c65ad08a65d0e2a0d2026892dcd28ce5dac5c22c8e9573d44db1e.png",
+          "localized": "images/candidates/8c70ab61815c65ad08a65d0e2a0d2026892dcd28ce5dac5c22c8e9573d44db1e.png",
           "sha256": "8c70ab61815c65ad08a65d0e2a0d2026892dcd28ce5dac5c22c8e9573d44db1e",
           "source_sha256": "dcc04e3a2e884e7851435f106c147ed3a715d6943fa8a7a83dabf960d924d625",
           "text_regions": [
@@ -2035,7 +2035,7 @@
         },
         {
           "id": 8201175486173655911,
-          "localized": "images/localized/098a3833684b39ccdaa1f3c592dcdb30dfb0fc32c4bd8288ef4f2f8098b636f9.png",
+          "localized": "images/candidates/098a3833684b39ccdaa1f3c592dcdb30dfb0fc32c4bd8288ef4f2f8098b636f9.png",
           "sha256": "098a3833684b39ccdaa1f3c592dcdb30dfb0fc32c4bd8288ef4f2f8098b636f9",
           "source_sha256": "bee2e8e7313abce4783a56ca3ca7d5977a7eb7dafc4db99bbcbf654962ea93d5",
           "text_regions": [
@@ -2709,7 +2709,7 @@
         },
         {
           "id": -2620473588395658558,
-          "localized": "images/localized/ee6c2821effef99151f6e5fa2f384c32d7bec4553d0c6bfc8afab44a68bfd18e.png",
+          "localized": "images/candidates/ee6c2821effef99151f6e5fa2f384c32d7bec4553d0c6bfc8afab44a68bfd18e.png",
           "sha256": "ee6c2821effef99151f6e5fa2f384c32d7bec4553d0c6bfc8afab44a68bfd18e",
           "source_sha256": "cadfcdcac21de6250a704fad8f584ff21ea0ef0f2869e30d3cbf4cd037bbebd2",
           "text_regions": [
@@ -3383,7 +3383,7 @@
         },
         {
           "id": 3046428204541317442,
-          "localized": "images/localized/20c2611ba45bdc97f96e385e3b51a26dd001f94af5c79a9dace8c112a7cb2f03.png",
+          "localized": "images/candidates/20c2611ba45bdc97f96e385e3b51a26dd001f94af5c79a9dace8c112a7cb2f03.png",
           "sha256": "20c2611ba45bdc97f96e385e3b51a26dd001f94af5c79a9dace8c112a7cb2f03",
           "source_sha256": "7fc6b24285ec92a6bee2d63553f91ed693b66c03657df9bd513774f9160ba321",
           "text_regions": [
@@ -4055,7 +4055,9 @@
           },
           "model": "imas-trans-image"
         }
-      ]
+      ],
+      "review_reason": "remaining_japanese_confirmed_in_dialogue",
+      "structural_audit": "manifests/image-review/1077750-ex4c00968-repack-audit.json"
     }
   }
 }

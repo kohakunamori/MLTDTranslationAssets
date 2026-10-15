@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'pipelines/image'))
 JAPANESE = re.compile(r'[\u3040-\u30ff\u3400-\u9fff]')
+KANA = re.compile(r'[\u3041-\u3096\u30a1-\u30fa]')
 # These surfaces have a Texture2D writer and known image semantics. Other
 # resource families are counted separately; audio/3D art never goes to the API.
 FAMILIES = {
@@ -96,7 +97,7 @@ def text_regions(path):
         x, y, w, h = (int(row[k]) for k in ('left', 'top', 'width', 'height'))
         pad = max(3, min(10, h // 6))
         boxes.append({'box': [max(0, x-pad), max(0, y-pad), min(width, x+w+pad), min(height, y+h+pad)],
-                      'source_text': row['text']})
+                      'source_text': row['text'], 'confidence': float(row['conf'])})
     return boxes
 
 
@@ -203,6 +204,7 @@ def generate(work, max_seconds=7200):
             time.sleep(max(0, 30 - (time.time() - last)))
             write(work / 'request-time.json', {'started': time.time()})
             prompt = ('Translate all Japanese lettering into fluent Simplified Chinese. '
+                      'Every dialogue, caption and sound effect must be fully translated; never leave Japanese kana. '
                       'Preserve artwork, characters, logo, panel order and exact canvas geometry. '
                       'Edit text only inside its original regions. Return one PNG. Source OCR: ' +
                       json.dumps([r['source_text'] for r in task['regions']], ensure_ascii=False))
@@ -241,6 +243,7 @@ def generate(work, max_seconds=7200):
             progress.pop('provider_error', None)
             write(work / 'results.json', progress)
             print('IMAGE_RESULT', bundle['logical'], progress['tasks'][task['sha256']]['status'], flush=True)
+    progress.pop('provider_error', None)
     write(work / 'results.json', progress)
 
 
@@ -254,14 +257,14 @@ def package(work):
     state = read(ROOT / 'manifests/image-incremental.json', {'schema_version': 1, 'bundles': {}})
     rows, completed = [], 0
     for bundle in queue['bundles']:
-        tasks = bundle['tasks']
-        needed = [t for t in tasks if t['regions']]
+        needed = [t for t in bundle['tasks'] if t['regions']]
         if any(t['sha256'] not in results for t in needed):
             continue
         manual = any(results[t['sha256']]['status'] != 'generated' for t in needed)
         record = {'identity': bundle['identity'], 'archive_sha256': bundle['archive_sha256'],
                   'status': 'manual_review' if manual else 'translated' if needed else 'ocr_no_text',
-                  'asset_version': version, 'textures': []}
+                  'asset_version': version, 'textures': [], 'text_maps': {}}
+        parts = []
         if not manual:
             for task in needed:
                 original = work / task['input']
@@ -271,6 +274,19 @@ def package(work):
                     raise ValueError('SHA-bound image handoff changed')
                 source = Image.open(original).convert('RGBA')
                 localized, audit = restore(source, Image.open(generated), source.size, task['regions'])
+                check = work / 'quality' / (task['sha256'] + '.png')
+                check.parent.mkdir(parents=True, exist_ok=True)
+                localized.save(check)
+                residual = [r for r in text_regions(check)
+                            if r.get('confidence', 0) >= 70 and KANA.search(r['source_text'])]
+                kana_count = sum(len(KANA.findall(r['source_text'])) for r in residual)
+                if kana_count >= 3:
+                    manual = True
+                    record['review_reason'] = 'remaining_japanese'
+                    record.setdefault('remaining_japanese', []).extend(residual)
+                record['text_maps'][task['sha256']] = {'input_sha256': task['sha256'],
+                    'size': list(source.size), 'regions': task['regions'], 'audit': audit,
+                    'provider': result['provider'], 'remaining_kana': kana_count}
                 for texture in task['layout']:
                     original_png = work / texture['original']
                     if sha(original_png) != texture['source_sha256']:
@@ -278,25 +294,36 @@ def package(work):
                     target = work / 'restored' / bundle['archive_sha256'] / f"{texture['id']}.png"
                     target.parent.mkdir(parents=True, exist_ok=True)
                     localized.crop(texture['box']).save(target)
-                    digest = sha(target)
-                    destination = ROOT / 'images/localized' / (digest + '.png')
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    destination.write_bytes(target.read_bytes())
-                    record['textures'].append({'id': texture['id'], 'localized': destination.relative_to(ROOT).as_posix(),
-                        'sha256': digest, 'source_sha256': texture['source_sha256'], 'text_regions': task['regions'],
-                        'audit': audit, 'model': result['provider']['requested_image_model']})
-                    rows.append({'archive_sha256': bundle['archive_sha256'], 'bundle': bundle['logical'],
-                        'remote': bundle['identity'][1], 'source_bundle': str((work / bundle['archive']).resolve()),
-                        'source_id': bundle['logical'].removesuffix('.unity3d') + ':' + str(texture['id']),
-                        'texture_path_id': texture['id'], 'original_png': str(original_png.resolve()),
-                        'original_png_sha256': texture['source_sha256'], 'original_size': texture['size'],
-                        'restored_png': str(target.resolve()), 'restored_png_sha256': digest,
-                        'review_status': 'auto_approved_no_human_signoff'})
+                    parts.append((task, texture, target, original_png))
+            if parts and not any(m['audit']['changed_pixels'] for m in record['text_maps'].values()):
+                manual = True
+                record['review_reason'] = 'no_visible_translation_change'
+            # Decide the whole bundle before writing any approved source/row.
+            # A good first texture cannot approve a bad second texture.
+            for task, texture, target, original_png in parts:
+                digest = sha(target)
+                destination = ROOT / 'images' / ('candidates' if manual else 'localized') / (digest + '.png')
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(target.read_bytes())
+                record['textures'].append({'id': texture['id'], 'localized': destination.relative_to(ROOT).as_posix(),
+                    'sha256': digest, 'source_sha256': texture['source_sha256'],
+                    'text_map': task['sha256'], 'composite_box': texture['box']})
+                if manual:
+                    continue
+                rows.append({'archive_sha256': bundle['archive_sha256'], 'bundle': bundle['logical'],
+                    'remote': bundle['identity'][1], 'source_bundle': str((work / bundle['archive']).resolve()),
+                    'source_id': bundle['logical'].removesuffix('.unity3d') + ':' + str(texture['id']),
+                    'texture_path_id': texture['id'], 'original_png': str(original_png.resolve()),
+                    'original_png_sha256': texture['source_sha256'], 'original_size': texture['size'],
+                    'restored_png': str(target.resolve()), 'restored_png_sha256': digest,
+                    'review_status': 'auto_approved_no_human_signoff'})
+        if manual:
+            record['status'] = 'manual_review'
+            record.setdefault('review_reason', 'provider_declined_or_invalid_geometry')
         state['bundles'][bundle['logical']] = record
         completed += 1
     install = work / 'install.jsonl'
     install.write_text(''.join(json.dumps(r) + '\n' for r in rows), encoding='utf-8')
-    # State is committed only after independent repack audit/R2 upload succeeds.
     write(work / 'next-state.json', state)
     output = {'completed': completed, 'remaining': max(0, queue['pending_bundles'] - completed),
               'has_images': bool(rows), 'ready': completed == queue['selected_bundles']}
@@ -311,9 +338,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['prepare', 'generate', 'package'])
     parser.add_argument('--work', type=Path, required=True)
-    parser.add_argument('--limit', type=int, default=12)
+    parser.add_argument('--limit', type=int, default=0, help='0 uses the shared image batch policy')
     parser.add_argument('--max-seconds', type=int, default=7200)
     args = parser.parse_args()
+    if args.limit == 0:
+        args.limit = read(ROOT / 'configs/localization-pipeline.json')['images']['batch_bundles']
     if not 1 <= args.limit <= 50:
         raise ValueError('Batch size must be 1..50 bundles')
     args.work.mkdir(parents=True, exist_ok=True)

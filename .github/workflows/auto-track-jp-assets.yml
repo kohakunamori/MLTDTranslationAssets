@@ -296,7 +296,7 @@ jobs:
     uses: ./.github/workflows/image-localize-assets.yml
     with:
       enabled: true
-      max_items: ${{ inputs.max_items != '0' && inputs.max_items != '' && inputs.max_items || '12' }}
+      max_items: ${{ inputs.max_items || '0' }}
     secrets: inherit
 
   release:
