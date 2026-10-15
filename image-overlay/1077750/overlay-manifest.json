@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "asset_version": "1077750",
+  "client_manifest_name": "729872172fc66ca54cced89a2a7cabfde0dae941.data",
+  "audit_sha256": "a0fb0e67c11acb27ae5b48bcf5ac74397c469044d2864a0e2e6d9f416a208db9",
+  "records": [
+    {
+      "logical": "ex4c00968.unity3d",
+      "remote": "7dc2f15ba089f5315095e84d74b1d8af53cbdbf1.unity3d",
+      "original_sha256": "b4e84b197c705d597ada2987d938c004b96370f9d4875a2f2979698c7d36a6f9",
+      "translated_sha256": "e6a36a4b7a49f2ab81cdeb60208068ca27ed953336a7077e95946a9b19d26304",
+      "original_bytes": 354939,
+      "translated_bytes": 1845020
+    }
+  ]
+}

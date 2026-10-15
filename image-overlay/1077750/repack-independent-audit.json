@@ -1,0 +1,18 @@
+{
+  "kind": "independent-reviewed-image-unity-repack-audit",
+  "report_audited": "work/image-batch/injection-report.json",
+  "report_audited_sha256": "d6f2d2810ad2112bcafbcfd09b60c473aa4ea2f14ab9ebaffef9a4977431e7ca",
+  "install_manifest": "work/image-batch/install.jsonl",
+  "install_manifest_sha256": "dc4fa3f53e47a190edbfa50f3396ae9dbb225e899432e80f596d052e5ab08d63",
+  "manifest_bundles": 1,
+  "audited_bundles": 1,
+  "passed_bundles": 1,
+  "failed_bundles": 0,
+  "target_textures": 6,
+  "untouched_unity_objects_byte_identical": 7,
+  "texture_format_transitions": {
+    "50 -> 4": 6
+  },
+  "errors": [],
+  "scope": "isolated candidate only; no formal archive or client asset mutated"
+}
