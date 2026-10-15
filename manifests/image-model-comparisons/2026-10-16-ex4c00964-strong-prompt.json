@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "models": {
+    "gpt-image-2.5": {
+      "status": "generated",
+      "output": "images/candidates/e4bcf7be0a61c9f31b4fea50f993090bc1b0e348bb7b1a6f8d8204e04932c1d3.png",
+      "sha256": "e4bcf7be0a61c9f31b4fea50f993090bc1b0e348bb7b1a6f8d8204e04932c1d3",
+      "output_size": [
+        724,
+        2172
+      ],
+      "aspect_ratio_error": 0.1421874999999999,
+      "geometry_matches": false,
+      "provider": {
+        "response_id": null,
+        "requested_image_model": "gpt-image-2.5",
+        "endpoint": "/v1/images/edits",
+        "mode": "images_edits",
+        "quality": "high",
+        "size_requested": "auto",
+        "output_format": "png"
+      },
+      "elapsed_seconds": 116.81,
+      "preview_normalization": {
+        "removed_full_height_near_black_columns": [
+          44,
+          45
+        ],
+        "aspect_ratio_error_after_margin_removal": 0.0017804730662984714,
+        "display_size": [
+          640,
+          2193
+        ],
+        "approved_for_installation": false
+      }
+    },
+    "gemini-3.1-flash-image": {
+      "status": "failed",
+      "error": {
+        "http_status": 429,
+        "code": "429",
+        "message": "You have exhausted your capacity on this model. Your quota will reset after 2h28m27s."
+      },
+      "elapsed_seconds": 1.89
+    }
+  },
+  "request": {
+    "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+    "prompt_sha256": "06dac95af891c74d192559fbbf052985cb12cbbb8c554a076cdbfbea88467717",
+    "endpoint": "http://127.0.0.1:21318/v1",
+    "mode": "native_model_protocols",
+    "quality": "high",
+    "size": "auto",
+    "output_format": "png",
+    "n": 1,
+    "min_request_interval_seconds": 30,
+    "model_protocols": {
+      "gpt-image-2.5": "images_edits",
+      "gemini-3.1-flash-image": "gemini_generate_content"
+    },
+    "gemini_image_size": "2K",
+    "gemini_aspect_ratio": "auto"
+  },
+  "source_size": [
+    640,
+    2193
+  ],
+  "review_status": "unapproved",
+  "mask_applied": false,
+  "source_logical": "ex4c00964.unity3d",
+  "asset_version": "1077750",
+  "date": "2026-10-16",
+  "experiment": "Stronger Chinese 17-region literal-text prompt and horizontal lettering, same reference wording and API parameters",
+  "baseline_manifest": "manifests/image-model-comparisons/2026-10-16-ex4c00964-fixed-text.json",
+  "reference_region_count": 17,
+  "reference_text_unchanged_apart_from_wrapping": true,
+  "notes": "One new request per model; GPT generated and Gemini HTTP429 capacity exhausted. No retries or fallback; raw candidates unapproved. Black-edge removal and resizing are preview-only."
+}

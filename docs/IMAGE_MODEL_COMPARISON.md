@@ -120,3 +120,31 @@ one explicitly reviewed Gemini-only retry returned JPEG successfully. GPT
 was reused. The failure and retry remain in the manifest's attempt history;
 there were no automatic retries or fallback models. Future unsupported
 decoded formats are saved before validation, avoiding this data loss.
+
+## Stronger prompt follow-up
+
+The next bounded experiment changes only the prompt: Chinese instructions,
+17 explicitly named regions with one literal string per region, horizontal
+left-to-right lettering, one copy of each region's text, and an internal
+duplication/omission check. A preflight comparison verified that all Chinese
+reference text is unchanged apart from wrapping. Original PNG bytes and
+native API parameters match the preceding fixed-text experiment.
+
+Each model was requested once. GPT returned a new PNG; Gemini returned
+HTTP 429, stating model capacity was exhausted with a reset after roughly
+2h28m. There was no retry or fallback, so this round cannot establish whether
+the stronger prompt helps Gemini.
+
+On the GPT sample, the fourth-panel question now contains the complete
+`知道初恋的味道了吗` without the previous repeated `知道` or missing `味道`.
+The checked third-panel text and handwritten aside also contain the expected
+wording. Most main bubbles follow the horizontal layout. The left reply and
+small aside remain vertical, and the same new black side margins remain.
+Overall composition looks similar, but this does not prove unchanged artwork.
+
+This one result supports using the stronger prompt for further small-sample
+review; it does not establish repeatable accuracy or approve bulk generation.
+The prompt, raw output, baseline reference and Gemini quota failure are in
+[`2026-10-16-ex4c00964-strong-prompt.json`](../manifests/image-model-comparisons/2026-10-16-ex4c00964-strong-prompt.json)
+and the adjacent prompt file. Preview-only black-edge trimming/resizing is
+recorded separately; the raw image remains unapproved.
