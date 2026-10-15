@@ -23,6 +23,7 @@ permissions:
   actions: read
 concurrency:
   group: image-localize-assets
+  queue: max
   cancel-in-progress: false
 
 jobs:

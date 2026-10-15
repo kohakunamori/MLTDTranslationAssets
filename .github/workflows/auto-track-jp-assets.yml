@@ -1,4 +1,5 @@
 name: Assets production pipeline
+run-name: Assets [${{ github.event_name == 'push' && 'release' || inputs.stage || 'watch' }}]
 
 # Keep this filename so the existing VPS version watcher needs no reconfiguration.
 'on':
@@ -100,7 +101,7 @@ jobs:
     name: Resolve track target
     needs: plan
     if: needs.plan.outputs.track == 'true'
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -182,7 +183,7 @@ jobs:
     name: Freeze outgoing asset version
     needs: [plan, resolve-target]
     if: needs.resolve-target.outputs.has_update == 'true'
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write  # 只用于推送冻结标签；不推分支、不建 PR

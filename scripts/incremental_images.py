@@ -223,11 +223,17 @@ def generate(work, max_seconds=7200):
                     reason = json.loads(error.read(8192)).get('error', {})
                 except (ValueError, AttributeError):
                     reason = {}
+                if not isinstance(reason, dict):
+                    reason = {'message': str(reason)}
+                safe_error = {k: str(reason[k]).replace(provider_config.api_key(config), '[REDACTED]')[:400]
+                              for k in ('code', 'type', 'param', 'message') if k in reason}
                 reason = {'code': 'moderation_blocked', 'http_status': error.code} if (
                     error.code in (400, 403) and reason.get('code') == 'moderation_blocked') else None
                 if reason is None:
+                    progress['provider_error'] = {'http_status': error.code, **safe_error}
                     write(work / 'results.json', progress)
-                    raise RuntimeError(f'Image provider HTTP {error.code}; generated progress retained') from None
+                    raise RuntimeError(f'Image provider HTTP {error.code}: {json.dumps(safe_error)}; '
+                                       'generated progress retained') from None
                 progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': reason}
             write(work / 'results.json', progress)
             print('IMAGE_RESULT', bundle['logical'], progress['tasks'][task['sha256']]['status'], flush=True)

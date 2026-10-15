@@ -7,6 +7,7 @@
 
 VPS 唤醒脚本的忙碌检测同步改为查询统一运行；网关漂移自愈也改为派发此入口的 `stage=gateway`。
 定时器、冷却时间和凭据文件保留。旧的独立翻译/网关 workflow 已不可直接派发。
+VPS 忙碌检测忽略名称为 `Assets [images]` 的独立图片运行，避免耗时的图片积压阻止检查新资源版本。
 
 | 入口 | 触发与作用 |
 | --- | --- |
@@ -81,7 +82,7 @@ flowchart TD
 | 阶段 | runner 与时限 |
 | --- | --- |
 | plan、summary、积压续跑 | hosted Ubuntu，各 5 分钟 |
-| 官方版本检查、冻结 | RackNerd 轻量 runner，各 15 分钟 |
+| 官方版本检查、冻结 | hosted Ubuntu，各 15 分钟；不排在耗时的模型作业之后 |
 | 文字同步准备 | hosted Ubuntu，180 分钟；官方 Bundle 留在大磁盘端 |
 | 文字模型调用与提交 | RackNerd，180 分钟；通过 exact-run cache 接收有界文本与索引 |
 | 图片解包 / OCR / 注入 / 独立审计 | hosted Ubuntu，准备和发布各 45 分钟 |
