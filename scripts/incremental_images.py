@@ -238,6 +238,7 @@ def generate(work, max_seconds=7200):
                     raise RuntimeError(f'Image provider HTTP {error.code}: {json.dumps(safe_error)}; '
                                        'generated progress retained') from None
                 progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': reason}
+            progress.pop('provider_error', None)
             write(work / 'results.json', progress)
             print('IMAGE_RESULT', bundle['logical'], progress['tasks'][task['sha256']]['status'], flush=True)
     write(work / 'results.json', progress)

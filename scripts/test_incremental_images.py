@@ -147,6 +147,16 @@ def test_native_moderation_decision_is_never_retried_as_transport_failure(monkey
         provider.image_edit(config, source.getvalue(), 'Translate Japanese')
 
 
+def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():
+    from UnityPy.export import Texture2DConverter as converter
+    from UnityPy.enums import TextureFormat
+    original = Image.new('RGBA', (7, 5), (12, 34, 56, 78))
+    original.putpixel((2, 3), (122, 99, 15, 200))
+    payload, fmt = converter.image_to_texture2d(original, TextureFormat.RGBA32)
+    decoded = converter.parse_image_data(payload, 7, 5, fmt, (2021, 3, 0, 0), 13)
+    assert decoded.convert('RGBA').tobytes() == original.tobytes()
+
+
 def test_gc_and_all_publishers_share_one_lock_and_api_job_has_no_heavy_dependency():
     root = Path(__file__).resolve().parents[1]
     workflows = root / '.github/workflows'

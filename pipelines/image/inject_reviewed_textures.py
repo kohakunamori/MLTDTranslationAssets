@@ -366,7 +366,10 @@ def repack(source: Path, output: Path, rows: Sequence[Mapping[str, Any]],
                 raise RefusedInput(
                     f"{item.get('source_id')}: original PNG differs from Unity source texture")
             original_format = str(texture.m_TextureFormat)
-            texture.image = edit.copy()
+            # Preserve exact pixels, including comic strips whose heights are
+            # not multiples of a compression block. Retaining DXT/ETC/ASTC here
+            # either fails encoding or introduces lossy changes outside text.
+            texture.set_image(edit.copy(), target_format=UnityPy.enums.TextureFormat.RGBA32)
             key = f"{original_format} -> {texture.m_TextureFormat}"
             converted_formats[key] = converted_formats.get(key, 0) + 1
             texture.save()

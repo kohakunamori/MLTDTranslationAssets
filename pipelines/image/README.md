@@ -2,9 +2,12 @@
 
 本模块包含《偶像大师 百万现场 剧场时光》游戏图像与纹理资源的自动化重组、视觉翻译与无损回填工具链。
 
+当前生产 CI 使用 [增量图片管线](../../docs/IMAGE_INCREMENTAL.md)：托管端解包/OCR/注入，
+RackNerd 只执行串行 API。固定 937 张批次的脚本保留供历史检查，不再作为生产队列入口。
+
 ## 1. 架构与模型规范
 
-- **图像生成与编辑模型**：`imas-trans-image`（通过 `images_edits` 端点，支持透明通道与高保真文字重绘）。调用是**串行**的，且两次请求之间至少间隔 `image_provider.min_request_interval_seconds`（默认 60 秒，即每分钟 1 次），以贴合上游的 RPM 限制；这个节流在 `provider_config.throttle_image_request()` 里实现，与线程数无关。
+- **图像生成与编辑模型**：`imas-trans-image`，生产端走 Gemini 原生 `generateContent`。调用串行，启动间隔至少 30 秒（RPM 2），所有调用经过 `provider_config.throttle_image_request()`。源透明度由宿主端恢复，不采用模型透明度。
 - **视觉审校与布局识别模型**：`gpt-5.6-luna`（用于识别多 Sprite 布局、文本区域分类与质量检测）
 - **底层纹理编码**：ASTC (Adaptive Scalable Texture Compression) 与 RGB24/RGBA32，保持 UnityFS 资源包非目标像素完全不变。
 
