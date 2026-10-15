@@ -4,6 +4,9 @@
 保留生产入口文件名 `auto-track-jp-assets.yml`，现有 VPS `mltd-asset-watch.timer` 不需要改派发目标。
 没有新增 GitHub schedule。NAS 不参与发布。
 
+VPS 唤醒脚本的忙碌检测同步改为查询统一运行；网关漂移自愈也改为派发此入口的 `stage=gateway`。
+定时器、冷却时间和凭据文件保留。旧的独立翻译/网关 workflow 已不可直接派发。
+
 | 入口 | 触发与作用 |
 | --- | --- |
 | `validate-localization.yml` | 主分支 push、PR、手动；校验真实汉化数据，离线回归和全部 workflow 语法 |

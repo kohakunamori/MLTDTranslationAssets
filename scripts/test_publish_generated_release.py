@@ -97,6 +97,7 @@ class PublishTests(unittest.TestCase):
 
     def test_r2_publish_commits_inventory_but_never_binary_payloads(self):
         self.outputs()
+        self.write(self.root, '.gitignore', '/generated/objects/\n/generated/build-inputs/\n')
         self.write(self.root, 'generated/r2-storage.json', {'objects': {'a' * 64: 3}})
         self.write(self.root, 'generated/build-inputs/text/cache', b'parsed-cache')
         result = tool.publish(self.root)

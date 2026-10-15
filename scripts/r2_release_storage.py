@@ -234,14 +234,14 @@ def restore(root, transport, workers=12, cache=True, samples=None, overlay_versi
     if any(d not in state['objects'] for d in digests):
         raise ValueError('R2 inventory does not cover the retained release')
     if hasattr(transport, 'download_batch'):
-        batches, batch, byte_count = [], [], 0
+        batches, batch, byte_count, large = [], [], 0, []
         for digest in digests:
             path = root / 'generated/objects/sha256' / digest
             if path.is_file() and sha256(path) == digest:
                 continue
             size = state['objects'][digest]
             if size > 4 * 1024**2:
-                fetch(transport, 'objects/sha256/' + digest, path)
+                large.append((digest, path))
                 continue
             if batch and (len(batch) == 32 or byte_count + size > 4 * 1024**2):
                 batches.append(batch)
@@ -251,7 +251,12 @@ def restore(root, transport, workers=12, cache=True, samples=None, overlay_versi
         if batch:
             batches.append(batch)
         with ThreadPoolExecutor(max_workers=min(workers, 4)) as pool:
-            list(pool.map(transport.download_batch, batches))
+            list(pool.map(lambda item: fetch(transport, 'objects/sha256/' + item[0], item[1]), large))
+        print(f'R2 restore: {len(large)} large objects verified; {len(batches)} bounded batches remain', flush=True)
+        with ThreadPoolExecutor(max_workers=min(workers, 4)) as pool:
+            for position, _ in enumerate(pool.map(transport.download_batch, batches), 1):
+                if position % 32 == 0 or position == len(batches):
+                    print(f'R2 restore: batch {position}/{len(batches)} verified', flush=True)
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             list(pool.map(lambda d: fetch(transport, 'objects/sha256/' + d, root / 'generated/objects/sha256' / d), digests))

@@ -17,16 +17,26 @@ export default {
           || keys.some(key => typeof key !== 'string' || !/^objects\/sha256\/[0-9a-f]{64}$/.test(key))) {
         return json({error: 'up to 32 immutable object keys required'}, 400);
       }
-      const metadata = [], bodies = [];
       let total = 0;
-      for (const key of keys) {
+      // Drain each R2 body as soon as headers arrive. The runtime limits active
+      // connections, while parallel reads avoid 32 cross-region round trips in
+      // series. The shared byte budget bounds the entire batch's buffers.
+      const parts = await Promise.all(keys.map(async key => {
         const object = await env.ASSETS.get(key);
-        if (!object || object.customMetadata?.sha256 !== key.slice(-64)) return json({error: 'missing object'}, 404);
+        if (!object || object.customMetadata?.sha256 !== key.slice(-64)) {
+          await object?.body?.cancel?.();
+          return {error: 'missing object', status: 404};
+        }
         total += object.size;
-        if (total > 4 * 1024 * 1024) return json({error: 'batch exceeds 4 MiB'}, 413);
-        metadata.push({key, size: object.size});
-        bodies.push(await object.arrayBuffer());
-      }
+        if (total > 4 * 1024 * 1024) {
+          await object.body?.cancel?.();
+          return {error: 'batch exceeds 4 MiB', status: 413};
+        }
+        return {metadata: {key, size: object.size}, body: await object.arrayBuffer()};
+      }));
+      const failed = parts.find(part => part.error);
+      if (failed) return json({error: failed.error}, failed.status);
+      const metadata = parts.map(part => part.metadata), bodies = parts.map(part => part.body);
       const header = new TextEncoder().encode(JSON.stringify(metadata));
       const length = new Uint8Array(4);
       new DataView(length.buffer).setUint32(0, header.length);

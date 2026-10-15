@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -65,11 +66,17 @@ def publish(root: Path = ROOT, *, force: bool = False, attempts: int = 3) -> dic
     source = git(root, "rev-parse", "HEAD").stdout.strip()
     if git(root, "diff", "--cached", "--name-only").stdout.strip():
         raise RuntimeError("Refusing to publish with pre-existing staged changes")
-    # With R2 configured, payloads must never enter a Git release, even if a
-    # caller accidentally forced one into its own index in an earlier commit.
+    # Enumerate metadata explicitly. Negative pathspecs naming ignored payload
+    # directories make git add fail on a real restored R2 checkout.
     output_paths = OUTPUT_PATHS
     if (root / 'generated/r2-storage.json').exists():
-        output_paths += (':(exclude)generated/objects', ':(exclude)generated/build-inputs')
+        metadata = {path for path in git(root, 'ls-files', '--', 'generated').stdout.splitlines()
+                    if re.fullmatch(r'generated/[0-9]+/(manifest\.json|checksums\.txt)', path)}
+        metadata.update(path.relative_to(root).as_posix()
+                        for name in ('manifest.json', 'checksums.txt')
+                        for path in (root / 'generated').glob('*/' + name) if path.parent.name.isdigit())
+        output_paths = (*sorted(metadata), 'generated/r2-storage.json',
+                        'locales', 'manifests/portal-resource-manifest.json')
     # Use an isolated index: the caller's checkout and index are never rewritten,
     # and unrelated local edits/untracked files cannot enter the release commit.
     with tempfile.TemporaryDirectory(prefix="assets-publish-") as directory:

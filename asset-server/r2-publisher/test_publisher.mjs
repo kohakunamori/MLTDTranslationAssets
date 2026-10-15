@@ -55,6 +55,24 @@ try {
   assert.equal((await call('batch', 'POST', JSON.stringify(Array(33).fill(key)))).status, 400);
   assert.equal((await call('batch', 'POST', JSON.stringify(['active.json']))).status, 400);
   assert.equal((await call('batch', 'POST', JSON.stringify([wrong]))).status, 404);
+  const secondDigest = createHash('sha256').update('two').digest('hex');
+  const secondKey = 'objects/sha256/' + secondDigest;
+  await call(secondKey, 'PUT', 'two');
+  const get = env.ASSETS.get;
+  let cancelled = 0;
+  const huge = 'objects/sha256/' + 'c'.repeat(64);
+  env.ASSETS.get = async key => {
+    if (key === huge) return {size: 5 * 1024**2, customMetadata: {sha256: key.slice(-64)},
+      body: {async cancel() {cancelled++;}}, async arrayBuffer() {throw Error('must not buffer oversized object');}};
+    if (key !== secondKey) await new Promise(resolve => setTimeout(resolve, 15));
+    return get(key);
+  };
+  const ordered = Buffer.from(await (await call('batch', 'POST', JSON.stringify([key, secondKey]))).arrayBuffer());
+  const orderedLength = ordered.readUInt32BE(0);
+  assert.deepEqual(JSON.parse(ordered.subarray(4, 4 + orderedLength).toString()), [{key, size: 10}, {key: secondKey, size: 3}]);
+  assert.equal(ordered.subarray(4 + orderedLength).toString(), 'translatedtwo');
+  assert.equal((await call('batch', 'POST', JSON.stringify([huge]))).status, 413);
+  assert.equal(cancelled, 1);
   console.log('PASS publisher authentication, immutable writes, checksum rejection, inventory, and bounded batch reads');
 } finally {
   await rm(directory, {recursive: true});
