@@ -4058,6 +4058,975 @@
       ],
       "review_reason": "remaining_japanese_confirmed_in_dialogue",
       "structural_audit": "manifests/image-review/1077750-ex4c00968-repack-audit.json"
+    },
+    "ex4c00967.unity3d": {
+      "identity": [
+        "65f38e1f349292461339b3e444d2892f14331231",
+        "e1ed13daf1cfa0f9d80988a40975cacd45ba826a.unity3d",
+        355261
+      ],
+      "archive_sha256": "cf92fbbaa48c1004c59938d01cfc3c4a123bb477f9ffd85583d61ff9944163ff",
+      "status": "manual_review",
+      "asset_version": "1077750",
+      "textures": [
+        {
+          "id": -7464440346175550728,
+          "localized": "images/candidates/fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236.png",
+          "sha256": "fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236",
+          "source_sha256": "fbcb8fee30d493491c71b5e0848a5a28cda82a2481c403c26bb26634459b5236",
+          "text_map": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "composite_box": [
+            0,
+            0,
+            640,
+            125
+          ]
+        },
+        {
+          "id": 4258965778840272893,
+          "localized": "images/candidates/3789c1ebfcbc8cd40da6ea7b4c9f9300df5cea09daba6a0f34a2456c4974ac79.png",
+          "sha256": "3789c1ebfcbc8cd40da6ea7b4c9f9300df5cea09daba6a0f34a2456c4974ac79",
+          "source_sha256": "f941fc4ea5c7a1158ebf972a68ce87dcc2840d4f7aeabb12d80c43cac3c9f1ce",
+          "text_map": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "composite_box": [
+            0,
+            125,
+            640,
+            591
+          ]
+        },
+        {
+          "id": 4751867010432278742,
+          "localized": "images/candidates/690d037bed366c95e0235d6b566b0400fdb5a6d2db032f21cb47909639ffea59.png",
+          "sha256": "690d037bed366c95e0235d6b566b0400fdb5a6d2db032f21cb47909639ffea59",
+          "source_sha256": "dcc04e3a2e884e7851435f106c147ed3a715d6943fa8a7a83dabf960d924d625",
+          "text_map": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "composite_box": [
+            0,
+            591,
+            640,
+            1057
+          ]
+        },
+        {
+          "id": 1299355229218380335,
+          "localized": "images/candidates/024a100e5b1278b14c43d455596af1d6d1ecebbbe95ab386165958e7c3569d50.png",
+          "sha256": "024a100e5b1278b14c43d455596af1d6d1ecebbbe95ab386165958e7c3569d50",
+          "source_sha256": "bee2e8e7313abce4783a56ca3ca7d5977a7eb7dafc4db99bbcbf654962ea93d5",
+          "text_map": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "composite_box": [
+            0,
+            1057,
+            640,
+            1523
+          ]
+        },
+        {
+          "id": -7266257522189081728,
+          "localized": "images/candidates/517ca1bd31f2fbe3d7621f310cb23431f70f7fc1f7ab2432002e01aad131745c.png",
+          "sha256": "517ca1bd31f2fbe3d7621f310cb23431f70f7fc1f7ab2432002e01aad131745c",
+          "source_sha256": "cadfcdcac21de6250a704fad8f584ff21ea0ef0f2869e30d3cbf4cd037bbebd2",
+          "text_map": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "composite_box": [
+            0,
+            1523,
+            640,
+            2013
+          ]
+        },
+        {
+          "id": 9123118871959495920,
+          "localized": "images/candidates/e6718c1244214ddec28ea5a150ca274a80780da1908016534789f6fc37df6b5c.png",
+          "sha256": "e6718c1244214ddec28ea5a150ca274a80780da1908016534789f6fc37df6b5c",
+          "source_sha256": "59c970ed4ada3eed34d5705fe27f316210f676e50c3ec0c5c51b30b9d60eb484",
+          "text_map": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "composite_box": [
+            0,
+            2013,
+            640,
+            2193
+          ]
+        }
+      ],
+      "text_maps": {
+        "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d": {
+          "input_sha256": "9371c1cf851acc8849d6da15a2effed53807a2f509a1cdf95ea4192cdf68f89d",
+          "size": [
+            640,
+            2193
+          ],
+          "regions": [
+            {
+              "box": [
+                51,
+                163,
+                65,
+                183
+              ],
+              "source_text": "い",
+              "confidence": 91.446854
+            },
+            {
+              "box": [
+                78,
+                158,
+                162,
+                185
+              ],
+              "source_text": "動",
+              "confidence": 91.754036
+            },
+            {
+              "box": [
+                112,
+                152,
+                143,
+                197
+              ],
+              "source_text": "ぬ",
+              "confidence": 86.14473
+            },
+            {
+              "box": [
+                134,
+                158,
+                162,
+                185
+              ],
+              "source_text": "本",
+              "confidence": 32.606743
+            },
+            {
+              "box": [
+                191,
+                160,
+                244,
+                185
+              ],
+              "source_text": "みお",
+              "confidence": 93.218742
+            },
+            {
+              "box": [
+                249,
+                159,
+                273,
+                185
+              ],
+              "source_text": "あ",
+              "confidence": 92.262466
+            },
+            {
+              "box": [
+                51,
+                207,
+                75,
+                230
+              ],
+              "source_text": "の",
+              "confidence": 96.881866
+            },
+            {
+              "box": [
+                79,
+                205,
+                103,
+                230
+              ],
+              "source_text": "た",
+              "confidence": 96.431694
+            },
+            {
+              "box": [
+                100,
+                198,
+                123,
+                243
+              ],
+              "source_text": "で",
+              "confidence": 87.359886
+            },
+            {
+              "box": [
+                137,
+                207,
+                160,
+                229
+              ],
+              "source_text": "ぐに",
+              "confidence": 95.806854
+            },
+            {
+              "box": [
+                51,
+                186,
+                93,
+                206
+              ],
+              "source_text": "いい",
+              "confidence": 93.200615
+            },
+            {
+              "box": [
+                108,
+                186,
+                122,
+                206
+              ],
+              "source_text": "い",
+              "confidence": 92.376213
+            },
+            {
+              "box": [
+                136,
+                181,
+                160,
+                208
+              ],
+              "source_text": "当",
+              "confidence": 92.477104
+            },
+            {
+              "box": [
+                192,
+                183,
+                208,
+                207
+              ],
+              "source_text": "お",
+              "confidence": 59.427128
+            },
+            {
+              "box": [
+                51,
+                250,
+                74,
+                276
+              ],
+              "source_text": "な",
+              "confidence": 96.578812
+            },
+            {
+              "box": [
+                52,
+                229,
+                75,
+                252
+              ],
+              "source_text": "に",
+              "confidence": 92.565521
+            },
+            {
+              "box": [
+                82,
+                227,
+                101,
+                253
+              ],
+              "source_text": "ら",
+              "confidence": 92.662361
+            },
+            {
+              "box": [
+                109,
+                229,
+                130,
+                253
+              ],
+              "source_text": "る",
+              "confidence": 93.245911
+            },
+            {
+              "box": [
+                193,
+                229,
+                203,
+                252
+              ],
+              "source_text": "に",
+              "confidence": 74.040161
+            },
+            {
+              "box": [
+                220,
+                229,
+                244,
+                252
+              ],
+              "source_text": "の",
+              "confidence": 74.040161
+            },
+            {
+              "box": [
+                448,
+                403,
+                519,
+                454
+              ],
+              "source_text": "レノ",
+              "confidence": 72.269379
+            },
+            {
+              "box": [
+                149,
+                550,
+                210,
+                574
+              ],
+              "source_text": "ーー",
+              "confidence": 63.885464
+            },
+            {
+              "box": [
+                227,
+                536,
+                256,
+                576
+              ],
+              "source_text": "電",
+              "confidence": 65.054382
+            },
+            {
+              "box": [
+                472,
+                785,
+                503,
+                810
+              ],
+              "source_text": "に",
+              "confidence": 48.196072
+            },
+            {
+              "box": [
+                21,
+                806,
+                113,
+                875
+              ],
+              "source_text": "ぶっ",
+              "confidence": 64.036224
+            },
+            {
+              "box": [
+                158,
+                845,
+                194,
+                870
+              ],
+              "source_text": "マミ",
+              "confidence": 54.007553
+            },
+            {
+              "box": [
+                523,
+                872,
+                550,
+                898
+              ],
+              "source_text": "地",
+              "confidence": 92.540642
+            },
+            {
+              "box": [
+                552,
+                872,
+                578,
+                898
+              ],
+              "source_text": "地",
+              "confidence": 92.816269
+            },
+            {
+              "box": [
+                523,
+                849,
+                549,
+                875
+              ],
+              "source_text": "菊",
+              "confidence": 43.462635
+            },
+            {
+              "box": [
+                556,
+                849,
+                578,
+                875
+              ],
+              "source_text": "菊",
+              "confidence": 85.439728
+            },
+            {
+              "box": [
+                20,
+                867,
+                105,
+                952
+              ],
+              "source_text": "人",
+              "confidence": 47.705124
+            },
+            {
+              "box": [
+                525,
+                895,
+                576,
+                920
+              ],
+              "source_text": "ささ",
+              "confidence": 96.766922
+            },
+            {
+              "box": [
+                264,
+                906,
+                332,
+                989
+              ],
+              "source_text": "万",
+              "confidence": 30.466988
+            },
+            {
+              "box": [
+                459,
+                947,
+                510,
+                972
+              ],
+              "source_text": "まま",
+              "confidence": 91.664124
+            },
+            {
+              "box": [
+                489,
+                924,
+                506,
+                949
+              ],
+              "source_text": "く",
+              "confidence": 81.264351
+            },
+            {
+              "box": [
+                527,
+                917,
+                550,
+                943
+              ],
+              "source_text": "ん",
+              "confidence": 88.226654
+            },
+            {
+              "box": [
+                552,
+                917,
+                578,
+                943
+              ],
+              "source_text": "ん",
+              "confidence": 96.810837
+            },
+            {
+              "box": [
+                458,
+                992,
+                484,
+                1017
+              ],
+              "source_text": "ん",
+              "confidence": 96.411499
+            },
+            {
+              "box": [
+                486,
+                992,
+                512,
+                1017
+              ],
+              "source_text": "ん",
+              "confidence": 82.905884
+            },
+            {
+              "box": [
+                459,
+                969,
+                511,
+                995
+              ],
+              "source_text": "ささ",
+              "confidence": 96.748947
+            },
+            {
+              "box": [
+                153,
+                1105,
+                175,
+                1129
+              ],
+              "source_text": "じ",
+              "confidence": 93.135498
+            },
+            {
+              "box": [
+                178,
+                1105,
+                203,
+                1129
+              ],
+              "source_text": "お",
+              "confidence": 92.80352
+            },
+            {
+              "box": [
+                47,
+                1128,
+                73,
+                1153
+              ],
+              "source_text": "や",
+              "confidence": 91.437782
+            },
+            {
+              "box": [
+                76,
+                1128,
+                101,
+                1152
+              ],
+              "source_text": "ホ",
+              "confidence": 90.223618
+            },
+            {
+              "box": [
+                50,
+                1149,
+                79,
+                1186
+              ],
+              "source_text": "うっ",
+              "confidence": 51.125725
+            },
+            {
+              "box": [
+                76,
+                1157,
+                100,
+                1176
+              ],
+              "source_text": "ラ",
+              "confidence": 79.786011
+            },
+            {
+              "box": [
+                122,
+                1150,
+                147,
+                1175
+              ],
+              "source_text": "る",
+              "confidence": 96.518333
+            },
+            {
+              "box": [
+                150,
+                1150,
+                175,
+                1175
+              ],
+              "source_text": "な",
+              "confidence": 92.657112
+            },
+            {
+              "box": [
+                178,
+                1150,
+                205,
+                1176
+              ],
+              "source_text": "居",
+              "confidence": 92.233261
+            },
+            {
+              "box": [
+                152,
+                1196,
+                176,
+                1220
+              ],
+              "source_text": "て",
+              "confidence": 95.732071
+            },
+            {
+              "box": [
+                179,
+                1194,
+                203,
+                1221
+              ],
+              "source_text": "中",
+              "confidence": 96.009499
+            },
+            {
+              "box": [
+                132,
+                1274,
+                188,
+                1303
+              ],
+              "source_text": "ツン",
+              "confidence": 91.004547
+            },
+            {
+              "box": [
+                185,
+                1553,
+                214,
+                1585
+              ],
+              "source_text": "は",
+              "confidence": 96.565758
+            },
+            {
+              "box": [
+                208,
+                1561,
+                237,
+                1594
+              ],
+              "source_text": "は",
+              "confidence": 93.018974
+            },
+            {
+              "box": [
+                305,
+                1560,
+                361,
+                1587
+              ],
+              "source_text": "僕",
+              "confidence": 90.713074
+            },
+            {
+              "box": [
+                338,
+                1553,
+                366,
+                1602
+              ],
+              "source_text": "あ",
+              "confidence": 93.050713
+            },
+            {
+              "box": [
+                306,
+                1583,
+                331,
+                1610
+              ],
+              "source_text": "も",
+              "confidence": 93.239212
+            },
+            {
+              "box": [
+                336,
+                1583,
+                359,
+                1610
+              ],
+              "source_text": "り",
+              "confidence": 89.574554
+            },
+            {
+              "box": [
+                424,
+                1552,
+                458,
+                1576
+              ],
+              "source_text": "な",
+              "confidence": 51.536629
+            },
+            {
+              "box": [
+                305,
+                1605,
+                362,
+                1632
+              ],
+              "source_text": "動",
+              "confidence": 92.951363
+            },
+            {
+              "box": [
+                343,
+                1598,
+                367,
+                1646
+              ],
+              "source_text": "が",
+              "confidence": 96.82206
+            },
+            {
+              "box": [
+                306,
+                1628,
+                332,
+                1655
+              ],
+              "source_text": "け",
+              "confidence": 92.047295
+            },
+            {
+              "box": [
+                335,
+                1629,
+                359,
+                1655
+              ],
+              "source_text": "と",
+              "confidence": 92.354057
+            },
+            {
+              "box": [
+                306,
+                1651,
+                332,
+                1677
+              ],
+              "source_text": "だ",
+              "confidence": 75.698471
+            },
+            {
+              "box": [
+                334,
+                1651,
+                361,
+                1677
+              ],
+              "source_text": "ラ",
+              "confidence": 81.400513
+            },
+            {
+              "box": [
+                306,
+                1674,
+                354,
+                1700
+              ],
+              "source_text": "よ",
+              "confidence": 90.309219
+            },
+            {
+              "box": [
+                413,
+                1762,
+                478,
+                1805
+              ],
+              "source_text": "レレ",
+              "confidence": 47.264549
+            },
+            {
+              "box": [
+                449,
+                1757,
+                482,
+                1810
+              ],
+              "source_text": "ガ",
+              "confidence": 73.552261
+            },
+            {
+              "box": [
+                321,
+                1760,
+                413,
+                1836
+              ],
+              "source_text": "し",
+              "confidence": 56.520134
+            },
+            {
+              "box": [
+                27,
+                1820,
+                105,
+                1863
+              ],
+              "source_text": "優",
+              "confidence": 46.868645
+            },
+            {
+              "box": [
+                37,
+                1894,
+                66,
+                1922
+              ],
+              "source_text": "な",
+              "confidence": 88.721458
+            },
+            {
+              "box": [
+                75,
+                1895,
+                103,
+                1920
+              ],
+              "source_text": "は",
+              "confidence": 93.183571
+            },
+            {
+              "box": [
+                129,
+                1887,
+                177,
+                1919
+              ],
+              "source_text": "人",
+              "confidence": 66.338577
+            },
+            {
+              "box": [
+                117,
+                1887,
+                255,
+                1979
+              ],
+              "source_text": "の",
+              "confidence": 42.886024
+            },
+            {
+              "box": [
+                196,
+                2111,
+                248,
+                2139
+              ],
+              "source_text": "瑞希",
+              "confidence": 65.499901
+            },
+            {
+              "box": [
+                371,
+                2068,
+                467,
+                2182
+              ],
+              "source_text": "紛",
+              "confidence": 79.729248
+            }
+          ],
+          "audit": {
+            "outside_mask_changed_pixels": 0,
+            "protected_regions_changed_pixels": 0,
+            "alpha_changed_pixels": 0,
+            "text_mask_pixels": 106572,
+            "changed_pixels": 102478,
+            "aspect_ratio_error": 0.0
+          },
+          "provider": {
+            "requested_image_model": "imas-trans-image",
+            "endpoint": "/v1beta/models/:generateContent",
+            "mode": "gemini_generate_content",
+            "aspect_ratio": "1:4",
+            "input_size": [
+              640,
+              2560
+            ],
+            "provider_output_size": [
+              1024,
+              4128
+            ],
+            "aspect_ratio_error": 0.007751937984496138,
+            "padding_removed": true
+          },
+          "remaining_kana": 9
+        }
+      },
+      "review_reason": "remaining_japanese",
+      "remaining_japanese": [
+        {
+          "box": [
+            13,
+            862,
+            68,
+            962
+          ],
+          "source_text": "マ",
+          "confidence": 76.217636
+        },
+        {
+          "box": [
+            122,
+            1127,
+            148,
+            1153
+          ],
+          "source_text": "け",
+          "confidence": 92.081467
+        },
+        {
+          "box": [
+            49,
+            1170,
+            81,
+            1198
+          ],
+          "source_text": "ぜ",
+          "confidence": 90.109871
+        },
+        {
+          "box": [
+            122,
+            1170,
+            173,
+            1198
+          ],
+          "source_text": "よく",
+          "confidence": 96.380928
+        },
+        {
+          "box": [
+            177,
+            1174,
+            206,
+            1201
+          ],
+          "source_text": "の",
+          "confidence": 96.811432
+        },
+        {
+          "box": [
+            183,
+            1553,
+            212,
+            1585
+          ],
+          "source_text": "は",
+          "confidence": 85.682343
+        },
+        {
+          "box": [
+            207,
+            1562,
+            235,
+            1594
+          ],
+          "source_text": "は",
+          "confidence": 82.894455
+        },
+        {
+          "box": [
+            134,
+            1876,
+            192,
+            2010
+          ],
+          "source_text": "し",
+          "confidence": 91.026466
+        }
+      ]
     }
   }
 }
