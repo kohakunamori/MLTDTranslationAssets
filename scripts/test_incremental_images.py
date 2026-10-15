@@ -354,6 +354,61 @@ def test_generic_finish_message_is_not_misclassified_as_moderation():
             'content': {'parts': []}}]})
 
 
+def test_durable_generation_survives_loss_of_actions_cache_without_another_api_call(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, source, output, results = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    result = dict(results['tasks'][task['sha256']])
+    result.pop('output')
+    cache_path = tmp_path / 'images/candidates' / (result['sha256'] + '.png')
+    cache_path.parent.mkdir(parents=True); cache_path.write_bytes(output.read_bytes())
+    entry = {'prompt_sha256': images.hashlib.sha256(images.image_prompt(task).encode()).hexdigest(),
+             'effective_model': 'gemini-3.1-flash-image', 'mode': 'gemini_generate_content',
+             'output': cache_path.relative_to(tmp_path).as_posix(), 'result': result}
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: entry}})
+    monkeypatch.setattr(provider, 'image_edit', lambda *args: pytest.fail('saved generation was billed again'))
+    images.generate(work)
+    restored = images.read(work / 'results.json')['tasks'][task['sha256']]
+    assert restored['status'] == 'generated'
+    assert images.sha(work / restored['output']) == result['sha256']
+    (work / 'results.json').unlink()
+    cache_path.unlink()
+    monkeypatch.setenv('GITHUB_REPOSITORY', 'owner/repository')
+    monkeypatch.setattr(images.subprocess, 'check_output', lambda *args, **kwargs: 'a' * 40 + '\n')
+    fetched = []
+    def fetch(url, timeout):
+        fetched.append(url)
+        assert timeout == 60
+        return io.BytesIO(output.read_bytes())
+    monkeypatch.setattr(images.urllib.request, 'urlopen', fetch)
+    images.generate(work)
+    assert fetched == [f'https://raw.githubusercontent.com/owner/repository/{"a" * 40}/{entry["output"]}']
+    (work / 'results.json').unlink()
+    cache_path.write_bytes(b'tampered')
+    with pytest.raises(ValueError, match='SHA-256 mismatch'):
+        images.generate(work)
+    cache_path.write_bytes(output.read_bytes())
+    entry['prompt_sha256'] = 'changed'
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: entry}})
+    with pytest.raises(ValueError, match='review before regenerating'):
+        images.generate(work)
+
+
+def test_durable_explicit_refusal_is_not_submitted_again(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, _, _, _ = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    entry = {'prompt_sha256': images.hashlib.sha256(images.image_prompt(task).encode()).hexdigest(),
+             'effective_model': 'gemini-3.1-flash-image', 'mode': 'gemini_generate_content',
+             'result': {'status': 'manual_review', 'reason': 'provider_safety_decision'}}
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: entry}})
+    monkeypatch.setattr(provider, 'image_edit', lambda *args: pytest.fail('explicit refusal was retried'))
+    images.generate(work)
+    assert images.read(work / 'results.json')['tasks'][task['sha256']] == entry['result']
+
+
 def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():
     from UnityPy.export import Texture2DConverter as converter
     from UnityPy.enums import TextureFormat

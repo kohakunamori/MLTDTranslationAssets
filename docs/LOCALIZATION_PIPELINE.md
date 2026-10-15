@@ -17,7 +17,7 @@ The translation workflow owns three stages:
    after enabled stages finish, using a fresh main checkout.
 
 The image policy has two independent switches in
-`configs/localization-pipeline.json` (schema 2): `generation_enabled=true` and
+`configs/localization-pipeline.json` (schema 2): `generation_enabled=false` and
 `publication_enabled=true`. Generation is temporarily paused for sample and prompt review.
 The provider is `gemini-3.1-flash-image`, concurrency 1,
 RPM 2 (every edit, including retries, passes the 30-second gate). Existing source

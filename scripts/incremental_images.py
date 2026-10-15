@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.request
 
 from PIL import Image
 
@@ -188,6 +189,51 @@ def prepare(work, limit):
     return document
 
 
+def image_prompt(task):
+    return ('Translate all Japanese lettering into fluent Simplified Chinese. '
+            'Every dialogue, caption and sound effect must be fully translated; never leave Japanese kana. '
+            'Preserve artwork, characters, logo, panel order and exact canvas geometry. '
+            'Edit text only inside its original regions. Return one PNG. Source OCR: ' +
+            json.dumps([r['source_text'] for r in task['regions']], ensure_ascii=False))
+
+
+def reuse_generation(work, task, prompt, config):
+    """Restore a durable, unapproved model result without another API request."""
+    entry = read(ROOT / 'manifests/image-generation-cache.json', {'tasks': {}})['tasks'].get(task['sha256'])
+    if entry is None:
+        return None
+    if (entry['prompt_sha256'] != hashlib.sha256(prompt.encode()).hexdigest()
+            or entry['effective_model'] != config['image_provider']['model']
+            or entry['mode'] != config['image_provider']['mode']):
+        raise ValueError('A saved image generation exists with a different request; review before regenerating')
+    result = entry['result']
+    if result.get('status') == 'manual_review' and result.get('reason') == 'provider_safety_decision':
+        return dict(result)
+    digest = result['sha256']
+    relative = entry['output']
+    if result['status'] != 'generated' or not re.fullmatch(r'[0-9a-f]{64}', digest) or relative != f'images/candidates/{digest}.png':
+        raise ValueError('Invalid saved image generation')
+    path = ROOT / relative
+    if path.is_file():
+        raw = path.read_bytes()
+    else:
+        # The light runner omits image blobs from its sparse checkout. Fetch
+        # exactly this committed source PNG, pinned to the checkout revision.
+        repository = os.environ.get('GITHUB_REPOSITORY', '')
+        if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
+            raise ValueError('Saved image generation is missing locally; do not generate it again')
+        revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+        if not re.fullmatch(r'[0-9a-f]{40}', revision):
+            raise ValueError('Invalid generation checkpoint revision')
+        with urllib.request.urlopen(f'https://raw.githubusercontent.com/{repository}/{revision}/{relative}', timeout=60) as response:
+            raw = response.read(32 * 1024 * 1024 + 1)
+    if len(raw) > 32 * 1024 * 1024 or hashlib.sha256(raw).hexdigest() != digest:
+        raise ValueError('Saved image generation SHA-256 mismatch; do not generate it again')
+    output = (work / task['input']).with_name(Path(task['input']).stem + '-generated.png')
+    output.write_bytes(raw)
+    return dict(result, output=output.relative_to(work).as_posix())
+
+
 def request_image(config, work, progress, task, source, prompt, deadline):
     """Bound transient response failures; keep failed tasks pending on exhaustion."""
     import provider_config
@@ -239,11 +285,14 @@ def generate(work, max_seconds=7200):
             source = work / task['input']
             if sha(source) != task['sha256']:
                 raise ValueError('Image input changed before provider call')
-            prompt = ('Translate all Japanese lettering into fluent Simplified Chinese. '
-                      'Every dialogue, caption and sound effect must be fully translated; never leave Japanese kana. '
-                      'Preserve artwork, characters, logo, panel order and exact canvas geometry. '
-                      'Edit text only inside its original regions. Return one PNG. Source OCR: ' +
-                      json.dumps([r['source_text'] for r in task['regions']], ensure_ascii=False))
+            prompt = image_prompt(task)
+            reused = reuse_generation(work, task, prompt, config)
+            if reused is not None:
+                progress['tasks'][task['sha256']] = reused
+                progress.pop('provider_error', None)
+                write(work / 'results.json', progress)
+                print('IMAGE_REUSED', bundle['logical'], reused['status'], flush=True)
+                continue
             try:
                 response = request_image(config, work, progress, task, source, prompt, start + max_seconds)
                 if response is None:

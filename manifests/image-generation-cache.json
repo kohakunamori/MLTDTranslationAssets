@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "purpose": "Unapproved generation checkpoints; not installable translations",
+  "tasks": {
+    "33445a2582cb41e8968182fdbb25961a241b99d54f1ce369abbcfe330d420839": {
+      "logical": "ex4c00966.unity3d",
+      "archive_sha256": "cb81320426734ac6a1db6e9a89561cf7baa777a9cf75c29157676f16eab36da4",
+      "asset_version": "1077750",
+      "prompt_sha256": "ef47def8ed56136157dc0c7cb45f363141a9c458cb6a56620301356f98af83d4",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "generated",
+        "sha256": "3c6d15b85f6c3c019cca23c45d82f7684d74f9832ea52937ef3d6388dab614f5",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true
+        }
+      },
+      "output": "images/candidates/3c6d15b85f6c3c019cca23c45d82f7684d74f9832ea52937ef3d6388dab614f5.png",
+      "output_kind": "raw_model_candidate"
+    },
+    "58341c65ed5b834edfba53a287c55cf644e19bb98ff77bc09c59cd6353fc87f8": {
+      "logical": "ex4c00965.unity3d",
+      "archive_sha256": "1094aaca486a5d4125dbf956963c49bf2ee641adaced74bd8a175f740b956d4d",
+      "asset_version": "1077750",
+      "prompt_sha256": "bfacd9939d4a0aa1bbd896e033bb48fe05636ce642af19317ed972003eb92b80",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "manual_review",
+        "reason": "provider_safety_decision"
+      }
+    },
+    "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2": {
+      "logical": "ex4c00964.unity3d",
+      "archive_sha256": "42329d9cb74149f3fa3a5812b6d1d94c447d321ec75b7ddcc8884a6402a70fff",
+      "asset_version": "1077750",
+      "prompt_sha256": "c1888a6da4bd3376fc506c2686300893dbd85944be129c1af76d80562cc2b678",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "generated",
+        "sha256": "56c9eac4adc53494d87d39d5865d1b6791f7d2e80733a0de120ce900df57b9df",
+        "provider": {
+          "requested_image_model": "gemini-3.1-flash-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true
+        }
+      },
+      "output": "images/candidates/56c9eac4adc53494d87d39d5865d1b6791f7d2e80733a0de120ce900df57b9df.png",
+      "output_kind": "raw_model_candidate"
+    },
+    "cd04b03c9243b305ad4d2ebeb0cdac91b1f7a6f2099d97def42dca858eabab6c": {
+      "logical": "ex4c00963.unity3d",
+      "archive_sha256": "67b8125c1b03c64b126c32a00cd71ff3f21547cad539a3d88d79ee78315dea1e",
+      "asset_version": "1077750",
+      "prompt_sha256": "90f8e9caf10cac41ee55b738c7515a4072e49fa211942e5c1a15e4ca37f89699",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "generated",
+        "sha256": "48acf8cf277e88799191f2719a83e73794a6a19db01a8a7668d0de706bc4d682",
+        "provider": {
+          "requested_image_model": "gemini-3.1-flash-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true
+        }
+      },
+      "output": "images/candidates/48acf8cf277e88799191f2719a83e73794a6a19db01a8a7668d0de706bc4d682.png",
+      "output_kind": "raw_model_candidate"
+    },
+    "b1200d7f482e224ab10d7fac0bf62bebb83c4215582e8b32733654df099d2062": {
+      "logical": "ex4c00962.unity3d",
+      "archive_sha256": "e6e68fa9d1b81db3ad8b5538ddb5fd41b900e0e9d8cce756eb63d7a63263b922",
+      "asset_version": "1077750",
+      "prompt_sha256": "c0c37c366990f1ce76dd16ad294e9511ddeafc15e88f8670587ea0b24219c1d0",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "generated",
+        "sha256": "8dc27d4841c146a34331c99cae6c090485f38e96d14c3f788156e6adcb73333b",
+        "provider": {
+          "requested_image_model": "gemini-3.1-flash-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true
+        }
+      },
+      "output": "images/candidates/8dc27d4841c146a34331c99cae6c090485f38e96d14c3f788156e6adcb73333b.png",
+      "output_kind": "raw_model_candidate"
+    },
+    "522bac4867a1bed27cff9451d7ff34a5366abf81a4de31b09f1833c089c6c7a6": {
+      "logical": "ex4c00961.unity3d",
+      "archive_sha256": "08b6459e4763463cf2a51b2f2bdb41e12c4d6b7c1c070a2a8f68a499b1462646",
+      "asset_version": "1077750",
+      "prompt_sha256": "d5fbbe97634916a75b46359b87c6da56dc95808a2e1fe73576b4ff13b46a17df",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "generated",
+        "sha256": "470c6557428d4bd69ec221df6926cee489c57c8d6f664901875d678186e76782",
+        "provider": {
+          "requested_image_model": "gemini-3.1-flash-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true
+        }
+      },
+      "output": "images/candidates/470c6557428d4bd69ec221df6926cee489c57c8d6f664901875d678186e76782.png",
+      "output_kind": "raw_model_candidate"
+    },
+    "09cd752a23696ad7dc913257ce806eba2f97f5191e3c24b2adb74dfcc4df6813": {
+      "logical": "ex4c00960.unity3d",
+      "archive_sha256": "06582e2ea7099a5d6963248c61219463a021423799902207eb77b5f2abe113df",
+      "asset_version": "1077750",
+      "prompt_sha256": "2dadb7cced760190b8bb99962095f2abd59b3afd263904653361e2110652bb96",
+      "effective_model": "gemini-3.1-flash-image",
+      "mode": "gemini_generate_content",
+      "review_status": "unapproved",
+      "result": {
+        "status": "generated",
+        "sha256": "ebd8fbbdf4d63c3af9566413cfa3d1dbb151eb598790b896810a99700cb729f3",
+        "provider": {
+          "requested_image_model": "gemini-3.1-flash-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true
+        }
+      },
+      "output": "images/candidates/ebd8fbbdf4d63c3af9566413cfa3d1dbb151eb598790b896810a99700cb729f3.png",
+      "output_kind": "raw_model_candidate"
+    }
+  }
+}
