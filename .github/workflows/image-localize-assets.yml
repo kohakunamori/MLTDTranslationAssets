@@ -62,7 +62,7 @@ jobs:
     # Assets packaging hand-off) open indefinitely.
     timeout-minutes: 10
     outputs:
-      images_enabled: ${{ steps.features.outputs.images_enabled }}
+      images_generation_enabled: ${{ steps.features.outputs.images_generation_enabled }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,7 +77,7 @@ jobs:
 
   localize:
     needs: policy
-    if: inputs.enabled && needs.policy.outputs.images_enabled == 'true'
+    if: inputs.enabled && needs.policy.outputs.images_generation_enabled == 'true'
     runs-on: [self-hosted, Linux, X64, racknerd-light]
     outputs:
       ready: ${{ steps.batch.outputs.audit_ready }}

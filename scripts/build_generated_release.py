@@ -7,18 +7,11 @@ from ``manifests/asset-version.json``, downloads only the official bundles
 referenced by accepted translation rows, runs the existing GTX writer, and
 publishes the resulting Unity3D files through the content-addressed store.
 
-Image inputs are intentionally optional until reviewed PNGs are present.  A
-missing image input is reported as ``blocked`` and never represented as a
-successful image artifact; text generation can still produce a valid release.
-
-``--require-images`` requires a named, independently audited image overlay.  This builder has no image
-materialization/injector step and no independent image audit, so it cannot
-produce an image surface from PNG inputs alone.  A text-only release is
-never proof that images were produced: the mere presence of reviewed PNG inputs
-on disk is not an image artifact.  ``--require-images`` therefore fails closed
-immediately, before any version/input scan or side effect, instead of
-publishing a text-only release that is mislabelled as satisfying the image
-requirement.  The default (no flag) text path is unchanged.
+Images can come from a named audited overlay or ``--reuse-published-images``.
+The latter verifies previously published objects against the current official
+source and reuses their bytes without image generation or texture injection.
+Reviewed PNG inputs alone never prove a published image artifact exists.
+``--require-images`` still requires an explicit overlay before any side effect.
 
 The release also publishes the official ``.data`` catalogue, because that is how
 the client learns each bundle's declared byte length, and the client requires the
@@ -59,6 +52,7 @@ import merge_image_overlay
 import release_reuse
 import bundle_incremental as incremental
 import source_provenance
+import reuse_published_images
 from pipelines.core.hashing import sha256_bytes, sha256_file, sha256_text
 from pipelines.text.mltd_localize_gtx import parse_records, read_gtx
 from pipelines.text.mltd_localization_pipeline import (
@@ -777,8 +771,11 @@ def main() -> int:
                         help="directory keyed by the catalogue's content fingerprint; lets a new "
                              "asset version reuse every official object whose bytes did not change")
     parser.add_argument("--no-reuse", action="store_true",
-                        help="regenerate every bundle even when the published release proves it "
-                             "can be reused; use after changing the build procedure itself")
+                        help="regenerate text/lyric bundles even when their inputs are unchanged; "
+                             "published images still require source-verified reuse")
+    parser.add_argument("--reuse-published-images", action="store_true",
+                        help="Publish existing image bundles whose source SHA-256 still matches "
+                             "the current official bundle; never generate or inject images")
     parser.add_argument("--image-overlay-manifest", type=Path, default=None,
                         help="image-overlay/<asset_version>/overlay-manifest.json; enables the image "
                              "surface and merges its size patch into the published catalogue")
@@ -791,6 +788,8 @@ def main() -> int:
                              "surface or audit it independently, so requiring images always "
                              "refuses. The default text-only path is unaffected.")
     args = parser.parse_args()
+    if args.reuse_published_images and args.image_overlay_manifest is not None:
+        raise ValueError("choose either an explicit image overlay or published-image reuse")
     if not args.ci_run_id:
         raise ValueError("CI run identity is required; set GITHUB_RUN_ID or --ci-run-id")
     # Fail closed before any version/input scan or side effect (work dirs,
@@ -915,6 +914,13 @@ def main() -> int:
     entries.extend(lyric_plan.reusable.values())
     entries.extend(event_plan.reusable.values())
     image_bundles = 0
+    image_reuse = None
+    if args.reuse_published_images:
+        image_entries, image_reuse = reuse_published_images.reuse(
+            store=store, version=version, index=index, work=work,
+            source_client_version=source_client, downloader=download, cache_root=official_cache)
+        image_bundles = len(image_entries)
+        entries.extend(image_entries)
     # The image surface writes its own size patch into a merged table, and the
     # alignment below has to carry that patch as well, so it patches the merged
     # table rather than the pristine one.
@@ -986,6 +992,8 @@ def main() -> int:
         "schema": incremental.SCHEMA, "text": text_records, "lyrics": lyric_records,
         "event_units": event_records,
     }
+    if image_reuse is not None:
+        reuse_record["image_reuse"] = image_reuse
     result = store.build_release(
         version["asset_version"], entries,
         source_commit=args.source_commit,
@@ -1004,7 +1012,8 @@ def main() -> int:
         "selected_bundles": len(selected),
         "generated_entries": len(entries), "generated_manifest": str(result.manifest_path),
         "image_surface": (f"published_{image_bundles}_bundles" if image_bundles else
-                          ("ready_for_injection" if images_ready
+                          ("no_compatible_published_images" if args.reuse_published_images else
+                           "ready_for_injection" if images_ready
                            else "blocked_missing_reviewed_inputs")),
         "official_index_sha256": index_sha256,
         "index_alignment": {
@@ -1019,6 +1028,7 @@ def main() -> int:
             "uncovered_records": aligned.uncovered_records,
         },
         "official_objects": surface.official_objects,
+        "image_reuse": image_reuse,
         "reuse": {**plan.to_dict(), "objects_written": result.objects_written,
                   "objects_deduped": result.objects_deduped,
                   "text_resolution": resolution.to_dict() if resolution else None,

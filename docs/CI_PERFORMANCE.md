@@ -4,8 +4,10 @@ The generated-release workflow first checks out source files and release
 manifests with a blob-filtered clone. It omits generated CAS objects, parsed
 bundle inputs, PNGs, and image overlays until the release gate says a build is
 needed. A text/lyrics build then materializes the generated tree while keeping
-images and image overlays excluded; an enabled image build materializes all
-inputs. Sparse checkout does not remove paths from the committed-tree comparison.
+PNGs and image overlays excluded when image generation is paused; publication
+reuses prior image objects from generated CAS after verifying the current source.
+An enabled image-generation build materializes all inputs. Sparse checkout does
+not remove paths from the committed-tree comparison.
 
 The gate reads the input trees twice, once for the release's source commit and
 once for HEAD. Previously it invoked `git ls-tree` once per input path and commit

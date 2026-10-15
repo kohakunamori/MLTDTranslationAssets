@@ -1,7 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "images": {
-    "enabled": false,
-    "disabled_reason": "No suitable image localization model provider has been selected."
+    "generation_enabled": false,
+    "publication_enabled": true,
+    "disabled_reason": "Image generation is paused until a suitable provider is selected; publish compatible existing translations."
   }
 }

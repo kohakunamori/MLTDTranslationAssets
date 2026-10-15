@@ -115,7 +115,7 @@ jobs:
         if: steps.gate.outputs.build == 'true'
         run: |
           python scripts/localization_features.py --report .localization-features.json --github-output "$GITHUB_OUTPUT"
-          if python -c 'import json, sys; sys.exit(0 if json.load(open(".localization-features.json"))["images_enabled"] else 1)'; then
+          if python -c 'import json, sys; sys.exit(0 if json.load(open(".localization-features.json"))["images_generation_enabled"] else 1)'; then
             git sparse-checkout disable
           else
             git sparse-checkout set --no-cone '/*' '!/images/' '!/image-overlay/'
@@ -135,7 +135,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .generated-work/official-by-content
-          key: official-by-content-v2-${{ steps.gate.outputs.asset_version }}
+          # A new cache generation saves image sources as well as text/lyrics;
+          # an exact immutable v2 hit would otherwise discard those additions.
+          key: official-by-content-v3-${{ steps.gate.outputs.asset_version }}-images-${{ steps.features.outputs.images_publication_enabled }}
           restore-keys: |
             official-by-content-
 
@@ -144,7 +146,8 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           ASSET_VERSION: ${{ steps.gate.outputs.asset_version }}
-          IMAGES_ENABLED: ${{ steps.features.outputs.images_enabled }}
+          IMAGES_GENERATION_ENABLED: ${{ steps.features.outputs.images_generation_enabled }}
+          IMAGES_PUBLICATION_ENABLED: ${{ steps.features.outputs.images_publication_enabled }}
           # Same value the gate above decides with: a forced dispatch rebuilds
           # everything, and an incremental build here would silently keep the
           # bundles the force was meant to regenerate.
@@ -154,7 +157,12 @@ jobs:
           SOURCE_COMMIT="$(git rev-parse HEAD)"
           image_args=()
           OVERLAY_MANIFEST="image-overlay/${ASSET_VERSION}/overlay-manifest.json"
-          if [ "$IMAGES_ENABLED" = "true" ]; then
+          if [ "$IMAGES_PUBLICATION_ENABLED" = "true" ] && [ "$IMAGES_GENERATION_ENABLED" != "true" ]; then
+            # Reuse prior published CAS objects only after checking the current
+            # official source SHA-256. No image provider or texture writer runs.
+            image_args+=(--reuse-published-images)
+            echo "Publishing compatible existing image translations without generation."
+          elif [ "$IMAGES_PUBLICATION_ENABLED" = "true" ]; then
             if [ ! -f "$OVERLAY_MANIFEST" ]; then
               echo "Image localization is enabled but its audited overlay is not ready for ${ASSET_VERSION}." >&2
               exit 1
@@ -171,7 +179,7 @@ jobs:
             )
             echo "Image overlay found for ${ASSET_VERSION}; publishing the image surface."
           else
-            echo "Image localization disabled; publishing text and lyrics."
+            echo "Image publication disabled; publishing text and lyrics."
           fi
           reuse_args=()
           if [ "$FORCE_BUILD" = "true" ]; then

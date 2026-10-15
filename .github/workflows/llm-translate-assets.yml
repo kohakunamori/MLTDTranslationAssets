@@ -73,7 +73,7 @@ jobs:
         run: |
           python scripts/localization_features.py \
             --github-output "$GITHUB_OUTPUT" --report .localization-features.json
-          echo 'Image localization currently defaults to disabled until a suitable provider is selected.'
+          echo 'Image generation is independent of publication of existing image translations.'
 
       - name: Install translation dependencies
         shell: bash
@@ -193,7 +193,7 @@ jobs:
     # normal run minutes. Anything past three hours is a hang, not progress.
     timeout-minutes: 180
     outputs:
-      images_enabled: ${{ steps.features.outputs.images_enabled }}
+      images_generation_enabled: ${{ steps.features.outputs.images_generation_enabled }}
       published: ${{ steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true' }}
       remaining: ${{ steps.backlog.outputs.remaining }}
       updated: ${{ steps.apply.outputs.updated }}
@@ -238,7 +238,7 @@ jobs:
         run: |
           python scripts/localization_features.py \
             --github-output "$GITHUB_OUTPUT" --report .localization-features.json
-          echo 'Image localization currently defaults to disabled until a suitable provider is selected.'
+          echo 'Image generation is independent of publication of existing image translations.'
 
       - name: Install translation dependencies
         shell: bash
@@ -454,7 +454,7 @@ jobs:
           set -euo pipefail
           if [ -f .llm-coverage.json ]; then
             cat .llm-coverage.json
-            echo 'Image coverage was inventoried only; image generation remains disabled by policy.'
+            echo 'Image coverage was inventoried; existing compatible translations can publish while generation is paused.'
           fi
           # The promotion runs even when this run's queue was empty, so report it
           # before the translation summary's early exit.
@@ -525,7 +525,7 @@ jobs:
   images:
     name: Localize images for the same release
     needs: draft
-    if: needs.draft.result == 'success' && needs.draft.outputs.images_enabled == 'true'
+    if: needs.draft.result == 'success' && needs.draft.outputs.images_generation_enabled == 'true'
     uses: ./.github/workflows/image-localize-assets.yml
     with:
       enabled: true
@@ -563,7 +563,7 @@ jobs:
     # An enabled but incomplete/failed image batch cannot publish a partial overlay.
     if: >-
       always() && !cancelled() && needs.draft.result == 'success' &&
-      (needs.draft.outputs.images_enabled != 'true' ||
+      (needs.draft.outputs.images_generation_enabled != 'true' ||
        (needs.images.result == 'success' && needs.images.outputs.ready == 'true')) &&
       (needs.draft.outputs.published == 'true' || needs.images.outputs.published == 'true')
     runs-on: [self-hosted, Linux, X64, racknerd-light]

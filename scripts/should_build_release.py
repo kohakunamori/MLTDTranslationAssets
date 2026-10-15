@@ -54,6 +54,7 @@ RELEASE_INPUT_FILES = (
     "scripts/event_unit_localization.py",
     "scripts/bundle_incremental.py",
     "scripts/merge_image_overlay.py",
+    "scripts/reuse_published_images.py",
     "scripts/source_provenance.py",
     "scripts/localization_features.py",
     "configs/localization-pipeline.json",

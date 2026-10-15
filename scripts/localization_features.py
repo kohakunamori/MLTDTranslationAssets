@@ -1,4 +1,4 @@
-"""Read the shared translation/image policy before any image provider work."""
+"""Separate image generation from publication of existing translated bundles."""
 from __future__ import annotations
 
 import argparse
@@ -11,14 +11,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def inspect(root: Path) -> dict:
     path = root / "configs/localization-pipeline.json"
     if not path.is_file():
-        return {"images_enabled": False, "reason": "Image localization is disabled by default."}
+        return {"images_generation_enabled": False, "images_publication_enabled": False,
+                "reason": "Image generation and publication are disabled by default."}
     document = json.loads(path.read_text(encoding="utf-8"))
     images = document.get("images", {})
-    if document.get("schema_version") != 1 or type(images.get("enabled")) is not bool:
+    if (document.get("schema_version") != 2
+            or type(images.get("generation_enabled")) is not bool
+            or type(images.get("publication_enabled")) is not bool):
         raise ValueError("invalid localization pipeline feature policy")
-    return {"images_enabled": images["enabled"],
-            "reason": "Image localization enabled." if images["enabled"] else
-                      images.get("disabled_reason", "Image localization disabled.")}
+    return {"images_generation_enabled": images["generation_enabled"],
+            "images_publication_enabled": images["publication_enabled"],
+            "reason": "Image generation enabled." if images["generation_enabled"] else
+                      images.get("disabled_reason", "Image generation disabled.")}
 
 
 def main() -> int:
@@ -30,7 +34,8 @@ def main() -> int:
     result = inspect(args.root)
     if args.github_output:
         with args.github_output.open("a", encoding="utf-8") as stream:
-            stream.write(f"images_enabled={str(result['images_enabled']).lower()}\n")
+            for key in ("images_generation_enabled", "images_publication_enabled"):
+                stream.write(f"{key}={str(result[key]).lower()}\n")
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

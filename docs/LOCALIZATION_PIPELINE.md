@@ -11,15 +11,26 @@ The translation workflow owns three stages:
    commit a version-bound overlay;
 3. `package`: dispatch one generated release after the enabled stages finish.
 
-The image stage is currently **disabled** in
-`configs/localization-pipeline.json`: no suitable model provider has been
-selected. A skipped image stage does not block text/lyric releases. The generated
-build also reads this policy and omits the image overlay while disabled. Existing
-image source files, reviewed PNGs, progress and overlays are preserved.
+The image policy has two independent switches in
+`configs/localization-pipeline.json` (schema 2): `generation_enabled=false` and
+`publication_enabled=true`. New image generation is paused; existing published
+translations remain part of releases. A skipped generation stage does not block
+packaging. Existing source files, reviewed PNGs, progress and overlays are preserved.
+
+With generation paused, the generated builder uses `--reuse-published-images`.
+It finds each image's newest successful published entry, including older releases
+when the latest release was text-only. It verifies the translated CAS object's
+SHA-256, downloads/caches the current official source and checks its full SHA-256
+against the source bound to that image. Compatible objects are reused byte-for-byte
+with the current catalogue's remote name. The final unified catalogue aligns their
+sizes together with text and lyrics; old image catalogues are never reused.
+Changed or removed sources are explicitly reported and fall back to official
+content. Missing/corrupt translated objects and network failures fail the build.
+No provider, PNG processing or texture injection is called on this path.
 
 Within one generated-release run, the release gate owns the selected
-`asset_version` and the materialization step owns the `images_enabled` policy
-result. Build, verification and Portal manifest steps consume those outputs.
+`asset_version` and the materialization step owns both image policy
+results. Build, verification and Portal manifest steps consume those outputs.
 They do not independently select another version or reinterpret the image
 policy. Publication still checks the latest upstream inputs before committing;
 the frozen step outputs do not replace the stale-input and retry guards.
@@ -37,7 +48,8 @@ Its old GitHub workflow is also administratively disabled during this pause.
 
 When a provider is selected, configure its runtime and a source-bound prepared
 image cohort, re-enable the GitHub image workflow if necessary, and change the
-shared policy to `images.enabled=true`. An incomplete image batch keeps its
+shared policy to `images.generation_enabled=true`. Keep
+`images.publication_enabled=true` to publish its output. An incomplete image batch keeps its
 progress and postpones unified packaging; a failed independent audit cannot
 publish an overlay. `publish_image_overlay.py` checks the audit/report digests,
 source/output bytes and current official catalogue before exporting the bundles
