@@ -1,8 +1,11 @@
 {
   "schema_version": 2,
   "images": {
-    "generation_enabled": false,
+    "generation_enabled": true,
     "publication_enabled": true,
-    "disabled_reason": "Image generation is paused until a suitable provider is selected; publish compatible existing translations."
+    "model": "imas-trans-image",
+    "requests_per_minute": 2,
+    "concurrency": 1,
+    "batch_bundles": 12
   }
 }

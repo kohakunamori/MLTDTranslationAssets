@@ -33,6 +33,10 @@ name: Reusable - synchronize and translate sources
         value: ${{ jobs.draft.outputs.remaining }}
       updated:
         value: ${{ jobs.draft.outputs.updated }}
+      image_remaining:
+        value: ${{ jobs.images.outputs.remaining }}
+      image_completed:
+        value: ${{ jobs.images.outputs.completed }}
 
 permissions:
   contents: write

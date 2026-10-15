@@ -1,4 +1,4 @@
-# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
+# Short provider experiments include Unity extraction and run on hosted CPUs.
 name: Test image localization model
 
 on:
@@ -7,7 +7,7 @@ on:
       model:
         description: 'Explicit image model to test on two official comic samples'
         required: true
-        default: 'gemini-3.1-flash-image'
+        default: 'imas-trans-image'
       guided:
         description: 'Use exact Chinese translations to test rendering quality separately'
         type: boolean
@@ -21,12 +21,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: image-model-smoke
+  group: images-provider
+  queue: max
   cancel-in-progress: false
 
 jobs:
   smoke:
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

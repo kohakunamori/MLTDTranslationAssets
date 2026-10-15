@@ -31,10 +31,11 @@ def condition(expression, values):
     return eval(compile(tree, "workflow condition", "eval"), {"__builtins__": {}})
 
 
-def test_image_generation_is_paused_but_publication_is_enabled():
-    assert features.inspect(ROOT)["images_generation_enabled"] is False
+def test_image_generation_and_publication_are_enabled():
+    assert features.inspect(ROOT)["images_generation_enabled"] is True
     assert features.inspect(ROOT)["images_publication_enabled"] is True
-    assert "provider" in features.inspect(ROOT)["reason"]
+    policy = json.loads((ROOT / 'configs/localization-pipeline.json').read_text())['images']
+    assert (policy['model'], policy['requests_per_minute'], policy['concurrency']) == ('imas-trans-image', 2, 1)
 
 
 def test_missing_policy_defaults_to_disabled(tmp_path):
@@ -73,7 +74,7 @@ def test_switches_are_independent(tmp_path, generation, publication):
     assert result["images_publication_enabled"] is publication
 
 
-def test_images_are_called_only_inside_translation_with_two_opt_in_gates():
+def test_images_have_opt_in_gates_for_translation_and_explicit_image_stage():
     jobs = workflow("llm-translate-assets.yml")["jobs"]
     image_job = jobs["images"]
     assert image_job["uses"] == "./.github/workflows/image-localize-assets.yml"
@@ -83,9 +84,9 @@ def test_images_are_called_only_inside_translation_with_two_opt_in_gates():
     triggers = child.get("on", child.get(True))
     assert set(triggers) == {"workflow_call"}
     assert triggers["workflow_call"]["inputs"]["enabled"]["default"] is False
-    assert "inputs.enabled" in child["jobs"]["localize"]["if"]
-    assert "needs.policy.outputs.images_generation_enabled == 'true'" in child["jobs"]["localize"]["if"]
-    assert "image-localize-assets.yml" not in (ROOT / ".github/workflows/auto-track-jp-assets.yml").read_text(encoding="utf-8")
+    assert "inputs.enabled" in child["jobs"]["prepare"]["if"]
+    assert "needs.policy.outputs.enabled == 'true'" in child["jobs"]["prepare"]["if"]
+    assert "stage == 'images'" in workflow('auto-track-jp-assets.yml')['jobs']['images']['if']
 
 
 @pytest.mark.parametrize("enabled,image_result,ready,text_published,image_published,expected", [
@@ -110,11 +111,14 @@ def test_packaging_waits_for_enabled_images_but_ignores_disabled_images(
 
 
 def test_image_overlay_is_exported_only_after_independent_repack_audit():
-    steps = workflow("image-localize-assets.yml")["jobs"]["localize"]["steps"]
+    jobs = workflow("image-localize-assets.yml")["jobs"]
+    assert jobs['publish']['runs-on'] == jobs['prepare']['runs-on'] == 'ubuntu-latest'
+    assert jobs['localize']['runs-on'][-1] == 'racknerd-light'
+    steps = jobs['publish']['steps']
     stage = next(step for step in steps if step.get("name") ==
                  "Inject and independently verify the translated image bundles")
     assert stage["run"].index("verify_bundle_repack.py") < stage["run"].index("publish_image_overlay.py")
-    assert stage["if"] == "steps.batch.outputs.audit_ready == 'true'"
+    assert stage["if"] == "steps.package.outputs.has_images == 'true'"
     assert not any("gh workflow run assets-generated.yml" in step.get("run", "") for step in steps)
 
 
@@ -124,11 +128,9 @@ def test_release_reuses_images_when_generation_is_paused():
     policy = next(step for step in steps if step.get("id") == "features")
     command = build["run"]
     assert '"$IMAGES_PUBLICATION_ENABLED" = "true"' in command
-    assert '"$IMAGES_GENERATION_ENABLED" != "true"' in command
     assert build["env"]["IMAGES_PUBLICATION_ENABLED"] == "${{ steps.features.outputs.images_publication_enabled }}"
     assert build["env"]["IMAGES_GENERATION_ENABLED"] == "${{ steps.features.outputs.images_generation_enabled }}"
     assert "--reuse-published-images" in command
     assert "localization_features.py" in policy["run"]
     assert '--github-output "$GITHUB_OUTPUT"' in policy["run"]
-    assert 'if [ ! -f "$OVERLAY_MANIFEST" ]; then' in command
-    assert "its audited overlay is not ready" in command
+    assert 'if [ -f "$OVERLAY_MANIFEST" ]; then' in command

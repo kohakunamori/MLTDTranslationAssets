@@ -34,12 +34,21 @@ def sha256(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def references(root):
+def retained_versions(root):
+    """Release payload retention is independent of the source library/history."""
+    config = root / 'configs/r2-storage.json'
+    limit = json.loads(config.read_text()).get('retain_releases', 2) if config.exists() else 2
+    if type(limit) is not int or not 1 <= limit <= 2:
+        raise ValueError('R2 must retain one or two releases')
+    return sorted((p.parent.name for p in (root / 'generated').glob('*/manifest.json')
+                   if p.parent.name.isdigit()), key=int, reverse=True)[:limit]
+
+
+def references(root, versions=None):
     """Retain the union of explicitly retained, successful releases."""
     result = set()
-    for path in (root / 'generated').glob('*/manifest.json'):
-        if not path.parent.name.isdigit():
-            continue
+    for version in retained_versions(root) if versions is None else versions:
+        path = root / 'generated' / version / 'manifest.json'
         manifest = json.loads(path.read_text(encoding='utf-8'))
         if manifest.get('build_status') != 'success':
             raise ValueError(f'Unsuccessful retained release: {path}')
@@ -110,6 +119,16 @@ class Transport:
             cursor = page['cursor']
             if not cursor:
                 return result
+
+    def delete(self, keys):
+        """Called only while CI holds the shared r2-mutation lock."""
+        for offset in range(0, len(keys), 100):
+            batch = keys[offset:offset + 100]
+            response = self.session().post(self.url + '/delete-batch', json=batch,
+                headers={'Authorization': f'Bearer {self.token}'},
+                timeout=(30, 180), allow_redirects=False)
+            if response.status_code != 200 or response.json().get('deleted') != batch:
+                raise ValueError('R2 deletion was not acknowledged; safe to retry')
 
     def download_batch(self, items):
         """Amortize HTTPS round trips without duplicating objects in R2."""
@@ -208,7 +227,7 @@ def unpack_cache(archive, destination):
 
 def restore(root, transport, workers=12, cache=True, samples=None, overlay_version=None):
     state = json.loads((root / 'generated/r2-storage.json').read_text(encoding='utf-8'))
-    digests = references(root)
+    digests = references(root, state.get('release_versions'))
     overlay = {}
     if overlay_version is not None:
         if not str(overlay_version).isdigit():
@@ -314,9 +333,13 @@ def publish(root, transport, workers=12):
     sources = {d: root / 'generated/objects/sha256' / d for d in digests}
     # Retain the retired audited overlay bytes in R2 too, before untracking them.
     old_state = root / 'generated/r2-storage.json'
+    versions = retained_versions(root)
     legacy = json.loads(old_state.read_text()).get('legacy_overlay', {}) if old_state.exists() else {}
+    legacy = {p: d for p, d in legacy.items() if p.split('/')[1] in versions}
     for pattern in ('*/*/*.unity3d', '*/*/*.data'):
         for path in (root / 'image-overlay').glob(pattern):
+            if path.relative_to(root / 'image-overlay').parts[0] not in versions:
+                continue
             digest = sha256(path)
             legacy[path.relative_to(root).as_posix()] = digest
             sources[digest] = path
@@ -349,7 +372,8 @@ def publish(root, transport, workers=12):
             digest = sha256(archive)
             _, size = upload(transport, 'build-cache/sha256/' + digest, archive, transport.inventory('build-cache/sha256/'))
             cache_record = {'sha256': digest, 'size': size, 'files': len(files)}
-    state = {'schema_version': 1, 'bucket': 'mltd-localized-assets', 'objects': dict(sorted(sizes.items())),
+    state = {'schema_version': 1, 'bucket': 'mltd-localized-assets', 'release_versions': versions,
+             'objects': dict(sorted(sizes.items())),
              'build_cache': cache_record, 'legacy_overlay': dict(sorted(legacy.items()))}
     # Write the publication proof only after every upload has succeeded.
     target = root / 'generated/r2-storage.json'
@@ -360,9 +384,47 @@ def publish(root, transport, workers=12):
           f'{len(files)} parsed build inputs')
 
 
+def prune(root, transport, *, apply=False):
+    """Sweep only after live acceptance, with no concurrent CI publisher.
+
+    Git source/history and local files are never deleted. A failed deployment
+    never reaches this command. Fail closed on stale metadata or missing pins.
+    """
+    state = json.loads((root / 'generated/r2-storage.json').read_text())
+    versions = retained_versions(root)
+    if state.get('release_versions', versions) != versions:
+        raise ValueError('Publication inventory is stale; publish before pruning')
+    keep = {'objects/sha256/' + d for d in references(root, versions)}
+    for path, digest in state.get('legacy_overlay', {}).items():
+        if path.split('/')[1] in versions:
+            keep.add('objects/sha256/' + digest)
+    # A new image overlay can be staged before the unified release is built.
+    # It is committed inventory and must survive a gateway-only repair run.
+    keep.update('objects/sha256/' + d for d in state['objects'])
+    if state.get('build_cache'):
+        keep.add('build-cache/sha256/' + state['build_cache']['sha256'])
+    existing = {**transport.inventory('objects/sha256/'),
+                **transport.inventory('build-cache/sha256/')}
+    missing = keep - existing.keys()
+    if missing:
+        raise ValueError(f'Refusing GC: {len(missing)} live objects are missing')
+    remove = sorted(existing.keys() - keep)
+    report = {'retained_versions': versions, 'delete_objects': len(remove),
+              'delete_bytes': sum(existing[k] for k in remove), 'applied': apply}
+    if apply and remove:
+        transport.delete(remove)
+        remaining = {**transport.inventory('objects/sha256/'),
+                     **transport.inventory('build-cache/sha256/')}
+        if not keep <= remaining.keys() or any(k in remaining for k in remove):
+            raise ValueError('R2 retention verification failed')
+    print(json.dumps(report))
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['publish', 'restore', 'publish-overlay'])
+    parser.add_argument('action', choices=['publish', 'restore', 'publish-overlay', 'prune'])
+    parser.add_argument('--apply', action='store_true', help='Actually delete unreferenced R2 payloads')
     parser.add_argument('--root', type=Path, default=ROOT)
     parser.add_argument('--workers', type=int, default=12)
     parser.add_argument('--no-cache', action='store_true')
@@ -376,6 +438,8 @@ def main():
         if args.overlay_version is None:
             parser.error('publish-overlay requires --overlay-version')
         publish_overlay(args.root, transport, args.overlay_version)
+    elif args.action == 'prune':
+        prune(args.root, transport, apply=args.apply)
     else:
         restore(args.root, transport, args.workers, not args.no_cache, args.samples, args.overlay_version)
 

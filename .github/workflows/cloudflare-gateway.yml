@@ -12,6 +12,10 @@ concurrency:
 
 jobs:
   deploy:
+    concurrency:
+      group: r2-mutation
+      queue: max
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     # Only metadata is checked out; acceptance restores a few verified R2 samples.
     timeout-minutes: 30
@@ -119,3 +123,16 @@ jobs:
           done
           echo "the live gateway never served this release; failing the run" >&2
           exit 1
+
+      - name: Enforce two-release R2 retention after successful live acceptance
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo 'Main advanced during deployment; leave GC for the next accepted deployment.'
+            exit 0
+          fi
+          python scripts/r2_release_storage.py prune --apply

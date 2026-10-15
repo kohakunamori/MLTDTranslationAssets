@@ -2,5 +2,6 @@
   "schema_version": 1,
   "bucket": "mltd-localized-assets",
   "publisher_url": "https://mltd-localized-publisher.k18696620325.workers.dev",
-  "object_prefix": "objects/sha256/"
+  "object_prefix": "objects/sha256/",
+  "retain_releases": 2
 }

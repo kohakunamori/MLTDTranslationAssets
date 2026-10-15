@@ -1,5 +1,5 @@
 // CI-only transport. The public gateway has no publication token or write route.
-// No mutable keys or deletes: failed/stale builds cannot change a live release.
+// Immutable uploads; authenticated GC is serialized with publishers in CI.
 const KEY = /^(objects|build-cache)\/sha256\/([0-9a-f]{64})$/;
 const json = (value, status = 200) => Response.json(value, {
   status, headers: {'cache-control': 'no-store'},
@@ -11,6 +11,13 @@ export default {
       return json({error: 'unauthorized'}, 401);
     }
     const url = new URL(request.url);
+    if (url.pathname === '/delete-batch' && request.method === 'POST') {
+      const keys = await request.json().catch(() => null);
+      if (!Array.isArray(keys) || !keys.length || keys.length > 100 || keys.some(key =>
+          typeof key !== 'string' || !KEY.test(key))) return json({error: 'invalid deletion keys'}, 400);
+      await env.ASSETS.delete(keys);
+      return json({deleted: keys});
+    }
     if (url.pathname === '/batch' && request.method === 'POST') {
       const keys = await request.json().catch(() => null);
       if (!Array.isArray(keys) || !keys.length || keys.length > 32

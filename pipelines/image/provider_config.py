@@ -23,7 +23,7 @@ DEFAULTS={
  "image_provider":{"base_url":"http://127.0.0.1:15721/v1","mode":"images_edits",
   "model":"imas-trans-image","api_key":"","api_key_env":"CLIPROXY_API_KEY",
   "require_api_key":False,"quality":"high","size":"auto","output_format":"png",
-  "timeout_seconds":330,"min_request_interval_seconds":60,
+  "timeout_seconds":330,"min_request_interval_seconds":30,
   "legacy_controller_model":"gpt-5.6-luna"},
  "vision":{"base_url":"","model":"gpt-5.6-luna","timeout_seconds":220},
  "network":{"http_proxy":"","https_proxy":"","no_proxy":"localhost,127.0.0.1,::1",
@@ -37,7 +37,9 @@ PNG_SIGNATURE=b"\x89PNG\r\n\x1a\n"
 # gate is process-global: extra threads queue behind it instead of stacking
 # calls, which is why callers must also stay serial.
 _IMAGE_REQUEST_GATE=Lock()
-_last_image_request_at=0.0
+# A fresh process waits one interval too, protecting the boundary between two
+# serialized CI jobs that do not share a monotonic clock or progress cache.
+_last_image_request_at=monotonic()
 
 
 def throttle_image_request(config:dict)->float:
@@ -47,7 +49,7 @@ def throttle_image_request(config:dict)->float:
  vision/classification calls, which are not the rate-limited surface.
  """
  global _last_image_request_at
- interval=float(config["image_provider"].get("min_request_interval_seconds",60.0))
+ interval=float(config["image_provider"].get("min_request_interval_seconds",30.0))
  if interval<=0:return 0.0
  with _IMAGE_REQUEST_GATE:
   now=monotonic()

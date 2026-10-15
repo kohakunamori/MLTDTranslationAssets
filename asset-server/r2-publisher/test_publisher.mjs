@@ -26,6 +26,7 @@ try {
     },
     async get(key) {return objects.get(key);},
     async head(key) {return objects.get(key);},
+    async delete(keys) {keys.forEach(key => objects.delete(key));},
     async list() {return {objects: [...objects.values()], truncated: false};},
   }};
   const call = (path, method = 'GET', body, authorized = true) => worker.fetch(new Request('https://publisher.test/' + path, {
@@ -73,6 +74,12 @@ try {
   assert.equal(ordered.subarray(4 + orderedLength).toString(), 'translatedtwo');
   assert.equal((await call('batch', 'POST', JSON.stringify([huge]))).status, 413);
   assert.equal(cancelled, 1);
+  assert.equal((await call('delete-batch', 'POST', JSON.stringify([key]), false)).status, 401);
+  assert.equal((await call('delete-batch', 'POST', JSON.stringify(['source/file.png']))).status, 400);
+  assert.equal((await call('delete-batch', 'POST', JSON.stringify(Array(101).fill(key)))).status, 400);
+  assert.equal((await call('delete-batch', 'POST', JSON.stringify([key]))).status, 200);
+  assert.equal((await call(key)).status, 404);
+  assert.equal((await call(secondKey)).status, 200); // shared retained bytes survive
   console.log('PASS publisher authentication, immutable writes, checksum rejection, inventory, and bounded batch reads');
 } finally {
   await rm(directory, {recursive: true});

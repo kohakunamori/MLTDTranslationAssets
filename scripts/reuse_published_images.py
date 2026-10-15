@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import json
 import re
 
 from pipelines.core.hashing import sha256_file
@@ -20,6 +21,8 @@ PREFIX = "production/2018/Android/"
 def published_candidates(store, asset_version: str) -> dict[str, tuple[str, dict]]:
     """A text-only release must not hide images in an older successful release."""
     candidates = {}
+    state_path = store.root / 'r2-storage.json'
+    available = json.loads(state_path.read_text())['objects'] if state_path.exists() else None
     versions = sorted((v for v in store.list_releases()
                        if v.isdigit() and int(v) <= int(asset_version)), key=int, reverse=True)
     for version in versions:
@@ -32,6 +35,8 @@ def published_candidates(store, asset_version: str) -> dict[str, tuple[str, dict
         for entry in manifest.get("entries", []):
             if entry.get("resource_kind") != "texture":
                 continue
+            if available is not None and entry.get('artifact_sha256') not in available:
+                continue  # Historical metadata can outlive the two R2 releases.
             logical = entry.get("logical_key")
             if (not isinstance(logical, str) or not logical.endswith(".unity3d")
                     or "/" in logical or "\\" in logical or logical in seen

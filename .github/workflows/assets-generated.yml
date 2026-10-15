@@ -29,6 +29,10 @@ concurrency:
 
 jobs:
   build:
+    concurrency:
+      group: r2-mutation
+      queue: max
+      cancel-in-progress: false
     outputs:
       pushed: ${{ steps.publish.outputs.pushed }}
       rebuild: ${{ steps.publish.outputs.rebuild }}
@@ -120,7 +124,9 @@ jobs:
           IMAGES_GENERATION_ENABLED: ${{ steps.features.outputs.images_generation_enabled }}
         run: |
           args=()
-          if [ "$IMAGES_GENERATION_ENABLED" = true ]; then args+=(--overlay-version "$ASSET_VERSION"); fi
+          if [ -f "image-overlay/${ASSET_VERSION}/overlay-manifest.json" ]; then
+            args+=(--overlay-version "$ASSET_VERSION")
+          fi
           python scripts/r2_release_storage.py restore "${args[@]}"
 
       - name: Validate translation source
@@ -155,29 +161,14 @@ jobs:
           SOURCE_COMMIT="$(git rev-parse HEAD)"
           image_args=()
           OVERLAY_MANIFEST="image-overlay/${ASSET_VERSION}/overlay-manifest.json"
-          if [ "$IMAGES_PUBLICATION_ENABLED" = "true" ] && [ "$IMAGES_GENERATION_ENABLED" != "true" ]; then
-            # Reuse prior published CAS objects only after checking the current
-            # official source SHA-256. No image provider or texture writer runs.
+          if [ "$IMAGES_PUBLICATION_ENABLED" = "true" ]; then
             image_args+=(--reuse-published-images)
-            echo "Publishing compatible existing image translations without generation."
-          elif [ "$IMAGES_PUBLICATION_ENABLED" = "true" ]; then
-            if [ ! -f "$OVERLAY_MANIFEST" ]; then
-              echo "Image localization is enabled but its audited overlay is not ready for ${ASSET_VERSION}." >&2
-              exit 1
+            if [ -f "$OVERLAY_MANIFEST" ]; then
+              INDEX_NAME="$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['client_manifest_name'])" "$OVERLAY_MANIFEST")"
+              image_args+=(--require-images --image-overlay-manifest "$OVERLAY_MANIFEST"
+                --image-overlay-root "image-overlay/${ASSET_VERSION}/jp-android"
+                --image-index "image-overlay/${ASSET_VERSION}/jp-android/${INDEX_NAME}")
             fi
-            # An audited overlay exists for exactly this asset version, so the
-            # image surface ships with the text surface in one release: same
-            # catalogue, one writer, one push.
-            INDEX_NAME="$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['client_manifest_name'])" "$OVERLAY_MANIFEST")"
-            image_args+=(
-              --require-images
-              --image-overlay-manifest "$OVERLAY_MANIFEST"
-              --image-overlay-root "image-overlay/${ASSET_VERSION}/jp-android"
-              --image-index "image-overlay/${ASSET_VERSION}/jp-android/${INDEX_NAME}"
-            )
-            echo "Image overlay found for ${ASSET_VERSION}; publishing the image surface."
-          else
-            echo "Image publication disabled; publishing text and lyrics."
           fi
           reuse_args=()
           if [ "$FORCE_BUILD" = "true" ]; then

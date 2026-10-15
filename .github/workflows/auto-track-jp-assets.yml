@@ -21,9 +21,9 @@ name: Assets production pipeline
   workflow_dispatch:
     inputs:
       stage:
-        description: 'watch, translate, release (existing results), gateway, or full'
+        description: 'watch, translate, images, release (existing results), gateway, or full'
         type: choice
-        options: [watch, translate, release, gateway, full]
+        options: [watch, translate, images, release, gateway, full]
         default: watch
       force_check:
         description: 'Compatibility input for the existing VPS watcher'
@@ -289,11 +289,21 @@ jobs:
       publish_drafts: ${{ inputs.publish_drafts || 'true' }}
     secrets: inherit
 
+  images:
+    needs: plan
+    if: needs.plan.outputs.stage == 'images'
+    uses: ./.github/workflows/image-localize-assets.yml
+    with:
+      enabled: true
+      max_items: ${{ inputs.max_items != '0' && inputs.max_items != '' && inputs.max_items || '12' }}
+    secrets: inherit
+
   release:
-    needs: [plan, translate]
+    needs: [plan, translate, images]
     if: >-
       always() && !cancelled() && needs.plan.result == 'success' &&
       (needs.plan.outputs.stage == 'release' ||
+       (needs.images.result == 'success' && needs.images.outputs.published == 'true') ||
        (needs.translate.result == 'success' && needs.translate.outputs.ready == 'true' &&
         (needs.translate.outputs.published == 'true' || needs.plan.outputs.stage == 'full')))
     uses: ./.github/workflows/assets-generated.yml
@@ -334,8 +344,27 @@ jobs:
           gh workflow run auto-track-jp-assets.yml --ref main -f stage=translate \
             -f max_items=0 -f publish_drafts="$PUBLISH_DRAFTS"
 
+  continue-images:
+    needs: [plan, images, translate, release, gateway]
+    if: >-
+      always() && !cancelled() && needs.release.result != 'failure' && needs.gateway.result != 'failure' &&
+      (inputs.max_items == '0' || inputs.max_items == '') &&
+      ((needs.images.result == 'success' && needs.images.outputs.completed != '0' &&
+        needs.images.outputs.completed != '' && needs.images.outputs.remaining != '0' &&
+        needs.images.outputs.remaining != '') ||
+       (needs.translate.result == 'success' && needs.translate.outputs.image_completed != '0' &&
+        needs.translate.outputs.image_completed != '' && needs.translate.outputs.image_remaining != '0' &&
+        needs.translate.outputs.image_remaining != ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run auto-track-jp-assets.yml --ref main -f stage=images -f max_items=0
+
   summary:
-    needs: [plan, resolve-target, freeze, translate, release, gateway, continue-backlog]
+    needs: [plan, resolve-target, freeze, translate, images, release, gateway, continue-backlog, continue-images]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

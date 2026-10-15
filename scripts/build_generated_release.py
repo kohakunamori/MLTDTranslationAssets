@@ -788,8 +788,6 @@ def main() -> int:
                              "surface or audit it independently, so requiring images always "
                              "refuses. The default text-only path is unaffected.")
     args = parser.parse_args()
-    if args.reuse_published_images and args.image_overlay_manifest is not None:
-        raise ValueError("choose either an explicit image overlay or published-image reuse")
     if not args.ci_run_id:
         raise ValueError("CI run identity is required; set GITHUB_RUN_ID or --ci-run-id")
     # Fail closed before any version/input scan or side effect (work dirs,
@@ -940,7 +938,9 @@ def main() -> int:
         merged_index.write_bytes(payload)
         image_entries = merge_image_overlay.build_entries(
             records, overlay_root, version["asset_version"], source_client)
-        image_bundles = len(image_entries)
+        replaced = {entry['logical_key'] for entry in image_entries}
+        entries = [entry for entry in entries if entry['logical_key'] not in replaced]
+        image_bundles = sum(e.get('resource_kind') == 'texture' for e in entries) + len(image_entries)
         # The client reads one declared size per runtime_path, so one catalogue
         # carries every surface's sizes: the image bundles join this entry list,
         # and the alignment below adds the text and lyric sizes to this table.

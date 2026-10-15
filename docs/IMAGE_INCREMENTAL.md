@@ -1,0 +1,40 @@
+# 图片增量汉化
+
+生产入口 `auto-track-jp-assets.yml` 的 `stage=images` 可以独立补图片积压；
+日常 `translate/full` 也调用同一图片阶段。配置为 `imas-trans-image`、串行、RPM 2。
+不再执行只有 937 张固定基线的旧批处理入口，已有 937 张汉化 PNG 和对应发布成果继续保留。
+
+```mermaid
+flowchart LR
+  Index[当前官方目录] --> Hosted[托管 runner：增量选择、解包、拼接、日文 OCR]
+  Hosted --> VPS[RackNerd：串行图片 API，每次启动至少间隔 30 秒]
+  VPS --> Audit[托管 runner：只恢复文字掩膜、保留透明度、Unity 注入及独立验证]
+  Audit --> Git[Git：新增 PNG 和来源记录]
+  Audit --> R2[R2：已校验 Bundle]
+  Git --> Release[复用已有图片并合并新覆盖包]
+  R2 --> Release
+```
+
+2026-10-15，1077750 目录中登记的八类图片合计 4,574 个 Bundle；现有发布覆盖其中 230 个，
+另有 4,344 个待增量检查。漫画 968、单格漫画 415、白板 629、贴图 207；
+另有活动横幅、教程、服装销售图、标题/Logo。这是 Bundle 数量，不能直接当作未翻译图片张数。
+同一个 Bundle 可以含多张 Texture2D，OCR 未发现日文也不等于已经人工证明没有日文。
+
+每批默认选择 12 个 Bundle，优先最新漫画。六段漫画按纹理名称的数字顺序拼接，
+保留每段坐标；其他登记类型按 Texture2D 处理。托管端用 Tesseract 日文 OCR 定位文字区域。
+提交模型前验证 PNG SHA-256；模型结果只能恢复在 OCR 掩膜内，掩膜外原图和原始 Alpha 保持逐像素一致。
+OCR 框可能漏字或框不准，这条自动管线不承诺语义质量已有人审核。未登记类型仍属未覆盖范围。
+
+状态记录在 `manifests/image-incremental.json`，包含官方目录身份、完整源 Bundle SHA-256、
+每张新增 PNG 的 SHA、模型、文字区域和像素审计。PNG 写入 `images/localized/`。
+同一来源已完成则跳过，来源变化重新进入队列。显式服务拒绝或错误画布比例进入待人工检查状态，不自动反复请求。
+
+模型作业不安装 UnityPy 或 OCR，只有 Pillow 和标准库；最长 150 分钟，API 预算 7,200 秒。
+进度按输入队列 SHA 缓存，生成结果即时记录，重跑不重复调用已完成任务。
+阶段交接使用当前 run 的短期 Actions artifacts（输入/输出 3 天，审计 7 天），
+汉化发布的 Bundle 长期存储在独立 R2 bucket；GitHub 不再作为发布 Bundle 的存储源。
+
+包级完整结果才进入安装清单，独立重打包审计通过后上传 R2，再提交源文件和元数据。
+发布不会替换掉历史其他图片：构建先验证兼容并复用已发布图片，新覆盖包只替换自身逻辑键。
+有剩余且确实完成 Bundle 时，统一入口自动排下一批 `stage=images`；失败、零进展、显式非零 `max_items` 冒烟不循环。
+R2 两版本限制仅约束发布结果，源 PNG 与文字不按版本清理。

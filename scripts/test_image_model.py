@@ -160,7 +160,7 @@ def decode_response(doc):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--model", default="gemini-3.1-flash-image")
+    parser.add_argument("--model", default="imas-trans-image")
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--guided", action="store_true", help="supply exact Chinese text to separate translation and rendering quality")
     parser.add_argument("--strict-preservation", action="store_true", help="test stronger protected artwork and label constraints on the stitched comic only")
@@ -178,7 +178,8 @@ def main(argv=None):
     index = load_official_index(index_path)
     public = json.loads((ROOT / "configs/api-models.example.json").read_text(encoding="utf-8"))
     base = public["defaults"]["base_url"].removesuffix("/v1")
-    endpoint = f"{base}/v1beta/models/{args.model}:generateContent"
+    endpoint = (base + '/v1/images/edits' if args.model == 'imas-trans-image' else
+                f"{base}/v1beta/models/{args.model}:generateContent")
     key = os.environ.get("MLTD_LLM_API_KEY", "")
     if not args.prepare_only and not key:
         raise ValueError("existing MLTD_LLM_API_KEY secret is unavailable")
@@ -215,9 +216,18 @@ def main(argv=None):
                       headers={"Authorization": f"Bearer {key}", "x-goog-api-key": key, "Content-Type": "application/json"})
             started = time.monotonic()
             try:
-                with urllib.request.urlopen(request, timeout=360) as response:
-                    result = json.load(response)
-                edited, caption = decode_response(result)
+                if args.model == 'imas-trans-image':
+                    sys.path.insert(0, str(ROOT / 'pipelines/image'))
+                    import provider_config
+                    config = {k: dict(v) for k, v in provider_config.DEFAULTS.items()}
+                    config['image_provider'].update(base_url=base + '/v1', model=args.model,
+                        api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)
+                    raw, _ = provider_config.image_edit(config, png(canvas), prompt)
+                    edited, caption, result = Image.open(io.BytesIO(raw)), '', {}
+                else:
+                    with urllib.request.urlopen(request, timeout=360) as response:
+                        result = json.load(response)
+                    edited, caption = decode_response(result)
                 edited.save(folder / "generated.png")
                 (folder / "response-text.txt").write_text(caption, encoding="utf-8")
                 sample.update(status="generated", output_size=list(edited.size),

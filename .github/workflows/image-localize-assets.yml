@@ -1,68 +1,36 @@
-# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
-name: image-localize-assets
-
-# Unattended image localization.
-#
-# Constraints this workflow encodes:
-#   * The upstream image service allows ONE request per minute, so generation is
-#     serial.  pipelines/image/provider_config.py paces every image edit with
-#     image_provider.min_request_interval_seconds (default 60); the gate is
-#     process-global, so extra threads queue instead of stacking calls.
-#   * A full cohort (937 pictures at one per minute) cannot finish inside one
-#     job, so each run stops on its own time budget, writes progress after every
-#     task, and the next run resumes from that same file.
-#   * No human sign-off.  The independent audit is the gate; a generated install
-#     manifest may only carry the automatic provenance tag, and
-#     inject_reviewed_textures.py still re-checks every hash, geometry and
-#     roundtrip before a bundle is written.
-#
-# Completed, reviewed repository outputs are verified before restoring work.
-# Pipeline state lives in work/image-localization-25/ and travels between runs
-# in the Actions cache.  A run without cached state fails its preflight by name
-# rather than generating against an unknown cohort.
-#
-# Called only from llm-translate-assets.yml. Image work and text translation
-# share one packaging hand-off. The checked-in feature policy currently disables
-# images because no suitable model provider has been selected.
-on:
+name: Reusable - incremental image localization
+'on':
   workflow_call:
     inputs:
       enabled:
         type: boolean
         default: false
-      max_seconds:
-        type: string
-        default: '18000'
       max_items:
         type: string
-        default: '0'
-      skip_generation:
-        type: boolean
-        default: false
+        default: '12'
     outputs:
       ready:
-        value: ${{ jobs.localize.outputs.ready }}
+        value: ${{ jobs.publish.outputs.ready }}
       published:
-        value: ${{ jobs.localize.outputs.published }}
-
-concurrency:
-  # One writer at a time: two runs would both spend the same rate budget and
-  # interleave the same progress file.
-  group: image-localize-assets
-  cancel-in-progress: false
+        value: ${{ jobs.publish.outputs.published }}
+      remaining:
+        value: ${{ jobs.publish.outputs.remaining }}
+      completed:
+        value: ${{ jobs.publish.outputs.completed }}
 
 permissions:
   contents: write
+  actions: read
+concurrency:
+  group: image-localize-assets
+  cancel-in-progress: false
 
 jobs:
   policy:
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
-    # One checkout and one policy read. Bounded so a stalled clone cannot hold
-    # the `image-localize-assets` group (and, through the reusable call, the
-    # Assets packaging hand-off) open indefinitely.
-    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
-      images_generation_enabled: ${{ steps.features.outputs.images_generation_enabled }}
+      enabled: ${{ steps.features.outputs.images_generation_enabled }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,26 +39,131 @@ jobs:
           sparse-checkout: |
             configs
             scripts
-      - name: Read shared localization policy
-        id: features
+      - id: features
         run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT"
 
-  localize:
+  prepare:
     needs: policy
-    if: inputs.enabled && needs.policy.outputs.images_generation_enabled == 'true'
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    if: inputs.enabled && needs.policy.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     outputs:
-      ready: ${{ steps.batch.outputs.audit_ready }}
-      published: ${{ steps.publish.outputs.published }}
-    timeout-minutes: 350
-    env:
-      WORK: work/image-localization-25
-      MAX_SECONDS: ${{ inputs.max_seconds }}
-      MAX_ITEMS: ${{ inputs.max_items }}
-      SKIP_GENERATION: ${{ inputs.skip_generation }}
+      queue: ${{ steps.queue.outputs.sha }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          filter: blob:none
+          sparse-checkout: |
+            configs
+            manifests
+            scripts
+            pipelines
+            generated
+            !/generated/objects/
+            !/generated/build-inputs/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install hosted extraction and OCR tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-jpn tesseract-ocr-jpn-vert
+          python -m pip install -r pipelines/image/requirements-injection.txt msgpack pycryptodome requests
+      - name: Discover current image backlog and prepare a bounded batch
+        env:
+          IMAGE_LIMIT: ${{ inputs.max_items }}
+        run: python -u scripts/incremental_images.py prepare --work work/image-batch --limit "$IMAGE_LIMIT"
+      - id: queue
+        run: echo "sha=$(sha256sum work/image-batch/queue.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-prepared
+          path: work/image-batch
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-api-inputs
+          path: |
+            work/image-batch/queue.json
+            work/image-batch/tasks
+          retention-days: 3
+
+  localize:
+    needs: prepare
+    # Only PNG/network work here: no UnityPy, OCR, bundle extraction or repacking.
+    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    timeout-minutes: 150
+    concurrency:
+      group: images-provider
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          filter: blob:none
+          sparse-checkout: |
+            configs
+            scripts
+            pipelines
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install Pillow
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-api-inputs
+          path: work/image-api
+      - name: Verify exact prepared queue
+        env:
+          QUEUE_SHA: ${{ needs.prepare.outputs.queue }}
+        run: echo "$QUEUE_SHA  work/image-api/queue.json" | sha256sum -c -
+      - uses: actions/cache/restore@v4
+        with:
+          key: image-api-${{ needs.prepare.outputs.queue }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: image-api-${{ needs.prepare.outputs.queue }}-
+          path: |
+            work/image-api/results.json
+            work/image-api/request-time.json
+            work/image-api/tasks/**/*-generated.png
+      - name: Translate serially using imas-trans-image at RPM 2
+        env:
+          MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
+        run: python -u scripts/incremental_images.py generate --work work/image-api --max-seconds 7200
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          key: image-api-${{ needs.prepare.outputs.queue }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            work/image-api/results.json
+            work/image-api/request-time.json
+            work/image-api/tasks/**/*-generated.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: image-api-results
+          path: |
+            work/image-api/results.json
+            work/image-api/tasks/**/*-generated.png
+          retention-days: 3
+
+  publish:
+    needs: [prepare, localize]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: r2-mutation
+      queue: max
+      cancel-in-progress: false
+    outputs:
+      ready: ${{ steps.package.outputs.ready }}
+      published: ${{ steps.commit.outputs.published }}
+      remaining: ${{ steps.package.outputs.remaining }}
+      completed: ${{ steps.package.outputs.completed }}
+    steps:
+      - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
@@ -100,171 +173,64 @@ jobs:
             /*
             !/generated/objects/
             !/generated/build-inputs/
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-
-      - name: Install pipeline dependencies
-        run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check \
-            -r pipelines/image/requirements-injection.txt pytest==8.4.2 msgpack pycryptodome requests
-
-      - name: Verify reviewed outputs against the frozen cohort
-        id: current
-        run: python scripts/image_ci_state.py --report image-current-state.json --github-output "$GITHUB_OUTPUT"
-
-      - name: Restore image work state
-        uses: actions/cache/restore@v4
+          python-version: '3.11'
+      - run: python -m pip install -r pipelines/image/requirements-injection.txt msgpack requests pycryptodome
+      - uses: actions/download-artifact@v4
         with:
-          path: work/image-localization-25
-          key: image-work-${{ github.run_number }}
-          restore-keys: |
-            image-work-
-
-      - name: Report effective rate limit
-        if: steps.current.outputs.needs_work == 'true'
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json, sys
-          sys.path.insert(0, 'pipelines/image')
-          import provider_config
-          info = provider_config.inspect(provider_config.load_config())
-          print(json.dumps(info, ensure_ascii=False, indent=2))
-          interval = float(info['min_request_interval_seconds'])
-          if interval < 60:
-              raise SystemExit(
-                  f"refusing to run: min_request_interval_seconds={interval} is below the "
-                  "60s (one request per minute) limit this workflow exists to respect")
-          PY
-
-      - name: Preflight
-        run: |
-          set -euo pipefail
-          missing=0
-          require () {
-            if [ ! -e "$1" ]; then
-              echo "::error::missing $1 -- $2"
-              missing=1
-            fi
-          }
-          require "$WORK/manifest.jsonl" \
-            "prepared texture cohort; produce it with pipelines/image/prepare_mltd_image25_review.py"
-          require "$WORK/reconstructed-preprocess/summary.json" \
-            "vision triage; produce it with pipelines/image/preprocess_reconstructed.py --classify"
-          if [ "$missing" -ne 0 ]; then
-            echo "No usable cohort/triage state was restored."
-            echo "The pipeline needs a prepared cohort before it can generate: download the official"
-            echo "bundles, run the reconstruction + classification triage once, and let this workflow's"
-            echo "cache carry that state into the next run."
-            exit 1
-          fi
-          echo "Cohort state present; continuing."
-
-      - name: Pipeline contract tests
-        run: |
-          set -euo pipefail
-          python -m pytest -p no:cacheprovider -q \
-            pipelines/image/test_image_injection_contract.py \
-            pipelines/image/test_moderation_batch.py
-
-      - name: Generate images (serial, at most one request per minute)
-        if: steps.current.outputs.needs_work == 'true' && !inputs.skip_generation
-        run: |
-          set -euo pipefail
-          echo "time budget ${MAX_SECONDS}s, item cap ${MAX_ITEMS} (0 = unlimited)"
-          python -u pipelines/image/run_reconstructed_batch.py \
-            --max-seconds "$MAX_SECONDS" \
-            --max-items "$MAX_ITEMS"
-
-      - name: Check whether the batch finished or needs another run
-        id: batch
-        run: |
-          python scripts/image_ci_state.py \
-            --batch-progress "$WORK/reconstructed-preprocess/batch-progress.json" \
-            --report "$WORK/batch-status.json" --github-output "$GITHUB_OUTPUT"
-
-      - name: Independent audit (the only approval gate)
-        if: steps.batch.outputs.audit_ready == 'true'
-        run: |
-          set -euo pipefail
-          python -u pipelines/image/audit_reconstructed_release.py \
-            --work "$WORK" \
-            --output-dir "$WORK/release-prep"
-
-      - name: Approve automatically (no human sign-off)
-        if: steps.batch.outputs.audit_ready == 'true'
-        # The audit above is the gate; this step only translates a clean audit
-        # into the install manifest the injector accepts.  It refuses any run
-        # with audit errors, upstream-declined images or failed tasks, so it can
-        # never approve a partial cohort.
-        run: |
-          set -euo pipefail
-          python -u pipelines/image/auto_approve_reconstructed.py \
-            --audit-report "$WORK/release-prep/report.json" \
-            --verified-candidates "$WORK/release-prep/verified-candidates.jsonl" \
-            --work "$WORK" \
-            --bundle-root "$WORK/bundles" \
-            --out "$WORK/release-prep/install-manifest.jsonl"
-
+          name: image-prepared
+          path: work/image-batch
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-api-results
+          path: work/image-batch
+      - name: Verify source-bound results and restore artwork outside text masks
+        id: package
+        run: python scripts/incremental_images.py package --work work/image-batch
       - name: Inject and independently verify the translated image bundles
-        if: steps.batch.outputs.audit_ready == 'true'
+        if: steps.package.outputs.has_images == 'true'
         run: |
-          set -euo pipefail
-          python pipelines/image/inject_reviewed_textures.py \
-            --all --install-manifest "$WORK/release-prep/install-manifest.jsonl" \
-            --original-root "$WORK" --out "$WORK/injected-${GITHUB_RUN_ID}" \
-            --report "$WORK/release-prep/injection-report.json"
+          python pipelines/image/inject_reviewed_textures.py --all \
+            --install-manifest work/image-batch/install.jsonl --original-root work/image-batch \
+            --out work/image-batch/injected --report work/image-batch/injection-report.json
           python pipelines/image/verify_bundle_repack.py \
-            --report "$WORK/release-prep/injection-report.json" \
-            --install-manifest "$WORK/release-prep/install-manifest.jsonl" \
-            --audit "$WORK/release-prep/repack-independent-audit.json"
-          python scripts/publish_image_overlay.py \
-            --version-manifest manifests/asset-version.json \
-            --report "$WORK/release-prep/injection-report.json" \
-            --audit "$WORK/release-prep/repack-independent-audit.json" \
-            --work "$WORK/release-prep"
-
-      - name: Commit audited image overlay for unified packaging
-        id: publish
-        if: steps.batch.outputs.audit_ready == 'true'
+            --report work/image-batch/injection-report.json --install-manifest work/image-batch/install.jsonl \
+            --audit work/image-batch/repack-independent-audit.json
+          python scripts/publish_image_overlay.py --version-manifest manifests/asset-version.json \
+            --report work/image-batch/injection-report.json --audit work/image-batch/repack-independent-audit.json \
+            --work work/image-batch
+      - name: Publish verified overlay objects to R2
+        if: steps.package.outputs.has_images == 'true'
         env:
           R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
         run: |
+          version=$(python -c 'import json; print(json.load(open("manifests/asset-version.json"))["asset_version"])')
+          python scripts/r2_release_storage.py publish-overlay --overlay-version "$version"
+      - name: Commit translation sources and audited metadata
+        id: commit
+        run: |
           set -euo pipefail
-          ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
-          python scripts/r2_release_storage.py publish-overlay --overlay-version "$ASSET_VERSION"
+          cp work/image-batch/next-state.json manifests/image-incremental.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "image-overlay/${ASSET_VERSION}" generated/r2-storage.json
-          if git diff --cached --quiet; then
+          git add images/localized manifests/image-incremental.json image-overlay generated/r2-storage.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Localize incremental image batch [skip ci]"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
             echo "published=false" >> "$GITHUB_OUTPUT"
-            exit 0
           fi
-          git commit -m "ci(images): stage audited overlay for unified release [skip ci]"
-          git push origin HEAD:main
-          echo "published=true" >> "$GITHUB_OUTPUT"
-
-      - name: Upload progress and audit report
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: image-progress-${{ github.run_number }}
-          retention-days: 7
+          name: image-publication-audit
           path: |
-            image-current-state.json
-            work/image-localization-25/batch-status.json
-            work/image-localization-25/reconstructed-preprocess/batch-progress.json
-            work/image-localization-25/release-prep/*.json
-            work/image-localization-25/release-prep/*.jsonl
-          if-no-files-found: warn
-
-      - name: Save image work state
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: work/image-localization-25
-          key: image-work-${{ github.run_number }}
+            work/image-batch/queue.json
+            work/image-batch/next-state.json
+            work/image-batch/*report.json
+            work/image-batch/*audit.json
+          retention-days: 7

@@ -1,6 +1,7 @@
 # CI 运行机制（R2 迁移后的统一入口）
 
 日常入口由原来的分段派发收敛为三个；工作阶段使用 `workflow_call`，在同一次 production run 内展示。
+图片积压、OCR、模型限速及发布机制详见 [图片增量管线](IMAGE_INCREMENTAL.md)。
 保留生产入口文件名 `auto-track-jp-assets.yml`，现有 VPS `mltd-asset-watch.timer` 不需要改派发目标。
 没有新增 GitHub schedule。NAS 不参与发布。
 
@@ -26,7 +27,8 @@ flowchart TD
   Track --> Freeze[有新版本：冻结离开的版本标签]
   Freeze --> Text[同步文字与歌词、翻译、校验并提交]
   Track -->|没有新版本、日常重试| Text
-  Text --> Images[图片生成阶段：当前暂停]
+  Text --> Images[图片增量扫描与串行汉化 RPM 2]
+  Plan -->|images| Images
   Images --> Ready[汇总文字和图片阶段的完成状态]
   Ready --> Build[重打包：重新读取最新 main]
   Plan -->|源码 push 或 release| Build
@@ -37,11 +39,13 @@ flowchart TD
   Commit --> Deploy[编译最新清单并部署网关]
   Plan -->|gateway| Deploy
   Deploy --> Accept[真实网络抽样、缓存和 Range 验收]
-  Accept --> Next[确有进展且仍有积压：下一批运行]
+  Accept --> GC[R2 只保留最新两版本的引用并集]
+  GC --> Next[确有进展且仍有积压：下一批运行]
 ```
 
-图片生成关闭时，其 job 会跳过，ready 条件明确允许它跳过；发布仍校验并复用旧图片 Bundle。
-图片生成将来开启时，启用阶段未完成或独立审核失败都不能发布部分成果。
+图片生成和发布均已开启。固定的 937 张历史成果继续保留；增量扫描读取当前官方目录，
+不再将这批历史图片的完成状态误认为所有 Assets 图片都已完成。每批完整 Bundle 经独立校验后发布，
+未完成的 Bundle 不会标记完成。既有图片成果与新批次覆盖包合并，单独开启生成不会使旧图片退出发布。
 
 ## 手动模式和 push
 
@@ -49,6 +53,7 @@ flowchart TD
 | --- | --- |
 | `watch`（默认） | 检查版本；有新版或 `daily_housekeeping=true` 才推进翻译和发布 |
 | `translate` | 先检查/冻结版本，再做有界的翻译批次，产生有效提交后发布 |
+| `images` | 只处理当前版本的图片积压；默认每批 12 个 Bundle，真实进展后自动续跑 |
 | `release` | 不调用翻译服务，使用当前已有汉化成果构建和发布；这也是源码 push 的模式 |
 | `gateway` | 只部署当前已发布清单并验收，用于修复分发端 |
 | `full` | 检查、翻译、重打包和网关部署按依赖依次执行；检查/审核失败会阻断发布 |
@@ -69,7 +74,7 @@ flowchart TD
 - 版本更新传入 `--expected-latest-version`。若官方在检查/冻结和准备阶段之间又变版，先失败重试，不越过冻结边界改源。
 - 翻译会产生新的 Git 提交，因此后续构建和部署必须重新 checkout `main`，不能误用继承的入口 `github.sha`。
 - R2 上传完成后才写校验记录。发布脚本 fetch 最新 main、比较影响产物的输入并普通 push；竞争中输入变化会排队新的 `release`，不部署陈旧结果。
-- 上传内容以哈希为键且禁止覆盖、删除；失败或过时构建遗留的对象不会改变线上清单。
+- 上传内容以哈希为键且禁止覆盖；删除仅在串行 GC 阶段、线上验收成功后进行。
 
 ## runner、并发和失败
 
@@ -79,20 +84,22 @@ flowchart TD
 | 官方版本检查、冻结 | RackNerd 轻量 runner，各 15 分钟 |
 | 文字同步准备 | hosted Ubuntu，180 分钟；官方 Bundle 留在大磁盘端 |
 | 文字模型调用与提交 | RackNerd，180 分钟；通过 exact-run cache 接收有界文本与索引 |
-| 图片生成（暂停） | RackNerd，350 分钟；保存进度、审计，单独速率限制 |
+| 图片解包 / OCR / 注入 / 独立审计 | hosted Ubuntu，准备和发布各 45 分钟 |
+| 图片模型调用 | RackNerd，150 分钟；模型 imas-trans-image，串行，RPM 2；有界批次及断点缓存 |
 | 资源构建与 R2 上传 | hosted Ubuntu，45 分钟 |
 | Worker 部署及线上验收 | hosted Ubuntu，30 分钟；只下载样本与目录索引 |
-| 质量校验 / 回归 | 主分支 RackNerd；PR hosted Ubuntu；10 / 20 分钟 |
+| 质量校验 / 回归 | hosted Ubuntu，10 / 20 分钟；四个回归 workers |
 
 父运行按入口阶段分组排队，不取消正在写入的任务。翻译、图片、构建、网关各自保留独立写者锁，
 父子不使用同名 concurrency group，避免相互等待。复用 job 自身不占用等待 runner，不会把唯一 RackNerd 插槽占住来等子任务。
-PR 回归四 workers，主分支一个 worker，遵循 RackNerd 的 CPU/内存限制。
+R2 构建、图片上传和网关验收/GC 共用 `r2-mutation` 锁，采用 `queue: max` 排队，避免排队任务互相取消。actionlint 1.7.12 尚不识别这个 GitHub 新字段，只忽略其精确语法告警；回归测试单独校验该字段。
+RackNerd 保留 35% CPU、512 MiB 上限，只承担文字/图片 API 等轻量任务。
 
 真实数据校验和离线 fixture 回归分开；actionlint 检查全部工作流输入、调用、表达式与自定义 runner 标签。
 模型部分失败时先保存并校验已经成功的草稿，保留诊断；严重服务故障仍报告失败。
 失败阶段不会被最后的 summary 覆盖成成功。summary 始终记录各阶段结果，方便在同一次 run 排障。
 
 普通阶段没有派发链。只有两种有界续跑需要新的 run：发布输入已过期的 `release` 重试，
-以及“有剩余条目且本批确实更新了行”的下一批翻译。零进展、失败、显式冒烟上限都不会自动循环。
+以及“有剩余条目且本批确实更新了行/完成图片 Bundle”的下一批翻译。零进展、失败、显式冒烟上限都不会自动循环。
 
 R2 的对象布局、缓存 TTL、客户端 ETag、凭据边界和回滚条件见 [网关说明](../asset-server/cloudflare/README.md)。

@@ -45,7 +45,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "X64", "racknerd-light"]') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -93,7 +93,7 @@ jobs:
 
   regression:
     name: Offline regression
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "X64", "racknerd-light"]') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -174,6 +174,7 @@ jobs:
             scripts/test_publish_image_overlay.py \
             scripts/test_reuse_published_images.py \
             scripts/test_r2_release_storage.py \
+            scripts/test_incremental_images.py \
             scripts/test_release_reuse.py \
             scripts/test_build_lyric_overlay.py \
             scripts/test_source_provenance.py \
@@ -208,4 +209,7 @@ jobs:
             --pattern actionlint_1.7.12_checksums.txt --dir "$lint_dir"
           (cd "$lint_dir" && sha256sum --check --ignore-missing actionlint_1.7.12_checksums.txt)
           tar -xzf "$lint_dir/actionlint_1.7.12_linux_amd64.tar.gz" -C "$lint_dir" actionlint
-          "$lint_dir/actionlint" -shellcheck='' -pyflakes=''
+          # GitHub supports concurrency.queue; actionlint 1.7.12 predates it.
+          # The regression gate validates queue=max on every R2 writer.
+          "$lint_dir/actionlint" -shellcheck='' -pyflakes='' \
+            -ignore 'unexpected key "queue" for "concurrency" section'

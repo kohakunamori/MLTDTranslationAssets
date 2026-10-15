@@ -20,6 +20,10 @@ class Remote:
     def inventory(self, prefix):
         return {k: len(v) for k, v in self.objects.items() if k.startswith(prefix)}
 
+    def delete(self, keys):
+        for key in keys:
+            self.objects.pop(key, None)
+
     def request(self, key, *, path=None, put=False):
         if self.fail:
             raise OSError('remote unavailable')
@@ -172,3 +176,49 @@ def test_audited_overlay_transport_restores_new_outputs_before_unified_build(tmp
     audit.write_text('tampered')
     with pytest.raises(ValueError, match='independent audit'):
         tool.publish_overlay(tmp_path, remote, '100')
+
+
+def test_third_version_prunes_old_exclusive_bytes_but_keeps_shared_and_sources(tmp_path):
+    obj, _ = fixture(tmp_path)
+    remote = Remote()
+    old = tmp_path / 'generated/objects/sha256' / hashlib.sha256(b'old-only').hexdigest()
+    old.write_bytes(b'old-only')
+    manifest = tmp_path / 'generated/100/manifest.json'
+    doc = json.loads(manifest.read_text())
+    doc['entries'].append({'artifact_sha256': old.name})
+    manifest.write_text(json.dumps(doc))
+    tool.publish(tmp_path, remote)
+    assert 'objects/sha256/' + old.name in remote.objects
+    newest = tmp_path / 'generated/102/manifest.json'
+    newest.parent.mkdir()
+    newest.write_text(json.dumps({'build_status': 'success', 'entries': [{'artifact_sha256': obj.name}]}))
+    overlay = tmp_path / 'image-overlay/100/jp-android/old.data'
+    overlay.parent.mkdir(parents=True)
+    overlay.write_bytes(b'historical-overlay')
+    source = tmp_path / 'images/localized/source.png'
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b'never delete source files')
+    tool.publish(tmp_path, remote)
+    preview = tool.prune(tmp_path, remote)
+    assert preview['retained_versions'] == ['102', '101']
+    assert preview['delete_objects'] == 1
+    assert 'objects/sha256/' + old.name in remote.objects
+    tool.prune(tmp_path, remote, apply=True)
+    assert 'objects/sha256/' + old.name not in remote.objects
+    assert 'objects/sha256/' + obj.name in remote.objects
+    assert old.exists() and manifest.exists() and overlay.exists() and source.exists()
+
+
+def test_gc_refuses_missing_live_bytes_and_stale_publication_proof(tmp_path):
+    obj, _ = fixture(tmp_path)
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    saved = remote.objects.pop('objects/sha256/' + obj.name)
+    with pytest.raises(ValueError, match='live objects are missing'):
+        tool.prune(tmp_path, remote, apply=True)
+    remote.objects['objects/sha256/' + obj.name] = saved
+    newest = tmp_path / 'generated/102/manifest.json'
+    newest.parent.mkdir()
+    newest.write_text((tmp_path / 'generated/101/manifest.json').read_text())
+    with pytest.raises(ValueError, match='stale'):
+        tool.prune(tmp_path, remote, apply=True)

@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 
-STAGES = {'watch', 'translate', 'release', 'gateway', 'full'}
+STAGES = {'watch', 'translate', 'images', 'release', 'gateway', 'full'}
 GATEWAY_PATHS = ('asset-server/cloudflare/', 'asset-server/r2-publisher/',
                  'configs/r2-storage.json', '.github/workflows/cloudflare-gateway.yml', 'generated/')
 

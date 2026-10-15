@@ -4,6 +4,8 @@
 R2 publication and gateway deployment are reusable jobs in one run; see
 [the CI mechanism and stage diagram](CI.md). Quality checks and manual model
 smoke tests are the other two entry points.
+See [incremental images](IMAGE_INCREMENTAL.md) for discovery scope, OCR masks,
+serial provider pacing, runner split and progress recovery.
 
 The translation workflow owns three stages:
 
@@ -15,12 +17,13 @@ The translation workflow owns three stages:
    after enabled stages finish, using a fresh main checkout.
 
 The image policy has two independent switches in
-`configs/localization-pipeline.json` (schema 2): `generation_enabled=false` and
-`publication_enabled=true`. New image generation is paused; existing published
-translations remain part of releases. A skipped generation stage does not block
-packaging. Existing source files, reviewed PNGs, progress and overlays are preserved.
+`configs/localization-pipeline.json` (schema 2): `generation_enabled=true` and
+`publication_enabled=true`. The provider is `imas-trans-image`, concurrency 1,
+RPM 2 (every edit, including retries, passes the 30-second gate). Existing source
+files, reviewed PNGs, progress and overlays are preserved.
 
-With generation paused, the generated builder uses `--reuse-published-images`.
+The generated builder always uses `--reuse-published-images` when publication is enabled,
+then merges a new audited overlay if one exists.
 It finds each image's newest successful published entry, including older releases
 when the latest release was text-only. It verifies the translated CAS object's
 SHA-256, downloads/caches the current official source and checks its full SHA-256
