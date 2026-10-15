@@ -27,6 +27,9 @@ sizes together with text and lyrics; old image catalogues are never reused.
 Changed or removed sources are explicitly reported and fall back to official
 content. Missing/corrupt translated objects and network failures fail the build.
 No provider, PNG processing or texture injection is called on this path.
+Image and event-unit download caches include the logical bundle name as well as
+the catalogue fingerprint: distinct official bundles can share the opaque
+catalogue field and byte size, so that field alone cannot identify their bytes.
 
 Within one generated-release run, the release gate owns the selected
 `asset_version` and the materialization step owns both image policy

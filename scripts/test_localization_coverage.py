@@ -15,6 +15,7 @@ import official_bundle_families as families
 import refresh_latest_official_catalogue as refresh
 import validate_repo
 import build_generated_release as build
+from concurrent.futures import ThreadPoolExecutor
 from urllib.error import HTTPError, URLError
 
 
@@ -39,6 +40,44 @@ class EventTests(unittest.TestCase):
         expected["commands"][0]["text"] = "你好"
         self.assertEqual(changed, expected)
         self.assertEqual(self.doc, original)
+
+    def test_distinct_sources_with_same_catalogue_fingerprint_do_not_share_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            library = root / "locales/event-unit"
+            library.mkdir(parents=True)
+            index, payloads = {}, {}
+            for number, ja, zh in ((832, "あ", "啊"), (834, "い", "伊")):
+                name = f"event_unit_talk_{number}.unity3d"
+                remote = f"remote-{number}.unity3d"
+                payload = json.dumps({"commands": [{"text": ja}]}, ensure_ascii=False).encode()
+                payloads[remote] = payload
+                index[name] = {"remote": remote, "catalog_hash": "same-opaque-field",
+                               "declared_size": len(payload)}
+                row = dict(accepted(ja, zh, "commands[0].text"), bundle=name)
+                (library / (name + ".jsonl")).write_text(json.dumps(row), encoding="utf-8")
+
+            def save(source, output, rows):
+                expected, changed = event.patch_document(json.loads(source.read_bytes()), rows)
+                if not changed:
+                    return None
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(json.dumps(expected), encoding="utf-8")
+                return {"changed": changed}
+
+            with patch.object(build, "urlopen", side_effect=lambda request, **kwargs:
+                              io.BytesIO(payloads[request.full_url.rsplit("/", 1)[-1]])), \
+                    patch.object(event, "save_localized_bundle", side_effect=save), \
+                    patch.object(event.concurrent.futures, "ThreadPoolExecutor",
+                                 side_effect=lambda **kwargs: ThreadPoolExecutor(max_workers=1)):
+                event.build_overlay(root=root, index=index, work=root / "work",
+                                    overlay=root / "overlay", version={
+                                        "asset_version": "100", "asset_root": "https://official.test"},
+                                    previous=None, store=build.GeneratedStore(root / "generated"),
+                                    downloader=build.download, cache_root=root / "cache")
+            result = json.loads((root / "overlay/localization-manifest.json").read_text())
+            self.assertEqual(result["event_units"]["bundles_patched"], 2)
+            self.assertEqual(result["event_units"]["commands_patched"], 2)
 
     def test_moved_or_changed_command_cannot_receive_stale_translation(self):
         self.doc["commands"][0]["text"] = "新しい台詞"

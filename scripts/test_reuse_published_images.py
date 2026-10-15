@@ -66,6 +66,7 @@ def test_renamed_route_reuses_exact_bytes_across_text_only_release(fixture):
     assert entry["artifact_sha256"] == build.sha256_bytes(TRANSLATED)
     assert report["source_versions"] == {"100": 1}
     assert calls[0][0] == "https://official.invalid/102/new.unity3d"
+    assert calls[0][1]["content_key"] == "images/picture.unity3d/source-id"
 
 
 @pytest.mark.parametrize("change", ["source", "removed"])

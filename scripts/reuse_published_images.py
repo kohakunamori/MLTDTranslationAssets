@@ -65,7 +65,7 @@ def reuse(*, store, version: dict, index: dict, work: Path,
             raise ValueError(f"published image artifact missing or corrupt: {logical}")
         source = work / "image-sources" / remote
         downloader(f"{version['asset_root']}/{remote}", source, current["declared_size"],
-                   content_key=current["catalog_hash"], cache_root=cache_root)
+                   content_key=f"images/{logical}/{current['catalog_hash']}", cache_root=cache_root)
         if source.stat().st_size != current["declared_size"]:
             raise ValueError(f"current official image size mismatch: {logical}")
         if sha256_file(source) != old["source_sha256"]:

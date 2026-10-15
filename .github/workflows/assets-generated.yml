@@ -135,9 +135,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .generated-work/official-by-content
-          # A new cache generation saves image sources as well as text/lyrics;
-          # an exact immutable v2 hit would otherwise discard those additions.
-          key: official-by-content-v3-${{ steps.gate.outputs.asset_version }}-images-${{ steps.features.outputs.images_publication_enabled }}
+          # v4 saves image/event sources scoped by logical name: the catalogue
+          # fingerprint alone can collide across distinct official bundles.
+          key: official-by-content-v4-${{ steps.gate.outputs.asset_version }}-images-${{ steps.features.outputs.images_publication_enabled }}
           restore-keys: |
             official-by-content-
 

@@ -176,7 +176,11 @@ def build_overlay(*, root, index, work, overlay, version, previous, store, downl
         row = index[name]
         remote = row["remote"]
         source = work / "archive" / "event_units" / remote
-        downloader(f"{version['asset_root']}/{remote}", source, row["declared_size"], row.get("catalog_hash"), cache_root)
+        # The catalogue's opaque field is shared by some distinct logical
+        # bundles (e.g. talk 832/834), even at the same byte size. It is not a
+        # globally unique content address; do not serve one source as another.
+        cache_key = f"event_units/{name}/{row['catalog_hash']}" if row.get("catalog_hash") else None
+        downloader(f"{version['asset_root']}/{remote}", source, row["declared_size"], cache_key, cache_root)
         result = save_localized_bundle(source, overlay / "jp-android" / remote, library[name])
         return dict(logical=name, remote=remote, **result) if result else None
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
