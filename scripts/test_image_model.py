@@ -29,6 +29,14 @@ from build_generated_release import download, load_official_index, load_version_
 from pipelines.core.hashing import sha256_file
 
 SAMPLES = ("ex4c00968.unity3d", "hitokoma_100.unity3d")
+OPENAI_IMAGE_MODELS = ('gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'gpt-image-2.5')
+
+
+def image_endpoint(base, model):
+    return (f"{base}/v1/images/edits" if model in OPENAI_IMAGE_MODELS
+            else f"{base}/v1beta/models/{model}:generateContent")
+
+
 PROMPT = """Use case: text-localization.
 The input PNG is the edit target: an official Japanese game comic, already
 assembled in its original reading order. Translate ALL Japanese dialogue,
@@ -178,7 +186,7 @@ def main(argv=None):
     index = load_official_index(index_path)
     public = json.loads((ROOT / "configs/api-models.example.json").read_text(encoding="utf-8"))
     base = public["defaults"]["base_url"].removesuffix("/v1")
-    endpoint = f"{base}/v1beta/models/{args.model}:generateContent"
+    endpoint = image_endpoint(base, args.model)
     key = os.environ.get("MLTD_LLM_API_KEY", "")
     if not args.prepare_only and not key:
         raise ValueError("existing MLTD_LLM_API_KEY secret is unavailable")
@@ -210,21 +218,21 @@ def main(argv=None):
                   "status": "prepared"}
         summary["samples"].append(sample)
         if not args.prepare_only:
-            body = json.dumps(payload(prompt, png(canvas), aspect, "2K" if aspect == "1:4" else "1K")).encode("utf-8")
-            request = urllib.request.Request(endpoint, data=body, method="POST",
-                      headers={"Authorization": f"Bearer {key}", "x-goog-api-key": key, "Content-Type": "application/json"})
             started = time.monotonic()
             try:
-                if args.model == 'gemini-3.1-flash-image':
+                if args.model == 'gemini-3.1-flash-image' or args.model in OPENAI_IMAGE_MODELS:
                     sys.path.insert(0, str(ROOT / 'pipelines/image'))
                     import provider_config
                     config = {k: dict(v) for k, v in provider_config.DEFAULTS.items()}
                     config['image_provider'].update(base_url=base + '/v1', model=args.model,
-                        mode='gemini_generate_content',
+                        mode='gemini_generate_content' if args.model == 'gemini-3.1-flash-image' else 'images_edits',
                         api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)
                     raw, _ = provider_config.image_edit(config, png(canvas), prompt)
                     edited, caption, result = Image.open(io.BytesIO(raw)), '', {}
                 else:
+                    body = json.dumps(payload(prompt, png(canvas), aspect, "2K" if aspect == "1:4" else "1K")).encode("utf-8")
+                    request = urllib.request.Request(endpoint, data=body, method="POST",
+                              headers={"Authorization": f"Bearer {key}", "x-goog-api-key": key, "Content-Type": "application/json"})
                     with urllib.request.urlopen(request, timeout=360) as response:
                         result = json.load(response)
                     edited, caption = decode_response(result)

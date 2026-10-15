@@ -4,9 +4,24 @@ import unittest
 from PIL import Image
 import test_image_model as experiment
 import image_text_regions as regions
+import copy
+import io
+import json
+import urllib.error
+
+import pytest
+import compare_image_models as comparison
 
 
 class ImageExperimentTests(unittest.TestCase):
+    def test_openai_models_use_edits_in_smoke_test_metadata(self):
+        self.assertEqual(experiment.OPENAI_IMAGE_MODELS, comparison.MODELS)
+        for model in comparison.MODELS:
+            self.assertEqual(experiment.image_endpoint('https://api.test', model),
+                             'https://api.test/v1/images/edits')
+        self.assertEqual(experiment.image_endpoint('https://api.test', 'gemini-3.1-flash-image'),
+                         'https://api.test/v1beta/models/gemini-3.1-flash-image:generateContent')
+
     def test_request_uses_native_gemini_parts_and_image_modalities(self):
         body = experiment.payload("汉化", b"png", "1:4", "2K")
         parts = body["contents"][0]["parts"]
@@ -66,6 +81,62 @@ class TextRegionRestoreTests(unittest.TestCase):
         for box in ([0, 0, 5, 4], [1, 1, 1, 2]):
             with self.assertRaisesRegex(ValueError, "coordinates"):
                 regions.text_mask((4, 4), [{"box": box}])
+
+
+def test_openai_comparison_uses_only_edits_with_identical_inputs_and_resumes(tmp_path, monkeypatch):
+    provider = comparison.provider
+    source = tmp_path / 'source.png'
+    raw = experiment.png(Image.new('RGB', (24, 80), 'red'))
+    source.write_bytes(raw)
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider'].update(base_url='https://api.test/v1', mode='images_edits', api_key='test-secret')
+    sent, gates = [], []
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda c: gates.append(c['image_provider']['min_request_interval_seconds']))
+    monkeypatch.setattr(comparison.time, 'sleep', lambda _: None)
+    def send(config, request, timeout):
+        assert request.full_url == 'https://api.test/v1/images/edits'
+        assert request.get_header('Content-type').startswith('multipart/form-data;')
+        assert b'name="mask"' not in request.data and b'inlineData' not in request.data
+        assert b'name="n"\r\n\r\n1\r\n' in request.data
+        assert raw in request.data and b'Translate Japanese' in request.data
+        sent.append(config['image_provider']['model'])
+        return {'data': [{'b64_json': base64.b64encode(raw).decode()}]}
+    monkeypatch.setattr(provider, 'send', send)
+    out = tmp_path / 'comparison'
+    result = comparison.compare(source, 'Translate Japanese', out, config)
+    assert sent == list(comparison.MODELS) and gates == [30, 30, 30]
+    assert not result['mask_applied'] and result['review_status'] == 'unapproved'
+    assert all(v['geometry_matches'] for v in result['models'].values())
+    comparison.compare(source, 'Translate Japanese', out, config)
+    assert len(sent) == 3
+    with pytest.raises(ValueError, match='different inputs'):
+        comparison.compare(source, 'Changed prompt', out, config)
+    (out / (comparison.MODELS[0] + '.png')).write_bytes(b'changed')
+    with pytest.raises(ValueError, match='do not generate again'):
+        comparison.compare(source, 'Translate Japanese', out, config)
+    assert 'test-secret' not in (out / 'summary.json').read_text()
+
+
+def test_openai_comparison_records_http_failure_without_fallback_or_retry(tmp_path, monkeypatch):
+    provider = comparison.provider
+    source = tmp_path / 'source.png'
+    raw = experiment.png(Image.new('RGB', (24, 80), 'red'))
+    source.write_bytes(raw)
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider'].update(base_url='https://api.test/v1', mode='images_edits', api_key='test-secret')
+    calls = []
+    def edit(config, *args):
+        calls.append(config['image_provider']['model'])
+        raise urllib.error.HTTPError('https://api.test/v1/images/edits', 400, 'bad request', {},
+            io.BytesIO(json.dumps({'error': {'code': 'unsupported', 'message': 'test-secret route unavailable'}}).encode()))
+    monkeypatch.setattr(provider, 'image_edit', edit)
+    monkeypatch.setattr(comparison.time, 'sleep', lambda _: None)
+    out = tmp_path / 'comparison'
+    result = comparison.compare(source, 'Translate', out, config)
+    assert calls == list(comparison.MODELS)
+    assert all(v['status'] == 'failed' and v['error']['http_status'] == 400 for v in result['models'].values())
+    comparison.compare(source, 'Translate', out, config)
+    assert len(calls) == 3 and 'test-secret' not in (out / 'summary.json').read_text()
 
 
 if __name__ == "__main__":

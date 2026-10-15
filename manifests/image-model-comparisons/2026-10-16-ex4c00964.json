@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "models": {
+    "gpt-image-2.5-flare": {
+      "status": "generated",
+      "output": "images/candidates/1d8940853a01e24a092bb5d539a767c84ff73475e3f113c0f6fc26d2e3d66864.png",
+      "sha256": "1d8940853a01e24a092bb5d539a767c84ff73475e3f113c0f6fc26d2e3d66864",
+      "output_size": [
+        724,
+        2172
+      ],
+      "aspect_ratio_error": 0.1421874999999999,
+      "geometry_matches": false,
+      "provider": {
+        "response_id": null,
+        "requested_image_model": "gpt-image-2.5-flare",
+        "endpoint": "/v1/images/edits",
+        "mode": "images_edits",
+        "quality": "high",
+        "size_requested": "auto",
+        "output_format": "png"
+      },
+      "elapsed_seconds": 140.97,
+      "preview_normalization": {
+        "removed_full_height_near_black_columns": [
+          44,
+          45
+        ],
+        "aspect_ratio_error_after_margin_removal": 0.0017804730662984714,
+        "display_size": [
+          640,
+          2193
+        ],
+        "approved_for_installation": false
+      }
+    },
+    "gpt-image-2.5-sunburst": {
+      "status": "generated",
+      "output": "images/candidates/bc97db647a63b8f998a511170678865a519427ffa1fa0b545b5522477d14b859.png",
+      "sha256": "bc97db647a63b8f998a511170678865a519427ffa1fa0b545b5522477d14b859",
+      "output_size": [
+        724,
+        2172
+      ],
+      "aspect_ratio_error": 0.1421874999999999,
+      "geometry_matches": false,
+      "provider": {
+        "response_id": null,
+        "requested_image_model": "gpt-image-2.5-sunburst",
+        "endpoint": "/v1/images/edits",
+        "mode": "images_edits",
+        "quality": "high",
+        "size_requested": "auto",
+        "output_format": "png"
+      },
+      "elapsed_seconds": 57.15,
+      "preview_normalization": {
+        "removed_full_height_near_black_columns": [
+          44,
+          46
+        ],
+        "aspect_ratio_error_after_margin_removal": 0.00020286602209940163,
+        "display_size": [
+          640,
+          2193
+        ],
+        "approved_for_installation": false
+      }
+    },
+    "gpt-image-2.5": {
+      "status": "generated",
+      "output": "images/candidates/299f19e85006dd8057eae3d45d066a71eee23607db83eea63ecd89492ddc002b.png",
+      "sha256": "299f19e85006dd8057eae3d45d066a71eee23607db83eea63ecd89492ddc002b",
+      "output_size": [
+        724,
+        2172
+      ],
+      "aspect_ratio_error": 0.1421874999999999,
+      "geometry_matches": false,
+      "provider": {
+        "response_id": null,
+        "requested_image_model": "gpt-image-2.5",
+        "endpoint": "/v1/images/edits",
+        "mode": "images_edits",
+        "quality": "high",
+        "size_requested": "auto",
+        "output_format": "png"
+      },
+      "elapsed_seconds": 62.32,
+      "preview_normalization": {
+        "removed_full_height_near_black_columns": [
+          46,
+          46
+        ],
+        "aspect_ratio_error_after_margin_removal": 0.0029523480662984047,
+        "display_size": [
+          640,
+          2193
+        ],
+        "approved_for_installation": false
+      }
+    }
+  },
+  "request": {
+    "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+    "prompt_sha256": "c1888a6da4bd3376fc506c2686300893dbd85944be129c1af76d80562cc2b678",
+    "endpoint": "http://127.0.0.1:21318/v1/images/edits",
+    "mode": "images_edits",
+    "quality": "high",
+    "size": "auto",
+    "output_format": "png",
+    "n": 1,
+    "min_request_interval_seconds": 30
+  },
+  "source_size": [
+    640,
+    2193
+  ],
+  "review_status": "unapproved",
+  "mask_applied": false,
+  "source_logical": "ex4c00964.unity3d",
+  "asset_version": "1077750",
+  "source_archive_sha256": "42329d9cb74149f3fa3a5812b6d1d94c447d321ec75b7ddcc8884a6402a70fff",
+  "baseline_gemini": "images/candidates/56c9eac4adc53494d87d39d5865d1b6791f7d2e80733a0de120ce900df57b9df.png",
+  "date": "2026-10-16",
+  "notes": "Raw unapproved candidates; black-margin removal and rescaling are preview-only; no OCR restoration mask."
+}
