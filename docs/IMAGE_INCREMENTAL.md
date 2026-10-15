@@ -73,6 +73,7 @@ R2 两版本限制仅约束发布结果，源 PNG 与文字不按版本清理。
 原始上传保存在 `images/approved-inputs/`，裁剪新增左右留白、恢复 640×2193 后，按原始六段尺寸保存到 `images/localized/`。
 `manifests/image-human-approvals.json` 记录原始上传、源 Bundle、每段纹理的 SHA-256、裁剪坐标及人工确认；不冒充 Gemini 自动验收。
 发布 CI 在图片发布开启时调用 `scripts/materialize_human_images.py`，只对尚未发布且官方源 Bundle 全哈希相同的成果重打包，并执行独立审计。
+该步骤使用独立 Python 环境及 `pipelines/image/requirements-injection.txt` 的固定依赖，不改变文字构建使用的运行环境。
 源发生变化时留待复核，已发布成果直接复用；若另有尚未发布的图片批次，拒绝覆盖该批次，须先完成其发布。
 统一构建继续合并已有图片，结果进入 R2；重打包审计作为 CI artifact 保存七天。
 自动图片生成保持关闭，不调用图片模型或视觉验收模型。

@@ -135,7 +135,12 @@ jobs:
 
       - name: Repack explicitly approved image sources without model calls
         if: steps.gate.outputs.build == 'true' && steps.features.outputs.images_publication_enabled == 'true'
-        run: python scripts/materialize_human_images.py --work .generated-work/human-images
+        run: |
+          python -m venv .generated-work/human-image-env
+          .generated-work/human-image-env/bin/python -m pip install --disable-pip-version-check \
+            -r pipelines/image/requirements-injection.txt msgpack requests pycryptodome
+          .generated-work/human-image-env/bin/python scripts/materialize_human_images.py \
+            --work .generated-work/human-images
 
       - name: Preserve manual image repack evidence
         if: always() && steps.gate.outputs.build == 'true' && steps.features.outputs.images_publication_enabled == 'true'

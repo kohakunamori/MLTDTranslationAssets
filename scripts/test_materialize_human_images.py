@@ -67,6 +67,8 @@ def test_manual_publication_is_independent_from_disabled_generation():
     manual = next(s for s in steps if s.get("name") == "Repack explicitly approved image sources without model calls")
     assert "images_publication_enabled" in manual["if"]
     assert "images_generation_enabled" not in manual["if"]
+    assert "-r pipelines/image/requirements-injection.txt" in manual["run"]
+    assert "human-image-env/bin/python scripts/materialize_human_images.py" in manual["run"]
     policy = json.loads((root / "configs/localization-pipeline.json").read_text(encoding="utf-8"))["images"]
     assert policy["generation_enabled"] is False
     assert policy["publication_enabled"] is True
