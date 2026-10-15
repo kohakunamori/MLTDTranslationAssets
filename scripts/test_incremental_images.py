@@ -159,6 +159,10 @@ def test_whole_image_package_requires_bound_visual_pass_and_keeps_raw_generation
     images.generate(work)
     images.generate(work)
     assert len(calls) == 1
+    if passed:
+        # Japanese lettering inside a preserved game logo is not a translation
+        # omission; the bound visual gate, not an unlocated kana count, decides.
+        monkeypatch.setattr(images, 'text_regions', lambda _: [{'source_text': 'アイドルマスター', 'confidence': 99}])
     images.package(work)
     state = images.read(work / 'next-state.json')['bundles']['hitokoma_1.unity3d']
     assert bool((work / 'install.jsonl').read_text()) is passed
@@ -169,6 +173,8 @@ def test_whole_image_package_requires_bound_visual_pass_and_keeps_raw_generation
         output = Image.open(tmp_path / state['textures'][0]['localized'])
         assert output.getpixel((0, 0)) == (0, 0, 255, 128)  # no OCR mask pasted the red source back
         assert not next(iter(state['text_maps'].values()))['audit']['mask_applied']
+        assert next(iter(state['text_maps'].values()))['ocr_advisory_only']
+        assert next(iter(state['text_maps'].values()))['remaining_kana'] >= 3
     else:
         assert state['review_reason'] == 'visual_acceptance_not_passed'
     # A changed reviewer policy/binding cannot turn a saved pass into approval.

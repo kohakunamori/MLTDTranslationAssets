@@ -501,13 +501,16 @@ def package(work):
                 residual = [r for r in text_regions(check)
                             if r.get('confidence', 0) >= 70 and KANA.search(r['source_text'])]
                 kana_count = sum(len(KANA.findall(r['source_text'])) for r in residual)
-                if kana_count >= 3:
+                # Whole-image visual acceptance distinguishes protected Japanese
+                # game logos from untranslated content; OCR alone cannot do so.
+                if kana_count >= 3 and not whole_image:
                     manual = True
                     record['review_reason'] = 'remaining_japanese'
                     record.setdefault('remaining_japanese', []).extend(residual)
                 record['text_maps'][task['sha256']] = {'input_sha256': task['sha256'],
                     'size': list(source.size), 'regions': task['regions'], 'audit': audit,
-                    'provider': result['provider'], 'remaining_kana': kana_count}
+                    'provider': result['provider'], 'remaining_kana': kana_count,
+                    'ocr_advisory_only': whole_image}
                 for texture in task['layout']:
                     original_png = work / texture['original']
                     if sha(original_png) != texture['source_sha256']:
