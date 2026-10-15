@@ -109,13 +109,14 @@ def prepare(work, limit):
     download(f"{version['asset_root']}/{version['index_name']}", index_path, None)
     index = load_official_index(index_path)
     state = read(ROOT / 'manifests/image-incremental.json', {'bundles': {}})
-    published = {}
+    published, published_sources = {}, {}
     from r2_release_storage import retained_versions
     for number in reversed(retained_versions(ROOT)):
         release = read(ROOT / 'generated' / number / 'manifest.json', {})
         for entry in release.get('entries', []):
             if entry.get('resource_kind') == 'texture':
                 published[entry['logical_key']] = entry['runtime_path'].rsplit('/', 1)[-1]
+                published_sources[entry['logical_key']] = entry['source_sha256']
     chosen, counts, remaining = select(index, state['bundles'], published, limit)
     document = {'schema_version': 1, 'asset_version': version['asset_version'], 'families': counts,
                 'pending_bundles': remaining, 'selected_bundles': len(chosen), 'bundles': [],
@@ -123,7 +124,20 @@ def prepare(work, limit):
     for logical, record in chosen:
         archive = work / 'bundles' / record['remote']
         download(f"{version['asset_root']}/{record['remote']}", archive, record['declared_size'])
-        key = hashlib.sha256((logical + sha(archive)).encode()).hexdigest()
+        archive_sha = sha(archive)
+        prior = state['bundles'].get(logical)
+        compatible = prior if prior and prior['archive_sha256'] == archive_sha else (
+            {'status': 'published_compatible', 'textures': [], 'text_maps': {}}
+            if published_sources.get(logical) == archive_sha else None)
+        if compatible is not None:
+            # Remote names change on version bumps. Verify actual bytes before
+            # carrying approved outputs OR explicit hold decisions forward.
+            document['bundles'].append({'logical': logical, 'identity': identity(record),
+                'archive': archive.relative_to(work).as_posix(), 'archive_sha256': archive_sha,
+                'tasks': [], 'reuse_record': compatible})
+            print('SOURCE_COMPATIBLE', logical, compatible['status'], flush=True)
+            continue
+        key = hashlib.sha256((logical + archive_sha).encode()).hexdigest()
         folder = work / 'tasks' / key
         folder.mkdir(parents=True, exist_ok=True)
         textures = []
@@ -257,6 +271,12 @@ def package(work):
     state = read(ROOT / 'manifests/image-incremental.json', {'schema_version': 1, 'bundles': {}})
     rows, completed = [], 0
     for bundle in queue['bundles']:
+        if bundle.get('reuse_record') is not None:
+            record = dict(bundle['reuse_record'], identity=bundle['identity'],
+                          archive_sha256=bundle['archive_sha256'], asset_version=version)
+            state['bundles'][bundle['logical']] = record
+            completed += 1
+            continue
         needed = [t for t in bundle['tasks'] if t['regions']]
         if any(t['sha256'] not in results for t in needed):
             continue

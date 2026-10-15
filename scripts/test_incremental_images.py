@@ -196,6 +196,35 @@ def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():
     assert decoded.convert('RGBA').tobytes() == original.tobytes()
 
 
+def test_version_rename_reuses_full_sha_verified_published_source_without_model_or_unity(tmp_path, monkeypatch):
+    import UnityPy
+    import build_generated_release as build
+    monkeypatch.setattr(images, 'ROOT', tmp_path)
+    logical = 'ex4c00968.unity3d'
+    source_sha = images.hashlib.sha256(b'official').hexdigest()
+    images.write(tmp_path / 'manifests/asset-version.json', {'asset_version': '101'})
+    images.write(tmp_path / 'generated/100/manifest.json', {'build_status': 'success', 'entries': [
+        {'logical_key': logical, 'source_sha256': source_sha, 'resource_kind': 'texture',
+         'runtime_path': 'production/old.unity3d', 'artifact_sha256': 'a'*64}]})
+    def download(url, path, _):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b'official')
+    monkeypatch.setattr(build, 'download', download)
+    monkeypatch.setattr(build, 'load_version_manifest', lambda _: {
+        'asset_version': '101', 'asset_root': 'https://official.test/101', 'index_name': 'index.data'})
+    monkeypatch.setattr(build, 'load_official_index', lambda _: {logical: {
+        'catalog_hash': 'same-opaque', 'remote': 'renamed.unity3d', 'declared_size': 8}})
+    monkeypatch.setattr(UnityPy, 'load', lambda _: pytest.fail('verified compatible source was unpacked'))
+    work = tmp_path / 'work'
+    queue = images.prepare(work, 1)
+    assert queue['bundles'][0]['tasks'] == []
+    assert queue['bundles'][0]['reuse_record']['status'] == 'published_compatible'
+    images.package(work)
+    record = images.read(work / 'next-state.json')['bundles'][logical]
+    assert record['archive_sha256'] == source_sha and record['identity'][1] == 'renamed.unity3d'
+    assert not (work / 'install.jsonl').read_text()
+
+
 def test_gc_and_all_publishers_share_one_lock_and_api_job_has_no_heavy_dependency():
     root = Path(__file__).resolve().parents[1]
     workflows = root / '.github/workflows'
