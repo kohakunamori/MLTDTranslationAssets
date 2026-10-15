@@ -15,6 +15,8 @@ import bundle_incremental as incremental
 from pipelines.text import mltd_localization_pipeline as pipeline
 from assets_generated_index import GeneratedStore
 
+REAL_DOWNLOAD = build.download
+
 
 def accepted(bundle, key, source, zh):
     return {"bundle": bundle.removesuffix(".unity3d"), "key": key,
@@ -77,6 +79,32 @@ def publish_state(store, records):
     incremental.finish_records(records, entries)
     return {"build_status": "success", "asset_version": "99", "entries": entries,
             incremental.STATE_KEY: {"schema": incremental.SCHEMA, "text": copy.deepcopy(records)}}
+
+
+def test_opaque_catalogue_collision_cannot_substitute_another_official_text_bundle(library, tmp_path, monkeypatch):
+    store, rows, grouped, _, _, _, _ = library
+    cache = tmp_path / 'official-cache'
+    cache.mkdir()
+    for row in rows.values():
+        row['catalog_hash'] = 'same-opaque-value'
+    # The old cache contains a same-length, different bundle under that value.
+    (cache / 'same-opaque-value').write_bytes(b'c.gtx.unity3d')
+    calls = []
+    def get(request, **kwargs):
+        name = next(name for name, row in rows.items() if request.full_url.endswith(row['remote']))
+        calls.append(name)
+        return io.BytesIO(name.encode())
+    monkeypatch.setattr(build, 'download', REAL_DOWNLOAD)
+    monkeypatch.setattr(build, 'urlopen', get)
+    work = tmp_path / 'actual-cache-work'
+    work.mkdir()
+    _, records, _, _ = build.prepare_text_inputs(work=work, store=store,
+        version={'asset_version': '100', 'asset_root': 'https://test'}, targets=rows,
+        grouped=grouped, previous=None, official_cache=cache)
+    assert sorted(calls) == sorted(rows)
+    for name, record in records.items():
+        assert record['source_sha256'] == hashlib.sha256(name.encode()).hexdigest()
+        assert (cache / 'text' / name / 'same-opaque-value').read_bytes() == name.encode()
 
 
 def test_only_memory_dependents_and_edited_bundle_change(library):

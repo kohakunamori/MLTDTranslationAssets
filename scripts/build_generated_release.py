@@ -260,7 +260,8 @@ The ledger always includes unchanged bundles, so rebuilding a subset has the
 same translation-memory semantics as a full build. The resulting replacement
 set, rather than its JSONL file's timestamp/layout, is each bundle's input.
     """
-    parser = incremental.writer_fingerprint(ROOT, incremental.PARSER_FILES)
+    parser = incremental.digest({'parser': incremental.writer_fingerprint(ROOT, incremental.PARSER_FILES),
+                                 'official_cache_scope': 'text/logical/v1'})
     writer = incremental.writer_fingerprint(ROOT, incremental.TEXT_FILES)
     old = incremental.previous_state(previous).get("text", {})
     documents, records, current_grouped = {}, {}, {}
@@ -278,7 +279,7 @@ set, rather than its JSONL file's timestamp/layout, is each bundle's input.
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
         futures = {logical: pool.submit(
             download, f"{version['asset_root']}/{row['remote']}", archive / row["remote"],
-            row["declared_size"], row.get("catalog_hash"), official_cache)
+            row["declared_size"], f"text/{logical}/{row.get('catalog_hash', '')}", official_cache)
             for logical, row in missing.items()}
         for logical, future in futures.items():
             outcomes[logical] = future.result()
@@ -479,9 +480,9 @@ def run_text_surface(*, work: Path, version: dict, targets: dict[str, dict],
                                 f"{version['asset_root']}/{row['remote']}",
                                 archive / "jp-android" / row["remote"],
                                 row["declared_size"],
-                                row.get("catalog_hash"),
+                                f"text/{logical}/{row.get('catalog_hash', '')}",
                                 official_cache)
-                   for row in targets.values()
+                   for logical, row in targets.items()
                    if not (archive / "jp-android" / row["remote"]).is_file()
                    or (archive / "jp-android" / row["remote"]).stat().st_size != row["declared_size"]]
         fetched = [future.result() for future in futures]
