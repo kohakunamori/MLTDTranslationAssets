@@ -65,19 +65,24 @@ def publish(root: Path = ROOT, *, force: bool = False, attempts: int = 3) -> dic
     source = git(root, "rev-parse", "HEAD").stdout.strip()
     if git(root, "diff", "--cached", "--name-only").stdout.strip():
         raise RuntimeError("Refusing to publish with pre-existing staged changes")
+    # With R2 configured, payloads must never enter a Git release, even if a
+    # caller accidentally forced one into its own index in an earlier commit.
+    output_paths = OUTPUT_PATHS
+    if (root / 'generated/r2-storage.json').exists():
+        output_paths += (':(exclude)generated/objects', ':(exclude)generated/build-inputs')
     # Use an isolated index: the caller's checkout and index are never rewritten,
     # and unrelated local edits/untracked files cannot enter the release commit.
     with tempfile.TemporaryDirectory(prefix="assets-publish-") as directory:
         env = dict(os.environ, GIT_INDEX_FILE=str(Path(directory) / "index"))
         git(root, "read-tree", source, env=env)
-        git(root, "add", "--", *OUTPUT_PATHS, env=env)
+        git(root, "add", "--", *output_paths, env=env)
         snapshot = git(root, "write-tree", env=env).stdout.strip()
         unchanged = snapshot == git(root, "rev-parse", f"{source}^{{tree}}").stdout.strip()
 
         # Record exact blob identities (including removals), never a textual merge
         # of two release manifests. --no-abbrev is required for update-index.
         raw = git(root, "diff", "--raw", "--no-abbrev", "--no-renames", "-z",
-                  source, snapshot, "--", *OUTPUT_PATHS).stdout.split("\0")
+                  source, snapshot, "--", *output_paths).stdout.split("\0")
         records = []
         for position in range(0, len(raw) - 1, 2):
             metadata, path = raw[position:position + 2]

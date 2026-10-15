@@ -155,7 +155,7 @@ async function loadLiveWorker(directory) {
   return { ...(await instantiate(directory)), calls };
 }
 
-const call = (worker, path, init) => worker.handler(new Request(`${GATEWAY}${path}`, init), {}, worker.ctx);
+const call = (worker, path, init) => worker.handler(new Request(`${GATEWAY}${path}`, init), worker.env || {}, worker.ctx);
 const callsTo = (worker, target) => worker.calls.filter((entry) => entry.url === target || entry.url.startsWith(target));
 
 /* -------------------------------------------------------------- assertions */
@@ -200,15 +200,62 @@ await test('(c) version-carrying request: one forward, no feed', async (director
 
 // (d) A covered path is answered from the release: untouched, no upstream at all.
 await test('(d) covered path: release bytes, no official forward, no feed', async (directory) => {
-  const worker = await loadWorker([prefix('https://raw.githubusercontent.com/', () => ok('translated-bytes'))], directory);
+  const worker = await loadWorker([], directory);
+  let reads = 0;
+  const digest = table.objects[COVERED];
+  worker.env = {ASSETS: {async get(key) {
+    equal(key, `objects/sha256/${digest}`, 'R2 key');
+    reads++;
+    return {size: table.sizes[digest], body: 'translated-bytes', customMetadata: {sha256: digest}};
+  }}};
   const response = await call(worker, `/${COVERED}`);
   equal(response.status, 200, 'status');
   equal(response.headers.get('x-mltd-asset-source'), 'generated-release', 'source marker');
   equal(await response.text(), 'translated-bytes', 'body');
-  equal(worker.calls.length, 1, 'upstream calls');
-  assert(worker.calls[0].url.startsWith('https://raw.githubusercontent.com/'), 'the release is read from GitHub');
+  equal(reads, 1, 'R2 reads');
+  equal(worker.calls.length, 0, 'HTTP upstream calls');
   assert(callsTo(worker, OFFICIAL).length === 0, 'a covered path must not reach the official CDN');
   assert(callsTo(worker, FEED).length === 0, 'a covered path must not reach the feed');
+  await worker.settle();
+  const again = await call(worker, `/${COVERED}`);
+  equal(again.headers.get('x-mltd-cache'), 'hit', 'immutable cache hit');
+  equal(reads, 1, 'cached R2 reads');
+  const cachedKey = [...worker.cache.store.keys()][0];
+  equal(cachedKey, `https://mltd-localized-assets.invalid/objects/sha256/${digest}`, 'cross-release cache key');
+  equal(again.headers.get('cache-control'), 'public, max-age=0, must-revalidate', 'stable URL revalidation');
+  const conditional = await call(worker, `/${COVERED}`, {method: 'HEAD', headers: {'if-none-match': `W/"${digest}"`}});
+  equal(conditional.status, 304, 'conditional HEAD');
+  equal(reads, 1, '304 does not read R2');
+});
+
+await test('R2 byte ranges, If-Range, and unavailable storage', async directory => {
+  const digest = table.objects[COVERED];
+  const size = table.sizes[digest];
+  const worker = await loadWorker([pinnedFetch(COVERED, () => ok('official-fallback'))], directory);
+  const ranges = [];
+  worker.env = {ASSETS: {async get(key, options) {
+    ranges.push(options?.range);
+    return {size, body: options?.range ? '123' : 'full', customMetadata: {sha256: digest}};
+  }}};
+  const partial = await call(worker, `/${COVERED}`, {headers: {range: 'bytes=1-3'}});
+  equal(partial.status, 206, 'partial status');
+  equal(partial.headers.get('content-range'), `bytes 1-3/${size}`, 'content range');
+  equal(ranges[0].offset, 1, 'R2 range offset');
+  equal(ranges[0].length, 3, 'R2 range length');
+  equal(worker.cache.puts, 0, 'partial bytes are never cached');
+  const invalid = await call(worker, `/${COVERED}`, {headers: {range: `bytes=${size}-`}});
+  equal(invalid.status, 416, 'unsatisfiable range');
+  equal(ranges.length, 1, '416 no R2 read');
+  const full = await call(worker, `/${COVERED}`, {headers: {range: 'bytes=1-3', 'if-range': '"old"'}});
+  equal(full.status, 200, 'changed If-Range gets full object');
+  equal(ranges[1], undefined, 'no range on changed If-Range');
+  await worker.settle();
+  worker.cache.store.clear();
+  worker.env = {ASSETS: {async get() {return null;}}};
+  const fallback = await call(worker, `/${COVERED}`);
+  equal(await fallback.text(), 'official-fallback', 'missing R2 fallback');
+  equal(fallback.headers.get('x-mltd-asset-source'), 'official-r2-unavailable', 'R2 failure marker');
+  equal(worker.cache.store.size, 0, 'fallback not cached as translated content');
 });
 
 // (a) Version-less, pinned pairing refused, newest version answers: the retry is adopted.

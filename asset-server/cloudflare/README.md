@@ -1,139 +1,92 @@
-# Cloudflare 版 assets 网关（Worker 直取 GitHub）
+# Cloudflare assets 网关（私有 R2 源站）
 
-线上地址：**https://mltd-asset-cf.nyaneko.cn**（同一个 Worker 也在 `mltd-assets.<sub>.workers.dev`，
-但那个域名在中国大陆被污染，只有能解析它的网络才通）。
+线上地址：[mltd-asset-cf.nyaneko.cn](https://mltd-asset-cf.nyaneko.cn)。
+Worker 绑定私有 bucket `mltd-localized-assets`，按编译进部署的路径表读取汉化文件。
+没覆盖的文件、其他游戏资源版本、R2 读取失败均转发官方 CDN。
+NAS 不参与这条发布或分发链路。
 
-一个 Cloudflare Worker：**命中汉化包的请求，直接去 GitHub 仓库按提交号取（在 Cloudflare 边缘缓存住）；
-没命中的请求，原样转发官方 CDN。** 它是 `asset-server/serve_release.py` + NAS nginx 那套的云端替身，
-规矩一样：只保留最新版、命中给汉化、未命中给官方原版、永不拿别的版本顶替。
+```mermaid
+flowchart LR
+  Source[Git：汉化源文件] --> Build[CI 重打包和独立校验]
+  Build --> Publisher[带鉴权的发布 Worker]
+  Publisher --> R2[(私有 R2：SHA-256 对象池)]
+  Build --> Metadata[Git：发布清单和 R2 校验记录]
+  Metadata --> Deploy[编译路径表并部署网关]
+  Client[游戏客户端] --> Gateway[网关 Worker]
+  Deploy --> Gateway
+  Gateway --> Edge[边缘内容缓存]
+  Edge --> R2
+  Gateway --> Official[未覆盖：官方 CDN]
+```
 
-## 1. 为什么不存副本
+## 发布与跨版本复用
 
-翻译产物的字节本来就在 GitHub（这个仓库 `generated/objects/sha256/<digest>` 就是产物本身）。
-Cloudflare 没法把仓库"挂"上去当硬盘，所以只有两种选择：**先搬一份**到自己这边，或者**用时去取**。
-这里选后者——Worker 里带一张对照表，按需要去取，取过的由 Cloudflare 缓存。
+1. 从 R2 恢复保留版本的对象和解析缓存；构建阶段仍使用本地 `generated/` 工作目录。
+   恢复通过每批最多 32 个对象、4 MiB 的带鉴权只读传输减少 HTTPS 往返，客户端仍逐对象验证 SHA-256。
+   大于 4 MiB 的对象独立流式传输，限制发布 Worker 的内存占用。
+2. 复用已经验证兼容的文字与图片成果；图片生成目前暂停，图片发布开启。
+3. 本地验证每个文件的 SHA-256；仅上传 R2 缺少的对象，R2 再校验上传流的 SHA-256。
+4. 所有引用上传成功后，写 `generated/r2-storage.json`，包含对象大小、解析缓存地址和旧覆盖包对应关系。
+5. 使用既有主分支输入检查和普通 Git push 的并发保护发布清单。输入变化则重新排队构建。
+6. 统一生产入口在同一次运行中调用 `cloudflare-gateway.yml`，编译最新清单、部署路径表，再进行真实网络逐字节抽样验收。
 
-| | 直取（本方案） | 先搬一份到 R2 |
+R2 中每个文件位于 `objects/sha256/<digest>`；不同版本、文字和图片共用一个对象池。
+逻辑名和游戏版本保存在清单里。字节相同只存一份；字节不同不能仅凭“文字看起来一样”复用整个 Bundle。
+图片复用继续要求当前官方源文件 SHA-256 与已发布成果绑定的源 SHA-256 相同。
+
+解析缓存位于 `build-cache/sha256/<archive-digest>`，包含按解析器指纹和官方源 SHA-256 区分的缓存。
+缓存归档具有稳定头部；内容不变时不会重复上传。新归档可能保留旧归档，暂不自动清理 R2：
+GC 需要先检查所有保留清单及仍可能运行的网关部署，不能按资源版本直接删除共享对象。
+
+Git 只保留源文件、发布清单、校验和、R2 校验记录及代码，不再追踪重打包 Bundle、对象池和解析缓存。
+历史 Git 提交中的旧二进制仍保留；本次没有重写历史。全新克隆建议使用 `--filter=blob:none`。
+
+迁移时保留的 1077741 / 1077750 分别引用 641.42 / 643.99 MiB；共享 11,060 个对象、584.22 MiB。
+去重后合计 12,317 个对象、701.19 MiB，比分别存储节约约 45.5%。解析缓存归档另占约 53.89 MiB。
+
+## 缓存与更新时效
+
+| 路径/层 | 策略 | 更新行为 |
 | --- | --- | --- |
-| 换一版要做什么 | 重新生成对照表 + 部署（几秒） | 把变化的包重新传一遍 |
-| 存储 | 不占 | 每个版本一份 |
-| 首次命中的延迟 | 多一次 GitHub 往返（几十到几百毫秒） | 直接命中 |
-| 源站 | GitHub | Cloudflare R2 |
+| 网关内部内容对象 | Cache API，`public, max-age=31536000, immutable`；键为 bucket + SHA-256 | 相同字节跨版本、跨部署复用；新内容使用新键，不覆盖旧键 |
+| 面向客户端的稳定 URL | `public, max-age=0, must-revalidate`，强 ETag 为 SHA-256 | HTTP 缓存每次验证；没变返回 304，无需读取 R2；部署新表后变更内容立即采用新哈希 |
+| Range | 直接从 R2 读指定范围，不缓存部分内容 | 支持单段、后缀、If-Range；越界返回 416 |
+| 官方回落、上传 API 错误 | 不写入内容对象缓存 | 不会把错误或日文文件长期缓存为某个汉化哈希 |
 
-## 2. 它怎么决定"有没有"
+更新需要上传、提交清单和部署完成；不是“文件上传完即切换”。Worker 部署有短暂传播时间。
+不需要 purge 或等待一年的 TTL。Cache API 按数据中心缓存，可能被驱逐，驱逐后重新读取 R2。
+游戏自己的本地资源缓存不受 HTTP 头控制；同版本已下载资源是否重取取决于客户端。
 
-Worker 里带一张表（`src/index.json`），内容是**请求路径 → 这个文件在仓库里的哈希名**。
+## 凭据与运行
 
-| 步骤 | 行为 |
-| --- | --- |
-| 1 | 解析 URL 里的 `<version>`（没有就当作当前版本） |
-| 2 | `<version>` 不等于表里那一版 → **直接转发官方**（绝不把 A 版的汉化包发给 B 版客户端） |
-| 3 | 查表：命中 → 去 `raw.githubusercontent.com/<owner>/<repo>/<pinned_commit>/generated/objects/sha256/<digest>` 取 |
-| 4 | 取回来的字节交给客户端，同时写进 Cloudflare 的边缘缓存（Cache API，1 年） |
-| 5 | 没命中（或 GitHub 取不到）→ 转发 `https://td-assets.bn765.com/<version>/<path>` |
+bucket 不开启公开访问。公开网关只提供 GET/HEAD，没有写入路由。
+独立发布 Worker `mltd-localized-publisher` 需要 Bearer token，且仅允许不可变哈希键的读取、校验写入和清单查询，
+没有任意路径写入、覆盖或删除功能。上传身份只访问这个 bucket。
 
-**不带版本号的请求（客户端拿新版的索引文件）**：这种请求按表里那一版转发。游戏发布新版本之后，
-新版索引文件在旧版本号下并不存在，官方 CDN 会用 403 拒绝，客户端就一直卡在 "Now Loading"。
-所以**只有**这种请求在**第一次转发被 4xx 拒绝**时，会按"最新正式版本"再试一次：拿到 2xx 就用它
-（响应头 `x-mltd-asset-source: official-newest-version`），拿不到就原样返回第一次的响应——只会变好，
-不会变坏。最新正式版本取自 `https://api.matsurihi.me/api/mltd/v2/version/assets`（JSON 数组，
-取最大的 `version`），按每 15 分钟缓存一次，不会每个请求都去问。带版本号的请求、命中汉化包的请求、
-`/healthz` 都不受影响。
-
-接受的 URL 形状（与现有 nginx vhost、`serve_release.py` 兼容）：
-
-```text
-/<version>/production/2018/Android/<name>   官方 CDN 形状
-/assets/<version|current>/<path>            serve_release.py 形状
-/generated-assets/<version>/<path>          现在对外公布的镜子形状
-/cn/<version>/<path>                        CN 命名空间（仅路由别名，不含 legacy overlay 回落）
-/<path>                                     当前版本
-/healthz                                    自述（版本、提交、表大小、上游基址）
-```
-
-细节：
-
-* **`HEAD` 不碰网络**：大小写在表里，直接回答。
-* **`Range` 透传**：交给 GitHub 处理，不进缓存（避免把 206 当成完整对象缓存下来）。
-* **`If-None-Match`**：ETag 就是内容的哈希，命中就回 304，不花任何上游请求。
-* **逻辑名别名**：表里同时收了"哈希名"和"可读名"，指向同一份字节，两种请求都能命中。
-* 断言：表里只会出现 `production/2018/Android/` 前缀下的路径；一条路径被两份不同内容同时认领会直接拒绝。
-
-## 3. 缓存策略（汉化资源会更新，所以分三层）
-
-| 层 | 策略 | 为什么 |
-| --- | --- | --- |
-| 客户端 ↔ 边缘 | `public, max-age=0, must-revalidate` + 强 ETag | 对外的 URL 不是永久的：**同一个资源版本号下可能重新发布汉化**（2026-10-11 就发生过，491 个歌词包换了字节）。所以带 HTTP 缓存的客户端每次都会问一句；没变就 304（不碰上游、不碰仓库），变了立刻拿新的 |
-| 边缘 ↔ GitHub | Cache API，`max-age=31536000, immutable` | 取的地址里带着提交号，内容永不可能变；一个对象在一个数据中心只读一次 |
-| 客户端本地 | **不归我们管** | 游戏按"资源版本 + 文件名"判断要不要重下。同一版本号下换了内容，已经下过的玩家不会自动重下——要清游戏缓存，或等官方资源版本号变化 |
-
-更新一版汉化资源之后，线上要多久生效：**重新构建对照表 + 部署**（见下）之后立刻生效，不需要等缓存过期。
-
-## 4. 怎么跟上更新
-
-**自动（推荐）**：`.github/workflows/cloudflare-gateway.yml`。上游 "Build generated Assets" 一跑完，
-它就重建对照表、部署、再跑一遍线上逐字节验收。发布提交带 `[skip ci]`，所以它挂在"上游流程完成"上，
-而不是挂在 push 上。需要仓库机密 `CLOUDFLARE_API_TOKEN`（权限：Edit Cloudflare Workers），
-建议一并加 `CLOUDFLARE_ACCOUNT_ID`；**没配令牌时它只打一条警告并跳过，不会把 CI 变红**。
-也可以手动点 "Run workflow"。
-
-**手动**：
+CI secrets：`CLOUDFLARE_API_TOKEN` 部署 Worker，`R2_PUBLISH_TOKEN` 访问发布 Worker。
+发布 Worker 中对应的 secret 名称为 `PUBLISH_TOKEN`。令牌不写入仓库或 URL。
+发布 URL 和 bucket 配置在 `configs/r2-storage.json`。
 
 ```bash
-git pull                                   # 先让本地和 origin/main 一致
-python asset-server/cloudflare/build_index.py            # 先看计划（只读，不写任何东西）
-python asset-server/cloudflare/build_index.py --apply    # 写 src/index.json
-cd asset-server/cloudflare && npx wrangler deploy        # 部署
+python scripts/r2_release_storage.py restore
+python scripts/build_generated_release.py --reuse-published-images
+python scripts/r2_release_storage.py publish
+# 使用正常的元数据发布流程后：
+python asset-server/cloudflare/build_index.py --apply
+cd asset-server/cloudflare && npx --yes wrangler@4 deploy
 ```
 
-生成前逐条校验：manifest 必须 `build_status=success`、每个 `artifact_sha256` 必须在本地对象库里存在且
-**哈希对得上**、路径不能越界、不能一条路径对应两份内容；任何一条不满足就整体退出、不写文件。
-锚定的提交号取"最后一次改动 `generated/<version>/manifest.json` 的那个提交"（用 `git log` 解析）。
-
-## 5. 验收
+网关部署仅需 Git 元数据，不必下载全部对象。线上验收从 R2 恢复固定种子的样本和资源索引：
 
 ```bash
-# 直连自定义域（大陆可用）
-python asset-server/cloudflare/check_gateway.py --base https://mltd-asset-cf.nyaneko.cn
-
-# 从大陆的机器上验 workers.dev 需要代理（域名被污染）
-python asset-server/cloudflare/check_gateway.py --base https://mltd-assets.<sub>.workers.dev \
-    --proxy http://127.0.0.1:7890
+python scripts/r2_release_storage.py restore --no-cache --samples 3
+python asset-server/cloudflare/check_gateway.py --base https://mltd-asset-cf.nyaneko.cn --samples 3
+node asset-server/cloudflare/test_newest_version_fallback.mjs
+node asset-server/r2-publisher/test_publisher.mjs
 ```
 
-覆盖：`/healthz`；**新鲜度**（线上提交 vs 本地对照表 vs 仓库最新提交——不一致就报错提醒"改了没部署"）；
-抽查汉化包字节与 `artifact_sha256` 一致；第二次读必须命中边缘缓存；逻辑名别名同字节；`HEAD`/`Range`；
-**从官方目录里挑本版没有的文件**，比对直连官方拿到的字节一致；别的版本不被本地命中；路径穿越/写请求被拒。
-
-部署之前先在本地跑一遍 Worker（不上线、不联网也能跑）：
-
-```bash
-node asset-server/cloudflare/test_newest_version_fallback.mjs          # 打桩，全部离线，12 项
-node asset-server/cloudflare/test_newest_version_fallback.mjs --live   # 额外用真实 feed + 真实官方 CDN 验 2 项
-```
-
-## 6. 边界与风险
-
-* **`*.workers.dev` 在中国大陆不可用**（DNS 被污染）。自定义域 `mltd-asset-cf.nyaneko.cn` 直连实测可用，
-  客户端应当用这个域名。
-* **GitHub 是源站**：仓库限速或抖动时请求会**自动回落官方原版**——客户端不会坏，只是那一刻拿到未汉化文件
-  （响应头 `x-mltd-asset-source: official-repository-unavailable`）。
-* **官方转发不落盘、不缓存**：这个 Worker 只决定"哪一端来答"。
-* **边缘缓存按数据中心独立**：不同地区各会向 GitHub 取一次（每个对象、每个节点一次），之后长期命中。
-* **免费额度**：Worker 100,000 请求/天；本方案不占 R2 存储。Cloudflare 条款允许把大文件放在自家服务
-  （R2/Stream/Images）再经 CDN 分发，而"缓存在 Cloudflare 之外的大文件"属于受限的那一类；本项目量级很小，
-  但这条要知道。
-* **环境依赖**：`check_gateway.py` 的"官方目录"抽查需要 `msgpack`（`asset-server/requirements.txt` 已列）。
-* 响应头自查：`x-mltd-asset-source`（哪一端答的，取值 `generated-release` / `official-miss` /
-  `official-other-version` / `official-repository-unavailable` / `official-newest-version` / `official-error`）、
-  `x-mltd-cache`（hit/miss/bypass）、`x-mltd-build`（部署的提交号）。
-* **最新版兜底依赖第三方 feed**（`api.matsurihi.me`）：它挂了、变格式了、或者报的版本还没真正上传到官方 CDN，
-  结果只是"这次不兜底"，客户端拿到的仍是改造前的那份 403，不会出现新错误。
-
-## 7. 本次实测（2026-10-11）
-
-* 对照表：**22,495 条路径**（11,248 哈希名 + 11,247 逻辑名），描述 **672,569,567 字节（约 641 MiB）** 对象载荷；
-  `src/index.json` 3.68 MiB（压缩后约 1.10 MiB，免费版上限 3 MiB），Worker 启动 10–19 ms。
-* 锚定提交：`eae9a5ede1d836acf8a416738b180fd09a763973`（`origin/main`）。
-* 验收 26 项全过；另单独验过 10.5 MB 大对象（先 miss 后 hit，字节与哈希一致）。
-* 缓存实测：直连自定义域第一次 `x-mltd-cache: miss`，第二次 `hit`；带相同 ETag 再问 → `304 Not Modified`。
+`/healthz` 报告版本、清单提交和 `object_store: r2`。
+响应头：`x-mltd-object-store: r2`、`x-mltd-cache: hit/miss/bypass/index`、`x-mltd-build`。
+R2 读取失败使用 `x-mltd-asset-source: official-r2-unavailable`。
+显式请求其他版本不会拿当前版本汉化包替代。无版本的官方 4xx 恢复规则保持不变：
+第三方版本 feed 最多缓存 15 分钟，仅成功取得新版官方文件时采用它。

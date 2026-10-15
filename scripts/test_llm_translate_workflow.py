@@ -116,7 +116,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertIn("--full-rescan", extract)
         # PyYAML resolves the bare `on:` key to boolean True.
         triggers = self.workflow["on"] if "on" in self.workflow else self.workflow[True]
-        self.assertIn("full_rescan", triggers["workflow_dispatch"]["inputs"])
+        self.assertIn("full_rescan", triggers["workflow_call"]["inputs"])
         commit = self.steps["Commit LLM translations to main"]["run"]
         self.assertIn("python scripts/commit_llm_drafts.py", commit)
         self.assertIn("manifests/official-bundle-index.json",
@@ -138,9 +138,10 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
 
     def test_backfill_is_bounded_and_continues_only_after_real_progress(self):
         self.assertIn('then limit=500; fi', self.steps["Translate with the existing provider pool"]["run"])
-        followup = self.workflow["jobs"]["continue-backlog"]
-        self.assertIn("needs.draft.outputs.updated != '0'", followup["if"])
-        self.assertIn("needs.draft.outputs.remaining != '0'", followup["if"])
+        parent = yaml.safe_load((WORKFLOW.parent / 'auto-track-jp-assets.yml').read_text(encoding='utf-8'))
+        followup = parent["jobs"]["continue-backlog"]
+        self.assertIn("needs.translate.outputs.updated != '0'", followup["if"])
+        self.assertIn("needs.translate.outputs.remaining != '0'", followup["if"])
         self.assertIn("inputs.max_items == '0'", followup["if"])
         self.assertEqual(self.steps["Refresh translation backlog report"]["id"], "backlog")
         self.assertIn(".llm-apply.json", self.steps["Apply LLM translations"]["run"])
@@ -216,11 +217,12 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         step has nothing left to push and only the apply step reports a publish.
         """
         package = self.workflow["jobs"]["package"]
-        trigger = next(step for step in package["steps"] if step.get("name") == "Trigger the generated Assets build")
         self.assertEqual(package["needs"], ["draft", "images"])
-        self.assertIn("needs.draft.outputs.published == 'true'", package["if"])
-        self.assertIn("needs.images.outputs.published == 'true'", package["if"])
-        self.assertIn("gh workflow run assets-generated.yml --ref main", trigger["run"])
+        self.assertIn("needs.draft.outputs.published == 'true'", package['outputs']['published'])
+        self.assertIn("needs.images.outputs.published == 'true'", package['outputs']['published'])
+        parent = yaml.safe_load((WORKFLOW.parent / 'auto-track-jp-assets.yml').read_text(encoding='utf-8'))
+        self.assertEqual(parent['jobs']['release']['uses'], './.github/workflows/assets-generated.yml')
+        self.assertIn("needs.translate.outputs.published == 'true'", parent['jobs']['release']['if'])
         self.assertIn("published=true", Path(commit_llm_drafts.__file__).read_text(encoding="utf-8"))
         self.assertIn("actions: write", self.text)
 
@@ -229,7 +231,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertIn("inputs.publish_drafts != 'false'", publish["if"])
         self.assertIn("vars.MLTD_PUBLISH_LLM_DRAFTS != 'false'", publish["if"])
         triggers = self.workflow["on"] if "on" in self.workflow else self.workflow[True]
-        self.assertIn("publish_drafts", triggers["workflow_dispatch"]["inputs"])
+        self.assertIn("publish_drafts", triggers["workflow_call"]["inputs"])
 
     def test_publish_evidence_is_kept_with_the_diagnostics(self):
         upload = self.steps["Upload translation diagnostics"]["with"]["path"]

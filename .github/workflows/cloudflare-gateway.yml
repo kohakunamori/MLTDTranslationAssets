@@ -1,28 +1,7 @@
-name: Deploy Cloudflare Gateway
+name: Reusable - deploy and verify R2 gateway
 
-# Keeps the Cloudflare gateway in step with this repository.
-#
-# Where the trigger comes from: "Build generated Assets" dispatches this workflow
-# explicitly (it needs `actions: write` for that), only after it actually pushed a
-# release commit.
-#
-# Why not `push`: those release commits always carry `[skip ci]`, and GitHub
-# suppresses push-triggered workflows for exactly those commits.
-#
-# Why not `workflow_run` either (it used to be the trigger): a run that has
-# *completed* does fire this one, but only when the finishing run came from a
-# push.  Every build that the translation workflow dispatched by itself has been
-# silently skipped -- builds #40, #52, #54 and #62 on 2026-10-10..12 produced four
-# release commits and zero gateway deploys, so the live gateway was left anchored
-# two releases behind main (`/healthz` said `fe71c9c2` while main was `e54d92ad`).
-# The explicit dispatch is what makes both entry points behave the same.
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'asset-server/cloudflare/**'
-      - '.github/workflows/cloudflare-gateway.yml'
-  workflow_dispatch:
+'on':
+  workflow_call:
 
 permissions:
   contents: read
@@ -34,9 +13,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # The checkout pulls the whole content-addressed object pool (~1 GB, of which
-    # this release references ~640 MiB) so that `build_index.py` can verify every
-    # object it indexes against its own SHA-256; that is the slow part of this job.
+    # Only metadata is checked out; acceptance restores a few verified R2 samples.
     timeout-minutes: 30
     steps:
       - name: Check whether a Cloudflare token is configured
@@ -55,12 +32,15 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
           filter: blob:none
           sparse-checkout: |
             .github
             asset-server
+            configs
             manifests
+            scripts
 
       - name: Add the generated release to the checkout
         if: steps.guard.outputs.configured == 'true'
@@ -88,7 +68,9 @@ jobs:
         # globals and checks that a refusal is only retried for a version-less
         # request, that a retry which is not 2xx returns the original response,
         # and that a version-carrying or covered request never touches the feed.
-        run: node asset-server/cloudflare/test_newest_version_fallback.mjs
+        run: |
+          node asset-server/cloudflare/test_newest_version_fallback.mjs
+          node asset-server/r2-publisher/test_publisher.mjs
 
       - name: Deploy to Cloudflare
         if: steps.guard.outputs.configured == 'true'
@@ -98,10 +80,26 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 deploy
 
+      - name: Deploy the authenticated R2 publisher
+        if: steps.guard.outputs.configured == 'true'
+        working-directory: asset-server/r2-publisher
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy
+
+      - name: Restore verified samples for live acceptance
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+        run: |
+          python -m pip install --quiet requests
+          python scripts/r2_release_storage.py restore --no-cache --samples 3
+
       - name: Verify the live gateway against this release
         if: steps.guard.outputs.configured == 'true'
-        # Real HTTPS, byte-for-byte against the object pool that was just
-        # checked out: if the deploy did not take, this fails the run.
+        # Real HTTPS, byte-for-byte against verified R2 samples: if the deploy
+        # did not take, this fails the run.
         #
         # Retry first.  Cloudflare keeps serving the previous worker version for a
         # few seconds after a successful deploy, and gateway run #18 read

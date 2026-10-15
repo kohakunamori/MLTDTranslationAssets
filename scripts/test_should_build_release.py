@@ -259,14 +259,16 @@ class WorkflowGateTests(unittest.TestCase):
             "Build generated Unity3D release",
             "Verify generated release",
             "Build portal resource manifest",
-            "Commit reviewed translations and generated release",
+            "Commit reviewed translations and release metadata",
+            "Restore retained releases and parsed inputs from R2",
+            "Upload and verify immutable R2 objects before publishing metadata",
         ):
             step = next(s for s in steps if s.get("name") == name)
             with self.subTest(name):
                 self.assertEqual(step.get("if"), "steps.gate.outputs.build == 'true'")
 
     def test_the_build_workflow_offers_an_explicit_force(self):
-        dispatch = self._workflow("assets-generated.yml")["on"]["workflow_dispatch"]
+        dispatch = self._workflow("assets-generated.yml")["on"]["workflow_call"]
         self.assertIn("force", dispatch.get("inputs", {}))
 
     def test_official_cache_is_version_bound_and_only_saved_after_a_miss(self):
@@ -306,9 +308,10 @@ class WorkflowGateTests(unittest.TestCase):
         self.assertIn("scripts/publish_generated_release.py", publish["run"])
         self.assertNotIn("git rebase", publish["run"])
 
-        dispatch = next(s for s in steps if "cloudflare-gateway.yml" in str(s.get("run", "")))
-        self.assertIn("gh workflow run cloudflare-gateway.yml --ref main", dispatch["run"])
-        self.assertIn("steps.publish.outputs.pushed == 'true'", dispatch["if"])
+        parent = self._workflow('auto-track-jp-assets.yml')
+        deploy = parent['jobs']['gateway']
+        self.assertEqual(deploy['uses'], './.github/workflows/cloudflare-gateway.yml')
+        self.assertIn("needs.release.outputs.pushed == 'true'", deploy['if'])
         self.assertEqual(
             self._workflow("assets-generated.yml").get("permissions", {}).get("actions"),
             "write",
@@ -318,7 +321,7 @@ class WorkflowGateTests(unittest.TestCase):
         # PyYAML 把裸 `on:` 读成布尔键 True，两种都取。
         gateway_triggers = gateway.get("on", gateway.get(True))
         self.assertNotIn("workflow_run", gateway_triggers)
-        self.assertIn("workflow_dispatch", gateway_triggers)
+        self.assertEqual(set(gateway_triggers), {'workflow_call'})
 
 
 class ReleaseGateCliTests(unittest.TestCase):

@@ -1,57 +1,105 @@
-# RackNerd dispatches these labeled jobs one at a time under CPU/memory limits.
-name: Auto Track Japanese Assets
+name: Assets production pipeline
 
-# 跟踪日版资源版本（Matsurihi API）。检测到新版本时：
-#   1. 把“离开的那一版”冻结成单一标签 assets-<version>（immutable：已存在且指向
-#      其他提交时直接失败，绝不移动）；该标签是后续 generated/<asset_version>/
-#      manifest.json 记录的 source_commit。
-#   2. 立刻叫醒翻译工作流（workflow_dispatch）。本流程自己**不再**改
-#      manifests/asset-version.json，也不开 PR。
-#
-# 为什么不再开 PR：版本号只能有一个写者，而那个写者是翻译工作流本身——
-# scripts/commit_llm_drafts.py 会把 manifests/asset-version.json 和其它译料一起推上
-# main。旧流程既开一张“等 owner 合并”的申请单、又让翻译工作流直接推 main，结果是
-# 每个版本都留下一张永远追不上的申请单（例如 #40），而真正推进版本号的始终是
-# 翻译工作流。这里保留 bot 的底线：它不合并、也不直接推 main——只读、只冻结标签、
-# 只派发。
-#
-# 触发方式：只由 vps_racknerd 上的 mltd-asset-watch.timer 派发，两种情况——
-#   1. 官方出了新版本（每 5 分钟查一次）：本流程冻结离开的那一版，再叫醒翻译任务；
-#   2. 兜底叫醒（同一台机器每 24 小时按一次，带 daily_housekeeping=true）：没有新版本
-#      也叫一次翻译任务（重试失败过的行、推进待审草稿），并顺便按一次图片汉化。
-#
-# 仓库这边**不再有定时**：GitHub 的 cron 实测被推迟 4~7 小时（16:00 UTC 的那次实际
-# 19:48~21:03 UTC 才启动），同一天还出现过一次推送完全不产生任何事件。2026-10-12 起
-# 唯一的时钟在 VPS 上，整条链只有一个入口：
-#     本流程 → 翻译任务 → 产物构建 → CDN 网关 → 查阅站
-# 后面每一跳都是显式派发（workflow_dispatch），不依赖隐式事件——“出包派发网关”这一跳
-# 曾经挂在 workflow_run 上，四次由翻译任务派发的构建因此产出了四个从未上线的发布。
-#
-# 写路径全部绑定到 checkout 的固定提交：每个 job 都用 ref: ${{ github.sha }} 拉取，
-# 并在写操作前核对 git rev-parse HEAD 与 github.sha 一致，避免“用移动中的分支头
-# 冒充 source commit”。
-
+# Keep this filename so the existing VPS version watcher needs no reconfiguration.
 'on':
+  push:
+    branches: [main]
+    paths:
+      - 'locales/**'
+      - 'lyrics/**'
+      - 'images/**'
+      - 'image-overlay/**'
+      - 'manifests/**'
+      - 'generated/**'
+      - 'pipelines/**'
+      - 'scripts/**'
+      - 'schema/**'
+      - 'configs/**'
+      - 'asset-server/cloudflare/**'
+      - 'asset-server/r2-publisher/**'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
+      stage:
+        description: 'watch, translate, release (existing results), gateway, or full'
+        type: choice
+        options: [watch, translate, release, gateway, full]
+        default: watch
       force_check:
-        description: 'Force run version check'
-        required: false
-        default: true
+        description: 'Compatibility input for the existing VPS watcher'
         type: boolean
+        default: true
       daily_housekeeping:
-        description: '兜底叫醒：没有新版本也要叫翻译任务重试失败过的行、推进待审草稿，并按一次图片汉化'
-        required: false
+        description: 'Watch mode: retry leftovers without a new version'
         default: 'false'
+      force_build:
+        description: 'Rebuild instead of reusing unchanged bundles'
+        type: boolean
+        default: false
+      max_items:
+        description: 'Translation smoke limit; 0 continues resumable batches'
+        default: '0'
+      max_bundles:
+        description: 'Optional source extraction limit'
+        default: '0'
+      full_rescan:
+        description: 'Ignore the official source memo'
+        type: boolean
+        default: false
+      publish_drafts:
+        description: 'Admit validated machine drafts with provenance'
+        default: 'true'
+      review_before:
+        description: 'Reviewed range carried by a stale build retry'
+        default: ''
+      review_after:
+        description: 'Reviewed range end'
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
 
 concurrency:
-  # 冻结标签是写操作；手动运行排队等待，不与写者竞争。
-  group: assets-track-jp-version
+  # Reusable stage writers have their own independent locks.
+  group: assets-production-${{ github.event_name == 'push' && 'release' || inputs.stage || 'watch' }}
   cancel-in-progress: false
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      stage: ${{ steps.plan.outputs.stage }}
+      track: ${{ steps.plan.outputs.track }}
+      deploy: ${{ steps.plan.outputs.deploy }}
+      source_commit: ${{ steps.plan.outputs.source_commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            scripts
+            manifests
+            configs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Plan this production run
+        id: plan
+        env:
+          CI_EVENT: ${{ github.event_name }}
+          CI_STAGE: ${{ inputs.stage || 'watch' }}
+          CI_BEFORE: ${{ github.event.before || '' }}
+        run: python scripts/ci_pipeline.py
+
   resolve-target:
     name: Resolve track target
+    needs: plan
+    if: needs.plan.outputs.track == 'true'
     runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 15
     permissions:
@@ -64,7 +112,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.plan.outputs.source_commit }}
           filter: blob:none
           sparse-checkout: |
             scripts
@@ -75,8 +123,8 @@ jobs:
         run: |
           set -euo pipefail
           CHECKOUT_SHA="$(git rev-parse HEAD)"
-          if [ "$CHECKOUT_SHA" != "${{ github.sha }}" ]; then
-            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
+          if [ "$CHECKOUT_SHA" != "${{ needs.plan.outputs.source_commit }}" ]; then
+            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ needs.plan.outputs.source_commit }}" >&2
             echo "Every write below records this commit as the source commit; refusing to continue." >&2
             exit 1
           fi
@@ -99,6 +147,7 @@ jobs:
           echo "track_jp_assets --check-only exit=${EXIT_CODE}"
           case "$EXIT_CODE" in
             0)
+              python -c 'import json,os; r=json.load(open("work/asset-report.json")); open(os.environ["GITHUB_OUTPUT"],"a").write("latest_version="+str(r["latest_version"])+"\ncurrent_version="+str(r["current_version"])+"\n")'
               # 0 = 已是最新，没有更新；这是唯一允许“无更新”的退出码。
               echo "has_update=false" >> "$GITHUB_OUTPUT"
               echo "No new asset version detected."
@@ -131,7 +180,7 @@ jobs:
 
   freeze:
     name: Freeze outgoing asset version
-    needs: resolve-target
+    needs: [plan, resolve-target]
     if: needs.resolve-target.outputs.has_update == 'true'
     runs-on: [self-hosted, Linux, X64, racknerd-light]
     timeout-minutes: 15
@@ -141,7 +190,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.plan.outputs.source_commit }}
           filter: blob:none
           sparse-checkout: |
             scripts
@@ -155,8 +204,8 @@ jobs:
         run: |
           set -euo pipefail
           CHECKOUT_SHA="$(git rev-parse HEAD)"
-          if [ "$CHECKOUT_SHA" != "${{ github.sha }}" ]; then
-            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
+          if [ "$CHECKOUT_SHA" != "${{ needs.plan.outputs.source_commit }}" ]; then
+            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ needs.plan.outputs.source_commit }}" >&2
             exit 1
           fi
           TARGET="$CHECKOUT_SHA"
@@ -221,118 +270,84 @@ jobs:
           echo "That tag does not record asset version ${OLD_VER} (it records '${FROZEN_VER:-unknown}'), so it cannot be reused." >&2
           exit 1
 
-  wake-translation:
-    name: Wake the downstream runs
-    needs: resolve-target
-    # 注意：这里**没有** has_update 门槛。发现新版本时它负责把翻译任务叫起来；
-    # 没有新版本、但被“兜底叫醒”（daily_housekeeping）时，它同样要叫一次翻译任务
-    # ——重试那些在所有服务商上都失败过的行、推进待审草稿。这是整条链唯一的入口：
-    # VPS 只按这一个按钮，后面翻译→出包→网关→查阅站全靠连锁。
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      # 派发运行要 actions: write。用 GITHUB_TOKEN 派发的 workflow_dispatch 不在
-      # GitHub 的“递归触发抑制”范围内（翻译工作流自己也是这样派发产物构建的）。
-      actions: write
+  translate:
+    needs: [plan, resolve-target, freeze]
+    if: >-
+      always() && !cancelled() && needs.plan.result == 'success' &&
+      (needs.plan.outputs.track != 'true' || needs.resolve-target.result == 'success') &&
+      (needs.freeze.result == 'success' || needs.freeze.result == 'skipped') &&
+      (needs.plan.outputs.stage == 'translate' || needs.plan.outputs.stage == 'full' ||
+       (needs.plan.outputs.stage == 'watch' && needs.resolve-target.result == 'success' &&
+        (needs.resolve-target.outputs.has_update == 'true' || inputs.daily_housekeeping == 'true')))
+    uses: ./.github/workflows/llm-translate-assets.yml
+    with:
+      source_commit: ${{ needs.plan.outputs.source_commit }}
+      expected_version: ${{ needs.resolve-target.outputs.latest_version }}
+      max_items: ${{ inputs.max_items || '0' }}
+      max_bundles: ${{ inputs.max_bundles || '0' }}
+      full_rescan: ${{ inputs.full_rescan || false }}
+      publish_drafts: ${{ inputs.publish_drafts || 'true' }}
+    secrets: inherit
+
+  release:
+    needs: [plan, translate]
+    if: >-
+      always() && !cancelled() && needs.plan.result == 'success' &&
+      (needs.plan.outputs.stage == 'release' ||
+       (needs.translate.result == 'success' && needs.translate.outputs.ready == 'true' &&
+        (needs.translate.outputs.published == 'true' || needs.plan.outputs.stage == 'full')))
+    uses: ./.github/workflows/assets-generated.yml
+    with:
+      force: ${{ inputs.force_build || false }}
+      review_before: ${{ github.event.before || inputs.review_before || '' }}
+      review_after: ${{ inputs.review_after || github.sha }}
+    secrets: inherit
+
+  gateway:
+    needs: [plan, release]
+    if: >-
+      always() && !cancelled() && needs.plan.result == 'success' &&
+      (needs.plan.outputs.stage == 'gateway' ||
+       (needs.release.result == 'success' && needs.release.outputs.rebuild != 'true' &&
+        (needs.release.outputs.pushed == 'true' || needs.plan.outputs.deploy == 'true')))
+    uses: ./.github/workflows/cloudflare-gateway.yml
+    secrets: inherit
+
+  continue-backlog:
+    needs: [plan, translate, release, gateway]
+    if: >-
+      always() && !cancelled() && needs.translate.result == 'success' &&
+      needs.translate.outputs.ready == 'true' &&
+      needs.translate.outputs.remaining != '' && needs.translate.outputs.remaining != '0' &&
+      needs.translate.outputs.updated != '' && needs.translate.outputs.updated != '0' &&
+      needs.release.result != 'failure' && needs.gateway.result != 'failure' &&
+      (inputs.max_items == '0' || inputs.max_items == '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          filter: blob:none
-          sparse-checkout: |
-            scripts
-            manifests
-            configs
-
-      - name: Bind the resolved commit to this checkout
-        run: |
-          set -euo pipefail
-          CHECKOUT_SHA="$(git rev-parse HEAD)"
-          if [ "$CHECKOUT_SHA" != "${{ github.sha }}" ]; then
-            echo "FAIL: checkout HEAD ${CHECKOUT_SHA} != github.sha ${{ github.sha }}" >&2
-            exit 1
-          fi
-          echo "CHECKOUT_SHA=${CHECKOUT_SHA}" >> "$GITHUB_ENV"
-
-      - name: Wake the translation workflow
+      - name: Continue only a backlog that made verified progress
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HAS_UPDATE: ${{ needs.resolve-target.outputs.has_update }}
-          CURRENT_VER: ${{ needs.resolve-target.outputs.current_version }}
-          LATEST_VER: ${{ needs.resolve-target.outputs.latest_version }}
-          DAILY_HOUSEKEEPING: ${{ github.event.inputs.daily_housekeeping || 'false' }}
+          PUBLISH_DRAFTS: ${{ inputs.publish_drafts || 'true' }}
         run: |
-          set -euo pipefail
-          MANIFEST="manifests/asset-version.json"
-          WORKFLOW="llm-translate-assets.yml"
-          # 上一次翻译任务刚起过头就失败时，不要每几分钟重试一次。
-          COOLDOWN_SECONDS=1800
+          gh workflow run auto-track-jp-assets.yml --ref main -f stage=translate \
+            -f max_items=0 -f publish_drafts="$PUBLISH_DRAFTS"
 
-          HEAD_VER=$(python3 -c "import json;print(json.load(open('${MANIFEST}'))['asset_version'])") \
-            || { echo "FAIL: cannot read ${MANIFEST}" >&2; exit 1; }
-
-          if [ "${HAS_UPDATE}" = "true" ]; then
-            # 幂等：清单已经是目标版本（翻译工作流自己写过了），无事可做。
-            # 重跑、取消后重试、或本流程被更频繁地叫醒，都不会制造重复派发。
-            if [ "$HEAD_VER" = "$LATEST_VER" ]; then
-              echo "Already tracking ${LATEST_VER}; nothing to wake."
-              exit 0
-            fi
-            if [ "$HEAD_VER" != "$CURRENT_VER" ]; then
-              echo "FAIL: checkout tracks ${HEAD_VER}, but the version check reported current ${CURRENT_VER}." >&2
-              exit 1
-            fi
-            REASON="asset version ${CURRENT_VER} -> ${LATEST_VER}"
-          elif [ "${DAILY_HOUSEKEEPING}" = "true" ]; then
-            # 没有新版本：这一轮只为“收尾”而叫醒翻译任务（重试失败过的行、推进待审
-            # 草稿）。以前这是 GitHub 每晚那次定时的工作，2026-10-12 起由 VPS 的兜底
-            # 叫醒承担。
-            REASON="daily housekeeping (no new asset version; retrying leftovers)"
-          else
-            echo "No new asset version and no daily housekeeping tick; nothing to wake."
-            exit 0
-          fi
-
-          # 不叠班：已经有排队或运行中的翻译任务时，不再派发第二个。
-          # 读不到运行状态时**这一轮什么都不做**（fail closed）：宁可等下一次唤醒，
-          # 也不要在看不出有没有在跑的时候再派发一个。
-          for status in queued in_progress; do
-            COUNT="$(gh run list --workflow="$WORKFLOW" --status="$status" --limit 10 \
-              --json databaseId --jq 'length' 2>/dev/null || true)"
-            if [ -z "$COUNT" ]; then
-              echo "cannot read the ${status} run state of ${WORKFLOW}; leaving this wake to the next one."
-              exit 0
-            fi
-            if [ "$COUNT" != "0" ]; then
-              echo "A ${WORKFLOW} run is already ${status} (${COUNT}); not dispatching another."
-              exit 0
-            fi
-          done
-
-          LAST_CREATED="$(gh run list --workflow="$WORKFLOW" --limit 1 \
-            --json createdAt --jq '.[0].createdAt // empty')"
-          if [ -n "$LAST_CREATED" ]; then
-            LAST_EPOCH="$(date -u -d "$LAST_CREATED" +%s)"
-            NOW_EPOCH="$(date -u +%s)"
-            AGE=$((NOW_EPOCH - LAST_EPOCH))
-            if [ "$AGE" -lt "$COOLDOWN_SECONDS" ]; then
-              echo "The last ${WORKFLOW} run started ${AGE}s ago (< ${COOLDOWN_SECONDS}s); leaving it room before retrying."
-              exit 0
-            fi
-          fi
-
-          gh workflow run "$WORKFLOW" --ref main
-          echo "Dispatched ${WORKFLOW} (${REASON})."
-          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-            {
-              echo "### Wake: ${REASON}"
-              echo "- source commit: \`${CHECKOUT_SHA}\`"
-              echo "- dispatched: \`${WORKFLOW}\` on \`main\`"
-              echo "- freeze tag for the outgoing version: handled by the \`freeze\` job when there is a new version"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      # Images are an optional stage of llm-translate-assets.yml, currently
-      # disabled by configs/localization-pipeline.json. No separate image wake.
+  summary:
+    needs: [plan, resolve-target, freeze, translate, release, gateway, continue-backlog]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record all stage outcomes in this run
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json, os
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('### Production pipeline\n\n| stage | result |\n| --- | --- |\n')
+              for name, value in json.loads(os.environ['RESULTS']).items():
+                  out.write('| ' + name + ' | ' + value['result'] + ' |\n')
+          PY

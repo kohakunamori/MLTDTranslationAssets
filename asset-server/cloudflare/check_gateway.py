@@ -118,7 +118,11 @@ def pick_translated(manifest: dict, pool: Path, samples: int, max_bytes: int, se
 
 
 def entry_size(entry: dict, pool: Path) -> int:
-    return (pool / entry["artifact_sha256"]).stat().st_size
+    path = pool / entry['artifact_sha256']
+    if path.is_file():
+        return path.stat().st_size
+    inventory = json.loads((pool.parents[1] / 'r2-storage.json').read_text(encoding='utf-8'))
+    return inventory['objects'][entry['artifact_sha256']]
 
 
 def check_health(runner: Runner, release: dict) -> None:

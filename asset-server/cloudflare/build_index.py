@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
-"""Build the path -> object index that the Cloudflare gateway serves from.
+"""Build the path -> immutable R2 object table carried by the gateway.
 
-The gateway keeps no copy of the release.  It carries a *table*: for every path
-a client can ask for, which content-addressed object in the GitHub repository
-holds the translated bytes.  A request that is in the table is fetched from the
-repository (commit-pinned, so the bytes can never change underneath a cache) and
-cached at Cloudflare's edge; a request that is not in the table is forwarded to
-the official CDN.
-
-That makes publishing a gateway release a *build + deploy* of one small file
-rather than a copy of the release:
+Git retains the release manifest and checksum-verified R2 inventory, not the
+payloads. Local objects, when present, are also hashed and checked against the
+inventory. A gateway deployment only needs the small metadata checkout:
 
     python asset-server/cloudflare/build_index.py            # plan only
     python asset-server/cloudflare/build_index.py --apply    # write src/index.json
     cd asset-server/cloudflare && npx wrangler deploy
 
-The planner is deliberately as strict as the old R2 publisher was: it refuses to
-index a release whose manifest does not describe it, whose keys collide, or
-whose objects are missing from (or do not hash to their name in) the local pool.
+Missing inventory/local proof, path collisions and corrupt local objects fail
+the plan. The source commit records the manifest revision, not an object URL.
 """
 from __future__ import annotations
 
@@ -114,13 +107,7 @@ def detect_version(root: Path, requested: str | None) -> str:
 
 
 def detect_commit(root: Path, manifest_path: Path, requested: str | None) -> str:
-    """The commit to pin raw.githubusercontent.com at.
-
-    It is the commit that last touched this release's manifest -- the commit the
-    objects were committed together with -- and not the manifest's own
-    ``generated_commit`` field, which records the translation input rather than
-    where the bytes landed.
-    """
+    """Resolve the manifest revision for deployment freshness checks."""
     if requested:
         commit = requested.strip()
         if not re.fullmatch(r"[0-9a-f]{40}", commit):
@@ -153,7 +140,7 @@ def build_index(
     include_logical_alias: bool = True,
     verify_hashes: bool = True,
 ) -> Index:
-    """Read ``generated/<version>/manifest.json`` and prove it against the pool."""
+    """Prove a manifest against the published R2 inventory or local pool."""
     version_dir = root / "generated" / version
     manifest_path = version_dir / "manifest.json"
     try:
@@ -172,6 +159,10 @@ def build_index(
         raise PlanError(f"{manifest_path} has no entries")
 
     pool = root / object_root
+    # The checked-in inventory is written only after checksum-validated R2 puts.
+    # Gateway deployments need this metadata, not another download of all blobs.
+    inventory_path = root / 'generated/r2-storage.json'
+    inventory = json.loads(inventory_path.read_text(encoding='utf-8'))['objects'] if inventory_path.exists() else {}
     index = Index(
         version=version,
         source_commit=detect_commit(root, manifest_path, commit),
@@ -211,10 +202,16 @@ def build_index(
             index.objects[key] = digest
 
         source = pool / digest
-        if not source.is_file():
+        if inventory_path.exists() and digest not in inventory:
+            raise PlanError(f'entry {position} has not been verified in R2: {digest}')
+        if not source.is_file() and digest not in inventory:
             raise PlanError(f"entry {position} ({runtime_path}) is missing from the pool: {source}")
-        size = source.stat().st_size
-        if verify_hashes and sha256_file(source) != digest:
+        size = source.stat().st_size if source.is_file() else inventory[digest]
+        if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+            raise PlanError(f'invalid object size for {digest}')
+        if digest in inventory and size != inventory[digest]:
+            raise PlanError(f'local size differs from verified R2 inventory: {digest}')
+        if verify_hashes and source.is_file() and sha256_file(source) != digest:
             raise PlanError(f"{source} does not hash to its own name")
         index.objects_bytes[digest] = size
         for name in names:

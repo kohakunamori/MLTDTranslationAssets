@@ -1,7 +1,9 @@
 # Unified localization and packaging
 
-`auto-track-jp-assets.yml` wakes `llm-translate-assets.yml` for version updates
-and daily retries. The tracker no longer dispatches an independent image task.
+`auto-track-jp-assets.yml` is the single production entry. Tracking, translation,
+R2 publication and gateway deployment are reusable jobs in one run; see
+[the CI mechanism and stage diagram](CI.md). Quality checks and manual model
+smoke tests are the other two entry points.
 
 The translation workflow owns three stages:
 
@@ -9,7 +11,8 @@ The translation workflow owns three stages:
 2. `images`: optionally call the reusable image workflow, resume generation,
    audit candidates, inject textures, independently audit the Unity bundles and
    commit a version-bound overlay;
-3. `package`: dispatch one generated release after the enabled stages finish.
+3. `package`: return readiness/publication outputs; the caller builds the release
+   after enabled stages finish, using a fresh main checkout.
 
 The image policy has two independent switches in
 `configs/localization-pipeline.json` (schema 2): `generation_enabled=false` and

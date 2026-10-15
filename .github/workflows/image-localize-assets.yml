@@ -98,7 +98,8 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /*
-            !/generated/
+            !/generated/objects/
+            !/generated/build-inputs/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -109,7 +110,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check \
-            -r pipelines/image/requirements-injection.txt pytest==8.4.2 msgpack pycryptodome
+            -r pipelines/image/requirements-injection.txt pytest==8.4.2 msgpack pycryptodome requests
 
       - name: Verify reviewed outputs against the frozen cohort
         id: current
@@ -230,12 +231,15 @@ jobs:
       - name: Commit audited image overlay for unified packaging
         id: publish
         if: steps.batch.outputs.audit_ready == 'true'
+        env:
+          R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
         run: |
           set -euo pipefail
           ASSET_VERSION="$(python -c "import json; print(json.load(open('manifests/asset-version.json'))['asset_version'])")"
+          python scripts/r2_release_storage.py publish-overlay --overlay-version "$ASSET_VERSION"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "image-overlay/${ASSET_VERSION}"
+          git add "image-overlay/${ASSET_VERSION}" generated/r2-storage.json
           if git diff --cached --quiet; then
             echo "published=false" >> "$GITHUB_OUTPUT"
             exit 0

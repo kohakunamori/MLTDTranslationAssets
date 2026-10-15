@@ -95,6 +95,17 @@ class PublishTests(unittest.TestCase):
         self.assertEqual(self.git(self.root, "rev-parse", "HEAD"), self.source)
         self.assertEqual(self.git(self.root, "diff", "--cached"), "")
 
+    def test_r2_publish_commits_inventory_but_never_binary_payloads(self):
+        self.outputs()
+        self.write(self.root, 'generated/r2-storage.json', {'objects': {'a' * 64: 3}})
+        self.write(self.root, 'generated/build-inputs/text/cache', b'parsed-cache')
+        result = tool.publish(self.root)
+        self.assertTrue(result['pushed'])
+        files = self.git(self.remote, 'ls-tree', '-r', '--name-only', 'main').splitlines()
+        self.assertIn('generated/r2-storage.json', files)
+        self.assertNotIn('generated/objects/new', files)
+        self.assertNotIn('generated/build-inputs/text/cache', files)
+
     def test_competing_manifest_is_replaced_without_losing_other_outputs(self):
         self.outputs()
         self.outputs(self.other, label="competing")
@@ -251,13 +262,15 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotIn("git rebase", publish["run"])
         rebuild = next(s for s in steps if s.get("name") == "Rebuild main after a release input changed")
         self.assertEqual(rebuild["if"], "steps.publish.outputs.rebuild == 'true'")
-        self.assertIn('gh workflow run assets-generated.yml --ref main -f force="$FORCE_BUILD"', rebuild["run"])
+        self.assertIn('gh workflow run auto-track-jp-assets.yml --ref main -f stage=release -f force_build="$FORCE_BUILD"', rebuild["run"])
         self.assertIn('-f review_before="$REVIEW_BEFORE" -f review_after="$REVIEW_AFTER"', rebuild["run"])
         promotion = next(s for s in steps if s.get("name") == "Promote reviewed locale changes")
         self.assertIn("inputs.review_before", promotion["env"]["BEFORE_SHA"])
         self.assertIn("inputs.review_after", promotion["env"]["AFTER_SHA"])
-        deploy = next(s for s in steps if s.get("name") == "Deploy the CDN gateway onto the new release")
-        self.assertIn("steps.publish.outputs.pushed == 'true'", deploy["if"])
+        parent = yaml.safe_load((tool.ROOT / '.github/workflows/auto-track-jp-assets.yml').read_text(encoding='utf-8'))
+        deploy = parent['jobs']['gateway']
+        self.assertIn("needs.release.outputs.pushed == 'true'", deploy["if"])
+        self.assertIn("needs.release.result == 'success'", deploy['if'])
         validation = yaml.safe_load((tool.ROOT / ".github/workflows/validate-localization.yml").read_text(encoding="utf-8"))
         self.assertIn("scripts/test_publish_generated_release.py", str(validation["jobs"]["regression"]))
 

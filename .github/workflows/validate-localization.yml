@@ -2,6 +2,7 @@
 name: Validate Localization Repository
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
@@ -15,12 +16,9 @@ on:
       - 'asset-server/**'
       - 'configs/image-cohort.json'
       - 'configs/localization-pipeline.json'
-      - '.github/workflows/image-localize-assets.yml'
-      - '.github/workflows/cloudflare-gateway.yml'
+      - '.github/workflows/**'
+      - '.github/actionlint.yaml'
       - 'requirements-ci.txt'
-      - '.github/workflows/validate-localization.yml'
-      - '.github/workflows/llm-translate-assets.yml'
-      - '.github/workflows/assets-generated.yml'
   pull_request:
     branches: [ main ]
     paths:
@@ -34,12 +32,9 @@ on:
       - 'asset-server/**'
       - 'configs/image-cohort.json'
       - 'configs/localization-pipeline.json'
-      - '.github/workflows/image-localize-assets.yml'
-      - '.github/workflows/cloudflare-gateway.yml'
+      - '.github/workflows/**'
+      - '.github/actionlint.yaml'
       - 'requirements-ci.txt'
-      - '.github/workflows/validate-localization.yml'
-      - '.github/workflows/llm-translate-assets.yml'
-      - '.github/workflows/assets-generated.yml'
 
 permissions:
   contents: read
@@ -146,11 +141,10 @@ jobs:
         run: uv pip install --system -r requirements-ci.txt
 
       - name: Run the offline suites that gate publishing
+        # Workflow contracts run below; actionlint also validates Actions syntax.
         # scripts/test_assets_generated_index.py keeps one known-red migration
-        # assertion (docs/GENERATED_STORE.md: the notes wording "shard" vs
-        # "retired fan-out") and scripts/test_auto_track_jp_assets_workflow.py
-        # drives bash+git sandboxes that are environment sensitive.  Neither is
-        # silently claimed as covered here; they are run manually.
+        # assertion (the old store notes wording "shard" vs
+        # "retired fan-out"). The immutable-freeze sandbox is part of this gate.
         #
         # Hosted PRs retain four workers; RackNerd uses one worker.
         # --dist worksteal hands a free worker
@@ -179,13 +173,15 @@ jobs:
             scripts/test_image_model_contract.py \
             scripts/test_publish_image_overlay.py \
             scripts/test_reuse_published_images.py \
+            scripts/test_r2_release_storage.py \
             scripts/test_release_reuse.py \
             scripts/test_build_lyric_overlay.py \
             scripts/test_source_provenance.py \
             scripts/test_commit_llm_drafts.py \
             scripts/test_should_build_release.py \
             scripts/test_publish_generated_release.py \
-            scripts/test_workflow_patch.py \
+            scripts/test_ci_pipeline.py \
+            scripts/test_auto_track_jp_assets_workflow.py \
             scripts/test_assets_mirror.py \
             scripts/test_refresh_latest_official_catalogue.py \
             scripts/test_official_bundle_families.py \
@@ -199,3 +195,17 @@ jobs:
             pipelines/text/test_provider_text_closure.py \
             asset-server \
             server/tests
+
+      - name: Validate all workflow syntax and reusable calls
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          lint_dir="$(mktemp -d "${RUNNER_TEMP}/mltd-actionlint.XXXXXX")"
+          trap 'rm -rf "$lint_dir"' EXIT
+          gh release download v1.7.12 --repo rhysd/actionlint \
+            --pattern actionlint_1.7.12_linux_amd64.tar.gz \
+            --pattern actionlint_1.7.12_checksums.txt --dir "$lint_dir"
+          (cd "$lint_dir" && sha256sum --check --ignore-missing actionlint_1.7.12_checksums.txt)
+          tar -xzf "$lint_dir/actionlint_1.7.12_linux_amd64.tar.gz" -C "$lint_dir" actionlint
+          "$lint_dir/actionlint" -shellcheck='' -pyflakes=''

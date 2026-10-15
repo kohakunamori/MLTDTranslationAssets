@@ -5,23 +5,12 @@
  * to the official Japanese CDN, so a client that points its asset base at this
  * host keeps working for paths the overlay does not cover.
  *
- * Where the translated bytes come from
- * -----------------------------------
- * This Worker stores nothing.  It carries a *table* (`src/index.json`, built by
- * `build_index.py` from `generated/<asset_version>/manifest.json`) that maps a
- * request path to the content-addressed object that holds its translated bytes,
- * and reads that object out of the GitHub repository at a **pinned commit**:
- *
- *     https://raw.githubusercontent.com/<owner>/<repo>/<commit>/generated/objects/sha256/<digest>
- *
- * A commit-pinned blob is immutable, so the answer is cached at Cloudflare's
- * edge for a year and the repository is read at most once per object per
- * datacentre.  Publishing a new release is therefore "rebuild the table, deploy
- * again" -- there is no copy of the release to move anywhere.
- *
- * If the repository cannot answer (rate limit, network, a blob that is gone) the
- * request falls through to the official CDN rather than failing: a client that
- * is mid-download gets the untranslated official file, never an error page.
+ * The compiled table maps client paths to immutable R2 content addresses.
+ * Upload/checksum verification precedes committing a release manifest and
+ * deploying its table. Cache keys contain only the bucket and digest, so a
+ * shared artifact is reused across translations, asset versions and deploys.
+ * R2 failures fall through to the official CDN, without caching the fallback
+ * under a translated digest.
  */
 
 import index from './index.json';
@@ -33,10 +22,11 @@ const ASSET_PREFIX = 'production/2018/Android/';
 const ASSET_VERSION = String(index.asset_version || '');
 const OBJECTS = new Map(Object.entries(index.objects || {}));
 const SIZES = new Map(Object.entries(index.sizes || {}));
-const OBJECT_BASE = `https://raw.githubusercontent.com/${index.repository}/${index.source_commit}/` +
-  `${index.object_root || 'generated/objects/sha256'}`;
+// The cache address is stable across versions/deploys. Only the content hash
+// changes; immutable objects are never overwritten in the private bucket.
+const OBJECT_BASE = 'https://mltd-localized-assets.invalid/objects/sha256';
 const BUILD = String(index.source_commit || '').slice(0, 12);
-// The object URL pins a commit, so a cached copy of it can never go stale.
+// The object address pins its bytes, so a cached copy cannot go stale.
 const OBJECT_CACHE_SECONDS = 31536000;
 // The *client-facing* URL is not pinned: the same asset version can be
 // republished with new translations (that happened on 2026-10-11, 491 lyric
@@ -103,9 +93,9 @@ export default {
 
     const digest = lookup(route);
     if (digest !== null) {
-      const served = await serveFromRepository(request, ctx, route, digest);
+      const served = await serveFromR2(request, env, ctx, route, digest);
       if (served !== null) return served;
-      return forwardOfficial(request, env, route, 'official-repository-unavailable');
+      return forwardOfficial(request, env, route, 'official-r2-unavailable');
     }
 
     return forwardOfficial(request, env, route, 'official-miss');
@@ -190,19 +180,19 @@ export function lookup(route) {
   return null;
 }
 
-/* ------------------------------------------------- repository (GitHub raw) */
+/* ------------------------------------------------ immutable R2 objects */
 
 /**
- * Returns a Response when the repository answered, or null when it did not and
- * the caller should fall back to the official CDN.
- *
- * The object is cached explicitly through the Cache API rather than by relying
- * on `cf.cacheTtl`: on a `*.workers.dev` hostname the transparent cache does not
- * engage for Worker subrequests, and without this every client download would
- * re-read the object from GitHub.
+ * Returns R2/edge bytes, or null for the official fallback. R2 bindings do not
+ * automatically populate the CDN, so the Cache API stores complete objects.
  */
-async function serveFromRepository(request, ctx, route, digest) {
+async function serveFromR2(request, env, ctx, route, digest) {
   const etag = `"${digest}"`;
+
+  const validators = (request.headers.get('if-none-match') || '').split(',').map(value => value.trim().replace(/^W\//, ''));
+  if (validators.includes(etag) || validators.includes('*')) {
+    return new Response(null, { status: 304, headers: objectHeaders(route, digest, null) });
+  }
 
   // A HEAD is answered from the table: the size is known and no bytes, no
   // subrequest and no cache lookup are needed.
@@ -213,14 +203,14 @@ async function serveFromRepository(request, ctx, route, digest) {
     });
   }
 
-  // The digest *is* the content hash, so a matching validator is answered here
-  // without spending a subrequest.
-  if (request.headers.get('if-none-match') === etag) {
-    return new Response(null, { status: 304, headers: objectHeaders(route, digest, SIZES.get(digest)) });
-  }
-
   const objectUrl = `${OBJECT_BASE}/${digest}`;
-  const rangeHeader = request.headers.get('range');
+  const ifRange = request.headers.get('if-range');
+  const rangeHeader = !ifRange || ifRange === etag ? request.headers.get('range') : null;
+  const size = SIZES.get(digest);
+  const range = parseRange(rangeHeader, size);
+  if (range === false) return new Response(null, {status: 416, headers: {
+    'content-range': `bytes */${size}`, 'cache-control': 'no-store',
+  }});
   const cache = rangeHeader ? null : objectCache();
   const cacheKey = cache ? new Request(objectUrl) : null;
 
@@ -240,24 +230,26 @@ async function serveFromRepository(request, ctx, route, digest) {
     }
   }
 
-  const headers = new Headers({ 'user-agent': 'mltd-asset-gateway/1' });
-  if (rangeHeader) headers.set('range', rangeHeader);
-
   let upstream;
   try {
-    upstream = await fetch(objectUrl, { method: 'GET', headers, redirect: 'follow' });
+    const object = await env.ASSETS.get(`objects/sha256/${digest}`, range ? {range} : undefined);
+    if (!object || object.size !== size || object.customMetadata?.sha256 !== digest) return null;
+    const headers = new Headers({'content-type': 'application/octet-stream'});
+    headers.set('content-length', String(range ? range.length : object.size));
+    if (range) headers.set('content-range', `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
+    upstream = new Response(object.body, {status: range ? 206 : 200, headers});
   } catch (err) {
-    console.log(`repository fetch failed for ${digest}: ${err && err.message}`);
+    console.log(`R2 read failed for ${digest}: ${err && err.message}`);
     return null;
   }
 
   if (upstream.status < 200 || upstream.status >= 300) {
-    console.log(`repository answered ${upstream.status} for ${digest}`);
+    console.log(`R2 answered ${upstream.status} for ${digest}`);
     return null;
   }
 
   if (cache && upstream.status === 200) {
-    // A failed store only costs the next reader a GitHub round trip, so it must
+    // A failed store only costs the next reader an R2 read, so it must
     // not fail the response -- but it must not be silent either, which is why
     // the rejection is logged instead of being left to waitUntil.
     try {
@@ -283,6 +275,23 @@ async function serveFromRepository(request, ctx, route, digest) {
   return new Response(upstream.body, { status: upstream.status, headers: out });
 }
 
+// Single byte ranges support resumes without ever caching a partial object.
+// RFC multi-ranges/unknown units may be ignored and receive the full object.
+export function parseRange(header, size) {
+  if (!header || !/^bytes=\d*-\d*$/.test(header)) return null;
+  const [start, end] = header.slice(6).split('-');
+  if (!start && !end) return null;
+  if (size === 0) return false;
+  if (!start) {
+    const length = Math.min(Number(end), size);
+    return length > 0 ? {offset: size - length, length} : false;
+  }
+  const offset = Number(start);
+  const last = end ? Math.min(Number(end), size - 1) : size - 1;
+  if (offset >= size || last < offset) return false;
+  return {offset, length: last - offset + 1};
+}
+
 /** Rewrite a response into the shape the Cache API is allowed to keep. */
 function storable(response) {
   const headers = new Headers(response.headers);
@@ -297,13 +306,15 @@ function objectHeaders(route, digest, contentLength, extra) {
     'content-type': 'application/octet-stream',
     'cache-control': CLIENT_CACHE_CONTROL,
     'etag': `"${digest}"`,
+    'accept-ranges': 'bytes',
+    'x-mltd-object-store': 'r2',
     'x-mltd-asset-source': 'generated-release',
     'x-mltd-asset-version': route.version,
     'x-mltd-build': BUILD,
     'x-content-type-options': 'nosniff',
     'access-control-allow-origin': '*',
   });
-  if (contentLength) headers.set('content-length', String(contentLength));
+  if (contentLength !== undefined && contentLength !== null) headers.set('content-length', String(contentLength));
   for (const [name, value] of Object.entries(extra || {})) headers.set(name, String(value));
   return headers;
 }
@@ -572,6 +583,8 @@ function healthz(env) {
         built_at: index.built_at,
         official_base: String((env && env.OFFICIAL_BASE) || DEFAULT_OFFICIAL_BASE),
         object_base: OBJECT_BASE,
+        object_store: 'r2',
+        bucket: 'mltd-localized-assets',
         object_cache_seconds: OBJECT_CACHE_SECONDS,
       },
       null,

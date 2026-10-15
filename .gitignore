@@ -12,3 +12,8 @@ d1-contributions-sync/
 work/
 /local-data/
 .wrangler/
+
+# Repacked payloads and parsed source caches live in the private R2 bucket.
+/generated/objects/
+/generated/build-inputs/
+/image-overlay/*/jp-android/

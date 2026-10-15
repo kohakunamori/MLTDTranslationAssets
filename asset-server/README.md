@@ -4,15 +4,9 @@
 本仓（`D:\Project\_MLTDTranslationAssets`）内的源码，不依赖主仓 mltd-current、
 不依赖任何兄弟仓库或 `PYTHONPATH` 回退。
 
-> 状态（2026-10-08 只读核对）：
-> - **已在生产运行的**：`generated-assets/` 的 `mltd-generated-assets`（loopback 只读路由
->   `127.0.0.1:18765`）与 `mltd-generated-assets-sync`（每 6h 自动同步 `generated/`），
->   经共享 `on-demand-nginx:18443` 以 `/generated-assets/<ver>/…` 对外提供；
-> - 本目录的官方归档侧模板（`docker-compose.yml` / `Dockerfile` 的
->   `mltd-asset-updater`、`mltd-assets-mirror`）仍是**候选**，NAS 上跑的是归档镜像
->   `local/imas-mltd-asset:20260914-static`；
-> - `generated/` 生成侧 CI（`assets-generated.yml` → `scripts/build_generated_release.py`）
->   仍是唯一的正式 writer，本目录只是它的消费/分发端，不写 `generated/`。
+> 当前生产链路：统一 CI → 私有 R2 → Cloudflare Worker。NAS 分发已退役。
+> `generated-assets/` 和 Docker/nginx 说明属于历史部署资料，不是当前运行状态。
+> 当前发布和缓存机制见 [R2 网关](cloudflare/README.md)，CI 阶段见 [CI 说明](../docs/CI.md)。
 
 ## 组成
 
@@ -24,8 +18,8 @@
 | `asset-version` | 官方归档控制 wrapper（`tools/asset_version.py`，经 docker compose `tools` profile） |
 | `switch-version.sh` | 兼容 wrapper：`activate --version <v>` |
 | `requirements.txt` | `msgpack`、`requests` |
-| `generated-assets/` | NAS 已部署的 generated 分发闭包：`sync_loop.py`（自动发现版本）、`Dockerfile`、`docker-compose.yml`、`deployed.json`（部署字节哈希记录）、`test_closure.py`；详见该目录 README |
-| `cloudflare/` | 云端分发候选：Cloudflare Worker 网关（只保留最新版，命中汉化包的直取 GitHub 仓库、未命中的转发官方 CDN）、`build_index.py`（生成"路径→对象"对照表）、`check_gateway.py`（线上逐字节验收）；本目录不持有发布产物副本，也不写 `generated/` |
+| `generated-assets/` | 已退役的 NAS 分发闭包，保留历史复现资料 |
+| `cloudflare/` | 生产 Cloudflare Worker：读取私有 R2 的汉化对象，未命中转发官方；包含路径表构建与线上验收 |
 | `nginx-vhost.conf` | 共享 nginx 的项目 vhost 副本（`/assets/`、`/cn/`、`/generated-assets/`） |
 | `Deploy-GeneratedAssets.ps1` | 项目侧部署/核对入口（默认只计划；`-Apply` 才收敛） |
 

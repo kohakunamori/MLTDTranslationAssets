@@ -90,7 +90,7 @@ def test_images_are_called_only_inside_translation_with_two_opt_in_gates():
 
 @pytest.mark.parametrize("enabled,image_result,ready,text_published,image_published,expected", [
     ("false", "skipped", "", "true", "", True),
-    ("false", "skipped", "", "false", "", False),
+    ("false", "skipped", "", "false", "", True),
     ("true", "success", "true", "true", "false", True),
     ("true", "success", "true", "false", "true", True),
     ("true", "success", "false", "true", "false", False),

@@ -67,6 +67,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Track MLTD Japanese Asset Versions")
     parser.add_argument("--check-only", action="store_true", help="Exit code 10 if new version available, 0 if up to date")
     parser.add_argument("--update", action="store_true", help="Update manifests/asset-version.json with latest metadata")
+    parser.add_argument('--expected-latest-version', type=int,
+                        help='Refuse a version that was not checked before the outgoing freeze')
     parser.add_argument("--output-json", type=str, default=None, help="Path to write status JSON")
     args = parser.parse_args()
 
@@ -88,6 +90,10 @@ def main() -> int:
 
     latest_item = versions[-1]
     latest_ver = int(latest_item.get("version", current_ver))
+    if args.expected_latest_version is not None and latest_ver != args.expected_latest_version:
+        print('ERROR: Official version changed after tracking/freezing; retry the production run before updating sources.',
+              file=sys.stderr)
+        return 1
     latest_updated = latest_item.get("updatedAt", "")
     latest_index = latest_item.get("indexName", "")
 

@@ -105,6 +105,34 @@ def test_missing_pool_object_is_refused(tmp_path):
         build(root)
 
 
+def test_r2_inventory_can_build_table_without_payload_checkout(tmp_path):
+    root = make_repo(tmp_path, entries=[(RUNTIME_A, LOGICAL_A, b'one')])
+    digest = hashlib.sha256(b'one').hexdigest()
+    (root / 'generated/objects/sha256' / digest).unlink()
+    inventory = root / 'generated/r2-storage.json'
+    inventory.write_text(json.dumps({'objects': {digest: 3}}))
+    index = build(root)
+    assert index.objects_bytes == {digest: 3}
+    inventory.write_text(json.dumps({'objects': {digest: -1}}))
+    with pytest.raises(build_index.PlanError, match='invalid object size'):
+        build(root)
+
+
+def test_r2_inventory_must_agree_with_local_payload(tmp_path):
+    root = make_repo(tmp_path, entries=[(RUNTIME_A, LOGICAL_A, b'one')])
+    digest = hashlib.sha256(b'one').hexdigest()
+    (root / 'generated/r2-storage.json').write_text(json.dumps({'objects': {digest: 300}}))
+    with pytest.raises(build_index.PlanError, match='differs from verified R2 inventory'):
+        build(root)
+
+
+def test_local_payload_does_not_bypass_r2_publication_proof(tmp_path):
+    root = make_repo(tmp_path, entries=[(RUNTIME_A, LOGICAL_A, b'one')])
+    (root / 'generated/r2-storage.json').write_text(json.dumps({'objects': {}}))
+    with pytest.raises(build_index.PlanError, match='has not been verified in R2'):
+        build(root)
+
+
 def test_pool_bytes_that_do_not_match_their_name_are_refused(tmp_path):
     digest = hashlib.sha256(b"one").hexdigest()
     root = make_repo(tmp_path, entries=[(RUNTIME_A, LOGICAL_A, b"one")], pool_overrides={digest: b"tampered"})

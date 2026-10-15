@@ -1,0 +1,9 @@
+{
+  "name": "mltd-localized-publisher",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "account_id": "f0133bcc4ae158edd8a2784b257d6024",
+  "workers_dev": true,
+  "r2_buckets": [{"binding": "ASSETS", "bucket_name": "mltd-localized-assets"}],
+  "observability": {"enabled": true}
+}
