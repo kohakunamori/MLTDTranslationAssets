@@ -2,6 +2,7 @@
   "schema_version": 2,
   "images": {
     "generation_enabled": false,
+    "translator": {"kind": "llm"},
     "publication_enabled": true,
     "model": "gpt-image-2.5",
     "api_protocol": "images_edits",

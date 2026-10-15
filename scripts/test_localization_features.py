@@ -115,7 +115,9 @@ def test_packaging_waits_for_enabled_images_but_ignores_disabled_images(
 def test_image_overlay_is_exported_only_after_independent_repack_audit():
     jobs = workflow("image-localize-assets.yml")["jobs"]
     assert jobs['publish']['runs-on'] == jobs['prepare']['runs-on'] == 'ubuntu-latest'
-    assert jobs['localize']['runs-on'][-1] == 'racknerd-light'
+    assert jobs['localize']['runs-on'] == '${{ fromJSON(needs.policy.outputs.runner) }}'
+    assert features.image_runner({})[-1] == 'racknerd-light'
+    assert features.image_runner({'translator': {'kind': 'command'}}) == ['ubuntu-latest']
     steps = jobs['publish']['steps']
     stage = next(step for step in steps if step.get("name") ==
                  "Inject and independently verify the translated image bundles")

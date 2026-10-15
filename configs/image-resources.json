@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "translation_families": {
+    "comic": "ex4c\\d{5}\\.unity3d",
+    "hitokoma": "hitokoma(?:_\\d+)?\\.unity3d",
+    "whiteboard": "exwb\\d+\\.unity3d",
+    "stamp": "(?:mobile_talk_stamp_[a-z0-9]+_\\d+|chat_stamp|igp_producer_stamp_common\\d+)\\.unity3d",
+    "event_banners": "(?:event_\\d+(?:_\\d+)?_info|event_info\\d+)\\.unity3d",
+    "tutorial": "(?:tutorialinfo|igp_tutorial_info_|specialeventinfo).*\\.unity3d",
+    "costume_sale": "(?:costumesalesinfo|pinkyringstonesalesinfo).*\\.unity3d",
+    "titles_logos": "(?:event_\\d+_(?:title|logo)|titlebg_[a-z0-9_]+|title_logo[a-z0-9_]*)\\.unity3d",
+    "achievement": "achievement_\\d+\\.unity3d",
+    "event_ui": "event_\\d+(?:_\\d+){0,2}\\.unity3d",
+    "login_bonus": "loginbonus_panel_\\d+_\\d+\\.unity3d",
+    "mycard_event_logo": "mycard_logo_event_\\d+\\.unity3d",
+    "gasha": "gasha\\d+\\.unity3d",
+    "item_icons": "(?:item_\\d+|item_ex_thumb_\\d+)\\.unity3d",
+    "blog": "blog\\d+\\.unity3d",
+    "event_talk_preview": "event_talk_thumb_\\d+\\.unity3d"
+  },
+  "thumbnail_rules": {
+    "comic_thumbnail": "(?P<parent>ex4c\\d{5})_thumb\\.unity3d",
+    "whiteboard_thumbnail": "(?P<parent>exwb\\d+)_thumb\\.unity3d",
+    "hitokoma_thumbnail": "(?P<parent>hitokoma_\\d+)_thumb\\.unity3d",
+    "blog_thumbnail": "(?P<parent>blog\\d+)_thumb\\.unity3d",
+    "titlebg_thumbnail": "(?P<parent>titlebg_[a-z0-9_]+)_thumb\\.unity3d",
+    "event_banner_thumbnail": "(?P<parent>event_\\d+(?:_\\d+)?_info)_thumb\\.unity3d"
+  },
+  "screening": "OCR discovery before translation; no detected text is recorded separately from translated. Pure artwork and protected game branding are not translation requirements.",
+  "thumbnail_policy": "Require a current approved full-size source and a unique pixel match. Derive its preview without another translator call; otherwise defer for inspection.",
+  "scope": "Reviewed named Texture2D families only. Audio, 3D models and unreviewed families remain excluded."
+}

@@ -23,16 +23,8 @@ from scripts.japanese_residue import repair_reason, KANA
 from scripts.event_unit_localization import is_bundle, read_rows, source_digest
 import bundle_incremental as incremental
 
-IMAGE_FAMILIES = {
-    "event_banners": r"^event_\d+(?:_\d+)?_info(?:_thumb)?\.unity3d$",
-    "tutorial": r"^(?:tutorialinfo|igp_tutorial_info_|specialeventinfo)",
-    "costume_sale": r"^(?:costumesalesinfo|pinkyringstonesalesinfo)",
-    "ex4c": r"^ex4c",
-    "exwb": r"^exwb",
-    "hitokoma": r"^hitokoma",
-    "talk_stamps": r"^(?:mobile_talk_stamp_|chat_stamp|igp_producer_stamp_common)",
-    "titles_logos": r"^(?:event_\d+_title|titlebg_|title_logo|event_\d+_logo)",
-}
+from image_resources import FAMILIES, THUMBNAILS, classify
+IMAGE_FAMILIES = {**FAMILIES, **THUMBNAILS}
 
 
 def load(path):
@@ -41,8 +33,12 @@ def load(path):
 
 def image_coverage(index, reviewed, generated):
     result = {}
-    for family, pattern in IMAGE_FAMILIES.items():
-        names = {name for name in index if re.search(pattern, name)}
+    groups = {family: set() for family in IMAGE_FAMILIES}
+    for name in index:
+        family = classify(name)
+        if family:
+            groups[family].add(name)
+    for family, names in groups.items():
         result[family] = {"official_bundles": len(names), "reviewed_bundles": len(names & reviewed),
                           "generated_bundles": len(names & generated),
                           "missing_reviewed_bundles": sorted(names - reviewed),

@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "images": {
+    "generation_enabled": false,
+    "publication_enabled": true,
+    "translator": {
+      "kind": "command",
+      "id": "my-image-localizer-v1",
+      "argv": ["python", "tools/my_image_processor.py", "--input", "{input}", "--output", "{output}"],
+      "timeout_seconds": 600
+    },
+    "prompt_profile": "preserve_layout",
+    "restoration_mode": "whole_image",
+    "visual_acceptance": {
+      "enabled": true,
+      "model": "gemini-3.8-flash-high",
+      "api_protocol": "gemini_generate_content"
+    },
+    "requests_per_minute": 2,
+    "concurrency": 1,
+    "batch_bundles": 12,
+    "disabled_reason": "Example only. Provide your processor executable and dependencies before opting in."
+  }
+}

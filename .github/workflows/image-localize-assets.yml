@@ -32,6 +32,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       enabled: ${{ steps.features.outputs.images_generation_enabled }}
+      runner: ${{ steps.features.outputs.images_translation_runner }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,7 +42,7 @@ jobs:
             configs
             scripts
       - id: features
-        run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT"
+        run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT" --image-runner-output
 
   prepare:
     needs: policy
@@ -61,6 +62,7 @@ jobs:
             scripts
             pipelines
             generated
+            images
             !/generated/objects/
             !/generated/build-inputs/
           sparse-checkout-cone-mode: false
@@ -92,9 +94,9 @@ jobs:
           retention-days: 3
 
   localize:
-    needs: prepare
-    # Only PNG/network work here: no UnityPy, OCR, bundle extraction or repacking.
-    runs-on: [self-hosted, Linux, X64, racknerd-light]
+    needs: [policy, prepare]
+    # API work is light and runs on RackNerd. External processors use hosted CPU.
+    runs-on: ${{ fromJSON(needs.policy.outputs.runner) }}
     timeout-minutes: 150
     concurrency:
       group: images-provider
@@ -132,7 +134,7 @@ jobs:
             work/image-api/tasks/**/*-generated.png
             work/image-api/tasks/**/*-candidate.png
             work/image-api/visual-reviews
-      - name: Translate with GPT image and accept with Gemini vision serially at RPM 2
+      - name: Translate images through configured backend and independently review
         env:
           MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
         run: python -u scripts/incremental_images.py generate --work work/image-api --max-seconds 7200

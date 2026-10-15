@@ -59,6 +59,9 @@ RELEASE_INPUT_FILES = (
     "scripts/reuse_published_images.py",
     "scripts/source_provenance.py",
     "scripts/localization_features.py",
+    "scripts/image_resources.py",
+    "scripts/image_thumbnails.py",
+    "configs/image-resources.json",
     "configs/localization-pipeline.json",
 )
 

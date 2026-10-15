@@ -126,9 +126,11 @@ class EventTests(unittest.TestCase):
 
 class CoverageTests(unittest.TestCase):
     def test_image_inventory_keeps_thumbnail_counts_and_does_not_claim_ocr(self):
-        index = {"ex4c1.unity3d": {}, "ex4c1_thumb.unity3d": {}, "voice.acb": {}}
-        result = coverage.image_coverage(index, {"ex4c1.unity3d"}, set())["ex4c"]
-        self.assertEqual(result["official_bundles"], 2)
+        index = {"ex4c00001.unity3d": {}, "ex4c00001_thumb.unity3d": {}, "voice.acb": {}}
+        result = coverage.image_coverage(index, {"ex4c00001.unity3d"}, set())["comic"]
+        self.assertEqual(result["official_bundles"], 1)
+        thumbs = coverage.image_coverage(index, set(), set())["comic_thumbnail"]
+        self.assertEqual(thumbs["official_bundles"], 1)
         self.assertEqual(result["reviewed_bundles"], 1)
         self.assertEqual(result["generated_bundles"], 0)
 

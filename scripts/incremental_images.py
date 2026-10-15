@@ -27,18 +27,8 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'pipelines/image'))
 JAPANESE = re.compile(r'[\u3040-\u30ff\u3400-\u9fff]')
 KANA = re.compile(r'[\u3041-\u3096\u30a1-\u30fa]')
-# These surfaces have a Texture2D writer and known image semantics. Other
-# resource families are counted separately; audio/3D art never goes to the API.
-FAMILIES = {
-    'comic': r'ex4c\d{5}\.unity3d',
-    'hitokoma': r'hitokoma(?:_\d+)?\.unity3d',
-    'whiteboard': r'exwb\d+\.unity3d',
-    'stamp': r'(?:mobile_talk_stamp_[a-z0-9]+_\d+|chat_stamp|igp_producer_stamp_common\d+)\.unity3d',
-    'event_banners': r'event_\d+(?:_\d+)?_info(?:_thumb)?\.unity3d',
-    'tutorial': r'(?:tutorialinfo|igp_tutorial_info_|specialeventinfo).*\.unity3d',
-    'costume_sale': r'(?:costumesalesinfo|pinkyringstonesalesinfo).*\.unity3d',
-    'titles_logos': r'(?:event_\d+_(?:title|logo)|titlebg_|title_logo).*\.unity3d',
-}
+from image_resources import FAMILIES, classify, thumbnail_parent, thumbnail_dependency
+from pipelines.image import translation
 
 
 def sha(path):
@@ -61,24 +51,32 @@ def identity(row):
     return [row['catalog_hash'], row['remote'], row['declared_size']]
 
 
-def select(index, state, published, limit):
+def select(index, state, published, limit, published_fingerprints=None):
     pending, counts = [], {}
     for logical, row in sorted(index.items()):
-        family = next((f for f, pattern in FAMILIES.items() if re.fullmatch(pattern, logical)), None)
+        family = classify(logical)
         if family is None:
             continue
-        count = counts.setdefault(family, {'official': 0, 'completed': 0, 'manual_review': 0, 'pending': 0})
+        count = counts.setdefault(family, {'official': 0, 'completed': 0, 'manual_review': 0,
+            'pending': 0, 'deferred': 0, 'ocr_no_text': 0, 'no_texture': 0})
         count['official'] += 1
         old = state.get(logical)
-        if old and old['identity'] == identity(row):
-            count['manual_review' if old['status'] == 'manual_review' else 'completed'] += 1
-        elif published.get(logical) == row['remote']:
+        same = old and old['identity'] == identity(row)
+        if same and thumbnail_parent(logical):
+            same = old.get('derivation', {}).get('dependency') == thumbnail_dependency(logical, index, state, published, published_fingerprints)
+        if same:
+            status = old['status'] if old['status'] in ('manual_review', 'ocr_no_text', 'no_texture') else 'completed'
+            count[status] += 1
+        elif published.get(logical) == row['remote'] and not thumbnail_parent(logical):
             count['completed'] += 1
+        elif thumbnail_parent(logical) and not (
+                thumbnail_parent(logical) in published or state.get(thumbnail_parent(logical), {}).get('status') == 'translated'):
+            count['deferred'] += 1
         else:
             count['pending'] += 1
             pending.append((logical, row))
     # Latest comic pages first; deterministic across resumptions.
-    pending.sort(key=lambda item: (0 if item[0].startswith('ex4c') else 1,
+    pending.sort(key=lambda item: (-1 if thumbnail_parent(item[0]) else 0 if item[0].startswith('ex4c') else 1,
                                   -int(re.findall(r'\d+', item[0].removesuffix('.unity3d'))[-1])
                                   if re.findall(r'\d+', item[0].removesuffix('.unity3d')) else 0,
                                   item[0]))
@@ -110,7 +108,7 @@ def prepare(work, limit):
     download(f"{version['asset_root']}/{version['index_name']}", index_path, None)
     index = load_official_index(index_path)
     state = read(ROOT / 'manifests/image-incremental.json', {'bundles': {}})
-    published, published_sources = {}, {}
+    published, published_sources, published_fingerprints = {}, {}, {}
     from r2_release_storage import retained_versions
     for number in reversed(retained_versions(ROOT)):
         release = read(ROOT / 'generated' / number / 'manifest.json', {})
@@ -118,7 +116,8 @@ def prepare(work, limit):
             if entry.get('resource_kind') == 'texture':
                 published[entry['logical_key']] = entry['runtime_path'].rsplit('/', 1)[-1]
                 published_sources[entry['logical_key']] = entry['source_sha256']
-    chosen, counts, remaining = select(index, state['bundles'], published, limit)
+                published_fingerprints[entry['logical_key']] = entry['artifact_sha256']
+    chosen, counts, remaining = select(index, state['bundles'], published, limit, published_fingerprints)
     document = {'schema_version': 1, 'asset_version': version['asset_version'], 'families': counts,
                 'pending_bundles': remaining, 'selected_bundles': len(chosen), 'bundles': [],
                 'scope': 'registered image families; not all game Texture2D assets'}
@@ -130,6 +129,8 @@ def prepare(work, limit):
         compatible = prior if prior and prior['archive_sha256'] == archive_sha else (
             {'status': 'published_compatible', 'textures': [], 'text_maps': {}}
             if published_sources.get(logical) == archive_sha else None)
+        if thumbnail_parent(logical):
+            compatible = None  # A parent translation may change without changing the thumbnail's official bytes.
         if compatible is not None:
             # Remote names change on version bumps. Verify actual bytes before
             # carrying approved outputs OR explicit hold decisions forward.
@@ -137,6 +138,12 @@ def prepare(work, limit):
                 'archive': archive.relative_to(work).as_posix(), 'archive_sha256': archive_sha,
                 'tasks': [], 'reuse_record': compatible})
             print('SOURCE_COMPATIBLE', logical, compatible['status'], flush=True)
+            continue
+        if thumbnail_parent(logical):
+            from image_thumbnails import prepare_derivation
+            derived = prepare_derivation(ROOT, work, version, index, logical, archive)
+            derived['derivation']['dependency'] = thumbnail_dependency(logical, index, state['bundles'], published, published_fingerprints)
+            document['bundles'].append(derived)
             continue
         key = hashlib.sha256((logical + archive_sha).encode()).hexdigest()
         folder = work / 'tasks' / key
@@ -155,7 +162,10 @@ def prepare(work, limit):
                              'original': path.relative_to(work).as_posix(),
                              'source_sha256': sha(path), 'size': list(image.size)})
         if not textures:
-            raise ValueError('No Texture2D in selected image bundle: ' + logical)
+            document['bundles'].append({'logical': logical, 'identity': identity(record),
+                'archive': archive.relative_to(work).as_posix(), 'archive_sha256': archive_sha,
+                'tasks': [], 'reuse_record': {'status': 'no_texture', 'textures': [], 'text_maps': {}}})
+            continue
         # Comic parts must be assembled in their explicit numeric reading order.
         if logical.startswith('ex4c'):
             textures.sort(key=lambda t: int(t['name'].rsplit('_', 1)[1]))
@@ -190,6 +200,11 @@ def prepare(work, limit):
 
 
 def validate_image_policy(policy):
+    translation.validate(policy.get('translator', {'kind': 'llm'}))
+    if policy.get('translator', {}).get('kind') == 'command':
+        if policy.get('concurrency') != 1 or policy.get('restoration_mode') != 'whole_image':
+            raise ValueError('Command translation requires serial whole-image processing')
+        return
     protocol = policy.get('api_protocol', 'gemini_generate_content')
     if ((policy.get('model'), protocol) not in (('gemini-3.1-flash-image', 'gemini_generate_content'), ('gpt-image-2.5', 'images_edits'))
             or policy.get('requests_per_minute') != 2 or policy.get('concurrency') != 1):
@@ -328,7 +343,7 @@ def checkpoint_generations(work, queue, results, policy):
     write(ROOT / 'manifests/image-visual-reviews.json', reviews)
 
 
-def request_image(config, work, progress, task, source, prompt, deadline):
+def request_image(config, work, progress, task, source, prompt, deadline, translator=None):
     """Bound transient response failures; keep failed tasks pending on exhaustion."""
     import provider_config
     for attempt in range(1, 4):
@@ -341,7 +356,10 @@ def request_image(config, work, progress, task, source, prompt, deadline):
         time.sleep(wait)
         write(work / 'request-time.json', {'started': time.time()})
         try:
-            return provider_config.image_edit(config, source.read_bytes(), prompt)
+            backend = translator or translation.LlmTranslator(config, prompt)
+            output = source.with_name(source.stem + '-generated.png')
+            metadata = backend.translate(source, output)
+            return output.read_bytes(), metadata
         except provider_config.ProviderImageResponseError as error:
             progress['provider_error'] = {'input_sha256': task['sha256'], 'attempt': attempt,
                                           'max_attempts': 3, **error.diagnostics}
@@ -358,12 +376,16 @@ def generate(work, max_seconds=7200):
     public = read(ROOT / 'configs/api-models.example.json')
     config = {key: dict(value) for key, value in provider_config.DEFAULTS.items()}
     validate_image_policy(policy)
-    config['image_provider'].update(base_url=public['defaults']['base_url'], model=policy['model'],
+    command = policy.get('translator', {}).get('kind') == 'command'
+    config['image_provider'].update(base_url=public['defaults']['base_url'], model=policy.get('model'),
         mode=policy.get('api_protocol', 'gemini_generate_content'),
         api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)
     config['reuse_existing_results'] = policy.get('visual_acceptance', {}).get('enabled', False)
     # Config and credentials are workflow-owned, never restored from work cache.
-    provider_config.api_key(config)
+    if command:
+        config['image_provider'].update(model=policy['translator'].get('id', 'external-image-processor'), mode='image_command')
+    else:
+        provider_config.api_key(config)
     document = read(work / 'queue.json')
     progress = read(work / 'results.json', {'tasks': {}})
     start = time.monotonic()
@@ -391,7 +413,8 @@ def generate(work, max_seconds=7200):
                 print('IMAGE_REUSED', bundle['logical'], reused['status'], flush=True)
                 continue
             try:
-                response = request_image(config, work, progress, task, source, prompt, start + max_seconds)
+                backend = translation.create(policy, ROOT, config=config, prompt=prompt)
+                response = request_image(config, work, progress, task, source, prompt, start + max_seconds, backend)
                 if response is None:
                     return
                 raw, metadata = response
@@ -453,6 +476,15 @@ def package(work):
     state = read(ROOT / 'manifests/image-incremental.json', {'schema_version': 1, 'bundles': {}})
     rows, completed = [], 0
     for bundle in queue['bundles']:
+        if 'derivation' in bundle:
+            from image_thumbnails import package_derivation
+            derived = package_derivation(ROOT, work, bundle, version)
+            if derived is not None:
+                record, derived_rows = derived
+                state['bundles'][bundle['logical']] = record
+                rows.extend(derived_rows)
+                completed += 1
+            continue
         if bundle.get('reuse_record') is not None:
             record = dict(bundle['reuse_record'], identity=bundle['identity'],
                           archive_sha256=bundle['archive_sha256'], asset_version=version)

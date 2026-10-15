@@ -1,0 +1,356 @@
+{
+  "schema_version": 1,
+  "asset_version": "1077750",
+  "inspected_on": "2026-10-16",
+  "protected_branding": "Game logo remains protected, including Japanese lettering. Ordinary event titles are not automatically exempt.",
+  "samples": [
+    {
+      "category": "漫画缩略图",
+      "catalogue_bundles": 968,
+      "sample": "ex4c00968_thumb.unity3d",
+      "sample_bytes": 7012,
+      "sample_object_types": {
+        "Texture2D": 1,
+        "AssetBundle": 1,
+        "Sprite": 1
+      },
+      "sample_textures": [
+        {
+          "id": -3492933248241845143,
+          "name": "ex4c00968_thumb",
+          "size": [
+            94,
+            68
+          ]
+        }
+      ],
+      "decision": "derive_from_approved_parent",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "白板缩略图",
+      "catalogue_bundles": 629,
+      "sample": "exwb2261231_thumb.unity3d",
+      "sample_bytes": 6587,
+      "sample_object_types": {
+        "Sprite": 1,
+        "AssetBundle": 1,
+        "Texture2D": 1
+      },
+      "sample_textures": [
+        {
+          "id": 605910000284458447,
+          "name": "exwb2261231_thumb",
+          "size": [
+            94,
+            55
+          ]
+        }
+      ],
+      "decision": "derive_from_approved_parent",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "单格缩略图",
+      "catalogue_bundles": 414,
+      "sample": "hitokoma_99_thumb.unity3d",
+      "sample_bytes": 6798,
+      "sample_object_types": {
+        "AssetBundle": 1,
+        "Sprite": 1,
+        "Texture2D": 1
+      },
+      "sample_textures": [
+        {
+          "id": 8650350035500805826,
+          "name": "hitokoma_99_thumb",
+          "size": [
+            94,
+            70
+          ]
+        }
+      ],
+      "decision": "derive_from_approved_parent",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "称号成就",
+      "catalogue_bundles": 6769,
+      "sample": "achievement_999.unity3d",
+      "sample_bytes": 8293,
+      "sample_object_types": {
+        "Sprite": 1,
+        "Texture2D": 1,
+        "AssetBundle": 1
+      },
+      "sample_textures": [
+        {
+          "id": -2447378505789169731,
+          "name": "achievement_999",
+          "size": [
+            216,
+            44
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "道具图标",
+      "catalogue_bundles": 3079,
+      "sample": "item_9992.unity3d",
+      "sample_bytes": 8054,
+      "sample_object_types": {
+        "Texture2D": 1,
+        "AssetBundle": 1,
+        "Sprite": 1
+      },
+      "sample_textures": [
+        {
+          "id": -3228375884020214104,
+          "name": "item_9992",
+          "size": [
+            104,
+            104
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "抽卡资源",
+      "catalogue_bundles": 1434,
+      "sample": "gasha99998.unity3d",
+      "sample_bytes": 292044,
+      "sample_object_types": {
+        "Texture2D": 4,
+        "Sprite": 14,
+        "AssetBundle": 1
+      },
+      "sample_textures": [
+        {
+          "id": -7852724245775653615,
+          "name": "gasha_bg_99998_0_x1",
+          "size": [
+            512,
+            512
+          ]
+        },
+        {
+          "id": -3605632245193575171,
+          "name": "gasha_bg_99998_0",
+          "size": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "id": 4564062896223054904,
+          "name": "gasha_bg_99998_0_x0",
+          "size": [
+            512,
+            512
+          ]
+        },
+        {
+          "id": 6055775878875998215,
+          "name": "gasha_bg_99998_0_x2",
+          "size": [
+            512,
+            512
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "博客配图",
+      "catalogue_bundles": 2510,
+      "sample": "blog60002_thumb.unity3d",
+      "sample_bytes": 9321,
+      "sample_object_types": {
+        "Texture2D": 1,
+        "AssetBundle": 1,
+        "Sprite": 1
+      },
+      "sample_textures": [
+        {
+          "id": -3285442339597947778,
+          "name": "blog60002_thumb",
+          "size": [
+            104,
+            104
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "活动对话缩略图",
+      "catalogue_bundles": 1578,
+      "sample": "event_talk_thumb_1806.unity3d",
+      "sample_bytes": 14150,
+      "sample_object_types": {
+        "Texture2D": 1,
+        "Sprite": 1,
+        "AssetBundle": 1
+      },
+      "sample_textures": [
+        {
+          "id": -4660320582808867253,
+          "name": "event_talk_thumb_1806",
+          "size": [
+            210,
+            106
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "登录奖励面板",
+      "catalogue_bundles": 280,
+      "sample": "loginbonus_panel_282_1.unity3d",
+      "sample_bytes": 126378,
+      "sample_object_types": {
+        "AssetBundle": 1,
+        "Texture2D": 1,
+        "Sprite": 1
+      },
+      "sample_textures": [
+        {
+          "id": 1708516864556119281,
+          "name": "loginbonus_panel_282_1",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "名片活动标识",
+      "catalogue_bundles": 217,
+      "sample": "mycard_logo_event_0448.unity3d",
+      "sample_bytes": 133555,
+      "sample_object_types": {
+        "AssetBundle": 1,
+        "Sprite": 1,
+        "Texture2D": 1
+      },
+      "sample_textures": [
+        {
+          "id": 7523104374739746435,
+          "name": "mycard_logo_event_0448",
+          "size": [
+            393,
+            150
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    },
+    {
+      "category": "普通活动资源",
+      "catalogue_bundles": 2397,
+      "sample": "event_0451.unity3d",
+      "sample_bytes": 540881,
+      "sample_object_types": {
+        "Sprite": 7,
+        "Texture2D": 3,
+        "AssetBundle": 1
+      },
+      "sample_textures": [
+        {
+          "id": -7272848815792957098,
+          "name": "event_end_image",
+          "size": [
+            552,
+            204
+          ]
+        },
+        {
+          "id": -2172114309668400690,
+          "name": "bg_x",
+          "size": [
+            512,
+            512
+          ]
+        },
+        {
+          "id": -211244103038795229,
+          "name": "bg",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "decision": "include_with_ocr_screening",
+      "inspection": "Object types and textures unpacked; first texture visually inspected. Counts are catalogue family matches, not a claim that every member contains text."
+    }
+  ],
+  "registered_catalogue_counts": {
+    "login_bonus": 280,
+    "achievement": 6769,
+    "item_icons": 3379,
+    "event_ui": 2397,
+    "event_banners": 639,
+    "gasha": 1434,
+    "tutorial": 414,
+    "blog": 1255,
+    "blog_thumbnail": 1255,
+    "titles_logos": 613,
+    "comic_thumbnail": 968,
+    "comic": 968,
+    "whiteboard": 629,
+    "whiteboard_thumbnail": 629,
+    "hitokoma": 415,
+    "hitokoma_thumbnail": 414,
+    "stamp": 207,
+    "event_talk_preview": 1578,
+    "costume_sale": 400,
+    "mycard_event_logo": 217,
+    "titlebg_thumbnail": 290
+  },
+  "registered_catalogue_total": 25150,
+  "thumbnail_candidates": 3556,
+  "missing_thumbnail_parent_count": 0,
+  "additional_mapping_checks": [
+    {
+      "family": "item_ex_thumb",
+      "catalogue_count": 300,
+      "same_prefix_parent_count": 0,
+      "same_numeric_item_parent_count": 1,
+      "inspected_pair": [
+        "item_ex_thumb_3001.unity3d",
+        "item_3001.unity3d"
+      ],
+      "texture_sizes": [
+        [
+          104,
+          104
+        ],
+        [
+          104,
+          104
+        ]
+      ],
+      "result": "Pixel match rejected. Do not assume equal numeric IDs identify the same image. Independent OCR screening."
+    },
+    {
+      "family": "event_talk_thumb",
+      "catalogue_count": 1578,
+      "same_prefix_parent_count": 0,
+      "result": "No corresponding event_talk_<id>.unity3d full-size asset in this catalogue. Independent OCR screening."
+    }
+  ]
+}

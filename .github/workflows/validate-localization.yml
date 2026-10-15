@@ -175,6 +175,9 @@ jobs:
             scripts/test_reuse_published_images.py \
             scripts/test_r2_release_storage.py \
             scripts/test_incremental_images.py \
+            scripts/test_image_translation.py \
+            scripts/test_image_resources.py \
+            scripts/test_materialize_human_images.py \
             scripts/test_release_reuse.py \
             scripts/test_build_lyric_overlay.py \
             scripts/test_source_provenance.py \
