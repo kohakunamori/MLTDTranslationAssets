@@ -148,3 +148,48 @@ The prompt, raw output, baseline reference and Gemini quota failure are in
 [`2026-10-16-ex4c00964-strong-prompt.json`](../manifests/image-model-comparisons/2026-10-16-ex4c00964-strong-prompt.json)
 and the adjacent prompt file. Preview-only black-edge trimming/resizing is
 recorded separately; the raw image remains unapproved.
+
+## Selected generator and visual acceptance
+
+The active test configuration uses `gpt-image-2.5` over OpenAI image edits
+with the preferred `preserve_layout` prompt. It retains the source's lettering
+orientation rather than forcing horizontal text. `gemini-3.8-flash-high`
+independently compares the original and normalized candidate over native
+Gemini, checking completeness, meaning, lettering, artwork, layout, branding
+and overflow. Reports bind both image hashes, reference text, model and review
+prompt. A pass label alone cannot approve an image: all seven checks must be
+boolean true, the issue list must be empty, and the binding must still match.
+
+| Live test | Outcome |
+| --- | --- |
+| Reuse old GPT `ex4c00964`, with repeated 知道 and omitted 味道 | Rejected; the reviewer quoted the precise incorrect sentence and expected text. |
+| Reuse existing corrected `ex4c00964` sample | Passed visual acceptance. This is a model decision, not publication of the sample. |
+| Generate previously uncached `ex4c00959` once with the preferred layout | Rejected: six issues, including mistranslated Bravo, omitted manga, fire-sea mistranslation and remaining Japanese sound-effect lettering. |
+
+Only one new generation and three review calls were made. Existing samples
+were not regenerated; there were no fallback models or automatic correction
+loops. The rejected new generation is durably checkpointed, so testing or
+resuming the queue cannot silently translate it again. Bulk generation stays
+disabled during these bounded tests; no new overlay was published.
+
+The new comic used an English self-translation prompt with advisory OCR
+fragments, unlike the earlier fixed-Chinese lettering comparison. These are
+different tasks, so their outcomes must not be treated as a prompt-only model
+benchmark. After the user requested a general reusable prompt, the default
+template moved to `configs/image-translation-prompt.txt`: it contains no
+sample-specific wording, names or OCR fragments. That final template has not
+triggered additional model calls; the live reports retain their actual tested
+reference hashes and the rejected generation remains reusable.
+
+The portable case ledger is
+[`image-acceptance-tests/2026-10-16.json`](../manifests/image-acceptance-tests/2026-10-16.json).
+Source-bound decisions live in `manifests/image-visual-reviews.json`. For an
+existing normalized PNG pair, the manual test command is:
+
+```powershell
+python scripts/image_visual_review.py --source original.png --candidate normalized.png --reference-file reference.txt --output review.json --base-url https://cpa.nyaneko.cn/v1
+```
+
+It reads the existing `MLTD_LLM_API_KEY` environment secret. Reusing the same
+report skips the request; changed image, reference or rule hashes fail closed.
+All image inputs are data to inspect, never instructions for the reviewer.

@@ -189,7 +189,27 @@ def prepare(work, limit):
     return document
 
 
-def image_prompt(task):
+def validate_image_policy(policy):
+    protocol = policy.get('api_protocol', 'gemini_generate_content')
+    if ((policy.get('model'), protocol) not in (('gemini-3.1-flash-image', 'gemini_generate_content'), ('gpt-image-2.5', 'images_edits'))
+            or policy.get('requests_per_minute') != 2 or policy.get('concurrency') != 1):
+        raise ValueError('Image API policy requires an explicit native model/protocol pair and serial RPM 2')
+    if policy['model'] == 'gpt-image-2.5':
+        acceptance = policy.get('visual_acceptance', {})
+        if (acceptance.get('enabled') is not True or acceptance.get('model') != 'gemini-3.8-flash-high'
+                or acceptance.get('api_protocol') != 'gemini_generate_content'
+                or policy.get('restoration_mode') != 'whole_image' or policy.get('prompt_profile') != 'preserve_layout'):
+            raise ValueError('GPT image translation requires preserve-layout whole-image visual acceptance')
+
+
+def image_prompt(task, profile='legacy'):
+    if profile == 'preserve_layout':
+        prompt = (ROOT / 'configs/image-translation-prompt.txt').read_text(encoding='utf-8').strip()
+        if not prompt:
+            raise ValueError('Image translation prompt is empty')
+        return prompt + ('\n\n参考译文，请逐字排入对应区域：\n' + task['reference_text'] if task.get('reference_text') else '')
+    if profile != 'legacy':
+        raise ValueError('Unknown image prompt profile')
     return ('Translate all Japanese lettering into fluent Simplified Chinese. '
             'Every dialogue, caption and sound effect must be fully translated; never leave Japanese kana. '
             'Preserve artwork, characters, logo, panel order and exact canvas geometry. '
@@ -204,7 +224,7 @@ def reuse_generation(work, task, prompt, config):
         return None
     if (entry['prompt_sha256'] != hashlib.sha256(prompt.encode()).hexdigest()
             or entry['effective_model'] != config['image_provider']['model']
-            or entry['mode'] != config['image_provider']['mode']):
+            or entry['mode'] != config['image_provider']['mode']) and not config.get('reuse_existing_results'):
         raise ValueError('A saved image generation exists with a different request; review before regenerating')
     result = entry['result']
     if result.get('status') == 'manual_review' and result.get('reason') == 'provider_safety_decision':
@@ -231,7 +251,81 @@ def reuse_generation(work, task, prompt, config):
         raise ValueError('Saved image generation SHA-256 mismatch; do not generate it again')
     output = (work / task['input']).with_name(Path(task['input']).stem + '-generated.png')
     output.write_bytes(raw)
-    return dict(result, output=output.relative_to(work).as_posix())
+    return dict(result, output=output.relative_to(work).as_posix(),
+                generation_prompt_sha256=entry['prompt_sha256'])
+
+
+def review_generated(work, task, result, prompt, policy, base_url):
+    import image_visual_review as visual
+    acceptance = policy.get('visual_acceptance', {})
+    if not acceptance.get('enabled') or result['status'] != 'generated':
+        return
+    if (acceptance.get('model') != visual.MODEL or acceptance.get('api_protocol') != 'gemini_generate_content'
+            or policy.get('restoration_mode') != 'whole_image'):
+        raise ValueError('Invalid visual acceptance policy')
+    source, raw = work / task['input'], work / result['output']
+    if sha(source) != task['sha256'] or sha(raw) != result['sha256']:
+        raise ValueError('SHA-bound image changed before visual review')
+    try:
+        normalized, audit = visual.normalize(Image.open(source), Image.open(raw))
+    except ValueError:
+        result['visual_review'] = {'status': 'failed', 'approved': False, 'reason': 'invalid_geometry'}
+        return
+    candidate = source.with_name(source.stem + '-candidate.png')
+    normalized.save(candidate)
+    source_bytes, candidate_bytes = source.read_bytes(), candidate.read_bytes()
+    bound = visual.binding(source_bytes, candidate_bytes, prompt)
+    key = hashlib.sha256(json.dumps(bound, sort_keys=True).encode()).hexdigest()
+    report_path = work / 'visual-reviews' / (key + '.json')
+    embedded = result.get('visual_review')
+    if embedded and embedded.get('binding') == bound and not report_path.exists():
+        write(report_path, embedded)
+    saved = read(ROOT / 'manifests/image-visual-reviews.json', {'reviews': {}})['reviews'].get(key)
+    if saved is not None and saved.get('binding') == bound and not report_path.exists():
+        write(report_path, saved)
+    report = visual.review(source_bytes, candidate_bytes, prompt, visual.config(base_url), report_path)
+    result.update(visual_review=report, normalized_output=candidate.relative_to(work).as_posix(),
+                  normalized_sha256=sha(candidate), normalization=audit)
+
+
+def checkpoint_generations(work, queue, results, policy):
+    """Keep raw results and review provenance when short-lived work caches expire."""
+    cache = read(ROOT / 'manifests/image-generation-cache.json', {'schema_version': 1, 'tasks': {}})
+    reviews = read(ROOT / 'manifests/image-visual-reviews.json', {'schema_version': 1, 'reviews': {}})
+    for bundle in queue['bundles']:
+        for task in bundle['tasks']:
+            result = results.get(task['sha256'])
+            if not result:
+                continue
+            if result.get('status') == 'manual_review' and result.get('reason') == 'provider_safety_decision':
+                cache['tasks'].setdefault(task['sha256'], {
+                    'prompt_sha256': hashlib.sha256(image_prompt(task, policy.get('prompt_profile', 'legacy')).encode()).hexdigest(),
+                    'effective_model': policy['model'], 'mode': policy.get('api_protocol', 'gemini_generate_content'),
+                    'result': dict(result)})
+            if result['status'] != 'generated':
+                continue
+            raw = work / result['output']
+            if sha(work / task['input']) != task['sha256'] or sha(raw) != result['sha256']:
+                raise ValueError('SHA-bound image handoff changed')
+            destination = ROOT / 'images/candidates' / (result['sha256'] + '.png')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(raw.read_bytes())
+            previous = cache['tasks'].get(task['sha256'])
+            if previous is not None and previous.get('result', {}).get('sha256') != result['sha256']:
+                raise ValueError('Existing durable generation differs; do not replace it silently')
+            if previous is None:
+                cache['tasks'][task['sha256']] = {'prompt_sha256': result.get('generation_prompt_sha256',
+                    hashlib.sha256(image_prompt(task, policy.get('prompt_profile', 'legacy')).encode()).hexdigest()),
+                    'effective_model': result['provider']['requested_image_model'],
+                    'mode': result['provider'].get('mode', policy.get('api_protocol', 'gemini_generate_content')),
+                    'output': destination.relative_to(ROOT).as_posix(),
+                    'result': {k: result[k] for k in ('status', 'sha256', 'provider')}}
+            report = result.get('visual_review')
+            if report and report.get('binding'):
+                key = hashlib.sha256(json.dumps(report['binding'], sort_keys=True).encode()).hexdigest()
+                reviews['reviews'][key] = report
+    write(ROOT / 'manifests/image-generation-cache.json', cache)
+    write(ROOT / 'manifests/image-visual-reviews.json', reviews)
 
 
 def request_image(config, work, progress, task, source, prompt, deadline):
@@ -263,13 +357,11 @@ def generate(work, max_seconds=7200):
     policy = read(ROOT / 'configs/localization-pipeline.json')['images']
     public = read(ROOT / 'configs/api-models.example.json')
     config = {key: dict(value) for key, value in provider_config.DEFAULTS.items()}
-    if (policy['model'] != 'gemini-3.1-flash-image' or policy['requests_per_minute'] != 2
-            or policy['concurrency'] != 1
-            or policy.get('api_protocol', 'gemini_generate_content') != 'gemini_generate_content'):
-        raise ValueError('Image API policy must be serial gemini-3.1-flash-image via Gemini at RPM 2')
+    validate_image_policy(policy)
     config['image_provider'].update(base_url=public['defaults']['base_url'], model=policy['model'],
         mode=policy.get('api_protocol', 'gemini_generate_content'),
         api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)
+    config['reuse_existing_results'] = policy.get('visual_acceptance', {}).get('enabled', False)
     # Config and credentials are workflow-owned, never restored from work cache.
     provider_config.api_key(config)
     document = read(work / 'queue.json')
@@ -277,7 +369,7 @@ def generate(work, max_seconds=7200):
     start = time.monotonic()
     for bundle in document['bundles']:
         for task in bundle['tasks']:
-            if not task['regions'] or task['sha256'] in progress['tasks']:
+            if not task['regions']:
                 continue
             if time.monotonic() - start >= max_seconds:
                 write(work / 'results.json', progress)
@@ -285,10 +377,15 @@ def generate(work, max_seconds=7200):
             source = work / task['input']
             if sha(source) != task['sha256']:
                 raise ValueError('Image input changed before provider call')
-            prompt = image_prompt(task)
+            prompt = image_prompt(task, policy.get('prompt_profile', 'legacy'))
+            if task['sha256'] in progress['tasks']:
+                review_generated(work, task, progress['tasks'][task['sha256']], prompt, policy, public['defaults']['base_url'])
+                write(work / 'results.json', progress)
+                continue
             reused = reuse_generation(work, task, prompt, config)
             if reused is not None:
                 progress['tasks'][task['sha256']] = reused
+                review_generated(work, task, reused, prompt, policy, public['defaults']['base_url'])
                 progress.pop('provider_error', None)
                 write(work / 'results.json', progress)
                 print('IMAGE_REUSED', bundle['logical'], reused['status'], flush=True)
@@ -300,13 +397,14 @@ def generate(work, max_seconds=7200):
                 raw, metadata = response
                 image = Image.open(io.BytesIO(raw)); image.load()
                 original = Image.open(source)
-                if abs(image.width / image.height / (original.width / original.height) - 1) > .01:
+                if policy.get('restoration_mode') != 'whole_image' and abs(image.width / image.height / (original.width / original.height) - 1) > .01:
                     progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_changed_geometry'}
                 else:
                     output = source.with_name(source.stem + '-generated.png')
                     output.write_bytes(raw)
                     progress['tasks'][task['sha256']] = {'status': 'generated',
-                        'output': output.relative_to(work).as_posix(), 'sha256': sha(output), 'provider': metadata}
+                        'output': output.relative_to(work).as_posix(), 'sha256': sha(output), 'provider': metadata,
+                        'generation_prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest()}
             except provider_config.ProviderImageDeclined:
                 progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_safety_decision'}
             except urllib.error.HTTPError as error:
@@ -330,6 +428,8 @@ def generate(work, max_seconds=7200):
                 progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': reason}
             progress.pop('provider_error', None)
             write(work / 'results.json', progress)
+            review_generated(work, task, progress['tasks'][task['sha256']], prompt, policy, public['defaults']['base_url'])
+            write(work / 'results.json', progress)
             print('IMAGE_RESULT', bundle['logical'], progress['tasks'][task['sha256']]['status'], flush=True)
     progress.pop('provider_error', None)
     write(work / 'results.json', progress)
@@ -337,11 +437,19 @@ def generate(work, max_seconds=7200):
 
 def package(work):
     from image_text_regions import restore
+    import image_visual_review as visual
     queue = read(work / 'queue.json')
+    policy = read(ROOT / 'configs/localization-pipeline.json', {'images': {}})['images']
+    if any(bundle['tasks'] for bundle in queue['bundles']):
+        validate_image_policy(policy)
+    whole_image = policy.get('restoration_mode') == 'whole_image'
+    if whole_image and not policy.get('visual_acceptance', {}).get('enabled'):
+        raise ValueError('Whole-image publication requires visual acceptance')
     version = str(read(ROOT / 'manifests/asset-version.json')['asset_version'])
     if version != queue['asset_version']:
         raise ValueError('Official version changed during image work; do not publish stale overlay')
     results = read(work / 'results.json', {'tasks': {}})['tasks']
+    checkpoint_generations(work, queue, results, policy)
     state = read(ROOT / 'manifests/image-incremental.json', {'schema_version': 1, 'bundles': {}})
     rows, completed = [], 0
     for bundle in queue['bundles']:
@@ -355,9 +463,22 @@ def package(work):
         if any(t['sha256'] not in results for t in needed):
             continue
         manual = any(results[t['sha256']]['status'] != 'generated' for t in needed)
+        if whole_image and not manual:
+            for task in needed:
+                result = results[task['sha256']]
+                candidate = work / result.get('normalized_output', '__missing_candidate__')
+                reference = image_prompt(task, policy.get('prompt_profile', 'legacy'))
+                if (not candidate.is_file() or sha(candidate) != result.get('normalized_sha256')
+                        or policy['visual_acceptance'].get('model') != visual.MODEL
+                        or not visual.approved(result.get('visual_review', {}), (work / task['input']).read_bytes(), candidate.read_bytes(), reference)):
+                    manual = True
         record = {'identity': bundle['identity'], 'archive_sha256': bundle['archive_sha256'],
                   'status': 'manual_review' if manual else 'translated' if needed else 'ocr_no_text',
                   'asset_version': version, 'textures': [], 'text_maps': {}}
+        if whole_image and manual:
+            record['review_reason'] = 'visual_acceptance_not_passed'
+        if whole_image:
+            record['visual_reviews'] = {t['sha256']: results[t['sha256']].get('visual_review', {'approved': False}) for t in needed}
         parts = []
         if not manual:
             for task in needed:
@@ -367,7 +488,13 @@ def package(work):
                 if sha(original) != task['sha256'] or sha(generated) != result['sha256']:
                     raise ValueError('SHA-bound image handoff changed')
                 source = Image.open(original).convert('RGBA')
-                localized, audit = restore(source, Image.open(generated), source.size, task['regions'])
+                if whole_image:
+                    localized = Image.open(work / result['normalized_output']).convert('RGBA')
+                    if localized.size != source.size or localized.getchannel('A').tobytes() != source.getchannel('A').tobytes():
+                        raise ValueError('Reviewed normalized image geometry or alpha changed')
+                    audit = result['normalization']
+                else:
+                    localized, audit = restore(source, Image.open(generated), source.size, task['regions'])
                 check = work / 'quality' / (task['sha256'] + '.png')
                 check.parent.mkdir(parents=True, exist_ok=True)
                 localized.save(check)

@@ -86,7 +86,7 @@ flowchart TD
 | 文字同步准备 | hosted Ubuntu，180 分钟；官方 Bundle 留在大磁盘端 |
 | 文字模型调用与提交 | RackNerd，180 分钟；通过 exact-run cache 接收有界文本与索引 |
 | 图片解包 / OCR / 注入 / 独立审计 | hosted Ubuntu，准备和发布各 45 分钟 |
-| 图片模型调用 | RackNerd，150 分钟；模型 gemini-3.1-flash-image，串行，RPM 2；有界批次及断点缓存 |
+| 图片汉化及视觉验收 | RackNerd，150 分钟；gpt-image-2.5 汉化、gemini-3.8-flash-high 验收，串行 RPM 2；分别缓存生成结果和验收报告 |
 | 资源构建与 R2 上传 | hosted Ubuntu，45 分钟 |
 | Worker 部署及线上验收 | hosted Ubuntu，30 分钟；只下载样本与目录索引 |
 | 质量校验 / 回归 | hosted Ubuntu，10 / 20 分钟；四个回归 workers |

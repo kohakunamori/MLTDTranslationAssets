@@ -11,6 +11,7 @@ import urllib.error
 
 import pytest
 import compare_image_models as comparison
+import image_visual_review as visual
 
 
 class ImageExperimentTests(unittest.TestCase):
@@ -198,6 +199,69 @@ def test_gemini_jpeg_is_preserved_without_conversion_and_invalid_bytes_retained(
     out = tmp_path / 'invalid'
     row = comparison.compare(source, 'Fixed text', out, config, (comparison.GEMINI_MODEL,))['models'][comparison.GEMINI_MODEL]
     assert row['status'] == 'failed' and (out / row['raw_output']).read_bytes() == b'unsupported image'
+
+
+def test_visual_acceptance_binds_two_images_and_reuses_result_without_call(tmp_path, monkeypatch):
+    source = experiment.png(Image.new('RGB', (20, 30), 'red'))
+    candidate = experiment.png(Image.new('RGB', (20, 30), 'blue'))
+    config = visual.config('https://api.test/v1')
+    config['image_provider']['api_key'] = 'test-secret'
+    calls = []
+    assessment = {'verdict': 'pass', 'checks': dict.fromkeys(visual.CHECKS, True), 'issues': []}
+    def send(config, request):
+        calls.append(request.full_url)
+        assert request.full_url == 'https://api.test/v1beta/models/gemini-3.8-flash-high:generateContent'
+        body = json.loads(request.data)
+        parts = body['contents'][0]['parts']
+        assert [base64.b64decode(p['inlineData']['data']) for p in parts if 'inlineData' in p] == [source, candidate]
+        assert body['generationConfig']['responseMimeType'] == 'application/json'
+        return {'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text': json.dumps(assessment)}]}}]}
+    monkeypatch.setattr(visual.provider, 'send', send)
+    monkeypatch.setattr(visual.provider, 'throttle_image_request', lambda _: None)
+    path = tmp_path / 'review.json'
+    report = visual.review(source, candidate, '中文参考', config, path)
+    assert visual.approved(report, source, candidate, '中文参考')
+    assert visual.review(source, candidate, '中文参考', config, path) == report and len(calls) == 1
+    assert not visual.approved(report, source, candidate + b'x', '中文参考')
+    with pytest.raises(ValueError, match='different input'):
+        visual.review(source, candidate, 'changed', config, path)
+    assert 'test-secret' not in path.read_text(encoding='utf-8')
+
+
+@pytest.mark.parametrize('defect', ['false_check', 'issue', 'uncertain', 'string_bool', 'wrong_model'])
+def test_visual_gate_does_not_trust_a_pass_label(defect):
+    report = {'status': 'reviewed', 'approved': True, 'binding': visual.binding(b'source', b'candidate', ''),
+        'assessment': {'verdict': 'pass', 'checks': dict.fromkeys(visual.CHECKS, True), 'issues': []}}
+    if defect == 'false_check': report['assessment']['checks']['text_correct'] = False
+    if defect == 'issue': report['assessment']['issues'] = [{'region': 'panel4', 'observed_text': '知道知道', 'expected_text': '知道', 'detail': 'duplicate'}]
+    if defect == 'uncertain': report['assessment']['verdict'] = 'uncertain'
+    if defect == 'string_bool': report['assessment']['checks']['text_correct'] = 'true'
+    if defect == 'wrong_model': report['binding']['model'] = 'other'
+    assert not visual.approved(report, b'source', b'candidate', '')
+
+
+def test_whole_image_normalization_removes_only_new_edges_without_ocr_masks():
+    source = Image.new('RGBA', (20, 40), (255, 255, 255, 128))
+    generated = Image.new('RGB', (24, 40), 'black')
+    generated.paste(Image.new('RGB', (20, 40), 'blue'), (2, 0))
+    result, audit = visual.normalize(source, generated)
+    assert result.size == source.size and result.getpixel((0, 0)) == (0, 0, 255, 128)
+    assert audit['mask_applied'] is False and audit['removed_edge_columns'] == [2, 2]
+    with pytest.raises(ValueError, match='geometry'):
+        visual.normalize(source, Image.new('RGB', (40, 40), 'blue'))
+
+
+def test_visual_http_failure_is_unapproved_and_not_retried(tmp_path, monkeypatch):
+    raw = experiment.png(Image.new('RGB', (2, 2)))
+    calls = []
+    def request(*args):
+        calls.append(True)
+        raise urllib.error.HTTPError('https://api.test', 429, 'quota', {}, io.BytesIO(b'secret'))
+    monkeypatch.setattr(visual, 'request_review', request)
+    path = tmp_path / 'failure.json'
+    assert not visual.review(raw, raw, '', {}, path)['approved']
+    assert visual.review(raw, raw, '', {}, path)['status'] == 'failed' and len(calls) == 1
+    assert 'secret' not in path.read_text()
 
 
 if __name__ == "__main__":

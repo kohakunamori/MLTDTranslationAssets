@@ -3,11 +3,18 @@
   "images": {
     "generation_enabled": false,
     "publication_enabled": true,
-    "model": "gemini-3.1-flash-image",
-    "api_protocol": "gemini_generate_content",
+    "model": "gpt-image-2.5",
+    "api_protocol": "images_edits",
+    "prompt_profile": "preserve_layout",
+    "restoration_mode": "whole_image",
+    "visual_acceptance": {
+      "enabled": true,
+      "model": "gemini-3.8-flash-high",
+      "api_protocol": "gemini_generate_content"
+    },
     "requests_per_minute": 2,
     "concurrency": 1,
     "batch_bundles": 12,
-    "disabled_reason": "Paused after initial Gemini samples for prompt and quality review; reuse completed outputs."
+    "disabled_reason": "Bounded GPT image translation and Gemini visual acceptance tests; reuse existing generations before new calls."
   }
 }

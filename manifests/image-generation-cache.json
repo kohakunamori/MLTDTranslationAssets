@@ -200,6 +200,29 @@
       },
       "output": "images/candidates/ebd8fbbdf4d63c3af9566413cfa3d1dbb151eb598790b896810a99700cb729f3.png",
       "output_kind": "raw_model_candidate"
+    },
+    "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0": {
+      "logical": "ex4c00959.unity3d",
+      "archive_sha256": "8fe7fcd98716928340a295cc16e513ecce6f432c217585b9dc755956dfac1972",
+      "asset_version": "1077750",
+      "prompt_sha256": "758af0c4a1c0165f47b7e5d0ec4abaf6594ec18595cd52156fd069351e8a2c61",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "review_status": "unapproved",
+      "output": "images/candidates/f75e7e16314c296863d5f6a0b0606e9e9cf9e74f63c6c36bf2d384116e6e8fb9.png",
+      "result": {
+        "status": "generated",
+        "sha256": "f75e7e16314c296863d5f6a0b0606e9e9cf9e74f63c6c36bf2d384116e6e8fb9",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
     }
   }
 }

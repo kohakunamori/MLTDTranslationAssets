@@ -35,7 +35,9 @@ def test_image_generation_pauses_for_sample_review_without_disabling_publication
     assert features.inspect(ROOT)["images_generation_enabled"] is False
     assert features.inspect(ROOT)["images_publication_enabled"] is True
     policy = json.loads((ROOT / 'configs/localization-pipeline.json').read_text())['images']
-    assert (policy['model'], policy['requests_per_minute'], policy['concurrency']) == ('gemini-3.1-flash-image', 2, 1)
+    assert (policy['model'], policy['requests_per_minute'], policy['concurrency']) == ('gpt-image-2.5', 2, 1)
+    assert policy['api_protocol'] == 'images_edits' and policy['restoration_mode'] == 'whole_image'
+    assert policy['visual_acceptance'] == {'enabled': True, 'model': 'gemini-3.8-flash-high', 'api_protocol': 'gemini_generate_content'}
 
 
 def test_missing_policy_defaults_to_disabled(tmp_path):

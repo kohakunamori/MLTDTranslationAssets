@@ -130,7 +130,9 @@ jobs:
             work/image-api/results.json
             work/image-api/request-time.json
             work/image-api/tasks/**/*-generated.png
-      - name: Translate serially using gemini-3.1-flash-image at RPM 2
+            work/image-api/tasks/**/*-candidate.png
+            work/image-api/visual-reviews
+      - name: Translate with GPT image and accept with Gemini vision serially at RPM 2
         env:
           MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
         run: python -u scripts/incremental_images.py generate --work work/image-api --max-seconds 7200
@@ -142,6 +144,8 @@ jobs:
             work/image-api/results.json
             work/image-api/request-time.json
             work/image-api/tasks/**/*-generated.png
+            work/image-api/tasks/**/*-candidate.png
+            work/image-api/visual-reviews
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -149,10 +153,14 @@ jobs:
           path: |
             work/image-api/results.json
             work/image-api/tasks/**/*-generated.png
+            work/image-api/tasks/**/*-candidate.png
+            work/image-api/visual-reviews
           retention-days: 3
 
   publish:
     needs: [prepare, localize]
+    # Preserve completed generations even if a later provider call fails.
+    if: always() && !cancelled() && needs.prepare.result == 'success' && (needs.localize.result == 'success' || needs.localize.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     concurrency:
@@ -191,7 +199,7 @@ jobs:
         with:
           name: image-api-results
           path: work/image-batch
-      - name: Verify source-bound results and restore artwork outside text masks
+      - name: Verify source-bound visual acceptance and package whole images
         id: package
         run: python scripts/incremental_images.py package --work work/image-batch
       - name: Inject and independently verify the translated image bundles
@@ -220,7 +228,7 @@ jobs:
           cp work/image-batch/next-state.json manifests/image-incremental.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add images manifests/image-incremental.json image-overlay generated/r2-storage.json
+          git add images manifests/image-incremental.json manifests/image-generation-cache.json manifests/image-visual-reviews.json image-overlay generated/r2-storage.json
           if ! git diff --cached --quiet; then
             git commit -m "Localize incremental image batch [skip ci]"
             git fetch origin main

@@ -29,6 +29,10 @@ def task_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(images, 'ROOT', tmp_path)
     monkeypatch.setattr(images, 'text_regions', lambda _: [])
     images.write(tmp_path / 'manifests/asset-version.json', {'asset_version': '100'})
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': {
+        'model': 'gemini-3.1-flash-image', 'requests_per_minute': 2, 'concurrency': 1}})
+    (tmp_path / 'configs/image-translation-prompt.txt').write_text(
+        (Path(images.__file__).resolve().parents[1] / 'configs/image-translation-prompt.txt').read_text(encoding='utf-8'), encoding='utf-8')
     source = tmp_path / 'work/source.png'
     source.parent.mkdir()
     Image.new('RGBA', (20, 20), (255, 0, 0, 128)).save(source)
@@ -133,6 +137,46 @@ def test_api_stage_uses_required_model_and_restores_completed_tasks(tmp_path, mo
     images.generate(work)
     images.generate(work)
     assert len(called) == 1  # completed work is never billed twice
+
+
+@pytest.mark.parametrize('passed', [False, True])
+def test_whole_image_package_requires_bound_visual_pass_and_keeps_raw_generation(tmp_path, monkeypatch, passed):
+    import image_visual_review as visual
+    work, source, _, results = task_fixture(tmp_path, monkeypatch)
+    policy = {'model': 'gpt-image-2.5', 'api_protocol': 'images_edits', 'requests_per_minute': 2,
+        'concurrency': 1, 'prompt_profile': 'preserve_layout', 'restoration_mode': 'whole_image',
+        'visual_acceptance': {'enabled': True, 'model': visual.MODEL, 'api_protocol': 'gemini_generate_content'}}
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': policy})
+    images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
+    images.write(work / 'results.json', results)
+    monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-secret')
+    monkeypatch.setattr(visual.provider, 'image_edit', lambda *a: pytest.fail('Existing generation must be reused'))
+    calls = []
+    def request(*args):
+        calls.append(True)
+        return {'verdict': 'pass' if passed else 'reject', 'checks': dict.fromkeys(visual.CHECKS, passed), 'issues': []}
+    monkeypatch.setattr(visual, 'request_review', request)
+    images.generate(work)
+    images.generate(work)
+    assert len(calls) == 1
+    images.package(work)
+    state = images.read(work / 'next-state.json')['bundles']['hitokoma_1.unity3d']
+    assert bool((work / 'install.jsonl').read_text()) is passed
+    assert state['status'] == ('translated' if passed else 'manual_review')
+    cached = images.read(tmp_path / 'manifests/image-generation-cache.json')['tasks'][images.sha(source)]
+    assert (tmp_path / cached['output']).is_file()
+    if passed:
+        output = Image.open(tmp_path / state['textures'][0]['localized'])
+        assert output.getpixel((0, 0)) == (0, 0, 255, 128)  # no OCR mask pasted the red source back
+        assert not next(iter(state['text_maps'].values()))['audit']['mask_applied']
+    else:
+        assert state['review_reason'] == 'visual_acceptance_not_passed'
+    # A changed reviewer policy/binding cannot turn a saved pass into approval.
+    saved = images.read(work / 'results.json')
+    saved['tasks'][images.sha(source)]['visual_review']['binding']['model'] = 'other-model'
+    images.write(work / 'results.json', saved)
+    images.package(work)
+    assert not (work / 'install.jsonl').read_text()
 
 
 def test_rate_gate_serializes_every_start_including_retries(monkeypatch):
@@ -407,6 +451,38 @@ def test_durable_explicit_refusal_is_not_submitted_again(tmp_path, monkeypatch):
     monkeypatch.setattr(provider, 'image_edit', lambda *args: pytest.fail('explicit refusal was retried'))
     images.generate(work)
     assert images.read(work / 'results.json')['tasks'][task['sha256']] == entry['result']
+
+
+def test_new_visual_policy_reuses_old_generation_and_durable_review_after_cache_loss(tmp_path, monkeypatch):
+    import image_visual_review as visual
+    work, source, output, results = task_fixture(tmp_path, monkeypatch)
+    policy = {'model': 'gpt-image-2.5', 'api_protocol': 'images_edits', 'requests_per_minute': 2,
+        'concurrency': 1, 'prompt_profile': 'preserve_layout', 'restoration_mode': 'whole_image',
+        'visual_acceptance': {'enabled': True, 'model': visual.MODEL, 'api_protocol': 'gemini_generate_content'}}
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': policy})
+    images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
+    monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-secret')
+    digest = images.sha(source)
+    result = results['tasks'][digest]
+    candidate = tmp_path / 'images/candidates' / (result['sha256'] + '.png')
+    candidate.parent.mkdir(parents=True); candidate.write_bytes(output.read_bytes())
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {digest: {
+        'effective_model': 'gemini-3.1-flash-image', 'mode': 'gemini_generate_content',
+        'prompt_sha256': 'older-prompt', 'output': candidate.relative_to(tmp_path).as_posix(),
+        'result': {k: result[k] for k in ('status', 'sha256', 'provider')}}}})
+    monkeypatch.setattr(visual.provider, 'image_edit', lambda *a: pytest.fail('Old generation was billed again'))
+    calls = []
+    def request(*args):
+        calls.append(True)
+        return {'verdict': 'reject', 'checks': dict.fromkeys(visual.CHECKS, False), 'issues': []}
+    monkeypatch.setattr(visual, 'request_review', request)
+    images.generate(work); images.package(work)
+    assert len(calls) == 1
+    (work / 'results.json').unlink()
+    for p in (work / 'visual-reviews').glob('*.json'): p.unlink()
+    images.generate(work)
+    assert len(calls) == 1  # persisted failed review is reused too
+    assert images.read(tmp_path / 'manifests/image-generation-cache.json')['tasks'][digest]['prompt_sha256'] == 'older-prompt'
 
 
 def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():

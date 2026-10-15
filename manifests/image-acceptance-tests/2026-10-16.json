@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-16",
+  "generator": "gpt-image-2.5",
+  "generator_protocol": "images_edits",
+  "reviewer": "gemini-3.8-flash-high",
+  "reviewer_protocol": "gemini_generate_content",
+  "prompt_profile": "preserve_layout",
+  "new_generation_calls": 1,
+  "visual_review_calls": 3,
+  "publication_performed": false,
+  "cases": {
+    "known-bad": {
+      "source_logical": "ex4c00964.unity3d",
+      "generation_reused": true,
+      "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+      "normalized_candidate": "images/candidates/dcd464d338bbd230f4807d6dc09456af6eb949e70f656bf9a4908418a94f3baf.png",
+      "visual_review_key": "1a99a34dfeb96dbf02f00e2cd08adf3011fb046b05d0525596b9582ae6b52f0f",
+      "verdict": "reject",
+      "issue_count": 1,
+      "raw_candidate": "images/candidates/d5c6c477678cfdb3dea21d51c7bf670a4e6d821e09891c5f115693d20a731903.png"
+    },
+    "stronger": {
+      "source_logical": "ex4c00964.unity3d",
+      "generation_reused": true,
+      "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+      "normalized_candidate": "images/candidates/1721b6373c849af20fd7e47938412866878097a574d84179f18b31a94253c280.png",
+      "visual_review_key": "66bf2d143e0fa5bc5122ddad5c5aedc216b4b22a9098dc284c0924529c5612e2",
+      "verdict": "pass",
+      "issue_count": 0,
+      "raw_candidate": "images/candidates/e4bcf7be0a61c9f31b4fea50f993090bc1b0e348bb7b1a6f8d8204e04932c1d3.png"
+    },
+    "fresh": {
+      "source_logical": "ex4c00959.unity3d",
+      "generation_reused": false,
+      "source_sha256": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0",
+      "normalized_candidate": "images/candidates/400d8cbc2844c34570e6fc00aa26f00026deb6b3b0a135db9ab01733c32f6df7.png",
+      "visual_review_key": "dbc4ed68611f6ee1c5fb8574954a35e9dc1f3c3769c4b5c8036f08ea3d686aa0",
+      "verdict": "reject",
+      "issue_count": 6,
+      "raw_candidate": "images/candidates/f75e7e16314c296863d5f6a0b0606e9e9cf9e74f63c6c36bf2d384116e6e8fb9.png"
+    }
+  }
+}

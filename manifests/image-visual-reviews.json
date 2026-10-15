@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "purpose": "Source-bound model visual decisions; publication still requires all pipeline checks",
+  "reviews": {
+    "1a99a34dfeb96dbf02f00e2cd08adf3011fb046b05d0525596b9582ae6b52f0f": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+        "candidate_sha256": "dcd464d338bbd230f4807d6dc09456af6eb949e70f656bf9a4908418a94f3baf",
+        "reference_sha256": "ba967b5a810be8e77cc1d3c110938232cf6c9ff57674fb4b6b82d63a18aa06b3",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "98fe7499f6adba03ed85e12cd3554304c2199d9e7a2512d8facc37c87091b81f"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": true,
+          "meaning_correct": false,
+          "text_correct": false,
+          "artwork_preserved": true,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "第4格下方中央粉色对话框",
+            "observed_text": "诶……那你最后知道初恋的知道了吗？",
+            "expected_text": "诶……那你最后知道初恋的味道了吗？",
+            "detail": "“味道”误写为“知道”，造成词语重复且语意错误。"
+          }
+        ]
+      }
+    },
+    "66bf2d143e0fa5bc5122ddad5c5aedc216b4b22a9098dc284c0924529c5612e2": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+        "candidate_sha256": "1721b6373c849af20fd7e47938412866878097a574d84179f18b31a94253c280",
+        "reference_sha256": "ba967b5a810be8e77cc1d3c110938232cf6c9ff57674fb4b6b82d63a18aa06b3",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "98fe7499f6adba03ed85e12cd3554304c2199d9e7a2512d8facc37c87091b81f"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "verdict": "pass",
+        "checks": {
+          "translation_complete": true,
+          "meaning_correct": true,
+          "text_correct": true,
+          "artwork_preserved": true,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": []
+      }
+    },
+    "dbc4ed68611f6ee1c5fb8574954a35e9dc1f3c3769c4b5c8036f08ea3d686aa0": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0",
+        "candidate_sha256": "400d8cbc2844c34570e6fc00aa26f00026deb6b3b0a135db9ab01733c32f6df7",
+        "reference_sha256": "758af0c4a1c0165f47b7e5d0ec4abaf6594ec18595cd52156fd069351e8a2c61",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "98fe7499f6adba03ed85e12cd3554304c2199d9e7a2512d8facc37c87091b81f"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": false,
+          "meaning_correct": false,
+          "text_correct": false,
+          "artwork_preserved": true,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "Panel 1, Matsuri speech bubble",
+            "observed_text": "因为是模仿邪神的能力啦！",
+            "expected_text": "太棒了呢！/ 精彩绝伦呢！",
+            "detail": "原句为“ブラボーなのです！”，意为Bravo，被彻底误译。"
+          },
+          {
+            "region": "Panel 2, Matsuri speech bubble",
+            "observed_text": "比起平时更加认真地进行表演，很辛苦吗？",
+            "expected_text": "演技比起以往更加精湛了呢！",
+            "detail": "原句“前よりも演技に磨きがかかっているのです！”，意思是演技更加精进磨砺，翻译偏离原意。"
+          },
+          {
+            "region": "Panel 2, Anna speech bubble",
+            "observed_text": "得到了可以作为参考的了我…",
+            "expected_text": "让百合子推荐了……可以作为参考的漫画……",
+            "detail": "原句“百合子さんに…参考になるマンガを教えて…もらった…”句尾遗漏漫画一词，且末尾出现乱码语病“了我…”。"
+          },
+          {
+            "region": "Panel 4, Anna speech bubble",
+            "observed_text": "想要把这个街道热情的海洋变成市民们充满",
+            "expected_text": "要把这条街……化为火海，让市民们……",
+            "detail": "原句“杏奈は…この街を火の海にして市民を”，意为化作火海，被错误翻译为“热情的海洋变成市民们充满”。"
+          },
+          {
+            "region": "Panel 4, Matsuri handwritten text",
+            "observed_text": "茉莉也完全是另一种类型的偶像才对啊！",
+            "expected_text": "茉莉推荐别的漫画给你！",
+            "detail": "原句“まつりが別のマンガをオススメするのです！”，误译严重。"
+          },
+          {
+            "region": "Panel 3, SFX",
+            "observed_text": "轰隆隆ゴ",
+            "expected_text": "轰隆隆 / ゴゴゴ",
+            "detail": "拟声词未完全汉化，残留日文原字“ゴ”。"
+          }
+        ]
+      }
+    }
+  }
+}

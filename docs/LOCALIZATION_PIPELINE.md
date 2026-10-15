@@ -4,7 +4,7 @@
 R2 publication and gateway deployment are reusable jobs in one run; see
 [the CI mechanism and stage diagram](CI.md). Quality checks and manual model
 smoke tests are the other two entry points.
-See [incremental images](IMAGE_INCREMENTAL.md) for discovery scope, OCR masks,
+See [incremental images](IMAGE_INCREMENTAL.md) for discovery scope, whole-image visual acceptance,
 serial provider pacing, runner split and progress recovery.
 
 The translation workflow owns three stages:
@@ -19,8 +19,10 @@ The translation workflow owns three stages:
 The image policy has two independent switches in
 `configs/localization-pipeline.json` (schema 2): `generation_enabled=false` and
 `publication_enabled=true`. Generation is temporarily paused for sample and prompt review.
-The provider is `gemini-3.1-flash-image`, concurrency 1,
-RPM 2 (every edit, including retries, passes the 30-second gate). Existing source
+The generator is `gpt-image-2.5` over OpenAI image edits; the independent visual
+reviewer is `gemini-3.8-flash-high` over native Gemini. The preferred prompt
+preserves the original lettering layout. Both stay serial at RPM 2, with a
+source-bound, fail-closed visual gate and no OCR restoration mask. Existing source
 files, reviewed PNGs, progress and overlays are preserved.
 
 The generated builder always uses `--reuse-published-images` when publication is enabled,
