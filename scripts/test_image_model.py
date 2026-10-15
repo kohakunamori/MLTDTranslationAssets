@@ -178,8 +178,7 @@ def main(argv=None):
     index = load_official_index(index_path)
     public = json.loads((ROOT / "configs/api-models.example.json").read_text(encoding="utf-8"))
     base = public["defaults"]["base_url"].removesuffix("/v1")
-    endpoint = (base + '/v1/images/edits' if args.model == 'imas-trans-image' else
-                f"{base}/v1beta/models/{args.model}:generateContent")
+    endpoint = f"{base}/v1beta/models/{args.model}:generateContent"
     key = os.environ.get("MLTD_LLM_API_KEY", "")
     if not args.prepare_only and not key:
         raise ValueError("existing MLTD_LLM_API_KEY secret is unavailable")
@@ -221,6 +220,7 @@ def main(argv=None):
                     import provider_config
                     config = {k: dict(v) for k, v in provider_config.DEFAULTS.items()}
                     config['image_provider'].update(base_url=base + '/v1', model=args.model,
+                        mode='gemini_generate_content',
                         api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)
                     raw, _ = provider_config.image_edit(config, png(canvas), prompt)
                     edited, caption, result = Image.open(io.BytesIO(raw)), '', {}

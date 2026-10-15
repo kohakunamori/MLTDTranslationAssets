@@ -2,6 +2,8 @@
 
 生产入口 `auto-track-jp-assets.yml` 的 `stage=images` 可以独立补图片积压；
 日常 `translate/full` 也调用同一图片阶段。配置为 `imas-trans-image`、串行、RPM 2。
+该别名使用 Gemini 原生 `generateContent` 接口；服务端不允许它走 `/v1/images/edits`。
+提交前按模型支持的画布比例补白，校验返回比例后去除补白，原图不拉伸，也不替换模型。
 不再执行只有 937 张固定基线的旧批处理入口，已有 937 张汉化 PNG 和对应发布成果继续保留。
 
 ```mermaid

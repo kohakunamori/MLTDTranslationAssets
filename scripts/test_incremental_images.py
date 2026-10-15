@@ -1,5 +1,6 @@
 """Queue expansion, durable progress and source-bound image publication."""
 import copy
+import base64
 import io
 import json
 from pathlib import Path
@@ -109,6 +110,41 @@ def test_rate_gate_serializes_every_start_including_retries(monkeypatch):
     provider.throttle_image_request(config)
     provider.throttle_image_request(config)
     assert waits == [30, 30, 30]
+
+
+def test_native_image_alias_protocol_pads_without_distortion_then_removes_padding(monkeypatch):
+    import provider_config as provider
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider'].update(base_url='https://api.test/v1', model='imas-trans-image',
+                                    mode='gemini_generate_content', api_key='test-secret')
+    original = Image.new('RGBA', (20, 60), (255, 0, 0, 128))
+    source = io.BytesIO(); original.save(source, format='PNG')
+    calls = []
+    def send(config, request, timeout):
+        assert request.full_url == 'https://api.test/v1beta/models/imas-trans-image:generateContent'
+        payload = json.loads(request.data)
+        assert payload['generationConfig']['imageConfig']['aspectRatio'] == '1:4'
+        raw = base64.b64decode(payload['contents'][0]['parts'][1]['inlineData']['data'])
+        assert Image.open(io.BytesIO(raw)).size == (20, 80)
+        output = io.BytesIO(); Image.new('RGB', (20, 80), 'blue').save(output, format='PNG')
+        return {'candidates': [{'content': {'parts': [{'inlineData': {'data': base64.b64encode(output.getvalue()).decode()}}]}}]}
+    monkeypatch.setattr(provider, 'send', send)
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda _: calls.append('rate-gate'))
+    raw, meta = provider.image_edit(config, source.getvalue(), 'Translate Japanese')
+    assert Image.open(io.BytesIO(raw)).size == (20, 60)
+    assert calls == ['rate-gate']
+    assert meta['requested_image_model'] == 'imas-trans-image' and meta['padding_removed']
+
+
+def test_native_moderation_decision_is_never_retried_as_transport_failure(monkeypatch):
+    import provider_config as provider
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider']['mode'] = 'gemini_generate_content'
+    source = io.BytesIO(); Image.new('RGB', (20, 20)).save(source, format='PNG')
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda _: None)
+    monkeypatch.setattr(provider, 'send', lambda *args: {'promptFeedback': {'blockReason': 'SAFETY'}})
+    with pytest.raises(provider.ProviderImageDeclined):
+        provider.image_edit(config, source.getvalue(), 'Translate Japanese')
 
 
 def test_gc_and_all_publishers_share_one_lock_and_api_job_has_no_heavy_dependency():

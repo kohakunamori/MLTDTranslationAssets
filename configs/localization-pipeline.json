@@ -4,6 +4,7 @@
     "generation_enabled": true,
     "publication_enabled": true,
     "model": "imas-trans-image",
+    "api_protocol": "gemini_generate_content",
     "requests_per_minute": 2,
     "concurrency": 1,
     "batch_bundles": 12

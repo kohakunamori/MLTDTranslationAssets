@@ -181,6 +181,7 @@ def generate(work, max_seconds=7200):
     if policy['model'] != 'imas-trans-image' or policy['requests_per_minute'] != 2 or policy['concurrency'] != 1:
         raise ValueError('Image API policy must be serial imas-trans-image at RPM 2')
     config['image_provider'].update(base_url=public['defaults']['base_url'], model=policy['model'],
+        mode=policy.get('api_protocol', 'gemini_generate_content'),
         api_key_env='MLTD_LLM_API_KEY', require_api_key=True, min_request_interval_seconds=30)
     # Config and credentials are workflow-owned, never restored from work cache.
     provider_config.api_key(config)
@@ -216,6 +217,8 @@ def generate(work, max_seconds=7200):
                     output.write_bytes(raw)
                     progress['tasks'][task['sha256']] = {'status': 'generated',
                         'output': output.relative_to(work).as_posix(), 'sha256': sha(output), 'provider': metadata}
+            except provider_config.ProviderImageDeclined:
+                progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_safety_decision'}
             except urllib.error.HTTPError as error:
                 # Never log provider bodies (they can echo credentials). Only
                 # explicit moderation decisions are held without automatic retry.

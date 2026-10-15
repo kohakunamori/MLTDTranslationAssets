@@ -32,6 +32,10 @@ DEFAULTS={
 }
 PNG_SIGNATURE=b"\x89PNG\r\n\x1a\n"
 
+
+class ProviderImageDeclined(RuntimeError):
+ """An explicit provider safety decision; retain for review, never retry."""
+
 # The upstream image service enforces a requests-per-minute ceiling, so image
 # edits leave this client at most once per min_request_interval_seconds.  The
 # gate is process-global: extra threads queue behind it instead of stacking
@@ -91,8 +95,8 @@ def load_config(path:Path|None=None)->dict:
  image=config["image_provider"];net=config["network"];vision=config["vision"]
  image["base_url"]=_url(image["base_url"],"image_provider.base_url")
  vision["base_url"]=_url(vision["base_url"],"vision.base_url",allow_empty=True)
- if image["mode"] not in {"images_edits","legacy_responses"}:
-  raise ValueError("image_provider.mode must be images_edits or legacy_responses")
+ if image["mode"] not in {"images_edits","legacy_responses","gemini_generate_content"}:
+  raise ValueError("image_provider.mode must be images_edits, legacy_responses or gemini_generate_content")
  if not isinstance(image["model"],str) or not image["model"].strip():
   raise ValueError("image_provider.model must be a nonempty string")
  if image["quality"] not in {"low","medium","high","xhigh","max","auto"}:
@@ -239,10 +243,60 @@ def legacy_responses(config:dict,source:bytes,prompt:str,
    "mode":"legacy_responses","quality":quality or image["quality"]}
 
 
+def gemini_edit(config:dict,source:bytes,prompt:str,
+                quality:str|None=None,timeout:int|None=None)->tuple[bytes,dict]:
+ """Native Gemini image aliases do not use the OpenAI images endpoint.
+
+ Pad to a supported aspect ratio without stretching the source, verify the
+ returned geometry, then remove only that padding. No model substitution.
+ """
+ import io,math
+ from PIL import Image
+ image=config['image_provider']
+ original=Image.open(io.BytesIO(source)).convert('RGBA')
+ if original.width*original.height>16_777_216:raise ValueError('Image input exceeds bounded size')
+ ratios=((1,1),(1,4),(1,8),(4,1),(8,1),(1,2),(2,1),(3,4),(4,3),(2,3),(3,2),(4,5),(5,4),(9,16),(16,9),(21,9))
+ a,b=min(ratios,key=lambda pair:abs(math.log((pair[0]/pair[1])/(original.width/original.height))))
+ scale=max(math.ceil(original.width/a),math.ceil(original.height/b))
+ canvas=Image.new('RGB',(scale*a,scale*b),'white')
+ canvas.paste(original,(0,0),original.getchannel('A'))
+ buffer=io.BytesIO();canvas.save(buffer,format='PNG')
+ aspect=f'{a}:{b}'
+ payload={'contents':[{'role':'user','parts':[{'text':prompt},
+    {'inlineData':{'mimeType':'image/png','data':base64.b64encode(buffer.getvalue()).decode('ascii')}}]}],
+    'generationConfig':{'responseModalities':['TEXT','IMAGE'],
+       'imageConfig':{'aspectRatio':aspect,'imageSize':'2K' if max(canvas.size)>2000 else '1K'}}}
+ url=image['base_url'].removesuffix('/v1')+'/v1beta/models/'+urllib.parse.quote(image['model'],safe='')+':generateContent'
+ request=urllib.request.Request(url,data=json.dumps(payload).encode(),method='POST',
+    headers={**headers(config,'application/json'),'x-goog-api-key':api_key(config)})
+ throttle_image_request(config)
+ result=send(config,request,timeout)
+ outputs=[part.get('inlineData',part.get('inline_data',{}))
+    for candidate in result.get('candidates',[]) for part in candidate.get('content',{}).get('parts',[])
+    if not part.get('thought') and part.get('inlineData',part.get('inline_data',{})).get('data')]
+ if len(outputs)!=1:
+  blocked=result.get('promptFeedback',{}).get('blockReason')
+  reasons={str(c.get('finishReason','')) for c in result.get('candidates',[])}
+  if blocked or reasons & {'SAFETY','IMAGE_SAFETY','PROHIBITED_CONTENT','BLOCKLIST'}:
+   raise ProviderImageDeclined('Gemini explicitly declined this image')
+  raise RuntimeError('Gemini did not return exactly one edited image')
+ raw=base64.b64decode(outputs[0]['data'],validate=True)
+ edited=Image.open(io.BytesIO(raw));edited.load()
+ error=abs((edited.width/edited.height)/(a/b)-1)
+ if error>.01:raise ValueError('Gemini changed the padded canvas aspect ratio')
+ normalized=edited.convert('RGB').resize(canvas.size,Image.Resampling.LANCZOS).crop((0,0,*original.size))
+ output=io.BytesIO();normalized.save(output,format='PNG')
+ return output.getvalue(),{'requested_image_model':image['model'],'endpoint':'/v1beta/models/:generateContent',
+    'mode':'gemini_generate_content','aspect_ratio':aspect,'input_size':list(canvas.size),
+    'provider_output_size':list(edited.size),'aspect_ratio_error':error,'padding_removed':True}
+
+
 def image_edit(config:dict,source:bytes,prompt:str,
                quality:str|None=None,timeout:int|None=None)->tuple[bytes,dict]:
  if config["image_provider"]["mode"]=="images_edits":
   return direct_edit(config,source,prompt,quality,timeout)
+ if config['image_provider']['mode']=='gemini_generate_content':
+  return gemini_edit(config,source,prompt,quality,timeout)
  return legacy_responses(config,source,prompt,quality,timeout)
 
 
@@ -262,7 +316,9 @@ def vision_response(config:dict,image_data_uri:str,prompt:str,
 def inspect(config:dict)->dict:
  image=config["image_provider"]
  return {"image_mode":image["mode"],"image_model":image["model"],
-         "image_endpoint":image["base_url"]+("/images/edits" if image["mode"]=="images_edits" else "/responses"),
+         "image_endpoint":(image['base_url'].removesuffix('/v1')+'/v1beta/models/'+image['model']+':generateContent'
+            if image['mode']=='gemini_generate_content' else
+            image["base_url"]+("/images/edits" if image["mode"]=="images_edits" else "/responses")),
          "vision_endpoint":(config["vision"]["base_url"] or image["base_url"])+"/responses",
          "vision_model":config["vision"]["model"],
          "quality":image["quality"],"size":image["size"],"output_format":image["output_format"],
