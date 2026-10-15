@@ -26,3 +26,7 @@ Pillow
 pycryptodome
 jsonschema
 requests
+# numpy is what scripts/image_thumbnails.py matches a preview against its
+# approved full-size source with, and scripts/test_image_resources.py imports
+# that module.  UnityPy does not pull it in, so it has to be declared here.
+numpy

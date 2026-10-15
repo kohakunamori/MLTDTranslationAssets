@@ -40,7 +40,7 @@ SUITE_DIRS = (".github", "asset-server", "manifests", "pipelines", "scripts", "s
 #: Packages both jobs' suites cannot import without.
 REQUIRED_PACKAGES = {
     "pytest", "pytest-xdist", "pyyaml", "msgpack", "UnityPy", "Pillow",
-    "pycryptodome", "jsonschema", "requests",
+    "pycryptodome", "jsonschema", "requests", "numpy",
 }
 
 
