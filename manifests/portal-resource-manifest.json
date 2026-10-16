@@ -54252,14 +54252,14 @@
         "IGP_jp.gtx": {
           "pending": 0,
           "total": 4607,
-          "translated": 4518,
-          "untranslated": 89
+          "translated": 4606,
+          "untranslated": 1
         },
         "MD_jp.gtx": {
           "pending": 18,
           "total": 117528,
-          "translated": 117509,
-          "untranslated": 1
+          "translated": 117510,
+          "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -76856,9 +76856,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 182635,
-      "translated": 182527,
+      "translated": 182616,
       "unit": "句",
-      "untranslated": 90
+      "untranslated": 1
     },
     {
       "blocked": 0,
@@ -76918,28 +76918,28 @@
       "id": "system",
       "pending": 18,
       "total": 182635,
-      "translated": 182527,
-      "untranslated": 90
+      "translated": 182616,
+      "untranslated": 1
     }
   ],
   "generated_at": "2026-10-16T08:12:19.066263+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1077790",
-    "assets_commit": "727931017a14055c124c4bcc2225ffc132b3af11",
+    "assets_commit": "fc3dfc03b196263bc9bdc84716380d022959b50f",
     "release_id": "assets-1077790",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "9d19ee15037c69a6ebc409b19431ae4d90b9520dc71adf5057ad5969b817aada",
+    "source_manifest_sha256": "0415f3be27e347502d37a41456c7df25ba846e1a16e5d9083484f4e49c57469e",
     "status": "published",
     "updated_at": "2026-10-16T13:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "727931017a14055c124c4bcc2225ffc132b3af11",
+    "commit": "fc3dfc03b196263bc9bdc84716380d022959b50f",
     "generated_entry_count": 13496,
-    "generated_manifest_sha256": "9d19ee15037c69a6ebc409b19431ae4d90b9520dc71adf5057ad5969b817aada",
+    "generated_manifest_sha256": "0415f3be27e347502d37a41456c7df25ba846e1a16e5d9083484f4e49c57469e",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "500f181f98f53ac636c0cb0f8f243d6e827fa6baf268bdc68dd90f97933e3e7c",
+    "source_catalogue_sha256": "a8e0e5d5b50ec8334715c81b148820229b1815f9ce158cd9b68a7b7d2595ee9b",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -76949,7 +76949,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 415826,
-    "translated": 415637,
-    "untranslated": 90
+    "translated": 415726,
+    "untranslated": 1
   }
 }
