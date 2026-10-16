@@ -124,7 +124,7 @@ class LatestLocalizationCITests(unittest.TestCase):
             config="config.json",
             batch_mode="dynamic",
             artifact_store_root=Path("artifact-store"),
-            nas_overlay_root="/vol2/1000/imas-asset-archive/mltd/cn-version",
+            nas_overlay_root="/archive/mltd/cn-version",
             publish_transport="ssh",
             publish_ssh_target="nas",
             publish_apply=True,

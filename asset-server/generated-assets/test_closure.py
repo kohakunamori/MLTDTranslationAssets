@@ -1,26 +1,15 @@
 #!/usr/bin/env python3
-"""Offline contract for the deployed NAS `mltd-generated-assets` closure.
+"""Offline contract for the historical `mltd-generated-assets` source closure.
 
-The NAS writes generated releases into
-`/vol2/1000/imas-asset-archive/mltd/generated` and serves them read-only.  Until
-2026-10-08 the only copy of `sync_loop.py`, the image recipe and the compose file
-lived on the NAS itself, and the deployed nginx vhost had no repository copy at
-all; `deployed.json` and this suite make the deployed shape reviewable, and make
-silent drift fail.
+`deployed.json` records repository-relative sources and service contracts;
+machine-specific deployment paths are intentionally kept out of this repository.
 
-No network, no SSH, no docker: every assertion is a file-content contract plus the
-recorded hashes.
-
-Repository hashes are taken from the committed blob (`git cat-file blob HEAD:<path>`),
-not from the working tree, so the suite means the same thing on a CRLF Windows checkout
-and on a Linux CI checkout.
+No network, no SSH, no docker: every assertion is a local source and behavior contract.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import re
-import subprocess
 import unittest
 from pathlib import Path
 
@@ -28,75 +17,33 @@ ROOT = Path(__file__).resolve().parents[2]
 CLOSURE = ROOT / "asset-server" / "generated-assets"
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def blob_sha256(relative: str) -> str:
-    """Hash the committed blob, so EOL normalisation cannot change the answer."""
-    data = subprocess.run(
-        ["git", "cat-file", "blob", f"HEAD:{relative}"],
-        cwd=ROOT, check=True, capture_output=True,
-    ).stdout
-    return hashlib.sha256(data).hexdigest()
-
-
-class DeploymentRecordTests(unittest.TestCase):
-    """`deployed.json` must describe the deployed bytes, not a wish."""
+class SourceRecordTests(unittest.TestCase):
+    """The source record describes files and behavior without host details."""
 
     @classmethod
     def setUpClass(cls) -> None:
         cls.record = json.loads((CLOSURE / "deployed.json").read_text(encoding="utf-8"))
 
     def test_record_identity(self):
-        self.assertEqual(self.record["kind"], "mltd-generated-assets-deployment-record")
-        self.assertEqual(self.record["schema_version"], 1)
+        self.assertEqual(self.record["kind"], "mltd-generated-assets-source-record")
+        self.assertEqual(self.record["schema_version"], 2)
         self.assertTrue(self.record["observed_at"])
-        self.assertEqual(self.record["host_alias"], "nas")
+        self.assertEqual(self.record["status"], "retired")
+        self.assertNotIn("host_alias", self.record)
+        self.assertNotIn("project_dir", self.record)
+        self.assertNotIn("mirror_root", self.record)
 
-    def test_every_recorded_file_matches_its_repository_copy(self):
+    def test_every_recorded_source_exists_in_the_repository(self):
         for entry in self.record["files"]:
-            with self.subTest(entry["nas_path"]):
+            with self.subTest(entry["repo_source"]):
                 self.assertTrue((ROOT / entry["repo_source"]).is_file(),
                                 f"missing repo source {entry['repo_source']}")
-                self.assertEqual(blob_sha256(entry["repo_source"]), entry["repo_sha256"])
+                self.assertTrue(entry.get("role"))
 
-    def test_identical_files_really_are_identical(self):
-        for entry in self.record["files"]:
-            if not entry["repo_matches_deployed"]:
-                continue
-            with self.subTest(entry["nas_path"]):
-                self.assertEqual(entry["repo_sha256"], entry["deployed_sha256"])
-
-    def test_recorded_drift_is_real_drift(self):
-        """A `false` entry must carry both hashes and an explanation.
-
-        This used to also demand that at least one such entry existed, because the
-        NAS ran an older revision of the mirror module and a record claiming full
-        convergence would have been a lie.  The 2026-10-10 deployment converged
-        every managed file, so demanding a permanent divergence would now ask the
-        record to lie in the other direction.  What must still hold is that every
-        entry claiming a difference really differs, and says why.
-        """
-        for entry in self.record["files"]:
-            if entry["repo_matches_deployed"]:
-                continue
-            with self.subTest(entry["nas_path"]):
-                self.assertNotEqual(entry["repo_sha256"], entry["deployed_sha256"])
-                self.assertTrue(entry.get("note"), "drift needs an explanation")
-
-    def test_the_record_is_internally_consistent(self):
-        """A `true` entry must name one hash, not two that disagree."""
-        for entry in self.record["files"]:
-            with self.subTest(entry["nas_path"]):
-                if entry["repo_matches_deployed"]:
-                    self.assertEqual(entry["repo_sha256"], entry["deployed_sha256"])
-                    self.assertNotIn("note", entry)
-                self.assertRegex(entry["deployed_sha256"], r"^[0-9a-f]{64}$")
-
-    def test_services_and_route_are_recorded(self):
+    def test_service_contracts_are_recorded(self):
         services = self.record["services"]
-        self.assertIn("--bind 127.0.0.1 --port 18765", services["generated-assets"]["command"])
+        self.assertEqual(services["generated-assets"]["bind"], "127.0.0.1")
+        self.assertEqual(services["generated-assets"]["port"], 18765)
         self.assertEqual(services["generated-assets-sync"]["interval_seconds"], 21600)
         self.assertEqual(services["generated-assets-sync"]["repository"], "kohakunamori/MLTDTranslationAssets")
 
@@ -150,18 +97,18 @@ class ImageAndComposeContractTests(unittest.TestCase):
 
     def test_route_service_cannot_write_the_mirror(self):
         route_block = self.compose.split("generated-assets-sync:")[0]
-        self.assertIn("/generated:/data:ro", route_block)
+        self.assertIn("${MLTD_GENERATED_ROOT:?Set MLTD_GENERATED_ROOT in .env}:/data:ro", route_block)
         self.assertIn("read_only: true", route_block)
         self.assertIn("no-new-privileges:true", route_block)
 
     def test_official_fallback_is_explicit_and_outside_the_cas(self):
         self.assertIn("--official-base-url", self.compose)
         self.assertIn("--official-cache-root", self.compose)
-        self.assertIn("/generated-official-cache:/official-cache", self.compose)
+        self.assertIn("${MLTD_OFFICIAL_CACHE_ROOT:?Set MLTD_OFFICIAL_CACHE_ROOT in .env}:/official-cache", self.compose)
 
     def test_sync_service_is_the_only_writer_and_is_pinned_to_one_repository(self):
         sync_block = self.compose.split("generated-assets-sync:")[1]
-        self.assertIn("/generated:/data", sync_block)
+        self.assertIn("${MLTD_GENERATED_ROOT:?Set MLTD_GENERATED_ROOT in .env}:/data", sync_block)
         self.assertNotIn("/data:ro", sync_block)
         self.assertIn("MLTD_ASSETS_REPOSITORY: kohakunamori/MLTDTranslationAssets", sync_block)
         self.assertIn("MLTD_ASSETS_BRANCH: main", sync_block)

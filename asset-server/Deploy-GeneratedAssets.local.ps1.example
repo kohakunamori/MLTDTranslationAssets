@@ -1,0 +1,8 @@
+# Copy to Deploy-GeneratedAssets.local.ps1 and fill in deployment-specific values.
+$DeployGeneratedAssetsConfig = @{
+    NasAlias = 'user@your-host'
+    ProjectDir = '/path/to/generated-assets-project'
+    VhostDir = '/path/to/reverse-proxy/config'
+    MirrorRoot = '/path/to/mltd-archive/generated'
+    ProxyUrl = ''
+}

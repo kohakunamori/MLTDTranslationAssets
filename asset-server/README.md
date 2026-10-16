@@ -1,10 +1,10 @@
 # MLTD 资产服务（本仓自足闭包）
 
 本目录是 MLTD 汉化 Assets 通道的**最小运行闭包**：镜像、CLI 与只读路由只依赖
-本仓（`D:\Project\_MLTDTranslationAssets`）内的源码，不依赖主仓 mltd-current、
+本仓内的源码，不依赖主仓 mltd-current、
 不依赖任何兄弟仓库或 `PYTHONPATH` 回退。
 
-> 当前生产链路：统一 CI → 私有 R2 → Cloudflare Worker。NAS 分发已退役。
+> 当前生产链路：统一 CI → 私有 R2 → Cloudflare Worker。旧分发方案已退役。
 > `generated-assets/` 和 Docker/nginx 说明属于历史部署资料，不是当前运行状态。
 > 当前发布和缓存机制见 [R2 网关](cloudflare/README.md)，CI 阶段见 [CI 说明](../docs/CI.md)。
 
@@ -60,15 +60,16 @@
   checkpoint，速率会掉回 ~20 对象/秒。遇到这种情况先停 updater 跑
   `PRAGMA wal_checkpoint(TRUNCATE)`（实测 310 MB → 0，0.1–30 s）。
 
-一次性索引维护（**不要**放进 store 构造路径：在现网 2 GB 库上它会读几十 GB、跑十几分钟，
+一次性索引维护（**不要**放进 store 构造路径：在大型归档库上它会读几十 GB、跑十几分钟，
 并阻塞每一次 sync）：
 
 ```bash
-docker run --rm --entrypoint python -v /vol2/1000/imas-asset-archive/mltd:/data \
+export MLTD_ARCHIVE_ROOT=/path/to/mltd-archive
+docker run --rm --entrypoint python -v "$MLTD_ARCHIVE_ROOT:/data" \
   local/imas-mltd-asset:20260914-static \
   /app/tools/versioned_assets.py maintenance --root /data            # 只看，不删（dry run）
 docker run -d --name mltd-drop-index --entrypoint python \
-  -v /vol2/1000/imas-asset-archive/mltd:/data \
+  -v "$MLTD_ARCHIVE_ROOT:/data" \
   local/imas-mltd-asset:20260914-static \
   /app/tools/versioned_assets.py maintenance --root /data --drop-unused-entry-indexes
 ```
@@ -95,8 +96,8 @@ docker run -d --name mltd-drop-index --entrypoint python \
 操作——`sync` 的固定开销再次抬头（或 `freelist` 又到几百 MB）时重跑即可。
 
 ```bash
-cd /vol1/1000/appdata/imas/mltd-asset/asset-server && docker compose stop mltd-asset-updater
-docker run --rm --entrypoint python -v /vol2/1000/imas-asset-archive/mltd:/data \
+cd /path/to/MLTDTranslationAssets/asset-server && docker compose stop mltd-asset-updater
+docker run --rm --entrypoint python -v "$MLTD_ARCHIVE_ROOT:/data" \
   local/imas-mltd-asset:20260914-static -c "
 import sqlite3, time, os
 con = sqlite3.connect('/data/index.sqlite3', timeout=3600); con.execute('PRAGMA busy_timeout=3600000')
@@ -183,7 +184,7 @@ python -m pytest scripts/test_assets_mirror.py server/tests asset-server/ -q
 静态 compose 检查（不 pull/build/up）：
 
 ```bash
-cd asset-server && ASSETS_MIRROR_VERSIONS=1077100,1077600 docker compose config --quiet
+cd asset-server && MLTD_ARCHIVE_ROOT=/path/to/mltd-archive ASSETS_MIRROR_VERSIONS=1077100,1077600 docker compose config --quiet
 ```
 
 ## 边界

@@ -1,7 +1,7 @@
 name: Assets production pipeline
 run-name: Assets [${{ github.event_name == 'push' && 'release' || inputs.stage || 'watch' }}]
 
-# Keep this filename so the existing VPS version watcher needs no reconfiguration.
+# Keep this filename so the existing external version watcher needs no reconfiguration.
 'on':
   push:
     branches: [main]
@@ -27,7 +27,7 @@ run-name: Assets [${{ github.event_name == 'push' && 'release' || inputs.stage |
         options: [watch, translate, images, release, gateway, full]
         default: watch
       force_check:
-        description: 'Compatibility input for the existing VPS watcher'
+        description: 'Compatibility input for the existing external watcher'
         type: boolean
         default: true
       daily_housekeeping:

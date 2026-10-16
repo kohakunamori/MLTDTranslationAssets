@@ -2,17 +2,16 @@
 
 日常入口由原来的分段派发收敛为三个；工作阶段使用 `workflow_call`，在同一次 production run 内展示。
 图片积压、OCR、模型限速及发布机制详见 [图片增量管线](IMAGE_INCREMENTAL.md)。
-保留生产入口文件名 `auto-track-jp-assets.yml`，现有 VPS `mltd-asset-watch.timer` 不需要改派发目标。
-没有新增 GitHub schedule。NAS 不参与发布。
+保留生产入口文件名 `auto-track-jp-assets.yml`，仓库外的调度配置无需改派发目标。
+没有新增 GitHub schedule。归档存储不参与发布。
 
-VPS 唤醒脚本的忙碌检测同步改为查询统一运行；网关漂移自愈也改为派发此入口的 `stage=gateway`。
-定时器、冷却时间和凭据文件保留。旧的独立翻译/网关 workflow 已不可直接派发。
-VPS 忙碌检测忽略名称为 `Assets [images]` 的独立图片运行，避免耗时的图片积压阻止检查新资源版本。
+外部调度的忙碌检测查询统一运行；网关漂移自愈也派发此入口的 `stage=gateway`。
+旧的独立翻译/网关 workflow 已不可直接派发。图片积压不会阻止检查新资源版本。
 
 | 入口 | 触发与作用 |
 | --- | --- |
 | `validate-localization.yml` | 主分支 push、PR、手动；校验真实汉化数据，离线回归和全部 workflow 语法 |
-| `auto-track-jp-assets.yml` | 唯一生产入口；VPS 检查/每日兜底、主分支源码 push、手动分阶段补跑 |
+| `auto-track-jp-assets.yml` | 唯一生产入口；外部定时检查、主分支源码 push、手动分阶段补跑 |
 | `image-model-smoke.yml` | 仅显式手动试模型并保留对照图；不会发布资源，不受日常生产入口连带触发 |
 
 `workflow-patch.yml` 已合并删除。`llm-translate-assets.yml`、`assets-generated.yml`、

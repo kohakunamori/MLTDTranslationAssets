@@ -9,9 +9,9 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - /vol2/1000/imas-asset-archive/mltd/generated:/data:ro
-      - /vol2/1000/imas-asset-archive/mltd:/official:ro
-      - /vol2/1000/imas-asset-archive/mltd/generated-official-cache:/official-cache
+      - ${MLTD_GENERATED_ROOT:?Set MLTD_GENERATED_ROOT in .env}:/data:ro
+      - ${MLTD_ARCHIVE_ROOT:?Set MLTD_ARCHIVE_ROOT in .env}:/official:ro
+      - ${MLTD_OFFICIAL_CACHE_ROOT:?Set MLTD_OFFICIAL_CACHE_ROOT in .env}:/official-cache
     command: ["python", "/app/serve_release.py", "serve", "--root", "/data", "--bind", "127.0.0.1", "--port", "18765", "--official-root", "/official", "--official-base-url", "https://td-assets.bn765.com", "--official-cache-root", "/official-cache", "--legacy-overlay-root", "/official/cn-version"]
   generated-assets-sync:
     build: .
@@ -22,16 +22,12 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - /vol2/1000/imas-asset-archive/mltd/generated:/data
+      - ${MLTD_GENERATED_ROOT:?Set MLTD_GENERATED_ROOT in .env}:/data
     environment:
       MLTD_ASSETS_REPOSITORY: kohakunamori/MLTDTranslationAssets
       MLTD_ASSETS_BRANCH: main
       MLTD_SYNC_INTERVAL: "21600"
-      # One object is one HTTPS request, and a release that adds lyrics and images
-      # adds hundreds of them.  Measured on this NAS through the LAN proxy below:
-      # 1.65 s per object one at a time, 0.42 s per object with eight in flight.
-      # Sixteen in flight started tripping the proxy, so this is the measured
-      # sweet spot rather than a round number.
+      # Keep concurrency bounded so the upstream and any configured proxy remain stable.
       MLTD_MIRROR_OBJECT_WORKERS: "8"
       # Anonymous GitHub API access allows 60 requests an hour and one tick uses
       # about 40 of them (a listing plus a manifest and checksums per version).
@@ -39,7 +35,7 @@ services:
       # credential never enters this repository, and an empty value is simply
       # anonymous access, which is what the deployment has today.
       MLTD_ASSETS_GITHUB_TOKEN: ${MLTD_ASSETS_GITHUB_TOKEN:-}
-      HTTP_PROXY: http://192.168.2.31:7890
-      HTTPS_PROXY: http://192.168.2.31:7890
+      HTTP_PROXY: "${MLTD_ARCHIVE_PROXY:-}"
+      HTTPS_PROXY: "${MLTD_ARCHIVE_PROXY:-}"
       NO_PROXY: 127.0.0.1,localhost
     command: ["python", "/app/sync_release.py", "--root", "/data"]

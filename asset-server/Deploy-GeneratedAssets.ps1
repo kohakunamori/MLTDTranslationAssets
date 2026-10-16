@@ -20,10 +20,11 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$NasAlias = 'nas',
-    [string]$ProjectDir = '/vol1/1000/appdata/imas/mltd-generated-assets',
-    [string]$VhostDir = '/vol1/1000/appdata/imas/mltd-asset/asset-server',
-    [string]$PublicHost = 'https://mltd-asset.nyaneko.cn:18443',
+    [string]$NasAlias,
+    [string]$ProjectDir,
+    [string]$VhostDir,
+    [string]$MirrorRoot,
+    [string]$ProxyUrl,
     [string]$ProbeRoot = '/tmp/mltd-deploy-probe',
     [switch]$Apply
 )
@@ -31,9 +32,34 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+$DeployGeneratedAssetsConfig = @{}
+$localConfigPath = Join-Path $PSScriptRoot 'Deploy-GeneratedAssets.local.ps1'
+if (Test-Path -LiteralPath $localConfigPath -PathType Leaf) {
+    . $localConfigPath
+}
+$environmentNames = @{
+    NasAlias = 'MLTD_DEPLOY_HOST_ALIAS'
+    ProjectDir = 'MLTD_DEPLOY_PROJECT_DIR'
+    VhostDir = 'MLTD_DEPLOY_VHOST_DIR'
+    MirrorRoot = 'MLTD_DEPLOY_MIRROR_ROOT'
+    ProxyUrl = 'MLTD_DEPLOY_PROXY_URL'
+}
+foreach ($name in $environmentNames.Keys) {
+    $current = Get-Variable -Name $name -ValueOnly
+    if ($current) { continue }
+    $value = $DeployGeneratedAssetsConfig[$name]
+    if (-not $value) { $value = [Environment]::GetEnvironmentVariable($environmentNames[$name]) }
+    if ($value) { Set-Variable -Name $name -Value $value }
+}
+foreach ($name in @('NasAlias', 'ProjectDir', 'VhostDir', 'MirrorRoot')) {
+    if (-not (Get-Variable -Name $name -ValueOnly)) {
+        throw "Set $name in Deploy-GeneratedAssets.local.ps1 or $($environmentNames[$name])."
+    }
+}
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 
-# repo-relative source -> absolute NAS path
+# repo-relative source -> absolute deployment path
 $managed = @(
     [pscustomobject]@{ Repo = 'asset-server/generated-assets/Dockerfile';           Remote = "$ProjectDir/Dockerfile" }
     [pscustomobject]@{ Repo = 'asset-server/generated-assets/docker-compose.yml';   Remote = "$ProjectDir/docker-compose.yml" }
@@ -108,18 +134,16 @@ if ($Apply -and $drift.Count -gt 0) {
     # Rebuild without disturbing the running containers, then prove the image on
     # a throwaway root before anything is recreated.
     Invoke-Nas "cd '$ProjectDir' && docker compose build 2>&1 | tail -n 3" | Out-Null
-    # The probe root is seeded from the live object pool.  The pool is
-    # content-addressed and write-once, so sharing it is safe, and an empty probe
-    # root would instead re-download the entire archive (measured: 12,000 objects,
-    # about an hour through this proxy) to learn what a few hundred real downloads
-    # teach in minutes.  Seeded, the probe still exercises the real download path
-    # and a real publish -- into a root that is deleted afterwards.
+    # The probe root is seeded from the content-addressed object pool so the test
+    # exercises the real download path without duplicating the full archive.
     # Hard links are tried first because they are instant, with a full copy as the
     # fallback: they only work inside one filesystem and /tmp is not the archive
     # volume, so the fallback is the normal case rather than an error case.
-    Invoke-Nas "rm -rf '$ProbeRoot' && mkdir -p '$ProbeRoot/objects' && { cp -al /vol2/1000/imas-asset-archive/mltd/generated/objects/sha256 '$ProbeRoot/objects/' 2>/dev/null || cp -a /vol2/1000/imas-asset-archive/mltd/generated/objects/sha256 '$ProbeRoot/objects/'; } && echo seeded" | Out-Null
+    $sourceObjects = "$MirrorRoot/objects/sha256"
+    Invoke-Nas "rm -rf '$ProbeRoot' && mkdir -p '$ProbeRoot/objects' && { cp -al '$sourceObjects' '$ProbeRoot/objects/' 2>/dev/null || cp -a '$sourceObjects' '$ProbeRoot/objects/'; } && echo seeded" | Out-Null
+    $proxyEnv = if ($ProxyUrl) { "-e HTTP_PROXY='$ProxyUrl' -e HTTPS_PROXY='$ProxyUrl'" } else { '' }
     $probe = Invoke-Nas @"
-docker run --rm -v ${ProbeRoot}:/probe -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e MLTD_MIRROR_OBJECT_WORKERS=8 -e HTTP_PROXY=http://192.168.2.31:7890 -e HTTPS_PROXY=http://192.168.2.31:7890 -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_release.py --root /probe --once | head -c 1200
+docker run --rm -v ${ProbeRoot}:/probe -e MLTD_ASSETS_REPOSITORY=kohakunamori/MLTDTranslationAssets -e MLTD_ASSETS_BRANCH=main -e MLTD_MIRROR_OBJECT_WORKERS=8 $proxyEnv -e NO_PROXY=127.0.0.1,localhost local/mltd-generated-assets:20260930 python /app/sync_release.py --root /probe --once | head -c 1200
 "@ -AllowFailure
     # The distributor no longer runs these; leaving them behind would leave a second
 # program in the project directory that can be started by hand against stale data.
@@ -143,7 +167,7 @@ Invoke-Nas "rm -rf '$ProbeRoot'" | Out-Null
 
 $status = Invoke-Nas "docker ps --format '{{.Names}}|{{.Status}}' | grep -E 'mltd-generated-assets' || true"
 $summary.Containers = @($status | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
-$published = Invoke-Nas "ls -1 /vol2/1000/imas-asset-archive/mltd/generated/published 2>/dev/null | tr '\n' ' '"
+$published = Invoke-Nas "ls -1 '$MirrorRoot/published' 2>/dev/null | tr '\n' ' '"
 $summary.PublishedVersions = "$published".Trim()
 $routeProbe = Invoke-Nas "curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://127.0.0.1:18765/assets/ || true"
 $summary.LoopbackRouteStatus = "$routeProbe".Trim()

@@ -55,7 +55,7 @@ def test_only_three_entry_points_and_no_dispatch_chains():
     for path in FLOWS.glob('*.yml'):
         doc = workflow(path.name)
         triggers = doc.get('on', doc.get(True))
-        assert 'schedule' not in triggers  # existing VPS remains the clock
+        assert 'schedule' not in triggers  # the external scheduler remains the clock
         if 'workflow_dispatch' in triggers:
             entries.add(path.name)
     assert entries == {'auto-track-jp-assets.yml', 'validate-localization.yml', 'image-model-smoke.yml'}

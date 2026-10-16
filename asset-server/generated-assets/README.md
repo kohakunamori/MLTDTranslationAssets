@@ -1,66 +1,36 @@
-# MLTD generated-assets 分发闭包（NAS 侧，已部署）
+# MLTD generated-assets 历史分发闭包
 
-本目录是 NAS 上 `mltd-generated-assets` 两个服务的**源码闭包**：它把本仓
-`generated/<asset_version>/` 变成客户端可直接请求的只读 HTTP 面。
+本目录保留一个旧版只读分发方案的源码。当前生产链路为统一 CI → 私有 R2 → Cloudflare Worker，
+此闭包已不属于当前发布路径。
 
-> 状态：**已部署并在跑**（2026-09-30 上线，2026-10-08 只读核对）。
-> 与 `asset-server/` 的官方归档 updater 完全不相交：这里只读 `generated/`，
-> 不写 `views/`、`current`、`index.sqlite3`，也不参与官方资源归档。
+## 服务契约
 
-## 两个服务
+| 服务 | 作用 |
+| --- | --- |
+| `generated-assets` | 只读服务一个经过校验的版本；只监听 loopback，未命中时可从官方资源回退读取 |
+| `generated-assets-sync` | 按固定间隔读取公开仓库中的发布清单，验证对象指纹后更新当前版本 |
 
-| 服务 | 容器 | 作用 |
-| --- | --- | --- |
-| `generated-assets` | `mltd-generated-assets` | 只读路由：`serve_release.py serve`（单版本：`manifest.json` + `checksums.txt` + `objects/sha256/`），只监听 `127.0.0.1:18765`；按 manifest 的 `runtime_path`/`logical_path` 读 CAS 对象，逐请求复验字节；未命中的对象只读回源同版本官方 CDN（缓存写在 CAS 之外） |
-| `generated-assets-sync` | `mltd-generated-assets-sync` | 常驻同步：`sync_release.py` 每 6 小时取仓库里最新的 `generated/<数字版本>/`，逐个校验对象指纹后就地替换 `manifest.json`/`checksums.txt`/`version.json`，并清掉新版本不再引用的对象 |
+服务使用的归档目录、发布目录、缓存目录和代理地址由本机 `.env` 提供。复制
+`.env.example` 为 `.env`，按需填写本机路径；这些值不会提交到仓库。
 
-公开路由（复用共享 `on-demand-nginx:18443`，不新开端口）：
+逻辑路由形态：
 
 ```text
-https://mltd-asset.nyaneko.cn:18443/generated-assets/<asset_version>/<logical_path>
-   -> shared on-demand-nginx
+https://<asset-host>/generated-assets/<asset_version>/<logical_path>
+   -> reverse proxy
    -> http://127.0.0.1:18765/assets/<asset_version>/<logical_path>
-   -> /vol2/1000/imas-asset-archive/mltd/generated/published/<asset_version>/
+   -> configured published root
 ```
 
-## 为什么新版本会自动出现
+`deployed.json` 只记录仓库内的源文件和服务契约，不保存机器名、部署路径、网络测量或远端文件哈希。
+`test_closure.py` 检查源文件存在、服务绑定和只读路由边界。
 
-`sync_loop.py` 不维护任何版本清单，也**不跟随任何 `current` 指针**：它每个 tick 在钉住的
-head 上重新枚举 `generated/` 下的纯数字目录，因此一笔新版本只要构建成功并推到 `main`，
-下一个 tick（≤6h）就会自动进入 `published/<asset_version>/`。已存在对象按 SHA-256 跳过下载，
-所以重复 tick 是廉价的幂等操作。
+## 本机部署配置
 
-## 文件与部署记录
-
-| 本仓文件 | NAS 路径 | 说明 |
-| --- | --- | --- |
-| `sync_release.py` | `<project_dir>/sync_release.py` | 同步循环；自包含（只用标准库），发布文件走不限额的 raw 地址 |
-| `Dockerfile` | `<project_dir>/Dockerfile` | 镜像配方；构建上下文就是 NAS 上的 `<project_dir>` |
-| `docker-compose.yml` | `<project_dir>/docker-compose.yml` | 两个服务的卷/环境/命令 |
-| `../serve_release.py` | `<project_dir>/serve_release.py` | 只读路由（本仓 `asset-server/` 同一文件） |
-
-| `../nginx-vhost.conf` | `<vhost_dir>/nginx-vhost.conf` | 共享 nginx 的项目 vhost（单文件 bind，需保 inode） |
-
-`deployed.json` 逐文件记录**部署时**的 NAS SHA-256 与本仓 SHA-256，`test_closure.py`
-离线校验两者一致、并拒绝没有说明的漂移。改这些文件后必须重新部署并更新记录，否则回归会红。
-
-当前已记录的一处真实漂移：NAS 镜像里的 `scripts/assets_mirror.py` 是旧副本
-（`08c82125…`），本仓是较新的 `1e39ebaa…`；用本仓模块驱动同一份 `sync_loop.py` 的
-只读探针（枚举 head + `1077710` dry-run，零写入）通过，但**收敛这处漂移是一次显式部署**，
-不属于本记录。
-
-## 部署与核对
-
-`asset-server/Deploy-GeneratedAssets.ps1` 是项目侧的部署/核对入口（默认只计划）：
-
-```powershell
-# 计划：对比两侧 SHA-256、检查容器与 nginx 配置，不写任何东西
-pwsh -NoLogo -NoProfile -File asset-server/Deploy-GeneratedAssets.ps1
-
-# 收敛：备份 → 上传并复验 → 重建镜像 → 用一次性容器在临时根上跑 --once 自证 →
-#       nginx -t 后 reload → 重建两个服务 → loopback 探针
-pwsh -NoLogo -NoProfile -File asset-server/Deploy-GeneratedAssets.ps1 -Apply
-```
+`asset-server/Deploy-GeneratedAssets.ps1` 需要本机的 SSH alias、项目目录、镜像目录和 vhost 目录。
+将 `Deploy-GeneratedAssets.local.ps1.example` 复制为同目录下的
+`Deploy-GeneratedAssets.local.ps1` 并填写这些值，或通过 `MLTD_DEPLOY_*` 环境变量传入。
+本机配置文件已加入 Git 忽略规则。
 
 ## 离线回归
 
@@ -68,6 +38,5 @@ pwsh -NoLogo -NoProfile -File asset-server/Deploy-GeneratedAssets.ps1 -Apply
 python -m pytest asset-server/generated-assets -q
 ```
 
-断言覆盖：不写 `current` 指针、版本发现来自 `generated/` 目录、只有 `build_status=success`
-才镜像、非阻塞单写者锁、tick 失败不退出循环、路由只监听回环且挂载只读、官方回退缓存
-不进 CAS、vhost 的 `/generated-assets/` 只代理回环且不接受写方法与 `current`。
+回归覆盖版本发现、失败时保留旧版本、单写者锁、loopback 只读服务、可配置数据卷、官方回退缓存
+和 vhost 的只读代理规则。

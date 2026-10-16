@@ -1,76 +1,44 @@
 {
-  "schema_version": 1,
-  "kind": "mltd-generated-assets-deployment-record",
+  "schema_version": 2,
+  "kind": "mltd-generated-assets-source-record",
+  "status": "retired",
   "observed_at": "2026-10-10T19:05:00Z",
-  "observed_from": "an -Apply of asset-server/Deploy-GeneratedAssets.ps1, which uploads through a staging directory, re-hashes every file remotely, probes the rebuilt image on a throwaway root, and only then recreates the services",
-  "hash_convention": "repo_sha256 is the repository blob (git cat-file blob HEAD:<repo_source>), i.e. the bytes a clean checkout deploys; deployed_sha256 is the file on the NAS.",
-  "host_alias": "nas",
-  "project_dir": "/vol1/1000/appdata/imas/mltd-generated-assets",
-  "mirror_root": "/vol2/1000/imas-asset-archive/mltd/generated",
-  "vhost_deploy_dir": "/vol1/1000/appdata/imas/mltd-asset/asset-server",
-  "image": "local/mltd-generated-assets:20260930",
   "services": {
     "generated-assets": {
       "container": "mltd-generated-assets",
-      "command": "python /app/serve_release.py serve --root /data --bind 127.0.0.1 --port 18765 --official-root /official --official-base-url https://td-assets.bn765.com --official-cache-root /official-cache --legacy-overlay-root /official/cn-version",
-      "role": "one release, verified per request; official original for anything it does not translate"
+      "bind": "127.0.0.1",
+      "port": 18765,
+      "role": "Read-only route for one verified release; missing assets may use the official source."
     },
     "generated-assets-sync": {
       "container": "mltd-generated-assets-sync",
-      "command": "python /app/sync_release.py --root /data",
-      "role": "keeps that one release in step with the repository, holding a single-writer lock",
       "interval_seconds": 21600,
       "repository": "kohakunamori/MLTDTranslationAssets",
-      "branch": "main"
+      "branch": "main",
+      "role": "Keeps the selected release in step with the repository."
     }
   },
   "files": [
     {
-      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/sync_release.py",
-      "repo_source": "asset-server/sync_release.py",
-      "deployed_sha256": "3a7685f845cd51c7f079a479daa179d4f503e22ba55792e111854f3bd18caceb",
-      "repo_sha256": "3a7685f845cd51c7f079a479daa179d4f503e22ba55792e111854f3bd18caceb",
-      "repo_matches_deployed": true
-    },
-    {
-      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/serve_release.py",
-      "repo_source": "asset-server/serve_release.py",
-      "deployed_sha256": "a1da30cd582b51a4baedb2555bf50ab6071babc3e6da77579257bef8f1c40296",
-      "repo_sha256": "a1da30cd582b51a4baedb2555bf50ab6071babc3e6da77579257bef8f1c40296",
-      "repo_matches_deployed": true
-    },
-    {
-      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/Dockerfile",
       "repo_source": "asset-server/generated-assets/Dockerfile",
-      "deployed_sha256": "9fff4cbd7ffab62ae1a8e31eb2dc7be8488ffd02491ddf49071de86537955839",
-      "repo_sha256": "9fff4cbd7ffab62ae1a8e31eb2dc7be8488ffd02491ddf49071de86537955839",
-      "repo_matches_deployed": true
+      "role": "Historical container build recipe."
     },
     {
-      "nas_path": "/vol1/1000/appdata/imas/mltd-generated-assets/docker-compose.yml",
       "repo_source": "asset-server/generated-assets/docker-compose.yml",
-      "deployed_sha256": "cd3b69c7a57eb8a657fe5a7246d5b2fdbcff6f84be83310a2051f9591b80a4a4",
-      "repo_sha256": "cd3b69c7a57eb8a657fe5a7246d5b2fdbcff6f84be83310a2051f9591b80a4a4",
-      "repo_matches_deployed": true
+      "role": "Historical service configuration with host paths supplied locally."
     },
     {
-      "nas_path": "/vol1/1000/appdata/imas/mltd-asset/asset-server/nginx-vhost.conf",
+      "repo_source": "asset-server/serve_release.py",
+      "role": "Read-only release route."
+    },
+    {
+      "repo_source": "asset-server/sync_release.py",
+      "role": "Release synchronization loop."
+    },
+    {
       "repo_source": "asset-server/nginx-vhost.conf",
-      "deployed_sha256": "663b678ec1efe8a00804af447b426650036728d06a7653a769a53ce8198a2439",
-      "repo_sha256": "663b678ec1efe8a00804af447b426650036728d06a7653a769a53ce8198a2439",
-      "repo_matches_deployed": true
+      "role": "Reverse-proxy route configuration."
     }
   ],
-  "observed_release": {
-    "published_versions": [
-      "1077741"
-    ],
-    "delivery": {
-      "asset_version": "1077741",
-      "generated_commit": "42732e9e0e8749116c0c14d5d44f8c656eee6ac3",
-      "entry_count": 11248
-    }
-  },
-  "note": "The distributor now holds exactly one release: assets_route.py and sync_loop.py were replaced by serve_release.py and sync_release.py, both shipped from this repository and removed from the NAS project directory by the same -Apply that recorded this. scripts/assets_mirror.py is no longer part of this deployment; the archive deployment (asset-server/docker-compose.yml) still builds it, because mirroring many official versions is that deployment's job.",
-  "verification": "asset-server/generated-assets/test_closure.py reads this file: the recorded repository blobs must exist at HEAD, the hashes must match the deployed bytes where repo_matches_deployed is true, and the image and compose contracts must describe the programs actually started. The live route was also compared byte for byte against its predecessor before the switch."
+  "note": "This source record intentionally excludes machine names, deployment paths, network measurements, and remote file hashes."
 }

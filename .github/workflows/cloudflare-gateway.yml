@@ -108,7 +108,7 @@ jobs:
         # Retry first.  Cloudflare keeps serving the previous worker version for a
         # few seconds after a successful deploy, and gateway run #18 read
         # live=f7de7355 twice while the deploy had in fact succeeded: the same URL
-        # reported the new commit a minute later and the VPS watcher agreed.  A
+          # reported the new commit a minute later and the external watcher agreed.  A
         # false red here reads as a broken release and makes the watcher dispatch
         # another deploy for nothing.
         run: |

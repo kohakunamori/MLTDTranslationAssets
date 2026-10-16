@@ -15,6 +15,7 @@ import hashlib
 import copy
 import re
 import shlex
+import os
 import tarfile
 import subprocess
 import sys
@@ -658,7 +659,7 @@ def runner_command(args: argparse.Namespace, release: dict[str, Any], snapshot: 
         "--artifact-store-root",
         str(args.artifact_store_root),
         "--nas-overlay-root",
-        str(args.nas_overlay_root),
+        args.nas_overlay_root or "",
         "--publish-transport",
         str(args.publish_transport),
         "--publish-ssh-target",
@@ -679,6 +680,13 @@ def runner_command(args: argparse.Namespace, release: dict[str, Any], snapshot: 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    archive_root_default = os.environ.get("MLTD_ARCHIVE_ROOT")
+    archive_manifest_default = os.environ.get("MLTD_ARCHIVE_MANIFEST") or (
+        f"{archive_root_default.rstrip('/')}/manifest.json" if archive_root_default else None
+    )
+    overlay_root_default = os.environ.get("MLTD_ARCHIVE_OVERLAY_ROOT") or (
+        f"{archive_root_default.rstrip('/')}/cn-version" if archive_root_default else None
+    )
     parser.add_argument("--source", choices=("nas", "remote"), default="nas")
     parser.add_argument("--version", default=None, help="override the NAS/remote version; default is newest complete source release")
     parser.add_argument("--asset-store-root", required=True, type=Path)
@@ -697,11 +705,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-free-gib", type=float, default=80.0)
     parser.add_argument("--publish-apply", action="store_true")
     parser.add_argument("--publish-transport", choices=("plan", "local", "ssh"), default="ssh")
-    parser.add_argument("--publish-ssh-target", default="nas")
-    parser.add_argument("--nas-overlay-root", default="/vol2/1000/imas-asset-archive/mltd/cn-version")
-    parser.add_argument("--nas-ssh-target", default="nas")
-    parser.add_argument("--nas-archive-root", default="/vol2/1000/imas-asset-archive/mltd")
-    parser.add_argument("--nas-manifest", default="/vol2/1000/imas-asset-archive/mltd/manifest.json")
+    parser.add_argument("--publish-ssh-target", default=os.environ.get("MLTD_PUBLISH_SSH_TARGET", "nas"))
+    parser.add_argument("--nas-overlay-root", default=overlay_root_default,
+                        help="archive overlay path; defaults to MLTD_ARCHIVE_OVERLAY_ROOT")
+    parser.add_argument("--nas-ssh-target", default=os.environ.get("MLTD_ARCHIVE_SSH_TARGET", "nas"))
+    parser.add_argument("--nas-archive-root", default=archive_root_default,
+                        help="archive path; defaults to MLTD_ARCHIVE_ROOT")
+    parser.add_argument("--nas-manifest", default=archive_manifest_default,
+                        help="archive manifest path; defaults to MLTD_ARCHIVE_MANIFEST or MLTD_ARCHIVE_ROOT/manifest.json")
     parser.add_argument("--prepare-only", action="store_true",
                         help="compare NAS source hashes, fetch only unresolved GTX, then stop before translation/publication")
     parser.add_argument("--reuse-manifest", action="append", default=[],
@@ -709,6 +720,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verify-source-fingerprint", action="store_true",
                         help="compactly verify all source (name, SHA-256, size) rows against NAS SQLite")
     args = parser.parse_args(argv)
+    if args.source == "nas" and (not args.nas_archive_root or not args.nas_manifest):
+        parser.error("source=nas requires --nas-archive-root and --nas-manifest, or MLTD_ARCHIVE_ROOT")
+    if args.publish_apply and args.publish_transport == "ssh" and not args.nas_overlay_root:
+        parser.error("SSH publication requires --nas-overlay-root or MLTD_ARCHIVE_OVERLAY_ROOT")
     try:
         asset_root = args.asset_store_root.resolve()
         snapshot_root = args.snapshot_root.resolve()
