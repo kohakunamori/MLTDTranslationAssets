@@ -18,10 +18,10 @@
     }
   },
   "locales": {
-    "accepted": 415007,
-    "accepted_with_kana_candidates": 4273,
+    "accepted": 415637,
+    "accepted_with_kana_candidates": 4274,
     "pending": 99,
-    "untranslated": 720
+    "untranslated": 90
   },
   "repair_candidates": [],
   "images": {
