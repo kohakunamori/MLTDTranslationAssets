@@ -16,10 +16,10 @@
 ```mermaid
 flowchart LR
   Index[当前官方目录] --> Hosted[托管 runner：增量选择、解包、拼接、日文 OCR]
-  Hosted --> VPS[RackNerd：GPT 图片汉化]
-  VPS --> Norm[整图去新增黑边和尺寸规范，不恢复 OCR 掩膜]
-  Norm --> Vision[Gemini 对照原图与中文结果逐项视觉验收]
-  Vision -->|全部通过| Audit[托管 runner：残留日文检查、Unity 注入及独立验证]
+  Hosted --> Translate[GPT 图片汉化与 Gemini 视觉验收]
+  Translate --> Norm[整图去新增黑边和尺寸规范，不恢复 OCR 掩膜]
+  Norm --> Vision[检查通过的结果]
+  Vision -->|全部通过| Audit[GitHub-hosted runner：残留日文检查、Unity 注入及独立验证]
   Vision -->|失败或不确定| Hold[保留候选与报告，待复查]
   Audit --> Git[Git：新增 PNG 和来源记录]
   Audit --> R2[R2：已校验 Bundle]
@@ -64,7 +64,7 @@ flowchart LR
 样本检查期间的未批准模型结果另存于 `images/candidates/`，来源与请求摘要记录在
 `manifests/image-generation-cache.json`。即使 Actions 缓存过期或批次组成变化，也先按输入 PNG SHA
 复用已有结果；切换到新验收配置时，旧模型/提示词的结果先复用并重新验收，不能因此重复生成。
-轻量 runner 只读取来源清单，按检出提交下载需要的单张候选 PNG 并校验 SHA，不检出整个图片目录。
+模型 job 只读取来源清单，按检出提交下载需要的单张候选 PNG 并校验 SHA，不检出整个图片目录。
 视觉验收绑定原图、规范后的候选、参考文字、模型及验收提示词的 SHA；报告在
 `manifests/image-visual-reviews.json` 持久保存。通过、拒绝、接口失败或不确定的结果均不会偷偷重试。
 图片或规则变化会产生新的验收身份，旧报告不能批准新图片。生成与验收分别缓存，验收不通过不等于重新汉化。

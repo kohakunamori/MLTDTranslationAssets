@@ -81,22 +81,18 @@ flowchart TD
 
 | 阶段 | runner 与时限 |
 | --- | --- |
-| plan、summary、积压续跑 | hosted Ubuntu，各 5 分钟 |
-| 官方版本检查、冻结 | hosted Ubuntu，各 15 分钟；不排在耗时的模型作业之后 |
-| 文字同步准备 | hosted Ubuntu，180 分钟；官方 Bundle 留在大磁盘端 |
-| 文字模型调用与提交 | RackNerd，180 分钟；通过 exact-run cache 接收有界文本与索引 |
-| 图片解包 / OCR / 注入 / 独立审计 | hosted Ubuntu，准备和发布各 45 分钟 |
-| 图片汉化及视觉验收 | RackNerd，150 分钟；gpt-image-2.5 汉化、gemini-3.8-flash-high 验收，串行 RPM 2；分别缓存生成结果和验收报告 |
-| 资源构建与 R2 上传 | hosted Ubuntu，45 分钟 |
-| Worker 部署及线上验收 | hosted Ubuntu，30 分钟；只下载样本与目录索引 |
-| 质量校验 / 回归 | hosted Ubuntu，10 / 20 分钟；四个回归 workers |
+| plan、summary、积压续跑 | 标准 GitHub-hosted Ubuntu，各 5 分钟 |
+| 官方版本检查、冻结 | 标准 GitHub-hosted Ubuntu，各 15 分钟；不排在耗时的模型作业之后 |
+| 文字同步准备与模型调用 | 标准 GitHub-hosted Ubuntu，180 分钟；通过 exact-run cache 传递有界文本与索引 |
+| 图片解包 / OCR / 翻译 / 视觉验收 / 注入 / 独立审计 | 标准 GitHub-hosted Ubuntu，准备和发布各 45 分钟，模型阶段 150 分钟；生成与验收结果分别缓存 |
+| 资源构建与 R2 上传 | 标准 GitHub-hosted Ubuntu，45 分钟 |
+| Worker 部署及线上验收 | 标准 GitHub-hosted Ubuntu，30 分钟；只下载样本与目录索引 |
+| 质量校验 / 回归 | 标准 GitHub-hosted Ubuntu，10 / 20 分钟；四个回归 workers |
 
 父运行按入口阶段分组排队，不取消正在写入的任务。翻译、图片、构建、网关各自保留独立写者锁，
-父子不使用同名 concurrency group，避免相互等待。复用 job 自身不占用等待 runner，不会把唯一 RackNerd 插槽占住来等子任务。
+父子不使用同名 concurrency group，避免相互等待。复用 job 自身不占用 runner 来等待子任务。
 R2 构建、图片上传和网关验收/GC 共用 `r2-mutation` 锁，采用 `queue: max` 排队，避免排队任务互相取消。actionlint 1.7.12 尚不识别这个 GitHub 新字段，只忽略其精确语法告警；回归测试单独校验该字段。
-RackNerd 保留 35% CPU、512 MiB 上限，只承担文字/图片 API 等轻量任务。
-
-真实数据校验和离线 fixture 回归分开；actionlint 检查全部工作流输入、调用、表达式与自定义 runner 标签。
+真实数据校验和离线 fixture 回归分开；actionlint 检查全部工作流输入、调用和表达式。
 模型部分失败时先保存并校验已经成功的草稿，保留诊断；严重服务故障仍报告失败。
 失败阶段不会被最后的 summary 覆盖成成功。summary 始终记录各阶段结果，方便在同一次 run 排障。
 

@@ -578,11 +578,8 @@ class TestStepTenUsesTheSingleEntryPoint(WorkflowTemplateCase):
         The guard is only honest because GitHub *does* provide these variables:
         the identity has one source (the runner), and "it was empty" can only
         mean "this is not a GitHub runner", which is exactly what the guard
-        says. A self-hosted runner that declares neither an Actions runner nor
-        a host environment would still get them from the runner process -- but a
-        job moved off `ubuntu-latest` (say, to a runner supplying identities
-        some other way) would meet the guard before the entry point and must
-        then be reconsidered here, deliberately, not silently.
+        says. If the job moves away from a GitHub-hosted runner, reconsider the
+        guard before changing the runner assignment.
         """
         self.assertEqual(self.job.get("runs-on"), "ubuntu-latest")
         for line in self.guard_lines():

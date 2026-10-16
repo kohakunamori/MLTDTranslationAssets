@@ -56,13 +56,9 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         checkout = self.job['steps'][0]['with']
         self.assertIn('!/image-overlay/', checkout['sparse-checkout'])
         self.assertEqual(self.prepare['runs-on'], 'ubuntu-latest')
-        # Both halves run hosted since 2026-10-16.  What this test freezes is
-        # what may reach the translation job, not which machine runs it: the
-        # bulk trees stay out of the checkout above, and the job only ever
-        # receives the bounded text handoff.  It used to run on the
-        # resource-limited RackNerd runner, whose 512 MiB ceiling wedged it at
-        # 511 MiB with the worker parked in mem_cgroup_handle_over_high
-        # (run 38858298620) and then held that runner's single job slot.
+        # Both jobs use standard GitHub-hosted runners. The bulk trees stay
+        # out of the checkout above, and the translation job only ever
+        # receives the bounded text handoff.
         self.assertEqual(self.job['runs-on'], 'ubuntu-latest')
         self.assertEqual(self.job['needs'], 'prepare')
         prepare_names = [step.get('name') for step in self.prepare['steps']]

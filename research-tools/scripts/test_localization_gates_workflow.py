@@ -74,7 +74,7 @@ APK_TEST_FILES = (
     "scripts/test_run_dual_track_pipeline.py",
     "client/tests/test_local_track_pin.py",
 )
-# B2 退役 self-hosted 候选后新增的 APK 工作流边界测试（终态 6 项断言）。
+# B2 退役候选 APK 流程后新增的工作流边界测试（终态 6 项断言）。
 APK_NEW_TESTS = ("client/tests/test_apk_candidate_workflow.py",)
 # assets job 的三步：candidate 快照/发布束校验 + asset-server 闭包 + release 模型/生成物/镜像。
 ASSETS_STEP_TESTS = (

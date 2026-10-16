@@ -193,14 +193,9 @@ jobs:
 
   draft:
     needs: prepare
-    # This job needs only the repository, Python and the public HTTPS gateway
-    # configured in configs/api-models.example.json, so it runs hosted.
-    # MLTDTranslationAssets is public, which makes standard hosted minutes free
-    # and unlimited, and the 4 vCPU / 16 GB runner replaces a 1 vCPU / 1.4 GiB
-    # host whose 512 MiB job ceiling wedged this job at 511 MiB for 17 minutes
-    # (run 38858298620) and then held the single runner slot for hours, blocking
-    # every queued job behind it. Only the API key is imported from Actions
-    # secrets into an ephemeral runner-temp file.
+    # Standard GitHub-hosted runners are free for this public repository.
+    # Only the API key is imported from Actions secrets into an ephemeral
+    # runner-temp file.
     runs-on: ubuntu-latest
     # A cold cache re-verifies every tracked bundle (~1 hour); the memo makes a
     # normal run minutes. Anything past three hours is a hang, not progress.

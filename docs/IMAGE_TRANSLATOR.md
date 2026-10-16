@@ -62,5 +62,5 @@ JPEG 等输入和处理程序返回的非 PNG 静态图片会规范为 PNG；多
 - 缩略图派生：`scripts/image_thumbnails.py`。只复用已批准的源图，不调用翻译或验收模型。
 - 纹理注入、独立审计、R2 和版本保留：原有发布阶段。
 
-LLM API 作业继续在 RackNerd 串行运行、RPM 2。外部命令默认在 GitHub 托管 runner 运行，避免将未知 CPU 密集程序放到 RackNerd。
+LLM API 作业与外部命令均在标准 GitHub-hosted runner 上运行；模型请求串行限速为 RPM 2。
 现有来源已有生成结果时仍优先恢复，不因替换实现而自动重新翻译。候选未通过验收与需要重新生成是两件独立的事。

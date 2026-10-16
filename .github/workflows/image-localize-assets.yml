@@ -32,7 +32,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       enabled: ${{ steps.features.outputs.images_generation_enabled }}
-      runner: ${{ steps.features.outputs.images_translation_runner }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,7 +41,7 @@ jobs:
             configs
             scripts
       - id: features
-        run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT" --image-runner-output
+        run: python scripts/localization_features.py --github-output "$GITHUB_OUTPUT"
 
   prepare:
     needs: policy
@@ -95,8 +94,7 @@ jobs:
 
   localize:
     needs: [policy, prepare]
-    # API work is light and runs on RackNerd. External processors use hosted CPU.
-    runs-on: ${{ fromJSON(needs.policy.outputs.runner) }}
+    runs-on: ubuntu-latest
     timeout-minutes: 150
     concurrency:
       group: images-provider

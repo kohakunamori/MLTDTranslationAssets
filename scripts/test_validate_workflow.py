@@ -106,7 +106,7 @@ class SparseCheckoutTests(unittest.TestCase):
         self.assertTrue(REQUIRED_PACKAGES.issubset(packages),
                         f"requirements-ci.txt is missing {sorted(REQUIRED_PACKAGES - packages)}")
 
-    def test_the_suite_sizes_workers_for_the_runner(self):
+    def test_the_suite_uses_the_hosted_worker_count(self):
         """``worksteal`` is what keeps the two slow files from owning the run.
 
         The suite's cost sits in asset-server/test_service_e2e.py (5 tests of
@@ -119,7 +119,7 @@ class SparseCheckoutTests(unittest.TestCase):
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn('-n "$PYTEST_WORKERS"', run)
         env = self.step("regression", "Run the offline suites that gate publishing")["env"]
-        self.assertEqual(env['PYTEST_WORKERS'], "${{ runner.environment == 'self-hosted' && '1' || '4' }}")
+        self.assertEqual(env['PYTEST_WORKERS'], '4')
         self.assertIn("--dist worksteal", run)
         self.assertNotIn("--dist loadfile", run)
         self.assertIn("pytest-xdist", REQUIREMENTS.read_text(encoding="utf-8"))

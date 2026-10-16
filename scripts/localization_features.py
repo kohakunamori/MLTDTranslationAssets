@@ -8,15 +8,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def image_runner(images):
-    kind = images.get('translator', {}).get('kind', 'llm')
-    if kind == 'command':
-        return ['ubuntu-latest']
-    if kind != 'llm':
-        raise ValueError('Unknown image translator kind')
-    return ['self-hosted', 'Linux', 'X64', 'racknerd-light']
-
-
 def inspect(root: Path) -> dict:
     path = root / "configs/localization-pipeline.json"
     if not path.is_file():
@@ -30,7 +21,6 @@ def inspect(root: Path) -> dict:
         raise ValueError("invalid localization pipeline feature policy")
     return {"images_generation_enabled": images["generation_enabled"],
             "images_publication_enabled": images["publication_enabled"],
-            "images_translation_runner": image_runner(images),
             "reason": "Image generation enabled." if images["generation_enabled"] else
                       images.get("disabled_reason", "Image generation disabled.")}
 
@@ -40,15 +30,12 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--github-output", type=Path)
     parser.add_argument("--report", type=Path)
-    parser.add_argument("--image-runner-output", action="store_true")
     args = parser.parse_args()
     result = inspect(args.root)
     if args.github_output:
         with args.github_output.open("a", encoding="utf-8") as stream:
             for key in ("images_generation_enabled", "images_publication_enabled"):
                 stream.write(f"{key}={str(result[key]).lower()}\n")
-            if args.image_runner_output:
-                stream.write('images_translation_runner=' + json.dumps(result.get('images_translation_runner', image_runner({}))) + '\n')
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
