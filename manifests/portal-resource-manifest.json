@@ -54249,11 +54249,17 @@
     {
       "blocked": 0,
       "bundles": {
+        "IGP_jp.gtx": {
+          "pending": 0,
+          "total": 4607,
+          "translated": 2119,
+          "untranslated": 2488
+        },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 117527,
+          "total": 117528,
           "translated": 117509,
-          "untranslated": 0
+          "untranslated": 1
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -76849,10 +76855,10 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 178027,
-      "translated": 178009,
+      "total": 182635,
+      "translated": 180128,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 2489
     },
     {
       "blocked": 0,
@@ -76911,29 +76917,29 @@
     {
       "id": "system",
       "pending": 18,
-      "total": 178027,
-      "translated": 178009,
-      "untranslated": 0
+      "total": 182635,
+      "translated": 180128,
+      "untranslated": 2489
     }
   ],
-  "generated_at": "2026-10-11T19:57:19.783213+00:00",
+  "generated_at": "2026-10-16T08:12:19.066263+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1077750",
-    "assets_commit": "dfe39a30fe87f74d1579c263647c9220311ca368",
-    "release_id": "assets-1077750",
+    "asset_version": "1077790",
+    "assets_commit": "ed378e332da69ed81096fb88feccb83009b4ff55",
+    "release_id": "assets-1077790",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "1efd70d1976412d057404c96a0dd7ec46f5ebefe2e9182a6e91955be5d93239d",
+    "source_manifest_sha256": "73ffe637ddc50d89eb88173afba3864311a07cd0f2e3db066e27d1080be92268",
     "status": "published",
-    "updated_at": "2026-10-12T00:00:00+09:00"
+    "updated_at": "2026-10-16T13:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "dfe39a30fe87f74d1579c263647c9220311ca368",
+    "commit": "ed378e332da69ed81096fb88feccb83009b4ff55",
     "generated_entry_count": 13496,
-    "generated_manifest_sha256": "1efd70d1976412d057404c96a0dd7ec46f5ebefe2e9182a6e91955be5d93239d",
+    "generated_manifest_sha256": "73ffe637ddc50d89eb88173afba3864311a07cd0f2e3db066e27d1080be92268",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "3169beae201be68462d33f19388b1d80efec1dc355488f0c873bf17c473156aa",
+    "source_catalogue_sha256": "d310a87fc8abc97b0d36c7acf51e0aca1e0b402eaf6f3fb95424a8fd436f9c66",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -76942,8 +76948,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 411218,
-    "translated": 411119,
-    "untranslated": 0
+    "total": 415826,
+    "translated": 413238,
+    "untranslated": 2489
   }
 }
