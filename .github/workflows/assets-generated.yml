@@ -144,6 +144,7 @@ jobs:
 
       - name: Preserve manual image repack evidence
         if: always() && steps.gate.outputs.build == 'true' && steps.features.outputs.images_publication_enabled == 'true'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: human-image-repack-audit
