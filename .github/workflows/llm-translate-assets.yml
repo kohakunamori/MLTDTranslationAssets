@@ -427,10 +427,10 @@ jobs:
         run: python scripts/commit_llm_drafts.py
 
       - name: Upload translation diagnostics
-        # Always keep the evidence: the failed items and the accepted drafts are
-        # otherwise lost with the runner, which is what made the 2026-10 outage
-        # invisible.
-        if: always()
+        # Failed runs retain diagnostics; successful drafts live in Git.
+        # Opt in to successful-run artifacts only when investigating a problem.
+        if: ${{ failure() || vars.MLTD_KEEP_SUCCESS_DIAGNOSTICS == 'true' }}
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: llm-translation-diagnostics
