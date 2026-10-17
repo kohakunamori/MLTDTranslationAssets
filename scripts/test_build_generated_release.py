@@ -860,6 +860,53 @@ class GeneratedReleaseContracts(unittest.TestCase):
         )
         self.assertEqual([row["translation"] for row in chosen], ["新译"])
 
+    def test_new_asset_version_uses_newest_historical_translation(self):
+        # A new official release may reuse the source without adding a row for
+        # that exact version. Earlier translations can intentionally differ.
+        rows = [
+            {"key": "ld_igp_unit_name_239", "source": "同一原文",
+             "translation": "较新译文", "asset_version": "1077790"},
+            {"key": "ld_igp_unit_name_239", "source": "同一原文",
+             "translation": "早期译文", "asset_version": "1077500"},
+            {"key": "ld_igp_unit_name_239", "source": "其他原文",
+             "translation": "不匹配", "asset_version": "1077800"},
+        ]
+        for candidates in (rows, list(reversed(rows))):
+            chosen = build.select_rows_for_current_sources(
+                candidates, {"ld_igp_unit_name_239": "同一原文"}, "1077800"
+            )
+            self.assertEqual([row["translation"] for row in chosen], ["较新译文"])
+
+    def test_exact_version_wins_regardless_of_candidate_order(self):
+        rows = [
+            {"key": "k", "source": "原文", "translation": "当前译", "asset_version": "1077800"},
+            {"key": "k", "source": "原文", "translation": "旧版译", "asset_version": "1077790"},
+        ]
+        for candidates in (rows, list(reversed(rows))):
+            chosen = build.select_rows_for_current_sources(
+                candidates, {"k": "原文"}, "1077800"
+            )
+            self.assertEqual(chosen[0]["translation"], "当前译")
+
+    def test_selected_historical_version_conflict_is_rejected(self):
+        rows = [
+            {"key": "k", "source": "原文", "translation": "甲", "asset_version": "1077790"},
+            {"key": "k", "source": "原文", "translation": "乙", "asset_version": "1077790"},
+            {"key": "k", "source": "原文", "translation": "更旧", "asset_version": "1077500"},
+        ]
+        with self.assertRaisesRegex(ValueError, "conflicting current-source translation for k"):
+            build.select_rows_for_current_sources(rows, {"k": "原文"}, "1077800")
+
+    def test_future_version_is_only_a_fallback(self):
+        rows = [
+            {"key": "k", "source": "原文", "translation": "未来", "asset_version": "1077900"},
+            {"key": "k", "source": "原文", "translation": "旧版", "asset_version": "1077790"},
+        ]
+        chosen = build.select_rows_for_current_sources(rows, {"k": "原文"}, "1077800")
+        self.assertEqual(chosen[0]["translation"], "旧版")
+        chosen = build.select_rows_for_current_sources(rows[:1], {"k": "原文"}, "1077800")
+        self.assertEqual(chosen[0]["translation"], "未来")
+
     def test_same_asset_version_conflict_is_rejected(self):
         rows = [
             {"key": "k", "source": "同一原文", "translation": "甲", "asset_version": "1077640"},

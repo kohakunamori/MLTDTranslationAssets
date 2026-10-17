@@ -223,32 +223,44 @@ def read_translation_rows(root: Path, asset_version: str,
 def select_rows_for_current_sources(
     rows: list[dict], current_sources: dict[str, str], asset_version: str | None = None
 ) -> list[dict]:
-    """Select only source-bound translations matching the current bundle."""
-    selected: dict[str, dict] = {}
+    """Select source-matching translations, preferring the nearest applicable release.
+
+    A newer accepted translation may revise the same Japanese source text.
+    Historical source-bound rows are still reusable after an asset-version bump,
+    so prefer the newest version *not newer than* the release being built, rather
+    than treating two different historical translations as an ambiguity. When
+    only future-version rows exist, the nearest future version is the fallback.
+    Conflicting translations within the selected version remain an error.
+    """
+    matching: dict[str, list[dict]] = {}
     for row in rows:
         key = str(row["key"])
-        source = str(row["source"])
-        if current_sources.get(key) != source:
-            continue
-        prior = selected.get(key)
-        if prior is not None and prior["translation"] != row["translation"]:
-            # A newer release may intentionally revise a translation while an
-            # older release keeps the previous wording. Prefer the row bound
-            # to the release currently being built; reject ambiguity on the
-            # same asset axis.
-            prior_version = str(prior.get("asset_version", ""))
-            row_version = str(row.get("asset_version", ""))
-            if prior_version == row_version:
-                raise ValueError(f"conflicting current-source translation for {key}")
-            if asset_version and row_version == asset_version:
-                selected[key] = row
-            elif prior_version == asset_version:
-                continue
-            else:
-                raise ValueError(f"conflicting current-source translation for {key}")
-        else:
-            selected[key] = row
-    return list(selected.values())
+        if current_sources.get(key) == str(row["source"]):
+            matching.setdefault(key, []).append(row)
+
+    selected: list[dict] = []
+    for key, candidates in matching.items():
+        if asset_version is not None:
+            target_version = int(asset_version)
+
+            def priority(row: dict) -> tuple[int, int]:
+                value = str(row.get("asset_version", ""))
+                if not value:
+                    return (0, 0)  # Unversioned legacy rows rank last.
+                if not value.isdecimal():
+                    raise ValueError(f"invalid translation asset_version for {key}: {value!r}")
+                version = int(value)
+                if version <= target_version:
+                    return (2, version)  # Current first, then newest past version.
+                return (1, -version)  # Nearest future version only as fallback.
+
+            highest = max(priority(row) for row in candidates)
+            candidates = [row for row in candidates if priority(row) == highest]
+
+        if len({row["translation"] for row in candidates}) > 1:
+            raise ValueError(f"conflicting current-source translation for {key}")
+        selected.append(candidates[0])
+    return selected
 
 
 def prepare_text_inputs(*, work: Path, store: GeneratedStore, version: dict,
