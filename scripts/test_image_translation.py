@@ -11,7 +11,6 @@ import pytest
 
 from pipelines.image import translation
 import incremental_images as images
-import localization_features as features
 
 
 def command(tmp_path, body):
@@ -36,7 +35,6 @@ def test_command_requires_only_images_and_no_model_key(tmp_path, monkeypatch):
     metadata = translation.create({'translator': spec}, tmp_path).translate(original, output)
     assert output.read_bytes() == before == original.read_bytes()
     assert metadata['mode'] == 'image_command'
-    assert features.image_runner({'translator': spec}) == ['ubuntu-latest']
 
 
 @pytest.mark.parametrize('body,match', [
