@@ -5,5 +5,5 @@
   "account_id": "f0133bcc4ae158edd8a2784b257d6024",
   "workers_dev": true,
   "r2_buckets": [{"binding": "ASSETS", "bucket_name": "mltd-localized-assets"}],
-  "observability": {"enabled": true}
+  "observability": {"enabled": true, "head_sampling_rate": 0.05}
 }

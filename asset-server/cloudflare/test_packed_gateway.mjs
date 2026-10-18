@@ -5,6 +5,13 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 globalThis.crypto ??= webcrypto;
+const telemetry=[];
+const originalLog=console.log;
+console.log=(...args)=>{
+ if(typeof args[0]==='string' && args[0].startsWith('mltd_gateway_metrics ')) {
+  telemetry.push(JSON.parse(args[0].slice('mltd_gateway_metrics '.length)));
+ } else originalLog(...args);
+};
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const dir=await mkdtemp(join(tmpdir(),'mltd-pack-'));
 const a=Buffer.from('alpha'),b=Buffer.from('BRAVO!'),pack=Buffer.concat([a,b]);
@@ -28,7 +35,7 @@ async function worker({bad=false,missing=false}={}){
  const module=await import(pathToFileURL(path));
  const cache=new Cache(),waits=[],keys=[];
  globalThis.caches={default:cache};
- const env={ASSETS:{async get(key){
+ const env={GATEWAY_METRICS_ENABLED:'true',ASSETS:{async get(key){
   keys.push(key);
   if(key==='packs/sha256/'+dp){
    if(missing)return null;
@@ -47,10 +54,15 @@ try{
  let r=await w.call('a.data');
  assert.equal(r.status,200);assert.equal(r.headers.get('etag'),'"'+da+'"');
  assert.equal(r.headers.get('x-mltd-cache'),'pack-miss');assert.equal(await r.text(),'alpha');
+ assert.equal(telemetry.at(-1).r2_pack_gets,1);
+ assert.equal(telemetry.at(-1).r2_get_attempts,1);
+ assert.equal(telemetry.at(-1).cache,'pack-miss');
  await w.settle();
  r=await w.call('b.data');
  assert.equal(r.headers.get('x-mltd-cache'),'pack-hit');
  assert.equal(await r.text(),'BRAVO!');
+ assert.equal(telemetry.at(-1).r2_get_attempts,0);
+ assert.equal(telemetry.at(-1).cache,'pack-hit');
  assert.deepEqual(w.keys,['packs/sha256/'+dp]);
  r=await w.call('b.data',{method:'HEAD'});
  assert.equal(r.status,200);assert.equal(r.headers.get('content-length'),'6');
@@ -61,13 +73,30 @@ try{
  assert.equal(r.status,304);assert.equal(w.keys.length,1);
  w=await worker();const pair=await Promise.all([w.call('a.data'),w.call('b.data')]);
  assert.equal(await pair[0].text(),'alpha');assert.equal(await pair[1].text(),'BRAVO!');
- assert.equal(w.keys.length,1);await w.settle();
+ assert.equal(w.keys.length,1);
+ // Concurrent responses share one R2 GetObject, not one for each HTTP request.
+ const concurrent=telemetry.slice(-2);
+ assert.equal(concurrent.reduce((n,event)=>n+event.r2_get_attempts,0),1);
+ assert(concurrent.some(event=>event.shared_pack_inflight));
+ await w.settle();
  w=await worker({bad:true});r=await w.call('a.data');
  assert.equal(await r.text(),'alpha');assert.equal(r.headers.get('x-mltd-cache'),'miss');
  assert.deepEqual(w.keys,['packs/sha256/'+dp,'objects/sha256/'+da]);
+ assert.equal(telemetry.at(-1).r2_get_attempts,2);
+ assert.equal(telemetry.at(-1).r2_pack_gets,1);
+ assert.equal(telemetry.at(-1).r2_object_gets,1);
  await w.settle();
  assert(!w.cache.store.has('https://mltd-localized-assets.invalid/objects/sha256/packs/sha256/'+dp));
  w=await worker({missing:true});r=await w.call('a.data');
  assert.equal(await r.text(),'alpha');assert.equal(w.keys.length,2);
- console.log('PASS packed R2 gateway: two URLs/one GET; HEAD, Range, ETag 304, concurrent cold requests, corrupt/unavailable fallback');
-}finally{await rm(dir,{recursive:true,force:true});}
+ const safe=JSON.stringify(telemetry);
+ assert(!safe.includes('/1077830/'));
+ assert(!safe.includes('https://'));
+ assert(!safe.includes('cf-connecting-ip'));
+ assert(!safe.includes(da), 'telemetry must not leak content digests');
+ assert(telemetry.every(event => event.event==='mltd_gateway_cache'));
+ console.log('PASS packed R2 gateway and privacy-safe GET/cache telemetry');
+}finally{
+ console.log=originalLog;
+ await rm(dir,{recursive:true,force:true});
+}
