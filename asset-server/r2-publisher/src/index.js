@@ -1,6 +1,6 @@
 // CI-only transport. The public gateway has no publication token or write route.
 // Immutable uploads; authenticated GC is serialized with publishers in CI.
-const KEY = /^(objects|build-cache)\/sha256\/([0-9a-f]{64})$/;
+const KEY = /^(objects|build-cache|packs)\/sha256\/([0-9a-f]{64})$/;
 const json = (value, status = 200) => Response.json(value, {
   status, headers: {'cache-control': 'no-store'},
 });
@@ -53,7 +53,7 @@ export default {
     }
     if (url.pathname === '/inventory' && request.method === 'GET') {
       const prefix = url.searchParams.get('prefix');
-      if (!['objects/sha256/', 'build-cache/sha256/'].includes(prefix)) return json({error: 'prefix'}, 400);
+      if (!['objects/sha256/', 'build-cache/sha256/', 'packs/sha256/'].includes(prefix)) return json({error: 'prefix'}, 400);
       const page = await env.ASSETS.list({prefix, cursor: url.searchParams.get('cursor') || undefined,
         limit: 1000, include: ['customMetadata']});
       return json({objects: page.objects.map(o => ({key: o.key, size: o.size, sha256: o.customMetadata?.sha256})),

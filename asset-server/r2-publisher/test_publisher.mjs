@@ -80,6 +80,15 @@ try {
   assert.equal((await call('delete-batch', 'POST', JSON.stringify([key]))).status, 200);
   assert.equal((await call(key)).status, 404);
   assert.equal((await call(secondKey)).status, 200); // shared retained bytes survive
+  const packBody = 'packed-content';
+  const packDigest = createHash('sha256').update(packBody).digest('hex');
+  const packKey = 'packs/sha256/' + packDigest;
+  assert.equal((await call(packKey, 'PUT', packBody)).status, 201);
+  assert.equal(await (await call(packKey)).text(), packBody);
+  const packs = await (await call('inventory?prefix=packs%2Fsha256%2F')).json();
+  assert(packs.objects.some(row => row.key === packKey && row.sha256 === packDigest));
+  assert.equal((await call('delete-batch', 'POST', JSON.stringify([packKey]))).status, 200);
+  assert.equal((await call(packKey)).status, 404);
   console.log('PASS publisher authentication, immutable writes, checksum rejection, inventory, and bounded batch reads');
 } finally {
   await rm(directory, {recursive: true});
