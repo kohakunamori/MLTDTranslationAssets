@@ -120,6 +120,8 @@ jobs:
         if: steps.gate.outputs.build == 'true'
         env:
           R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          # Prevent a regression from packed restore to 13k individual reads.
+          R2_CI_CLASS_B_LIMIT: '3000'
           ASSET_VERSION: ${{ steps.gate.outputs.asset_version }}
           IMAGES_GENERATION_ENABLED: ${{ steps.features.outputs.images_generation_enabled }}
         run: |
@@ -238,6 +240,7 @@ jobs:
         if: steps.gate.outputs.build == 'true'
         env:
           R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          R2_CI_CLASS_B_LIMIT: '100'
         run: python scripts/r2_release_storage.py publish
 
       - name: Commit reviewed translations and release metadata

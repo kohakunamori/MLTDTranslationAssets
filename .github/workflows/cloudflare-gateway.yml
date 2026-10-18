@@ -98,6 +98,7 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         env:
           R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          R2_CI_CLASS_B_LIMIT: '100'
         run: |
           python -m pip install --quiet requests
           python scripts/r2_release_storage.py restore --no-cache --samples 3
@@ -134,6 +135,7 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         env:
           R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          R2_CI_CLASS_B_LIMIT: '100'
         run: |
           set -euo pipefail
           git fetch origin main
