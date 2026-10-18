@@ -202,7 +202,7 @@ def test_third_version_prunes_old_exclusive_bytes_but_keeps_shared_and_sources(t
     tool.publish(tmp_path, remote)
     preview = tool.prune(tmp_path, remote)
     assert preview['retained_versions'] == ['102', '101']
-    assert preview['delete_objects'] == 1
+    assert preview['delete_objects'] == 2  # retired blob and its immutable small-object pack
     assert 'objects/sha256/' + old.name in remote.objects
     tool.prune(tmp_path, remote, apply=True)
     assert 'objects/sha256/' + old.name not in remote.objects
@@ -282,3 +282,81 @@ def test_invalid_chunk_lengths_fail_before_remote_download(tmp_path, monkeypatch
     with pytest.raises(ValueError, match='chunk lengths'):
         tool.restore(tmp_path, remote)
     assert not cache.exists()
+
+
+def test_immutable_edge_packs_share_many_small_objects_and_gc_them(tmp_path, monkeypatch):
+    fixture(tmp_path)
+    monkeypatch.setattr(tool, 'PACK_TARGET_BYTES', 35)
+    monkeypatch.setattr(tool, 'PACK_MAX_MEMBER_BYTES', 16)
+    samples = {}
+    for i in range(12):
+        body = f'piece-{i:02d}'.encode('ascii')
+        digest = hashlib.sha256(body).hexdigest()
+        path = tmp_path / 'generated/objects/sha256' / digest
+        path.write_bytes(body)
+        samples[digest] = body
+        for version in ('100', '101'):
+            manifest = tmp_path / 'generated' / version / 'manifest.json'
+            doc = json.loads(manifest.read_text())
+            doc['entries'].append({'artifact_sha256': digest})
+            manifest.write_text(json.dumps(doc))
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    metadata = tmp_path / 'generated/r2-storage.json'
+    state = json.loads(metadata.read_text())
+    assert len(state['packed_objects']) == 13  # includes shared original fixture
+    assert len(state['pack_sizes']) > 1
+    assert all(n <= 35 for n in state['pack_sizes'].values())
+    assert all('objects/sha256/' + d in remote.objects for d in samples)
+    for digest, (pack, offset) in state['packed_objects'].items():
+        blob = remote.objects['packs/sha256/' + pack]
+        assert hashlib.sha256(blob).hexdigest() == pack
+        assert blob[offset:offset + state['objects'][digest]] == (
+            samples.get(digest) or b'translated')
+    before = metadata.read_bytes()
+    tool.publish(tmp_path, remote)
+    assert metadata.read_bytes() == before
+    tool.prune(tmp_path, remote, apply=True)
+    assert all('packs/sha256/' + d in remote.objects for d in state['pack_sizes'])
+    # A subsequent CI job restores all missing originals using one R2 GET
+    # per packed object, instead of one Class B read for each original.
+    for digest in samples:
+        (tmp_path / 'generated/objects/sha256' / digest).unlink()
+    get_keys = []
+    original_request = remote.request
+
+    def counted(key, **kwargs):
+        if not kwargs.get('put'):
+            get_keys.append(key)
+        return original_request(key, **kwargs)
+    monkeypatch.setattr(remote, 'request', counted)
+    tool.restore(tmp_path, remote)
+    assert len([k for k in get_keys if k.startswith('packs/sha256/')]) == len(state['pack_sizes'])
+    assert not [k for k in get_keys if k.startswith('objects/sha256/')]
+    assert all((tmp_path / 'generated/objects/sha256' / d).read_bytes() == body
+               for d, body in samples.items())
+
+
+def test_packed_publish_failure_leaves_old_metadata_untouched(tmp_path, monkeypatch):
+    fixture(tmp_path)
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    marker = tmp_path / 'generated/r2-storage.json'
+    original = marker.read_bytes()
+    extra = b'add-packed-content'
+    digest = hashlib.sha256(extra).hexdigest()
+    (tmp_path / 'generated/objects/sha256' / digest).write_bytes(extra)
+    manifest = tmp_path / 'generated/101/manifest.json'
+    doc = json.loads(manifest.read_text())
+    doc['entries'].append({'artifact_sha256': digest})
+    manifest.write_text(json.dumps(doc))
+    original_request = remote.request
+
+    def fail_on_packs(key, **kwargs):
+        if key.startswith('packs/sha256/'):
+            raise OSError('pack upload unavailable')
+        return original_request(key, **kwargs)
+    monkeypatch.setattr(remote, 'request', fail_on_packs)
+    with pytest.raises(OSError, match='pack upload unavailable'):
+        tool.publish(tmp_path, remote)
+    assert marker.read_bytes() == original

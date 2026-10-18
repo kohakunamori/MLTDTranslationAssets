@@ -51,6 +51,9 @@ class Index:
     sizes: dict[str, int] = field(default_factory=dict)
     #: artifact sha256 -> byte size (one entry per stored object, aliases share)
     objects_bytes: dict[str, int] = field(default_factory=dict)
+    #: original digest -> [immutable pack digest, byte offset]
+    packs: dict[str, list] = field(default_factory=dict)
+    pack_sizes: dict[str, int] = field(default_factory=dict)
     entry_count: int = 0
     logical_keys: int = 0
     generated_at_utc: str | None = None
@@ -81,6 +84,8 @@ class Index:
             # Digest -> byte size, so a HEAD can be answered from the table
             # without touching the repository at all.
             "sizes": dict(sorted(self.objects_bytes.items())),
+            "packs": dict(sorted(self.packs.items())),
+            "pack_sizes": dict(sorted(self.pack_sizes.items())),
         }
 
 
@@ -162,7 +167,12 @@ def build_index(
     # The checked-in inventory is written only after checksum-validated R2 puts.
     # Gateway deployments need this metadata, not another download of all blobs.
     inventory_path = root / 'generated/r2-storage.json'
-    inventory = json.loads(inventory_path.read_text(encoding='utf-8'))['objects'] if inventory_path.exists() else {}
+    published = json.loads(inventory_path.read_text(encoding='utf-8')) if inventory_path.exists() else {}
+    inventory = published.get('objects', {})
+    packed = published.get('packed_objects', {})
+    pack_sizes = published.get('pack_sizes', {})
+    if not isinstance(packed, dict) or not isinstance(pack_sizes, dict):
+        raise PlanError('Malformed immutable R2 packing proof')
     index = Index(
         version=version,
         source_commit=detect_commit(root, manifest_path, commit),
@@ -214,6 +224,18 @@ def build_index(
         if verify_hashes and source.is_file() and sha256_file(source) != digest:
             raise PlanError(f"{source} does not hash to its own name")
         index.objects_bytes[digest] = size
+        if digest in packed:
+            pin = packed[digest]
+            if (not isinstance(pin, list) or len(pin) != 2 or
+                    not isinstance(pin[0], str) or not re.fullmatch(r'[0-9a-f]{64}', pin[0]) or
+                    type(pin[1]) is not int or pin[1] < 0):
+                raise PlanError(f'Invalid R2 pack pin for {digest}')
+            pack_bytes = pack_sizes.get(pin[0])
+            if (type(pack_bytes) is not int or
+                    not 0 < pack_bytes <= 1024 * 1024 or pin[1] + size > pack_bytes):
+                raise PlanError(f'Pack size/offset has no published proof for {digest}')
+            index.packs[digest] = pin
+            index.pack_sizes[pin[0]] = pack_bytes
         for name in names:
             index.sizes[PurePosixPath(name).as_posix()] = size
 
