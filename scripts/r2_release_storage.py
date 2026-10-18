@@ -28,6 +28,9 @@ from urllib3.exceptions import HTTPError as StreamError
 ROOT = Path(__file__).resolve().parents[1]
 HEX = re.compile(r'[0-9a-f]{64}')
 
+# Each immutable cache piece fits comfortably below Cloudflare Workers' request-body limit.
+CACHE_UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024
+
 
 def sha256(path):
     with Path(path).open('rb') as stream:
@@ -282,7 +285,31 @@ def restore(root, transport, workers=12, cache=True, samples=None, overlay_versi
     if cache and state.get('build_cache'):
         with tempfile.TemporaryDirectory(prefix='mltd-r2-cache-') as directory:
             archive = Path(directory) / 'cache.tar.gz'
-            fetch(transport, 'build-cache/sha256/' + state['build_cache']['sha256'], archive)
+            record = state['build_cache']
+            chunks = record.get('chunks')
+            if chunks is None:
+                # Backward compatible with already published single-object caches.
+                fetch(transport, 'build-cache/sha256/' + record['sha256'], archive)
+            else:
+                if not chunks or any(
+                        not HEX.fullmatch(part.get('sha256', ''))
+                        or type(part.get('size')) is not int
+                        or not 0 < part['size'] <= CACHE_UPLOAD_CHUNK_BYTES
+                        for part in chunks):
+                    raise ValueError('Invalid chunked R2 cache manifest')
+                if sum(part['size'] for part in chunks) != record['size']:
+                    raise ValueError('R2 cache chunk lengths do not match the archive')
+                with archive.open('wb') as combined:
+                    for position, part in enumerate(chunks):
+                        piece = Path(directory) / f'piece-{position}'
+                        fetch(transport, 'build-cache/sha256/' + part['sha256'], piece)
+                        if piece.stat().st_size != part['size']:
+                            raise ValueError('R2 cache chunk size mismatch')
+                        with piece.open('rb') as stream:
+                            shutil.copyfileobj(stream, combined, length=1024 * 1024)
+                        piece.unlink()
+            if archive.stat().st_size != record['size'] or sha256(archive) != record['sha256']:
+                raise ValueError('R2 restored cache archive checksum/size mismatch')
             unpack_cache(archive, root / 'generated/build-inputs')
     for name, digest in overlay.items():
         target = root / name
@@ -369,9 +396,30 @@ def publish(root, transport, workers=12):
                         info.mode = 0o644
                         with path.open('rb') as stream:
                             tar.addfile(info, stream)
-            digest = sha256(archive)
-            _, size = upload(transport, 'build-cache/sha256/' + digest, archive, transport.inventory('build-cache/sha256/'))
+            digest, size = sha256(archive), archive.stat().st_size
             cache_record = {'sha256': digest, 'size': size, 'files': len(files)}
+            cache_inventory = transport.inventory('build-cache/sha256/')
+            if size <= CACHE_UPLOAD_CHUNK_BYTES:
+                upload(transport, 'build-cache/sha256/' + digest, archive, cache_inventory)
+            else:
+                # The publisher Worker rejects large PUT requests (HTTP 413).
+                # Store bounded, content-addressed pieces; reconstruct and verify
+                # the original tarball before extracting on the next run.
+                chunks = []
+                with archive.open('rb') as stream:
+                    while piece_bytes := stream.read(CACHE_UPLOAD_CHUNK_BYTES):
+                        piece_digest = hashlib.sha256(piece_bytes).hexdigest()
+                        piece_path = Path(directory) / f'part-{len(chunks)}'
+                        piece_path.write_bytes(piece_bytes)
+                        try:
+                            upload(transport, 'build-cache/sha256/' + piece_digest,
+                                   piece_path, cache_inventory)
+                        finally:
+                            piece_path.unlink(missing_ok=True)
+                        chunks.append({'sha256': piece_digest, 'size': len(piece_bytes)})
+                cache_record['chunks'] = chunks
+                print(f'R2 build cache: {size / 1024**2:.1f} MiB in {len(chunks)} verified chunks',
+                      flush=True)
     state = {'schema_version': 1, 'bucket': 'mltd-localized-assets', 'release_versions': versions,
              'objects': dict(sorted(sizes.items())),
              'build_cache': cache_record, 'legacy_overlay': dict(sorted(legacy.items()))}
@@ -402,7 +450,11 @@ def prune(root, transport, *, apply=False):
     # It is committed inventory and must survive a gateway-only repair run.
     keep.update('objects/sha256/' + d for d in state['objects'])
     if state.get('build_cache'):
-        keep.add('build-cache/sha256/' + state['build_cache']['sha256'])
+        cache = state['build_cache']
+        if 'chunks' in cache:
+            keep.update('build-cache/sha256/' + part['sha256'] for part in cache['chunks'])
+        else:
+            keep.add('build-cache/sha256/' + cache['sha256'])
     existing = {**transport.inventory('objects/sha256/'),
                 **transport.inventory('build-cache/sha256/')}
     missing = keep - existing.keys()
