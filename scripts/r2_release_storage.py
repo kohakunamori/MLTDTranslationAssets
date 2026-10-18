@@ -648,10 +648,20 @@ def prune(root, transport, *, apply=False):
               'delete_bytes': sum(existing[k] for k in remove), 'applied': apply}
     if apply and remove:
         transport.delete(remove)
-        remaining = {**transport.inventory('objects/sha256/'),
-                     **transport.inventory('build-cache/sha256/'),
-                     **transport.inventory('packs/sha256/')}
-        if not keep <= remaining.keys() or any(k in remaining for k in remove):
+        # The pre-delete inventory proved every retained key existed. CI holds
+        # the shared r2-mutation lock, and DELETE was only sent for remove.
+        # Re-check every key in touched namespaces, not unrelated objects.
+        # This catches accidental deletion of a retained key, or any undeleted
+        # obsolete key, without relisting unaffected namespaces.
+        prefixes = ('objects/sha256/', 'build-cache/sha256/', 'packs/sha256/')
+        touched = [prefix for prefix in prefixes
+                   if any(key.startswith(prefix) for key in remove)]
+        remaining = {}
+        for prefix in touched:
+            remaining.update(transport.inventory(prefix))
+        must_survive = {key for key in keep
+                        if any(key.startswith(prefix) for prefix in touched)}
+        if not must_survive <= remaining.keys() or any(key in remaining for key in remove):
             raise ValueError('R2 retention verification failed')
     print(json.dumps(report))
     return report

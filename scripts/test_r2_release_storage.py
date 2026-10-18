@@ -446,3 +446,64 @@ def test_r2_ci_cost_report_emits_summary_without_exposing_tokens(tmp_path, monke
     assert 'estimated' in body.lower()
     assert 'not-a-real-token' not in body
     assert 'R2 CI operations' in capsys.readouterr().out
+
+
+def test_gc_verifies_only_mutated_prefix_without_relisting_all_objects(tmp_path):
+    fixture(tmp_path)
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    obsolete = hashlib.sha256(b'obsolete-immutable-pack').hexdigest()
+    remote.objects['packs/sha256/' + obsolete] = b'obsolete-immutable-pack'
+    listings = []
+    inventory = remote.inventory
+
+    def measured_inventory(prefix):
+        listings.append(prefix)
+        return inventory(prefix)
+
+    remote.inventory = measured_inventory
+    result = tool.prune(tmp_path, remote, apply=True)
+    assert result['delete_objects'] == 1
+    assert listings == [
+        'objects/sha256/', 'build-cache/sha256/', 'packs/sha256/',
+        'packs/sha256/',
+    ]
+    assert 'packs/sha256/' + obsolete not in remote.objects
+    assert any(name.startswith('objects/sha256/') for name in remote.objects)
+
+
+def test_gc_detects_accidental_deletion_of_retained_item_in_touched_prefix(tmp_path):
+    fixture(tmp_path)
+    second = b'other-content'
+    digest = hashlib.sha256(second).hexdigest()
+    (tmp_path / 'generated/objects/sha256' / digest).write_bytes(second)
+    manifest = tmp_path / 'generated/101/manifest.json'
+    state = json.loads(manifest.read_text())
+    state['entries'].append({'artifact_sha256': digest})
+    manifest.write_text(json.dumps(state))
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    current = json.loads((tmp_path / 'generated/r2-storage.json').read_text())
+    live_pack = next(iter(current['pack_sizes']))
+    obsolete = hashlib.sha256(b'obsolete-pack').hexdigest()
+    remote.objects['packs/sha256/' + obsolete] = b'obsolete-pack'
+    original_delete = remote.delete
+
+    def flawed_delete(keys):
+        original_delete(keys)
+        remote.objects.pop('packs/sha256/' + live_pack)
+
+    remote.delete = flawed_delete
+    with pytest.raises(ValueError, match='retention verification'):
+        tool.prune(tmp_path, remote, apply=True)
+
+
+def test_gc_detects_acknowledged_but_not_deleted_keys(tmp_path):
+    fixture(tmp_path)
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    obsolete = hashlib.sha256(b'undeleted-pack').hexdigest()
+    remote.objects['packs/sha256/' + obsolete] = b'undeleted-pack'
+    remote.delete = lambda _: None
+    with pytest.raises(ValueError, match='retention verification'):
+        tool.prune(tmp_path, remote, apply=True)
