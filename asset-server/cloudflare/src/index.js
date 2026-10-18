@@ -31,6 +31,10 @@ const OBJECT_BASE = 'https://mltd-localized-assets.invalid/objects/sha256';
 const BUILD = String(index.source_commit || '').slice(0, 12);
 // The object address pins its bytes, so a cached copy cannot go stale.
 const OBJECT_CACHE_SECONDS = 31536000;
+// Cold byte-range misses below this bound read/cache the whole immutable
+// object once; later ranges use its edge cache without extra R2 GetObject.
+// Large media assets continue streaming only the requested bytes.
+const RANGED_FULL_CACHE_MAX_BYTES = 2 * 1024 * 1024;
 // The *client-facing* URL is not pinned: the same asset version can be
 // republished with new translations (that happened on 2026-10-11, 491 lyric
 // bundles changed under an unchanged version number).  So a client that caches
@@ -220,19 +224,34 @@ async function serveFromR2(request, env, ctx, route, digest) {
     const packed = await servePackedObject(env, ctx, route, digest, range);
     if (packed !== null) return packed;
   }
-  const cache = rangeHeader ? null : objectCache();
+  const rangeCacheable = range && size > 0 && size <= RANGED_FULL_CACHE_MAX_BYTES;
+  const cache = rangeHeader && !rangeCacheable ? null : objectCache();
   const cacheKey = cache ? new Request(objectUrl) : null;
 
   if (cache) {
     try {
       const hit = await cache.match(cacheKey);
       if (hit) {
-        return new Response(hit.body, {
-          status: 200,
-          headers: objectHeaders(route, digest, hit.headers.get('content-length') || SIZES.get(digest), {
-            'x-mltd-cache': 'hit',
-          }),
-        });
+        if (rangeCacheable) {
+          const full = new Uint8Array(await hit.arrayBuffer());
+          if (full.byteLength === size) {
+            const headers = objectHeaders(route, digest, range.length, {
+              'x-mltd-cache': 'hit-range',
+            });
+            headers.set('content-range',
+              'bytes ' + range.offset + '-' + (range.offset + range.length - 1) + '/' + size);
+            return new Response(full.slice(range.offset, range.offset + range.length),
+              {status: 206, headers});
+          }
+          console.log('ignoring malformed cached full object ' + digest);
+        } else {
+          return new Response(hit.body, {
+            status: 200,
+            headers: objectHeaders(route, digest, hit.headers.get('content-length') || SIZES.get(digest), {
+              'x-mltd-cache': 'hit',
+            }),
+          });
+        }
       }
     } catch (err) {
       console.log(`cache lookup failed for ${digest}: ${err && err.message}`);
@@ -240,13 +259,24 @@ async function serveFromR2(request, env, ctx, route, digest) {
   }
 
   let upstream;
+  let rangeBytes = null;
+  const fetchFullForRange = Boolean(cache && rangeCacheable);
   try {
-    const object = await env.ASSETS.get(`objects/sha256/${digest}`, range ? {range} : undefined);
+    const object = await env.ASSETS.get('objects/sha256/' + digest,
+      range && !fetchFullForRange ? {range} : undefined);
     if (!object || object.size !== size || object.customMetadata?.sha256 !== digest) return null;
     const headers = new Headers({'content-type': 'application/octet-stream'});
-    headers.set('content-length', String(range ? range.length : object.size));
-    if (range) headers.set('content-range', `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
-    upstream = new Response(object.body, {status: range ? 206 : 200, headers});
+    if (fetchFullForRange) {
+      rangeBytes = new Uint8Array(await object.arrayBuffer());
+      if (rangeBytes.byteLength !== size) return null;
+      headers.set('content-length', String(size));
+      upstream = new Response(rangeBytes, {status: 200, headers});
+    } else {
+      headers.set('content-length', String(range ? range.length : object.size));
+      if (range) headers.set('content-range', 'bytes ' + range.offset + '-' +
+        (range.offset + range.length - 1) + '/' + object.size);
+      upstream = new Response(object.body, {status: range ? 206 : 200, headers});
+    }
   } catch (err) {
     console.log(`R2 read failed for ${digest}: ${err && err.message}`);
     return null;
@@ -277,6 +307,14 @@ async function serveFromR2(request, env, ctx, route, digest) {
   });
   const contentType = upstream.headers.get('content-type');
   if (contentType) out.set('content-type', contentType);
+  if (rangeBytes !== null) {
+    out.set('content-length', String(range.length));
+    out.set('content-range', 'bytes ' + range.offset + '-' +
+      (range.offset + range.length - 1) + '/' + size);
+    out.set('x-mltd-cache', 'miss-range');
+    return new Response(rangeBytes.slice(range.offset, range.offset + range.length),
+      {status: 206, headers: out});
+  }
   if (upstream.status === 206) {
     const contentRange = upstream.headers.get('content-range');
     if (contentRange) out.set('content-range', contentRange);

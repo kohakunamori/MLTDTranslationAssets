@@ -31,7 +31,7 @@ HEX = re.compile(r'[0-9a-f]{64}')
 # Each immutable cache piece fits comfortably below Cloudflare Workers' request-body limit.
 CACHE_UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024
 # Keep edge-cache entries small. Most released assets are under 64 KiB.
-PACK_MAX_MEMBER_BYTES = 64 * 1024
+PACK_MAX_MEMBER_BYTES = 256 * 1024
 PACK_TARGET_BYTES = 1024 * 1024
 
 

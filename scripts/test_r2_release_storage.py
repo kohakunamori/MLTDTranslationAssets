@@ -360,3 +360,27 @@ def test_packed_publish_failure_leaves_old_metadata_untouched(tmp_path, monkeypa
     with pytest.raises(OSError, match='pack upload unavailable'):
         tool.publish(tmp_path, remote)
     assert marker.read_bytes() == original
+
+
+def test_medium_200k_objects_are_packed_without_packing_oversized_objects(tmp_path):
+    fixture(tmp_path)
+    remote = Remote()
+    members = {}
+    for index, size in enumerate((120 * 1024, 200 * 1024, 260 * 1024)):
+        body = bytes([index + 11]) * size
+        digest = hashlib.sha256(body).hexdigest()
+        (tmp_path / 'generated/objects/sha256' / digest).write_bytes(body)
+        manifest_path = tmp_path / 'generated/101/manifest.json'
+        manifest = json.loads(manifest_path.read_text())
+        manifest['entries'].append({'artifact_sha256': digest})
+        manifest_path.write_text(json.dumps(manifest))
+        members[digest] = (body, size)
+    tool.publish(tmp_path, remote)
+    state = json.loads((tmp_path / 'generated/r2-storage.json').read_text())
+    for digest, (body, size) in members.items():
+        if size <= tool.PACK_MAX_MEMBER_BYTES:
+            pack, offset = state['packed_objects'][digest]
+            assert remote.objects['packs/sha256/' + pack][offset:offset + size] == body
+        else:
+            assert digest not in state['packed_objects']
+            assert remote.objects['objects/sha256/' + digest] == body

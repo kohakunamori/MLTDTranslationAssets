@@ -75,6 +75,7 @@ jobs:
         run: |
           node asset-server/cloudflare/test_newest_version_fallback.mjs
           node asset-server/cloudflare/test_packed_gateway.mjs
+          node asset-server/cloudflare/test_range_cache.mjs
           node asset-server/r2-publisher/test_publisher.mjs
 
       - name: Deploy to Cloudflare
