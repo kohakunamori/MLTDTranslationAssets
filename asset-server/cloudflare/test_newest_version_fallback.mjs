@@ -47,6 +47,12 @@ const UNCOVERED = `${'f'.repeat(40)}.data`;
 // mocking a pack GET with an unrelated single-file R2 stub.
 const COVERED = Object.keys(table.objects).find((key) =>
   key.startsWith(PREFIX) && !Object.hasOwn(table.packs || {}, table.objects[key]));
+// These tests keep exercising the unchanged streaming path for >2 MiB
+// objects; medium-sized objects now have a separate full-object Range cache.
+const RANGE_COVERED = Object.keys(table.objects).find(key =>
+  key.startsWith(PREFIX) && !(table.packs || {})[table.objects[key]] &&
+  table.sizes[table.objects[key]] > 2 * 1024 * 1024);
+if (!RANGE_COVERED) throw new Error('No large unpacked object for Range regression');
 if (!COVERED) throw new Error(`${INDEX_PATH} carries no ${PREFIX} path to test with`);
 if (table.objects[UNCOVERED] || table.objects[PREFIX + UNCOVERED]) {
   throw new Error(`${UNCOVERED} is covered by the release; pick another name for the uncovered case`);
@@ -234,30 +240,30 @@ await test('(d) covered path: release bytes, no official forward, no feed', asyn
 });
 
 await test('R2 byte ranges, If-Range, and unavailable storage', async directory => {
-  const digest = table.objects[COVERED];
+  const digest = table.objects[RANGE_COVERED];
   const size = table.sizes[digest];
-  const worker = await loadWorker([pinnedFetch(COVERED, () => ok('official-fallback'))], directory);
+  const worker = await loadWorker([pinnedFetch(RANGE_COVERED, () => ok('official-fallback'))], directory);
   const ranges = [];
   worker.env = {ASSETS: {async get(key, options) {
     ranges.push(options?.range);
     return {size, body: options?.range ? '123' : 'full', customMetadata: {sha256: digest}};
   }}};
-  const partial = await call(worker, `/${COVERED}`, {headers: {range: 'bytes=1-3'}});
+  const partial = await call(worker, `/${RANGE_COVERED}`, {headers: {range: 'bytes=1-3'}});
   equal(partial.status, 206, 'partial status');
   equal(partial.headers.get('content-range'), `bytes 1-3/${size}`, 'content range');
   equal(ranges[0].offset, 1, 'R2 range offset');
   equal(ranges[0].length, 3, 'R2 range length');
   equal(worker.cache.puts, 0, 'partial bytes are never cached');
-  const invalid = await call(worker, `/${COVERED}`, {headers: {range: `bytes=${size}-`}});
+  const invalid = await call(worker, `/${RANGE_COVERED}`, {headers: {range: `bytes=${size}-`}});
   equal(invalid.status, 416, 'unsatisfiable range');
   equal(ranges.length, 1, '416 no R2 read');
-  const full = await call(worker, `/${COVERED}`, {headers: {range: 'bytes=1-3', 'if-range': '"old"'}});
+  const full = await call(worker, `/${RANGE_COVERED}`, {headers: {range: 'bytes=1-3', 'if-range': '"old"'}});
   equal(full.status, 200, 'changed If-Range gets full object');
   equal(ranges[1], undefined, 'no range on changed If-Range');
   await worker.settle();
   worker.cache.store.clear();
   worker.env = {ASSETS: {async get() {return null;}}};
-  const fallback = await call(worker, `/${COVERED}`);
+  const fallback = await call(worker, `/${RANGE_COVERED}`);
   equal(await fallback.text(), 'official-fallback', 'missing R2 fallback');
   equal(fallback.headers.get('x-mltd-asset-source'), 'official-r2-unavailable', 'R2 failure marker');
   equal(worker.cache.store.size, 0, 'fallback not cached as translated content');

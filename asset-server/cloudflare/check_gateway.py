@@ -142,6 +142,11 @@ def check_health(runner: Runner, release: dict) -> None:
                                  f"commit={str(payload.get('source_commit'))[:12]}")
 
 
+# A packed resource caches its immutable pack, not its old individual object.
+# Both hit types are backed by locally cached SHA-256 verified bytes.
+CACHE_HIT_MARKERS = frozenset({'hit', 'pack-hit', 'hit-range'})
+
+
 def read_until_cached(runner: Runner, url: str, *, attempts: int = 7, delay: float = 2.5):
     """Read ``url`` until the edge reports a cache hit, then return that read.
 
@@ -152,7 +157,7 @@ def read_until_cached(runner: Runner, url: str, *, attempts: int = 7, delay: flo
     """
     started = time.monotonic()
     status, headers, body = runner.request(url)
-    while headers.get("x-mltd-cache") != "hit" and attempts > 1:
+    while headers.get("x-mltd-cache") not in CACHE_HIT_MARKERS and attempts > 1:
         attempts -= 1
         time.sleep(delay)
         status, headers, body = runner.request(url)
@@ -185,7 +190,7 @@ def check_translated(runner: Runner, release: dict, samples: list[dict]) -> None
         status, cached_headers, body, waited = read_until_cached(runner, url)
         runner.record(
             f"cached  {entry['logical_key']}",
-            status == 200 and cached_headers.get("x-mltd-cache") == "hit" and hashlib.sha256(body).hexdigest() == local_sha,
+            status == 200 and cached_headers.get("x-mltd-cache") in CACHE_HIT_MARKERS and hashlib.sha256(body).hexdigest() == local_sha,
             f"HTTP {status} cache={cached_headers.get('x-mltd-cache')} after {waited:.1f}s",
             echo=False,
         )
