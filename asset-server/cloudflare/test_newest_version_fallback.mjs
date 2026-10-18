@@ -41,7 +41,12 @@ const PINNED = String(table.asset_version);
 const NEWEST = String(Number(PINNED) + 9);
 /** A file name the release cannot possibly cover (checked below). */
 const UNCOVERED = `${'f'.repeat(40)}.data`;
-const COVERED = Object.keys(table.objects).find((key) => key.startsWith(PREFIX));
+// These assertions exercise the original *single-object* R2 path.
+// New packed-object reads, including range and failure fallback, have a
+// separate dedicated test; use an unpacked covered object here to avoid
+// mocking a pack GET with an unrelated single-file R2 stub.
+const COVERED = Object.keys(table.objects).find((key) =>
+  key.startsWith(PREFIX) && !Object.hasOwn(table.packs || {}, table.objects[key]));
 if (!COVERED) throw new Error(`${INDEX_PATH} carries no ${PREFIX} path to test with`);
 if (table.objects[UNCOVERED] || table.objects[PREFIX + UNCOVERED]) {
   throw new Error(`${UNCOVERED} is covered by the release; pick another name for the uncovered case`);
