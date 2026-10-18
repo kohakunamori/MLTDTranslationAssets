@@ -74,6 +74,7 @@ jobs:
         # and that a version-carrying or covered request never touches the feed.
         run: |
           node asset-server/cloudflare/test_newest_version_fallback.mjs
+          node asset-server/cloudflare/test_packed_gateway.mjs
           node asset-server/r2-publisher/test_publisher.mjs
 
       - name: Deploy to Cloudflare
@@ -123,6 +124,10 @@ jobs:
           done
           echo "the live gateway never served this release; failing the run" >&2
           exit 1
+
+      - name: Verify two distinct live assets share one immutable R2 pack
+        if: steps.guard.outputs.configured == 'true'
+        run: python scripts/verify_packed_gateway.py --base https://mltd-asset-cf.nyaneko.cn
 
       - name: Enforce two-release R2 retention after successful live acceptance
         if: steps.guard.outputs.configured == 'true'

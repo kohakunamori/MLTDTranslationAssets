@@ -30,6 +30,9 @@ HEX = re.compile(r'[0-9a-f]{64}')
 
 # Each immutable cache piece fits comfortably below Cloudflare Workers' request-body limit.
 CACHE_UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024
+# Keep edge-cache entries small. Most released assets are under 64 KiB.
+PACK_MAX_MEMBER_BYTES = 64 * 1024
+PACK_TARGET_BYTES = 1024 * 1024
 
 
 def sha256(path):
@@ -228,6 +231,67 @@ def unpack_cache(archive, destination):
                     target.write(chunk)
 
 
+def restore_from_packs(root, transport, digests, state, workers=12):
+    '''One validated R2 GET restores many small content-addressed source objects.
+
+    Do not install any byte from a pack until the pack SHA, size and each
+    requested original SHA-256 match the published metadata.
+    '''
+    mapped = state.get('packed_objects', {})
+    sizes = state.get('objects', {})
+    pack_sizes = state.get('pack_sizes', {})
+    targets = {}
+    for digest in digests:
+        path = root / 'generated/objects/sha256' / digest
+        if path.is_file() and sha256(path) == digest:
+            continue
+        pin = mapped.get(digest)
+        if pin is None:
+            continue
+        if (not isinstance(pin, list) or len(pin) != 2
+                or not HEX.fullmatch(pin[0]) or type(pin[1]) is not int
+                or not 0 <= pin[1] < PACK_TARGET_BYTES
+                or type(sizes.get(digest)) is not int
+                or pin[1] + sizes[digest] > pack_sizes.get(pin[0], -1)):
+            raise ValueError('Corrupt R2 packed restoration manifest')
+        targets.setdefault(pin[0], []).append((digest, pin[1], sizes[digest], path))
+
+    def one_pack(item):
+        pack_digest, members = item
+        with tempfile.TemporaryDirectory(prefix='mltd-r2-packed-') as directory:
+            packed = Path(directory) / 'pack.bin'
+            fetch(transport, 'packs/sha256/' + pack_digest, packed)
+            if packed.stat().st_size != pack_sizes.get(pack_digest):
+                raise ValueError('R2 pack has invalid published size')
+            verified = []
+            with packed.open('rb') as content:
+                for digest, offset, size, target in members:
+                    content.seek(offset)
+                    body = content.read(size)
+                    if len(body) != size or hashlib.sha256(body).hexdigest() != digest:
+                        raise ValueError('R2 packed object does not match original hash')
+                    verified.append((target, body))
+            # All members in this pack have passed before installing any.
+            for target, body in verified:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temporary = target.with_name(target.name + '.tmp')
+                try:
+                    temporary.write_bytes(body)
+                    temporary.replace(target)
+                finally:
+                    temporary.unlink(missing_ok=True)
+        return {digest for digest, _, _, _ in members}
+
+    restored = set()
+    with ThreadPoolExecutor(max_workers=min(workers, 4)) as pool:
+        for result in pool.map(one_pack, sorted(targets.items())):
+            restored.update(result)
+    if targets:
+        print(f'R2 restore: {len(restored)} verified small files via {len(targets)} packed reads',
+              flush=True)
+    return restored
+
+
 def restore(root, transport, workers=12, cache=True, samples=None, overlay_version=None):
     state = json.loads((root / 'generated/r2-storage.json').read_text(encoding='utf-8'))
     digests = references(root, state.get('release_versions'))
@@ -255,6 +319,10 @@ def restore(root, transport, workers=12, cache=True, samples=None, overlay_versi
         digests = sorted({e['artifact_sha256'] for e in chosen})
     if any(d not in state['objects'] for d in digests):
         raise ValueError('R2 inventory does not cover the retained release')
+    # The pack manifest is committed only after the immutable pack uploads
+    # succeed; reduce Class B operations during every CI restoration.
+    restored_by_packs = restore_from_packs(root, transport, digests, state, workers)
+    digests = [digest for digest in digests if digest not in restored_by_packs]
     if hasattr(transport, 'download_batch'):
         batches, batch, byte_count, large = [], [], 0, []
         for digest in digests:
@@ -354,6 +422,50 @@ def publish_overlay(root, transport, version):
     print(f'R2 verified {len(rows)} audited overlay objects for {version}')
 
 
+def publish_small_object_packs(sources, sizes, transport):
+    '''Pack small, already verified immutable objects into 1 MiB edge-cache units.
+
+    The original R2 objects remain available as a fail-safe on cache or pack
+    errors; every packed member has an exact (pack SHA-256, offset, size) pin.
+    '''
+    eligible = [(digest, sources[digest], sizes[digest])
+                for digest in sorted(sources)
+                if 0 < sizes.get(digest, 0) <= PACK_MAX_MEMBER_BYTES]
+    if len(eligible) < 2:
+        return {}, {}
+    existing = transport.inventory('packs/sha256/')
+    members, pack_sizes = {}, {}
+    with tempfile.TemporaryDirectory(prefix='mltd-small-object-packs-') as directory:
+        target = Path(directory) / 'pack.bin'
+        offsets, current_size = [], 0
+
+        def flush():
+            nonlocal offsets, current_size
+            if not offsets:
+                return
+            pack_digest = sha256(target)
+            upload(transport, 'packs/sha256/' + pack_digest, target, existing)
+            pack_sizes[pack_digest] = current_size
+            for original_digest, offset in offsets:
+                members[original_digest] = [pack_digest, offset]
+            target.unlink()
+            offsets, current_size = [], 0
+
+        for digest, source, size in eligible:
+            if current_size and current_size + size > PACK_TARGET_BYTES:
+                flush()
+            if sha256(source) != digest:
+                raise ValueError(f'Small-object pack source changed: {digest}')
+            with source.open('rb') as incoming, target.open('ab') as packed:
+                shutil.copyfileobj(incoming, packed, length=1024 * 1024)
+            offsets.append((digest, current_size))
+            current_size += size
+        flush()
+    print(f'R2 edge packs: {len(members)} small objects in {len(pack_sizes)} '
+          f'immutable packs ({sum(pack_sizes.values()) / 1024**2:.1f} MiB)', flush=True)
+    return dict(sorted(members.items())), dict(sorted(pack_sizes.items()))
+
+
 def publish(root, transport, workers=12):
     existing = transport.inventory('objects/sha256/')
     digests = references(root)
@@ -420,8 +532,12 @@ def publish(root, transport, workers=12):
                 cache_record['chunks'] = chunks
                 print(f'R2 build cache: {size / 1024**2:.1f} MiB in {len(chunks)} verified chunks',
                       flush=True)
+    # Publish packs BEFORE committing metadata, like the ordinary content objects.
+    # Fail closed if any pack is not acknowledged by the authenticated R2 publisher.
+    packed_objects, pack_sizes = publish_small_object_packs(sources, sizes, transport)
     state = {'schema_version': 1, 'bucket': 'mltd-localized-assets', 'release_versions': versions,
              'objects': dict(sorted(sizes.items())),
+             'packed_objects': packed_objects, 'pack_sizes': pack_sizes,
              'build_cache': cache_record, 'legacy_overlay': dict(sorted(legacy.items()))}
     # Write the publication proof only after every upload has succeeded.
     target = root / 'generated/r2-storage.json'
@@ -455,8 +571,11 @@ def prune(root, transport, *, apply=False):
             keep.update('build-cache/sha256/' + part['sha256'] for part in cache['chunks'])
         else:
             keep.add('build-cache/sha256/' + cache['sha256'])
+    # Retain packed cold-cache accelerators while their release proof is live.
+    keep.update('packs/sha256/' + digest for digest in state.get('pack_sizes', {}))
     existing = {**transport.inventory('objects/sha256/'),
-                **transport.inventory('build-cache/sha256/')}
+                **transport.inventory('build-cache/sha256/'),
+                **transport.inventory('packs/sha256/')}
     missing = keep - existing.keys()
     if missing:
         raise ValueError(f'Refusing GC: {len(missing)} live objects are missing')
@@ -466,7 +585,8 @@ def prune(root, transport, *, apply=False):
     if apply and remove:
         transport.delete(remove)
         remaining = {**transport.inventory('objects/sha256/'),
-                     **transport.inventory('build-cache/sha256/')}
+                     **transport.inventory('build-cache/sha256/'),
+                     **transport.inventory('packs/sha256/')}
         if not keep <= remaining.keys() or any(k in remaining for k in remove):
             raise ValueError('R2 retention verification failed')
     print(json.dumps(report))

@@ -249,3 +249,28 @@ def test_apply_writes_the_index(tmp_path, capsys):
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["objects"][RUNTIME_A] == hashlib.sha256(b"one").hexdigest()
     assert payload["built_at"].endswith("Z")
+
+
+def test_gateway_table_includes_only_published_verified_pack_offsets(tmp_path):
+    body_a, body_b = b'one', b'two!'
+    root = make_repo(tmp_path, entries=[(RUNTIME_A, LOGICAL_A, body_a),
+                                       (RUNTIME_B, LOGICAL_B, body_b)])
+    da, db = hashlib.sha256(body_a).hexdigest(), hashlib.sha256(body_b).hexdigest()
+    pack = body_a + body_b
+    pack_sha = hashlib.sha256(pack).hexdigest()
+    state = {'objects': {da: len(body_a), db: len(body_b)},
+             'packed_objects': {da: [pack_sha, 0], db: [pack_sha, len(body_a)]},
+             'pack_sizes': {pack_sha: len(pack)}}
+    proof = root / 'generated/r2-storage.json'
+    proof.write_text(json.dumps(state))
+    index = build(root)
+    assert index.payload(built_at='test')['packs'] == state['packed_objects']
+    assert index.payload(built_at='test')['pack_sizes'] == state['pack_sizes']
+    state['packed_objects'][db] = [pack_sha, 5000]
+    proof.write_text(json.dumps(state))
+    with pytest.raises(build_index.PlanError, match='Pack size/offset'):
+        build(root)
+    state['packed_objects'][db] = [pack_sha, -1]
+    proof.write_text(json.dumps(state))
+    with pytest.raises(build_index.PlanError, match='Invalid R2 pack pin'):
+        build(root)

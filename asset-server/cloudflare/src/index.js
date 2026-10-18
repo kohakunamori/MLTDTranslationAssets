@@ -22,6 +22,9 @@ const ASSET_PREFIX = 'production/2018/Android/';
 const ASSET_VERSION = String(index.asset_version || '');
 const OBJECTS = new Map(Object.entries(index.objects || {}));
 const SIZES = new Map(Object.entries(index.sizes || {}));
+const PACKS = new Map(Object.entries(index.packs || {}));
+const PACK_SIZES = new Map(Object.entries(index.pack_sizes || {}));
+const PACK_INFLIGHT = new Map();
 // The cache address is stable across versions/deploys. Only the content hash
 // changes; immutable objects are never overwritten in the private bucket.
 const OBJECT_BASE = 'https://mltd-localized-assets.invalid/objects/sha256';
@@ -211,6 +214,12 @@ async function serveFromR2(request, env, ctx, route, digest) {
   if (range === false) return new Response(null, {status: 416, headers: {
     'content-range': `bytes */${size}`, 'cache-control': 'no-store',
   }});
+  // Small objects share cached pack bytes. The original single-object
+  // path remains a fallback if a pack is missing/corrupt/unavailable.
+  if (PACKS.has(digest)) {
+    const packed = await servePackedObject(env, ctx, route, digest, range);
+    if (packed !== null) return packed;
+  }
   const cache = rangeHeader ? null : objectCache();
   const cacheKey = cache ? new Request(objectUrl) : null;
 
@@ -273,6 +282,81 @@ async function serveFromR2(request, env, ctx, route, digest) {
     if (contentRange) out.set('content-range', contentRange);
   }
   return new Response(upstream.body, { status: upstream.status, headers: out });
+}
+
+/** One immutable pack serves many independent client URLs and range requests.
+ * Concurrent misses in one isolate share the same R2 GetObject call.
+ */
+async function readImmutablePack(env, ctx, packDigest, expectedSize) {
+  if (PACK_INFLIGHT.has(packDigest)) return PACK_INFLIGHT.get(packDigest);
+  const loading = (async () => {
+    const cache = objectCache();
+    const key = new Request(`${OBJECT_BASE}/packs/sha256/${packDigest}`);
+    if (cache) {
+      try {
+        const hit = await cache.match(key);
+        if (hit) {
+          const bytes = new Uint8Array(await hit.arrayBuffer());
+          if (bytes.byteLength === expectedSize) return {bytes, source: 'pack-hit'};
+          console.log(`invalid cached pack size for ${packDigest}`);
+        }
+      } catch (error) {
+        console.log(`pack cache unavailable ${packDigest}: ${error && error.message}`);
+      }
+    }
+    const object = await env.ASSETS.get(`packs/sha256/${packDigest}`);
+    if (!object || object.size !== expectedSize ||
+        object.customMetadata?.sha256 !== packDigest) return null;
+    const bytes = new Uint8Array(await object.arrayBuffer());
+    if (bytes.byteLength !== expectedSize) return null;
+    // Never cache or serve a pack without checking its full immutable content pin.
+    const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
+      .map(octet => octet.toString(16).padStart(2, '0')).join('');
+    if (actual !== packDigest) return null;
+    if (cache) {
+      try {
+        const pending = cache.put(key, storable(new Response(bytes)));
+        if (pending && typeof pending.catch === 'function') {
+          pending.catch(error => console.log(`pack cache store failed: ${error && error.message}`));
+        }
+        ctx?.waitUntil?.(pending);
+      } catch (error) {
+        console.log(`pack cache store failed: ${error && error.message}`);
+      }
+    }
+    return {bytes, source: 'pack-miss'};
+  })();
+  PACK_INFLIGHT.set(packDigest, loading);
+  loading.then(() => PACK_INFLIGHT.delete(packDigest), () => PACK_INFLIGHT.delete(packDigest));
+  return loading;
+}
+
+async function servePackedObject(env, ctx, route, digest, range) {
+  const pin = PACKS.get(digest);
+  if (!Array.isArray(pin) || pin.length !== 2) return null;
+  const [packDigest, offset] = pin;
+  const packSize = PACK_SIZES.get(packDigest);
+  const size = SIZES.get(digest);
+  if (!/^[0-9a-f]{64}$/.test(packDigest) ||
+      !Number.isSafeInteger(offset) || offset < 0 ||
+      !Number.isSafeInteger(size) || size <= 0 ||
+      !Number.isSafeInteger(packSize) || packSize > 1024 * 1024 ||
+      offset + size > packSize) return null;
+  try {
+    const packed = await readImmutablePack(env, ctx, packDigest, packSize);
+    if (!packed) return null;
+    const partStart = range ? range.offset : 0;
+    const partLength = range ? range.length : size;
+    const body = packed.bytes.slice(offset + partStart, offset + partStart + partLength);
+    if (body.byteLength !== partLength) return null;
+    const headers = objectHeaders(route, digest, body.byteLength, {'x-mltd-cache': packed.source});
+    if (range) headers.set('content-range',
+      `bytes ${partStart}-${partStart + partLength - 1}/${size}`);
+    return new Response(body, {status: range ? 206 : 200, headers});
+  } catch (error) {
+    console.log(`packed R2 read failed for ${digest}: ${error && error.message}`);
+    return null;
+  }
 }
 
 // Single byte ranges support resumes without ever caching a partial object.
