@@ -2,6 +2,7 @@
 import hashlib
 import io
 import json
+import random
 from pathlib import Path
 import tarfile
 from contextlib import nullcontext
@@ -222,3 +223,62 @@ def test_gc_refuses_missing_live_bytes_and_stale_publication_proof(tmp_path):
     newest.write_text((tmp_path / 'generated/101/manifest.json').read_text())
     with pytest.raises(ValueError, match='stale'):
         tool.prune(tmp_path, remote, apply=True)
+
+
+def test_large_cache_chunks_round_trip_and_gc_retains_every_piece(tmp_path, monkeypatch):
+    fixture(tmp_path)
+    # A small threshold exercises the same partition path as a real >8 MiB archive.
+    monkeypatch.setattr(tool, 'CACHE_UPLOAD_CHUNK_BYTES', 256)
+    cache = next((tmp_path / 'generated/build-inputs').glob('text/*/*.json.gz'))
+    payload = random.Random(20261018).randbytes(8192)
+    cache.write_bytes(payload)
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    state = json.loads((tmp_path / 'generated/r2-storage.json').read_text())
+    record = state['build_cache']
+    assert len(record['chunks']) > 1
+    assert sum(part['size'] for part in record['chunks']) == record['size']
+    assert all(part['size'] <= 256 for part in record['chunks'])
+    assert 'build-cache/sha256/' + record['sha256'] not in remote.objects
+    assert all('build-cache/sha256/' + part['sha256'] in remote.objects
+               for part in record['chunks'])
+    first_metadata = (tmp_path / 'generated/r2-storage.json').read_bytes()
+    tool.publish(tmp_path, remote)
+    assert (tmp_path / 'generated/r2-storage.json').read_bytes() == first_metadata
+    tool.prune(tmp_path, remote, apply=True)
+    cache.unlink()
+    tool.restore(tmp_path, remote)
+    assert cache.read_bytes() == payload
+
+
+def test_corrupt_cache_chunk_fails_closed_before_extracting(tmp_path, monkeypatch):
+    fixture(tmp_path)
+    monkeypatch.setattr(tool, 'CACHE_UPLOAD_CHUNK_BYTES', 256)
+    cache = next((tmp_path / 'generated/build-inputs').glob('text/*/*.json.gz'))
+    cache.write_bytes(random.Random(20261019).randbytes(8192))
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    state = json.loads((tmp_path / 'generated/r2-storage.json').read_text())
+    chunk = state['build_cache']['chunks'][0]
+    remote.objects['build-cache/sha256/' + chunk['sha256']] = b'tampered'
+    cache.unlink()
+    with pytest.raises(ValueError, match='wrong checksum'):
+        tool.restore(tmp_path, remote)
+    assert not cache.exists()
+
+
+def test_invalid_chunk_lengths_fail_before_remote_download(tmp_path, monkeypatch):
+    fixture(tmp_path)
+    monkeypatch.setattr(tool, 'CACHE_UPLOAD_CHUNK_BYTES', 256)
+    cache = next((tmp_path / 'generated/build-inputs').glob('text/*/*.json.gz'))
+    cache.write_bytes(random.Random(20261020).randbytes(8192))
+    remote = Remote()
+    tool.publish(tmp_path, remote)
+    statefile = tmp_path / 'generated/r2-storage.json'
+    state = json.loads(statefile.read_text())
+    state['build_cache']['chunks'][0]['size'] -= 1
+    statefile.write_text(json.dumps(state))
+    cache.unlink()
+    with pytest.raises(ValueError, match='chunk lengths'):
+        tool.restore(tmp_path, remote)
+    assert not cache.exists()
