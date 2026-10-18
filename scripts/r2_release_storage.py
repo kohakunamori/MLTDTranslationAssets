@@ -8,6 +8,7 @@ deployment selects the corresponding table. Stale uploads are harmless.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext as _null_stream
 import hashlib
@@ -76,6 +77,60 @@ class Transport:
         if not self.token:
             raise ValueError('R2_PUBLISH_TOKEN is required (the dedicated publisher credential)')
         self.local = threading.local()
+        # Per-CLI execution accounting: Cloudflare bills *R2 operations*, not
+        # publisher HTTP requests. Concurrency-safe, never records credentials.
+        self.usage = Counter()
+        self.usage_lock = threading.Lock()
+        max_gets = os.getenv('R2_CI_CLASS_B_LIMIT', '').strip()
+        self.class_b_limit = int(max_gets) if max_gets else None
+        if self.class_b_limit is not None and self.class_b_limit <= 0:
+            raise ValueError('R2_CI_CLASS_B_LIMIT must be a positive integer')
+
+    def record(self, operation, count=1):
+        # Unit-test transports built without __init__ may not have a meter.
+        if not hasattr(self, 'usage'):
+            return
+        with self.usage_lock:
+            previous = self.usage[operation]
+            if (operation == 'class_b_get' and self.class_b_limit is not None
+                    and previous + count > self.class_b_limit):
+                raise RuntimeError(
+                    f'R2 CI Class B budget exceeded: {previous + count} GET operations '
+                    f'would exceed limit {self.class_b_limit}. '
+                    'Check pack metadata, retries and unexpected full restores.')
+            self.usage[operation] += count
+
+    def report(self):
+        totals = dict(sorted(self.usage.items()))
+        totals['class_a_estimate'] = self.usage['class_a_list'] + self.usage['class_a_put']
+        totals['class_b_estimate'] = self.usage['class_b_get']
+        print('R2 CI operations (publisher-side estimates): ' + json.dumps(totals, sort_keys=True),
+              flush=True)
+        summary = os.getenv('GITHUB_STEP_SUMMARY')
+        if summary:
+            lines = [
+                '\n### R2 CI operation accounting',
+                '',
+                '| R2 metric | Operations |',
+                '| --- | ---: |',
+                f"| Estimated Class B (GET, including all batch member reads/retries) | {totals['class_b_estimate']:,} |",
+                f"| Estimated Class A (LIST pages + attempted PUTs) | {totals['class_a_estimate']:,} |",
+                f"| LIST pages | {self.usage['class_a_list']:,} |",
+                f"| PUT attempts | {self.usage['class_a_put']:,} |",
+                f"| Objects skipped because verified inventory already contained them | {self.usage['skipped_put']:,} |",
+                f"| Batch HTTP requests (not R2 operations) | {self.usage['batch_http']:,} |",
+                f"| Deleted objects (R2 free operation) | {self.usage['free_delete']:,} |",
+                '',
+                'Accounting is a local estimate, **not** an authoritative Cloudflare billing metric. '
+                'The publisher can issue a HEAD for a rare conflicting immutable PUT, '
+                'and Workers retries/Cloudflare billing may differ.',
+                '',
+            ]
+            try:
+                with open(summary, 'a', encoding='utf8') as stream:
+                    stream.write('\n'.join(lines))
+            except OSError as error:
+                print(f'Could not write R2 CI usage summary: {error}', flush=True)
 
     def session(self):
         if not hasattr(self.local, 'session'):
@@ -91,6 +146,8 @@ class Transport:
                     if put:
                         headers['Content-Length'] = str(path.stat().st_size)
                         headers['Content-Type'] = 'application/octet-stream'
+                    self.record('class_a_list' if key.startswith('inventory?') else
+                                'class_a_put' if put else 'class_b_get')
                     with self.session().request('PUT' if put else 'GET', self.url + '/' + key,
                             data=stream if put else None, headers=headers, stream=True,
                             timeout=(30, 180), allow_redirects=False) as response:
@@ -118,6 +175,7 @@ class Transport:
             if cursor:
                 query['cursor'] = cursor
             page = self.request('inventory?' + urllib.parse.urlencode(query))
+            self.record('listed_objects', len(page['objects']))
             for item in page['objects']:
                 if item.get('sha256') != item['key'].rsplit('/', 1)[-1]:
                     raise ValueError('R2 inventory contains an unverified object')
@@ -130,6 +188,7 @@ class Transport:
         """Called only while CI holds the shared r2-mutation lock."""
         for offset in range(0, len(keys), 100):
             batch = keys[offset:offset + 100]
+            self.record('free_delete', len(batch))
             response = self.session().post(self.url + '/delete-batch', json=batch,
                 headers={'Authorization': f'Bearer {self.token}'},
                 timeout=(30, 180), allow_redirects=False)
@@ -142,6 +201,9 @@ class Transport:
         expected = [{'key': key, 'size': item[1]} for key, item in zip(keys, items)]
         for attempt in range(5):
             try:
+                # A 32-object batch is 32 R2 GetObject operations, not one.
+                self.record('class_b_get', len(keys))
+                self.record('batch_http')
                 with self.session().post(self.url + '/batch', json=keys, stream=True, timeout=(30, 180),
                         allow_redirects=False, headers={'Authorization': f'Bearer {self.token}',
                                                        'Accept-Encoding': 'identity',
@@ -189,6 +251,8 @@ def upload(transport, key, path, existing):
         raise ValueError(f'Local object has wrong SHA-256: {path}')
     size = path.stat().st_size
     if key in existing:
+        if hasattr(transport, 'record'):
+            transport.record('skipped_put')
         if existing[key] != size:
             raise ValueError(f'R2 size mismatch: {key}')
     else:
@@ -604,16 +668,19 @@ def main():
     parser.add_argument('--overlay-version')
     args = parser.parse_args()
     transport = Transport(args.root)
-    if args.action == 'publish':
-        publish(args.root, transport, args.workers)
-    elif args.action == 'publish-overlay':
-        if args.overlay_version is None:
-            parser.error('publish-overlay requires --overlay-version')
-        publish_overlay(args.root, transport, args.overlay_version)
-    elif args.action == 'prune':
-        prune(args.root, transport, apply=args.apply)
-    else:
-        restore(args.root, transport, args.workers, not args.no_cache, args.samples, args.overlay_version)
+    try:
+        if args.action == 'publish':
+            publish(args.root, transport, args.workers)
+        elif args.action == 'publish-overlay':
+            if args.overlay_version is None:
+                parser.error('publish-overlay requires --overlay-version')
+            publish_overlay(args.root, transport, args.overlay_version)
+        elif args.action == 'prune':
+            prune(args.root, transport, apply=args.apply)
+        else:
+            restore(args.root, transport, args.workers, not args.no_cache, args.samples, args.overlay_version)
+    finally:
+        transport.report()
 
 
 if __name__ == '__main__':

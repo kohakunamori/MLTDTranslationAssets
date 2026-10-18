@@ -1,5 +1,7 @@
 """R2 publication failure/recovery invariants, without network access."""
 import hashlib
+from collections import Counter
+import threading
 import io
 import json
 import random
@@ -384,3 +386,63 @@ def test_medium_200k_objects_are_packed_without_packing_oversized_objects(tmp_pa
         else:
             assert digest not in state['packed_objects']
             assert remote.objects['objects/sha256/' + digest] == body
+
+
+def test_r2_ci_metrics_count_each_batched_get_and_avoid_http_under_count(tmp_path):
+    first, second = b'alpha', b'bravo!'
+    rows = [(hashlib.sha256(data).hexdigest(), len(data), tmp_path / str(i))
+            for i, data in enumerate((first, second))]
+    keys = ['objects/sha256/' + digest for digest, _, _ in rows]
+    header = json.dumps([{'key': key, 'size': row[1]} for key, row in zip(keys, rows)]).encode()
+    frame = len(header).to_bytes(4, 'big') + header + first + second
+    calls = []
+    transport = object.__new__(tool.Transport)
+    transport.url = 'https://publisher.test'
+    transport.token = 'not-a-real-token'
+    transport.usage = Counter()
+    transport.usage_lock = threading.Lock()
+    transport.class_b_limit = 5
+
+    def post(*args, **kwargs):
+        calls.append(args[0])
+        return nullcontext(SimpleNamespace(status_code=200, raw=io.BytesIO(frame)))
+
+    transport.session = lambda: SimpleNamespace(post=post)
+    transport.download_batch(rows)
+    assert len(calls) == 1
+    assert transport.usage['batch_http'] == 1
+    assert transport.usage['class_b_get'] == 2
+    assert rows[0][2].read_bytes() == first
+    assert rows[1][2].read_bytes() == second
+
+
+def test_r2_ci_budget_stops_oversized_batch_before_any_network(tmp_path):
+    transport = object.__new__(tool.Transport)
+    transport.url = 'https://publisher.test'
+    transport.token = 'not-a-real-token'
+    transport.usage = Counter()
+    transport.usage_lock = threading.Lock()
+    transport.class_b_limit = 1
+    calls = []
+    transport.session = lambda: SimpleNamespace(post=lambda *args, **kwargs: calls.append(args))
+    digests = [hashlib.sha256(x).hexdigest() for x in (b'a', b'b')]
+    with pytest.raises(RuntimeError, match='Class B budget exceeded'):
+        transport.download_batch([(digest, 1, tmp_path / digest) for digest in digests])
+    assert not calls
+    assert transport.usage['class_b_get'] == 0
+
+
+def test_r2_ci_cost_report_emits_summary_without_exposing_tokens(tmp_path, monkeypatch, capsys):
+    report = tmp_path / 'summary.md'
+    monkeypatch.setenv('GITHUB_STEP_SUMMARY', str(report))
+    transport = object.__new__(tool.Transport)
+    transport.usage = Counter({'class_b_get': 101, 'class_a_list': 3,
+                               'class_a_put': 2, 'skipped_put': 13000,
+                               'batch_http': 4, 'free_delete': 1})
+    transport.report()
+    body = report.read_text()
+    assert '101' in body
+    assert '13,000' in body
+    assert 'estimated' in body.lower()
+    assert 'not-a-real-token' not in body
+    assert 'R2 CI operations' in capsys.readouterr().out
