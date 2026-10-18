@@ -74,8 +74,40 @@ function usableVersion(value) {
   return /^[0-9]{1,32}$/.test(String(value ?? '').trim());
 }
 
+// Per-request R2 GetObject attempts, not Worker HTTP request count.
+// No client IP, resource path, user agent, digest or request ID is logged.
 export default {
   async fetch(request, env, ctx) {
+    const meter = {packGets: 0, objectGets: 0, sharedPack: false};
+    let response;
+    try {
+      response = await gatewayFetch(request, env, ctx, meter);
+      return response;
+    } finally {
+      // Only 5% of Workers requests are persisted by platform sampling.
+      if (env?.GATEWAY_METRICS_ENABLED === 'true' &&
+          new URL(request.url).pathname !== '/healthz') {
+        const headers = response?.headers;
+        console.log('mltd_gateway_metrics ' + JSON.stringify({
+          event: 'mltd_gateway_cache',
+          schema: 1,
+          colo: request.cf?.colo || 'unknown',
+          method: request.method,
+          status: response?.status ?? 0,
+          range: request.headers.has('range'),
+          asset_source: headers?.get('x-mltd-asset-source') || 'none',
+          cache: headers?.get('x-mltd-cache') || 'none',
+          r2_pack_gets: meter.packGets,
+          r2_object_gets: meter.objectGets,
+          r2_get_attempts: meter.packGets + meter.objectGets,
+          shared_pack_inflight: meter.sharedPack,
+        }));
+      }
+    }
+  },
+};
+
+async function gatewayFetch(request, env, ctx, meter) {
     const url = new URL(request.url);
 
     if (url.pathname === '/healthz') return healthz(env);
@@ -100,14 +132,13 @@ export default {
 
     const digest = lookup(route);
     if (digest !== null) {
-      const served = await serveFromR2(request, env, ctx, route, digest);
+      const served = await serveFromR2(request, env, ctx, route, digest, meter);
       if (served !== null) return served;
       return forwardOfficial(request, env, route, 'official-r2-unavailable');
     }
 
     return forwardOfficial(request, env, route, 'official-miss');
-  },
-};
+}
 
 /* ------------------------------------------------------------------ routing */
 
@@ -193,7 +224,7 @@ export function lookup(route) {
  * Returns R2/edge bytes, or null for the official fallback. R2 bindings do not
  * automatically populate the CDN, so the Cache API stores complete objects.
  */
-async function serveFromR2(request, env, ctx, route, digest) {
+async function serveFromR2(request, env, ctx, route, digest, meter) {
   const etag = `"${digest}"`;
 
   const validators = (request.headers.get('if-none-match') || '').split(',').map(value => value.trim().replace(/^W\//, ''));
@@ -221,7 +252,7 @@ async function serveFromR2(request, env, ctx, route, digest) {
   // Small objects share cached pack bytes. The original single-object
   // path remains a fallback if a pack is missing/corrupt/unavailable.
   if (PACKS.has(digest)) {
-    const packed = await servePackedObject(env, ctx, route, digest, range);
+    const packed = await servePackedObject(env, ctx, route, digest, range, meter);
     if (packed !== null) return packed;
   }
   const rangeCacheable = range && size > 0 && size <= RANGED_FULL_CACHE_MAX_BYTES;
@@ -262,6 +293,7 @@ async function serveFromR2(request, env, ctx, route, digest) {
   let rangeBytes = null;
   const fetchFullForRange = Boolean(cache && rangeCacheable);
   try {
+    meter.objectGets++;
     const object = await env.ASSETS.get('objects/sha256/' + digest,
       range && !fetchFullForRange ? {range} : undefined);
     if (!object || object.size !== size || object.customMetadata?.sha256 !== digest) return null;
@@ -325,8 +357,12 @@ async function serveFromR2(request, env, ctx, route, digest) {
 /** One immutable pack serves many independent client URLs and range requests.
  * Concurrent misses in one isolate share the same R2 GetObject call.
  */
-async function readImmutablePack(env, ctx, packDigest, expectedSize) {
-  if (PACK_INFLIGHT.has(packDigest)) return PACK_INFLIGHT.get(packDigest);
+async function readImmutablePack(env, ctx, packDigest, expectedSize, meter) {
+  if (PACK_INFLIGHT.has(packDigest)) {
+    // A concurrent request shares the original invocation's GET.
+    meter.sharedPack = true;
+    return PACK_INFLIGHT.get(packDigest);
+  }
   const loading = (async () => {
     const cache = objectCache();
     const key = new Request(`${OBJECT_BASE}/packs/sha256/${packDigest}`);
@@ -342,6 +378,7 @@ async function readImmutablePack(env, ctx, packDigest, expectedSize) {
         console.log(`pack cache unavailable ${packDigest}: ${error && error.message}`);
       }
     }
+    meter.packGets++;
     const object = await env.ASSETS.get(`packs/sha256/${packDigest}`);
     if (!object || object.size !== expectedSize ||
         object.customMetadata?.sha256 !== packDigest) return null;
@@ -369,7 +406,7 @@ async function readImmutablePack(env, ctx, packDigest, expectedSize) {
   return loading;
 }
 
-async function servePackedObject(env, ctx, route, digest, range) {
+async function servePackedObject(env, ctx, route, digest, range, meter) {
   const pin = PACKS.get(digest);
   if (!Array.isArray(pin) || pin.length !== 2) return null;
   const [packDigest, offset] = pin;
@@ -381,7 +418,7 @@ async function servePackedObject(env, ctx, route, digest, range) {
       !Number.isSafeInteger(packSize) || packSize > 1024 * 1024 ||
       offset + size > packSize) return null;
   try {
-    const packed = await readImmutablePack(env, ctx, packDigest, packSize);
+    const packed = await readImmutablePack(env, ctx, packDigest, packSize, meter);
     if (!packed) return null;
     const partStart = range ? range.offset : 0;
     const partLength = range ? range.length : size;

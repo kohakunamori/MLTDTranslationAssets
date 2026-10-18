@@ -128,3 +128,9 @@ node asset-server/r2-publisher/test_publisher.mjs
 R2 读取失败使用 `x-mltd-asset-source: official-r2-unavailable`。
 显式请求其他版本不会拿当前版本汉化包替代。无版本的官方 4xx 恢复规则保持不变：
 第三方版本 feed 最多缓存 15 分钟，仅成功取得新版官方文件时采用它。
+
+## R2 实际消耗与 Gateway 缓存观测
+
+Bucket 级 R2 Data Access Logs 的启用步骤、Workers 5% 采样日志、
+实际 GET 与 HTTP 请求的区别、导出日志安全汇总方式见
+[docs/R2_OBSERVABILITY.md](../../docs/R2_OBSERVABILITY.md)。
