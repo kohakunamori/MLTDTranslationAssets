@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "kind": "mltd-official-asset-inventory",
-  "asset_version": "1077880",
-  "observed_at": "2026-10-22T06:07:47+00:00",
+  "asset_version": "1077890",
+  "observed_at": "2026-10-24T15:06:46+00:00",
   "note": "家族签名 = 逻辑包名把数字折叠成 #；只记录出现过的资源类型与数量，不记录 16.8 万个名字。unclassified 家族即「新资源类型」，需要人工判断是否可汉化。",
   "families": {
     "#_#_nf_grst_ltone": 1,
@@ -13469,7 +13469,7 @@
     "login_skip_home_bg_#": 3,
     "login_skip_home_chr_#d_#": 52,
     "loginbonus_bg_#": 33,
-    "loginbonus_panel_#_#": 280,
+    "loginbonus_panel_#_#": 281,
     "lottery_bg": 1,
     "lottery_character#d_#": 1,
     "lottery_parts": 1,
