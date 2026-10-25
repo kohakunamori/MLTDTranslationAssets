@@ -1701,6 +1701,12 @@
           "translated": 2,
           "untranslated": 0
         },
+        "birth_ent_018ele_010_jp.gtx": {
+          "pending": 0,
+          "total": 2,
+          "translated": 2,
+          "untranslated": 0
+        },
         "birth_ent_019min_003_jp.gtx": {
           "pending": 0,
           "total": 1,
@@ -6001,8 +6007,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 2929,
-      "translated": 2929,
+      "total": 2931,
+      "translated": 2931,
       "unit": "句",
       "untranslated": 0
     },
@@ -6580,6 +6586,12 @@
           "untranslated": 0
         },
         "birth_bdl2_018ele_009_jp.gtx": {
+          "pending": 0,
+          "total": 5,
+          "translated": 5,
+          "untranslated": 0
+        },
+        "birth_bdl2_018ele_010_jp.gtx": {
           "pending": 0,
           "total": 5,
           "translated": 5,
@@ -8343,6 +8355,12 @@
           "translated": 9,
           "untranslated": 0
         },
+        "birth_bdl_018ele_010_jp.gtx": {
+          "pending": 0,
+          "total": 9,
+          "translated": 9,
+          "untranslated": 0
+        },
         "birth_bdl_019min_004_jp.gtx": {
           "pending": 0,
           "total": 7,
@@ -9793,8 +9811,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 3828,
-      "translated": 3828,
+      "total": 3842,
+      "translated": 3842,
       "unit": "句",
       "untranslated": 0
     },
@@ -54395,8 +54413,8 @@
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 117932,
-          "translated": 117914,
+          "total": 117951,
+          "translated": 117933,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -76993,8 +77011,8 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 183039,
-      "translated": 183021,
+      "total": 183058,
+      "translated": 183040,
       "unit": "句",
       "untranslated": 0
     },
@@ -77027,8 +77045,8 @@
     {
       "id": "birth",
       "pending": 0,
-      "total": 6757,
-      "translated": 6757,
+      "total": 6773,
+      "translated": 6773,
       "untranslated": 0
     },
     {
@@ -77055,29 +77073,29 @@
     {
       "id": "system",
       "pending": 18,
-      "total": 183039,
-      "translated": 183021,
+      "total": 183058,
+      "translated": 183040,
       "untranslated": 0
     }
   ],
-  "generated_at": "2026-10-24T15:02:15.730349+00:00",
+  "generated_at": "2026-10-25T15:02:00.111282+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1077890",
-    "assets_commit": "edabe46bedb33124af2b4818ba128fcf455e1ad5",
-    "release_id": "assets-1077890",
+    "asset_version": "1077900",
+    "assets_commit": "623dd241c78063e57bfbc0d7fd891069e6fd94b0",
+    "release_id": "assets-1077900",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "7c46f8cbff404f76a30130537b22628b514719a6cdbd2ef8afb7aebdbb4b2713",
+    "source_manifest_sha256": "161b24f8eb15b43134231f965d8628fc2f49032978df4ae3cc499c8ebd2bffbf",
     "status": "published",
-    "updated_at": "2026-10-25T00:00:00+09:00"
+    "updated_at": "2026-10-26T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "edabe46bedb33124af2b4818ba128fcf455e1ad5",
-    "generated_entry_count": 13519,
-    "generated_manifest_sha256": "7c46f8cbff404f76a30130537b22628b514719a6cdbd2ef8afb7aebdbb4b2713",
+    "commit": "623dd241c78063e57bfbc0d7fd891069e6fd94b0",
+    "generated_entry_count": 13522,
+    "generated_manifest_sha256": "161b24f8eb15b43134231f965d8628fc2f49032978df4ae3cc499c8ebd2bffbf",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "c18318f539f03bbbd5857494dcacaeff4977241840c0bc3fdc23718c7ea3d702",
+    "source_catalogue_sha256": "bed2527dde6dedc25675a391c345776f0f8cb0200fa3a289a64ea16cb3774bcb",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77086,8 +77104,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 416929,
-    "translated": 416830,
+    "total": 416964,
+    "translated": 416865,
     "untranslated": 0
   }
 }
