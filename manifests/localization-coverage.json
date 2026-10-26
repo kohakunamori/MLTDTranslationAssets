@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "asset_version": "1077930",
-  "official_index_sha256": "aa2a5996b158e6affa0eff9bbcdf72863dd143b55d3ef8cb1b4d0595cdb83def",
+  "asset_version": "1077938",
+  "official_index_sha256": "be5586db27397c85b8fb44946c8550635abd7be80b800e6bea562d55f99ff4ee",
   "source_sync_complete": true,
   "sources": {
     "gtx_text": {
-      "official_bundles": 11934,
+      "official_bundles": 11935,
       "unsynchronized_bundles": []
     },
     "song_lyrics": {
-      "official_bundles": 493,
+      "official_bundles": 494,
       "unsynchronized_bundles": []
     },
     "event_units": {
@@ -20,7 +20,8 @@
   "locales": {
     "accepted": 416871,
     "accepted_with_kana_candidates": 4302,
-    "pending": 99
+    "pending": 99,
+    "untranslated": 2423
   },
   "repair_candidates": [],
   "images": {
@@ -7262,7 +7263,7 @@
         ]
       },
       "titles_logos": {
-        "official_bundles": 614,
+        "official_bundles": 616,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -7869,6 +7870,8 @@
           "titlebg_02004.unity3d",
           "titlebg_02005.unity3d",
           "titlebg_02006.unity3d",
+          "titlebg_02007.unity3d",
+          "titlebg_02008.unity3d",
           "titlebg_default.unity3d",
           "titlebg_kv6th.unity3d",
           "titlebg_kv6th2.unity3d",
@@ -8485,6 +8488,8 @@
           "titlebg_02004.unity3d",
           "titlebg_02005.unity3d",
           "titlebg_02006.unity3d",
+          "titlebg_02007.unity3d",
+          "titlebg_02008.unity3d",
           "titlebg_default.unity3d",
           "titlebg_kv6th.unity3d",
           "titlebg_kv6th2.unity3d",
@@ -8499,7 +8504,7 @@
         ]
       },
       "achievement": {
-        "official_bundles": 6786,
+        "official_bundles": 6788,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -14848,6 +14853,8 @@
           "achievement_7294.unity3d",
           "achievement_7295.unity3d",
           "achievement_730.unity3d",
+          "achievement_7302.unity3d",
+          "achievement_7303.unity3d",
           "achievement_731.unity3d",
           "achievement_7316.unity3d",
           "achievement_7317.unity3d",
@@ -21636,6 +21643,8 @@
           "achievement_7294.unity3d",
           "achievement_7295.unity3d",
           "achievement_730.unity3d",
+          "achievement_7302.unity3d",
+          "achievement_7303.unity3d",
           "achievement_731.unity3d",
           "achievement_7316.unity3d",
           "achievement_7317.unity3d",
@@ -30802,7 +30811,7 @@
         ]
       },
       "item_icons": {
-        "official_bundles": 3408,
+        "official_bundles": 3414,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -31293,6 +31302,8 @@
           "item_110004.unity3d",
           "item_110005.unity3d",
           "item_110006.unity3d",
+          "item_110007.unity3d",
+          "item_110008.unity3d",
           "item_1101.unity3d",
           "item_1102.unity3d",
           "item_1103.unity3d",
@@ -31344,6 +31355,7 @@
           "item_120001.unity3d",
           "item_120002.unity3d",
           "item_120003.unity3d",
+          "item_120004.unity3d",
           "item_130001.unity3d",
           "item_130002.unity3d",
           "item_130003.unity3d",
@@ -33898,6 +33910,9 @@
           "item_904202.unity3d",
           "item_904203.unity3d",
           "item_904206.unity3d",
+          "item_904602.unity3d",
+          "item_904603.unity3d",
+          "item_904606.unity3d",
           "item_980001.unity3d",
           "item_980002.unity3d",
           "item_980003.unity3d",
@@ -34703,6 +34718,8 @@
           "item_110004.unity3d",
           "item_110005.unity3d",
           "item_110006.unity3d",
+          "item_110007.unity3d",
+          "item_110008.unity3d",
           "item_1101.unity3d",
           "item_1102.unity3d",
           "item_1103.unity3d",
@@ -34754,6 +34771,7 @@
           "item_120001.unity3d",
           "item_120002.unity3d",
           "item_120003.unity3d",
+          "item_120004.unity3d",
           "item_130001.unity3d",
           "item_130002.unity3d",
           "item_130003.unity3d",
@@ -37308,6 +37326,9 @@
           "item_904202.unity3d",
           "item_904203.unity3d",
           "item_904206.unity3d",
+          "item_904602.unity3d",
+          "item_904603.unity3d",
+          "item_904606.unity3d",
           "item_980001.unity3d",
           "item_980002.unity3d",
           "item_980003.unity3d",
@@ -49887,7 +49908,7 @@
         ]
       },
       "titlebg_thumbnail": {
-        "official_bundles": 290,
+        "official_bundles": 292,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -50180,6 +50201,8 @@
           "titlebg_02004_thumb.unity3d",
           "titlebg_02005_thumb.unity3d",
           "titlebg_02006_thumb.unity3d",
+          "titlebg_02007_thumb.unity3d",
+          "titlebg_02008_thumb.unity3d",
           "titlebg_default_thumb.unity3d"
         ],
         "missing_generated_bundles": [
@@ -50472,6 +50495,8 @@
           "titlebg_02004_thumb.unity3d",
           "titlebg_02005_thumb.unity3d",
           "titlebg_02006_thumb.unity3d",
+          "titlebg_02007_thumb.unity3d",
+          "titlebg_02008_thumb.unity3d",
           "titlebg_default_thumb.unity3d"
         ]
       },
