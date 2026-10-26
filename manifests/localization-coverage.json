@@ -28,7 +28,7 @@
     "mode": "coverage_detection_only",
     "generation_enabled": false,
     "measurement": "bundle inventory including thumbnails; Japanese presence requires visual/OCR review",
-    "generated_source_commit": "f8f9a7fdfafa95c93581c6d99cd77508cba967d0",
+    "generated_source_commit": "f0714ccb88d74d4d69832b72c185c51294b8b1d1",
     "families": {
       "comic": {
         "official_bundles": 968,
