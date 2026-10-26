@@ -1,11 +1,11 @@
 # MLTD 资产服务（本仓自足部署模板；候选，未部署）
 #
-# 与主仓 mltd-current/asset-server/docker-compose.yml 的 build 段完全同形：
+# build 段写法约定：
 #   context 相对本 compose 文件（asset-server/）解析，因此 ``..`` = **本仓根**，
-#   即闭包源码的唯一来源仓库。主仓副本的同样写法 ``..`` 指向主仓；闭包迁入本仓后
-#   同一写法就自足，不需要把 compose 移到仓库根，也不依赖任何兄弟仓库。
+#   即闭包源码的唯一来源仓库。这样不需要把 compose 移到仓库根，也不依赖本仓之外
+#   的任何目录或 PYTHONPATH 回退。
 # 三个服务的镜像、卷、环境变量、命令与 fail-fast 语义（ASSETS_MIRROR_VERSIONS
-# 缺失即拒绝启动）与主仓逐一对应。上线切换需单写者窗口，本文件不做任何指向。
+# 缺失即拒绝启动）在上线切换前保持稳定。上线切换需单写者窗口，本文件不做任何指向。
 name: imas-mltd-asset
 
 services:

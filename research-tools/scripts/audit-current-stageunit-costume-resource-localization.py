@@ -282,7 +282,7 @@ def main() -> int:
                 )
 
     result = {
-        "schema": "mltd-current-stageunit-costume-resource-localization-v1",
+        "schema": "mltd-stageunit-costume-resource-localization-v1",
         "schema_version": 1,
         "inputs": {
             "localization": str(args.localization),

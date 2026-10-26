@@ -1823,7 +1823,7 @@ async def async_main(args: argparse.Namespace) -> int:
                 max_connections=max(2, cfg.concurrency + 2),
                 max_keepalive_connections=max(1, cfg.concurrency),
             ),
-            headers={"User-Agent": "mltd-current-localization-api-pool/1"},
+            headers={"User-Agent": "mltd-localization-api-pool/1"},
             # The config loader imports HTTP_PROXY/HTTPS_PROXY before these
             # clients are created.  Keep this explicit so a future HTTPX
             # default change cannot silently bypass the configured proxy.

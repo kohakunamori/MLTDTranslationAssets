@@ -182,7 +182,7 @@ def main():
                 )
 
     artifact = {
-        "schema": "mltd-current-live-song-textasset-audit-v1",
+        "schema": "mltd-live-song-textasset-audit-v1",
         "schema_version": 1,
         "inputs": {
             "relationship_db": str(db.relative_to(ROOT)),

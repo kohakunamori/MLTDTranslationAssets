@@ -541,7 +541,7 @@ def main() -> int:
     )
 
     meta = {
-        "schema": "mltd-current-asset-relationships-v2",
+        "schema": "mltd-asset-relationships-v2",
         "build_complete": "0",
         "manifest_entry_count": str(len(manifest)),
         "asset_index": str(args.asset_index),

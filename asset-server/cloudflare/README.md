@@ -3,7 +3,6 @@
 线上地址：[mltd-asset-cf.nyaneko.cn](https://mltd-asset-cf.nyaneko.cn)。
 Worker 绑定私有 bucket `mltd-localized-assets`，按编译进部署的路径表读取汉化文件。
 没覆盖的文件、其他游戏资源版本、R2 读取失败均转发官方 CDN。
-NAS 不参与这条发布或分发链路。
 
 ```mermaid
 flowchart LR

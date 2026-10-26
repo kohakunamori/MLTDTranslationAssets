@@ -5,10 +5,10 @@ Tracks:
 - ``official`` follows the latest Hotplay APK (package unchanged, assets from
   the official server, only APK-built-in localization);
 - ``local`` is pinned to an exact client/assets pair (``9.0.200``/``1077500``)
-  served by the NAS asset-server ``/cn/<assets>/`` namespace, package ``.local``.
+  and uses the project's own asset base instead of the official CDN.
 
 Each run is idempotent: builds happen only when a track's input fingerprint
-changes; candidates go to the NAS ``candidate`` channel (never canonical);
+changes; candidates go to the non-canonical ``candidate`` channel;
 the ``release`` channel additionally needs the track gate report, the private
 release signer, and ``publish.release=true``. Success is silent; failures,
 version incompatibility, missing signing inputs and review needs are sent once

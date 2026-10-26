@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "kind": "mltd-dual-track-pipeline",
-  "_comment": "Template only. Copy to a private path (e.g. work/agents/client/dual-track-pipeline/pipeline.json). Paths only; signing material comes from runner environment variables MLTD_KEYSTORE/MLTD_KEY_ALIAS/MLTD_KEYSTORE_PASSWORD/MLTD_KEY_PASSWORD and MLTD_RELEASE_SIGNER_SHA256. nas.asset_host_resolve is an optional curl-style host:port:ip pin used when the asset host DNS is AAAA-only and the runner has no IPv6 path (HEAD falls back to the OS resolver when null). tracks.*.asset_pin is optional: the last verified {index_name, index_sha256} for a pinned asset release; it powers the serving-path diagnostic when the NAS control path is down and fails closed if the NAS index changes.",
+  "_comment": "Template only. Copy to a private path (e.g. work/agents/client/dual-track-pipeline/pipeline.json). Paths only; signing material comes from runner environment variables MLTD_KEYSTORE/MLTD_KEY_ALIAS/MLTD_KEYSTORE_PASSWORD/MLTD_KEY_PASSWORD and MLTD_RELEASE_SIGNER_SHA256. nas.asset_host_resolve is an optional curl-style host:port:ip pin used when the asset host DNS returns no reachable address for the runner (HEAD falls back to the OS resolver when null). tracks.*.asset_pin is optional: the last verified {index_name, index_sha256} for a pinned asset release; it powers the serving-path diagnostic when the remote control path is down and fails closed if the published index changes.",
   "state_path": "work/agents/client/dual-track-pipeline/state.json",
   "run_root": "build/runs/client/9.0.200/dual-track-pipeline",
   "notify_config": null,
@@ -9,7 +9,7 @@
     "ssh_target": "user@your-host",
     "archive_root": "/path/to/mltd-archive",
     "release_root": "/path/to/mltd-archive/releases",
-    "asset_host": "https://mltd-asset.nyaneko.cn:18443",
+    "asset_host": "https://asset-host.example",
     "asset_host_resolve": null
   },
   "tracks": {

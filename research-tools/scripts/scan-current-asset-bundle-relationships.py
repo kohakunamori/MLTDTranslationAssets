@@ -299,9 +299,9 @@ def scan_one(job):
 
 def ensure_schema(con: sqlite3.Connection):
     meta = dict(con.execute("SELECT key,value FROM metadata"))
-    if meta.get("schema") != "mltd-current-asset-relationships-v2":
+    if meta.get("schema") != "mltd-asset-relationships-v2":
         raise RuntimeError(
-            "deep scanner requires mltd-current-asset-relationships-v2; "
+            "deep scanner requires mltd-asset-relationships-v2; "
             f"found {meta.get('schema')!r}"
         )
     if meta.get("build_complete") != "1":

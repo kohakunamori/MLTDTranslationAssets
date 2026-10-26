@@ -125,7 +125,7 @@ def main() -> int:
             })
 
     result = {
-        "schema": "mltd-current-archived-costume-icon-batch-scan-v1",
+        "schema": "mltd-archived-costume-icon-batch-scan-v1",
         "version": args.version,
         "scope": args.scope,
         "batch_prefix": args.batch_prefix,

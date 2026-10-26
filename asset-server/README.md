@@ -1,8 +1,7 @@
 # MLTD 资产服务（本仓自足闭包）
 
 本目录是 MLTD 汉化 Assets 通道的**最小运行闭包**：镜像、CLI 与只读路由只依赖
-本仓内的源码，不依赖主仓 mltd-current、
-不依赖任何兄弟仓库或 `PYTHONPATH` 回退。
+本仓内的源码，不依赖本仓之外的任何目录或 `PYTHONPATH` 回退。
 
 > 当前生产链路：统一 CI → 私有 R2 → Cloudflare Worker。旧分发方案已退役。
 > `generated-assets/` 和 Docker/nginx 说明属于历史部署资料，不是当前运行状态。
@@ -18,10 +17,10 @@
 | `asset-version` | 官方归档控制 wrapper（`tools/asset_version.py`，经 docker compose `tools` profile） |
 | `switch-version.sh` | 兼容 wrapper：`activate --version <v>` |
 | `requirements.txt` | `msgpack`、`requests` |
-| `generated-assets/` | 已退役的 NAS 分发闭包，保留历史复现资料 |
+| `generated-assets/` | 已退役的分发闭包，保留历史复现资料 |
 | `cloudflare/` | 生产 Cloudflare Worker：读取私有 R2 的汉化对象，未命中转发官方；包含路径表构建与线上验收 |
-| `nginx-vhost.conf` | 共享 nginx 的项目 vhost 副本（`/assets/`、`/cn/`、`/generated-assets/`） |
-| `Deploy-GeneratedAssets.ps1` | 项目侧部署/核对入口（默认只计划；`-Apply` 才收敛） |
+| `nginx-vhost.conf` | 只读路由的参考配置（`/assets/`、`/cn/`、`/generated-assets/`） |
+| `Deploy-GeneratedAssets.ps1` | 闭包核对入口（默认只计划；`-Apply` 才收敛） |
 
 服务入口（compose）：
 
@@ -92,7 +91,7 @@ docker run -d --name mltd-drop-index --entrypoint python \
 | `sync` 固定开销（500 条 smoke） | 159 s | **0.735 s** |
 
 `VACUUM` 现网耗时 **203.8 s**，`quick_check` 仍为 `ok`。它只阻塞归档工具（updater 必须停），
-对外分发走 nginx `alias` 直读 `views/`，不受影响。碎片会随版本继续累积，所以这不是一次性
+对外分发走只读路由直读 `views/`，不受影响。碎片会随版本继续累积，所以这不是一次性
 操作——`sync` 的固定开销再次抬头（或 `freelist` 又到几百 MB）时重跑即可。
 
 ```bash
@@ -157,7 +156,7 @@ python asset-server/assets_route.py serve --root /path/to/verified-mirror --bind
 python scripts/assets_mirror.py --root /path/to/mirror sync --asset-version 1077100
 python scripts/assets_mirror.py --root /path/to/mirror watch --asset-version 1077100 --once
 
-# 官方归档控制（NAS 场景经 compose tools profile）
+# 官方归档控制（经 compose tools profile）
 ./asset-server/asset-version list
 ./asset-server/asset-version progress <ver>
 ./asset-server/switch-version.sh <ver>
@@ -191,6 +190,6 @@ cd asset-server && MLTD_ARCHIVE_ROOT=/path/to/mltd-archive ASSETS_MIRROR_VERSION
 
 - 扁平 `objects/sha256/<digest>` 与历史 fan-out 路径**都可读**；本仓 writer 产出 flat +
   `runtime_path`，不迁移对象、不做 GC。
-- 本目录不写 `generated/`、不写 `manifests/`、不碰 D1/NAS；`mltd-asset-updater` 只管理
+- 本目录不写 `generated/`、不写 `manifests/`、不碰 D1 与归档主机；`mltd-asset-updater` 只管理
   官方归档（`views/` + `current`），与 generated mirror 的树完全不相交。
-- 生产切换（NAS 指向、单写者交接）未做，也不在本文件的范围内。
+- 生产切换（对外指向、单写者交接）未做，也不在本文件的范围内。

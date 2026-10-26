@@ -2,9 +2,9 @@
 """Focused closure regression for the asset-server image context (本仓自足版).
 
 这个测试验证 ``asset-server/Dockerfile`` 逐文件 COPY 出的**最小上下文**真的自洽：
-每个 COPY 源都存在且是文件、不整树 COPY 目录；复制出的源码不引用主仓
-（mltd-current）名字；每个 COPY 进镜像的模块所 import 的本仓模块也在 COPY 清单里；
-把这份上下文复制到临时目录后（不挂任何兄弟仓库，剔除 PYTHONPATH），闭包模块可导入、
+每个 COPY 源都存在且是文件、不整树 COPY 目录；复制出的源码不引用本仓之外的
+检出目录或盘符路径；每个 COPY 进镜像的模块所 import 的本仓模块也在 COPY 清单里；
+把这份上下文复制到临时目录后（不挂本仓之外的目录，剔除 PYTHONPATH），闭包模块可导入、
 五个镜像 CLI 入口从复制后的 app 执行 ``--help`` 并退出 0，且 mirror 的顶层名 / 包名两条兼容导入分支都解析到同一份
 producer 字节。入镜像的 serve_release.py 同时作宿主专用 CLI 检查。
 
@@ -55,8 +55,9 @@ CLI_HELP_ENTRIES = (
 # 未列入 Dockerfile COPY 或 Compose 的入口，仅验证宿主 --help。
 HOST_ONLY_CLI_HELP_ENTRIES = ("asset-server/serve_release.py",)
 
-#: 本仓自足：闭包源码中不得出现主仓检出目录名（跨仓路径/回退的痕迹）。
-FOREIGN_REPO_MARKERS = ("mltd-current",)
+#: 本仓自足：闭包源码中不得出现盘符路径（跨仓检出/回退的痕迹）。
+#: 前置断言排除 ``https://`` 这类 scheme，只命中 ``X:\`` / ``X:/`` 形式的本地路径。
+FOREIGN_PATH_RE = re.compile(r"(?<![A-Za-z0-9+.\-])[A-Za-z]:[\\/]")
 
 #: compose 三服务与 archive_controller 子进程链在镜像内需要的全部源文件
 #: （逐文件 COPY 的「闭包」清单基线；新增运行时依赖必须同时更新这里与 Dockerfile）。
@@ -132,15 +133,15 @@ class DockerContextClosureTest(unittest.TestCase):
             ["no/such_file.py"])
 
     def test_copied_sources_never_name_a_foreign_repo(self):
-        """闭包源码必须本仓自足：不得出现主仓/兄弟仓标识。"""
+        """闭包源码必须本仓自足：不得出现仓库之外的检出路径。"""
         for src, _dst in self.copies:
             if not src.endswith(".py"):
                 continue
             text = (REPO / src).read_text(encoding="utf-8")
-            for marker in FOREIGN_REPO_MARKERS:
-                self.assertNotIn(
-                    marker, text,
-                    f"{src} 引用了本仓之外的项目标识 {marker!r}；闭包必须可独立构建")
+            match = FOREIGN_PATH_RE.search(text)
+            if match is not None:
+                self.fail(f"{src} 引用了本仓之外的检出路径 {match.group(0)!r}；"
+                          "闭包必须可独立构建")
 
     def test_local_imports_of_copied_modules_are_covered_by_copy_list(self):
         """COPY 进镜像的模块所 import 的本仓模块，必须也在 COPY 清单里。

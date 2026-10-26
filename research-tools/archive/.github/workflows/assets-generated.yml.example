@@ -12,8 +12,8 @@
 #
 # External-blocked (state this honestly, do not paper over it)
 # -----------------------------------------------------------
-# 1. There is no runner attached to this repository: mltd-current has no
-#    `.github/workflows/*.yml` that has ever executed, and the only sibling
+# 1. There is no runner attached to this repository: no
+#    `.github/workflows/*.yml` here has ever executed, and the only sibling
 #    template (`private-client-build-arm64.yml.example`) documents the same
 #    gap.  Nothing here has been run on a real GitHub runner.
 # 2. GitHub-hosted runners have NOT been verified against the official baseline
@@ -325,7 +325,7 @@ jobs:
             echo "FAIL: the Unity3D write-back injector is not where this repository keeps it." >&2
             echo "Expected: ${INJECTOR} plus pipelines/image/verify_bundle_repack.py as the" >&2
             echo "independent re-audit (the same two programs live at" >&2
-            echo "tools/mltd_image_localization/ in mltd-current). Both are in the commit" >&2
+            echo "tools/mltd_image_localization/). Both are in the commit" >&2
             echo "contract; if they moved, update the entry point's --image-entry/--image-audit" >&2
             echo "and this step together." >&2
             echo "Nothing was written to generated/." >&2

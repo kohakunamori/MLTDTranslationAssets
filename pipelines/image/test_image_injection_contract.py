@@ -443,7 +443,6 @@ def test_resolution_is_cli_only_and_sources_are_clean(tmp_path, workspace, monke
     for text, name in ((injector_text, INJECTOR.name), (auditor_text, AUDITOR.name)):
         assert "os.environ" not in text and "getenv" not in text, name
         assert "MANIFEST_ENV" not in text and "ORIGINAL_ROOT_ENV" not in text, name
-        assert "mltd-current" not in text, name
         assert "work/image-localization-25" not in text, name
         assert "reviewed937-texture-stage" not in text, name
         assert "D:/" not in text and "D:\\" not in text, name

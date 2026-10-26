@@ -177,7 +177,7 @@ def main() -> int:
 
     errors = Counter(str(row.get("error")) for row in rows if row.get("error"))
     result = {
-        "schema": "mltd-current-unity-costume-icon-namespace-v1",
+        "schema": "mltd-unity-costume-icon-namespace-v1",
         "schema_version": 1,
         "version": args.version,
         "scope": args.scope,

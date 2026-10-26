@@ -384,9 +384,10 @@ class LocalizationGatesWorkflowTest(unittest.TestCase):
         self.assertEqual(set(files), set(RUNTIME_SOURCE_FILES))
         self.assertEqual(len(files), len(RUNTIME_SOURCE_FILES), "精确清单不能含重复项")
         self.assertEqual(selector.COMPONENT_PREFIXES.get("runtime", ()), ())
-        # 兄弟产品树 D:/Project/MLTDLocalServer 是 CI 之外的输入：runtime job 不得引用
-        # 它；进程安全用例仍完整接入，执行验收须等 main 的源码 freeze。
-        self.assertNotIn("MLTDLocalServer", self._job_text("runtime"))
+        # 仓库之外的兄弟目录是 CI 之外的输入：runtime job 不得引用任何外部绝对
+        # 路径；进程安全用例仍完整接入，执行验收须等 main 的源码 freeze。
+        self.assertNotRegex(self._job_text("runtime"), r"[A-Za-z]:[\\/]",
+                            "runtime job 不得引用仓库之外的绝对路径")
 
     def test_portal_job_keeps_the_worker_syntax_boundary(self) -> None:
         # worker 语法检查随 portal 组件走（worker.js 属于 web/translation-portal/）；

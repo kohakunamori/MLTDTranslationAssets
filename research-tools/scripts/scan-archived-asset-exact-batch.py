@@ -186,7 +186,7 @@ def main() -> int:
 
     hits.sort(key=lambda x: x["logical"])
     result = {
-        "schema": "mltd-current-archived-asset-exact-batch-scan-v1",
+        "schema": "mltd-archived-asset-exact-batch-scan-v1",
         "version": args.version,
         "scope": args.scope,
         "batch": args.batch,

@@ -443,11 +443,11 @@ def bilingual_line(source: str, translation: str) -> str:
 
     The lyric object has one string per timed line, so a second line can only come
     from a newline inside that string.  The stock client throws those away --
-    ``MVModeMgr.OnScenarioEvent`` calls ``String.Replace("\\n", "")`` -- which is
-    exactly what ``localization.lyrics-multiline`` in MLTDModifiedAPK patches out
-    (``b #...`` over that call), so the pair renders as two lines in Unit Live and
-    MV.  On an unpatched client the two lines would be joined on one line, which is
-    ugly but not broken: the Chinese is still readable and nothing is lost.
+    ``MVModeMgr.OnScenarioEvent`` calls ``String.Replace("\\n", "")`` -- so an
+    optional client-side patch that removes that call (``b #...`` over it) is what
+    makes the pair render as two lines in Unit Live and MV.  On an unpatched
+    client the two lines would be joined on one line, which is ugly but not
+    broken: the Chinese is still readable and nothing is lost.
     """
     clean_source = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", source).strip()
     clean_translation = re.sub(r"[ \t]*[\r\n]+[ \t]*", " ", translation).strip()

@@ -110,7 +110,7 @@ def download_one(url: str, destination: Path, declared_size: int, timeout: float
         with destination.open("rb") as handle:
             if handle.read(7) == b"UnityFS":
                 return {"status": "cached", "bytes": declared_size}
-    request = Request(url, headers={"User-Agent": "mltd-current-localization/1"})
+    request = Request(url, headers={"User-Agent": "mltd-localization/1"})
     with urlopen(request, timeout=timeout) as response:
         data = response.read()
     if len(data) != declared_size:

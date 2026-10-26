@@ -21,7 +21,7 @@ import UnityPy
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_VERSION = 5
-DB_SCHEMA = "mltd-current-unity-assets-v5"
+DB_SCHEMA = "mltd-unity-assets-v5"
 REFERENCE_GRAPH_VERSION = 3
 FINAL_QUERY_INDEX_DDL = (
     "CREATE INDEX IF NOT EXISTS idx_unity_object_type ON unity_object(type_name)",
@@ -1188,7 +1188,7 @@ def summarize(con: sqlite3.Connection, db: Path, rel_db: Path, output: Path) -> 
         return round((n * 100.0 / d), 4) if d else 0.0
 
     artifact = {
-        "schema": "mltd-current-unity-assets-summary-v2",
+        "schema": "mltd-unity-assets-summary-v2",
         "schema_version": SCHEMA_VERSION,
         "database": str(db),
         "database_sha256": sha256_path(db),

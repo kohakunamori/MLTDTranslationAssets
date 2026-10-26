@@ -99,7 +99,7 @@ def main() -> int:
         blockers.append(f"foreign_key_check returned {len(fk_rows)} rows")
 
     metadata = dict(con.execute("SELECT key,value FROM metadata"))
-    if metadata.get("schema") != "mltd-current-asset-relationships-v2":
+    if metadata.get("schema") != "mltd-asset-relationships-v2":
         blockers.append(f"unexpected schema {metadata.get('schema')!r}")
     if metadata.get("build_complete") != "1":
         blockers.append(f"build_complete={metadata.get('build_complete')!r}")

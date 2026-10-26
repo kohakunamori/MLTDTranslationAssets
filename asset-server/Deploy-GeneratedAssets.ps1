@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Deploy or verify the NAS `mltd-generated-assets` closure (plan by default).
+    Deploy or verify the deployed `mltd-generated-assets` closure (plan by default).
 
 .DESCRIPTION
-    Compares this repository's closure files with the deployed NAS files by
-    SHA-256.  With -Apply it converges them and only then touches the services:
+    Compares this repository's closure files with the deployed files on the
+    archive host by SHA-256.  With -Apply it converges them and only then touches
+    the services:
 
       1. back up every drifted remote file to <project>/.backup-<UTC>
       2. upload to a staging dir and re-verify each hash remotely
@@ -74,7 +75,7 @@ function Invoke-Nas {
     $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($Script -replace "`r", '')))
     $output = & ssh -o BatchMode=yes -o ConnectTimeout=15 $NasAlias "echo $encoded | base64 -d | sh" 2>&1
     if ($LASTEXITCODE -ne 0 -and -not $AllowFailure) {
-        throw "NAS command failed ($LASTEXITCODE): $($output -join ' ')"
+        throw "Remote command failed ($LASTEXITCODE): $($output -join ' ')"
     }
     return $output
 }
