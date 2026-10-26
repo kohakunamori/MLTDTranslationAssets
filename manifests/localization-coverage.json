@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "asset_version": "1077900",
-  "official_index_sha256": "a15209a34032f6658da64d88377b3b753d3b6aff56ba099b168b44a901b1c594",
+  "asset_version": "1077930",
+  "official_index_sha256": "aa2a5996b158e6affa0eff9bbcdf72863dd143b55d3ef8cb1b4d0595cdb83def",
   "source_sync_complete": true,
   "sources": {
     "gtx_text": {
@@ -20,7 +20,8 @@
   "locales": {
     "accepted": 416865,
     "accepted_with_kana_candidates": 4302,
-    "pending": 99
+    "pending": 99,
+    "untranslated": 6
   },
   "repair_candidates": [],
   "images": {
@@ -27472,7 +27473,7 @@
         ]
       },
       "mycard_event_logo": {
-        "official_bundles": 217,
+        "official_bundles": 219,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -27692,7 +27693,9 @@
           "mycard_logo_event_0442.unity3d",
           "mycard_logo_event_0444.unity3d",
           "mycard_logo_event_0446.unity3d",
-          "mycard_logo_event_0448.unity3d"
+          "mycard_logo_event_0448.unity3d",
+          "mycard_logo_event_0450.unity3d",
+          "mycard_logo_event_0452.unity3d"
         ],
         "missing_generated_bundles": [
           "mycard_logo_event_0004.unity3d",
@@ -27911,7 +27914,9 @@
           "mycard_logo_event_0442.unity3d",
           "mycard_logo_event_0444.unity3d",
           "mycard_logo_event_0446.unity3d",
-          "mycard_logo_event_0448.unity3d"
+          "mycard_logo_event_0448.unity3d",
+          "mycard_logo_event_0450.unity3d",
+          "mycard_logo_event_0452.unity3d"
         ]
       },
       "gasha": {
@@ -37623,7 +37628,7 @@
         ]
       },
       "blog": {
-        "official_bundles": 1256,
+        "official_bundles": 1257,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -38726,6 +38731,7 @@
           "blog1586.unity3d",
           "blog1587.unity3d",
           "blog1588.unity3d",
+          "blog1589.unity3d",
           "blog50010.unity3d",
           "blog50011.unity3d",
           "blog50012.unity3d",
@@ -39984,6 +39990,7 @@
           "blog1586.unity3d",
           "blog1587.unity3d",
           "blog1588.unity3d",
+          "blog1589.unity3d",
           "blog50010.unity3d",
           "blog50011.unity3d",
           "blog50012.unity3d",
@@ -47358,7 +47365,7 @@
         ]
       },
       "blog_thumbnail": {
-        "official_bundles": 1256,
+        "official_bundles": 1257,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -48461,6 +48468,7 @@
           "blog1586_thumb.unity3d",
           "blog1587_thumb.unity3d",
           "blog1588_thumb.unity3d",
+          "blog1589_thumb.unity3d",
           "blog50010_thumb.unity3d",
           "blog50011_thumb.unity3d",
           "blog50012_thumb.unity3d",
@@ -49719,6 +49727,7 @@
           "blog1586_thumb.unity3d",
           "blog1587_thumb.unity3d",
           "blog1588_thumb.unity3d",
+          "blog1589_thumb.unity3d",
           "blog50010_thumb.unity3d",
           "blog50011_thumb.unity3d",
           "blog50012_thumb.unity3d",
