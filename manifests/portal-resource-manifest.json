@@ -45237,6 +45237,78 @@
           "translated": 18,
           "untranslated": 0
         },
+        "event_unit_talk_1807.unity3d": {
+          "pending": 0,
+          "total": 16,
+          "translated": 16,
+          "untranslated": 0
+        },
+        "event_unit_talk_1808.unity3d": {
+          "pending": 0,
+          "total": 18,
+          "translated": 18,
+          "untranslated": 0
+        },
+        "event_unit_talk_1809.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 17,
+          "untranslated": 0
+        },
+        "event_unit_talk_1810.unity3d": {
+          "pending": 0,
+          "total": 13,
+          "translated": 13,
+          "untranslated": 0
+        },
+        "event_unit_talk_1811.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 21,
+          "untranslated": 0
+        },
+        "event_unit_talk_1812.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 20,
+          "untranslated": 0
+        },
+        "event_unit_talk_1813.unity3d": {
+          "pending": 0,
+          "total": 19,
+          "translated": 19,
+          "untranslated": 0
+        },
+        "event_unit_talk_1814.unity3d": {
+          "pending": 0,
+          "total": 21,
+          "translated": 21,
+          "untranslated": 0
+        },
+        "event_unit_talk_1815.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 17,
+          "untranslated": 0
+        },
+        "event_unit_talk_1816.unity3d": {
+          "pending": 0,
+          "total": 14,
+          "translated": 14,
+          "untranslated": 0
+        },
+        "event_unit_talk_1817.unity3d": {
+          "pending": 0,
+          "total": 20,
+          "translated": 19,
+          "untranslated": 1
+        },
+        "event_unit_talk_1818.unity3d": {
+          "pending": 0,
+          "total": 17,
+          "translated": 17,
+          "untranslated": 0
+        },
         "event_unit_talk_822.unity3d": {
           "pending": 0,
           "total": 12,
@@ -48961,10 +49033,10 @@
       "pending": 1,
       "reused": 0,
       "suggested": 0,
-      "total": 96004,
-      "translated": 96003,
+      "total": 96217,
+      "translated": 96215,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 1
     },
     {
       "blocked": 0,
@@ -52739,8 +52811,8 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 5,
-          "total": 10034,
-          "translated": 10029,
+          "total": 10042,
+          "translated": 10037,
           "untranslated": 0
         }
       },
@@ -52753,8 +52825,8 @@
       "pending": 5,
       "reused": 0,
       "suggested": 0,
-      "total": 10034,
-      "translated": 10029,
+      "total": 10042,
+      "translated": 10037,
       "unit": "句",
       "untranslated": 0
     },
@@ -54413,9 +54485,9 @@
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 118007,
-          "translated": 117989,
-          "untranslated": 0
+          "total": 118026,
+          "translated": 118006,
+          "untranslated": 2
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -77017,10 +77089,10 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 185475,
-      "translated": 185457,
+      "total": 185494,
+      "translated": 185474,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 2
     },
     {
       "blocked": 0,
@@ -77065,43 +77137,43 @@
     {
       "id": "dialogue",
       "pending": 75,
-      "total": 37596,
-      "translated": 37521,
+      "total": 37604,
+      "translated": 37529,
       "untranslated": 0
     },
     {
       "id": "story",
       "pending": 1,
-      "total": 104977,
-      "translated": 104976,
-      "untranslated": 0
+      "total": 105190,
+      "translated": 105188,
+      "untranslated": 1
     },
     {
       "id": "system",
       "pending": 18,
-      "total": 185475,
-      "translated": 185457,
-      "untranslated": 0
+      "total": 185494,
+      "translated": 185474,
+      "untranslated": 2
     }
   ],
-  "generated_at": "2026-10-26T06:02:00.262069+00:00",
+  "generated_at": "2026-10-27T06:02:00.509663+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1077938",
-    "assets_commit": "c6236cd16ae2b4e1c9dc83ba281a02703ccc05e9",
-    "release_id": "assets-1077938",
+    "asset_version": "1077950",
+    "assets_commit": "be8a7757a520cbd3068638ed44f9a95aec1552d3",
+    "release_id": "assets-1077950",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "73f27347688886880fe5087cbbfe449552a015925d7a4f630351b962659ad4b3",
+    "source_manifest_sha256": "ee10f1e069c0eb29b64a17eb6432a9e43ad75f097227e8ea6be8541171aa24cb",
     "status": "published",
-    "updated_at": "2026-10-26T15:00:00+09:00"
+    "updated_at": "2026-10-27T15:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "c6236cd16ae2b4e1c9dc83ba281a02703ccc05e9",
-    "generated_entry_count": 13524,
-    "generated_manifest_sha256": "73f27347688886880fe5087cbbfe449552a015925d7a4f630351b962659ad4b3",
+    "commit": "be8a7757a520cbd3068638ed44f9a95aec1552d3",
+    "generated_entry_count": 13536,
+    "generated_manifest_sha256": "ee10f1e069c0eb29b64a17eb6432a9e43ad75f097227e8ea6be8541171aa24cb",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "7fc5a41a6582886ac4d4394349c42538a1f1e455abc5d3664482a1ba854894f1",
+    "source_catalogue_sha256": "497a2a06fd58c9ac1b6f46ed2837dd5e6d6cd5f575a6bb38166e4b9a170a5d50",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77110,8 +77182,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 419393,
-    "translated": 419294,
-    "untranslated": 0
+    "total": 419633,
+    "translated": 419531,
+    "untranslated": 3
   }
 }
