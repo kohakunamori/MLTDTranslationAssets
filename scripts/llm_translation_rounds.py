@@ -31,7 +31,8 @@ the original queue.  That is what ``plan`` does with the pending set.
 Stop reasons, in the order ``plan`` evaluates them:
 ``drained`` (nothing left), ``limited`` (the operator passed ``max_items``),
 ``no_progress`` (the last round accepted nothing, so another identical round
-would settle nothing either), ``budget`` (wall clock spent) and ``max_rounds``.
+would settle nothing either), ``budget`` (a caller-supplied time cap was spent;
+off by default) and ``max_rounds``.
 
 ``no_progress`` has to be decided *before* ``budget`` and ``max_rounds``: those
 two mean "there was more worth doing", which is what makes the caller re-dispatch
@@ -58,10 +59,11 @@ DEFAULT_MAX_ROUNDS = 4
 #: How many rounds one row may fail before it is taken out of the queue, so a
 #: permanently unacceptable row cannot keep a large queue looping.
 DEFAULT_MAX_ATTEMPTS = 4
-#: Wall-clock ceiling for the whole loop.  The job itself may run for 180
-#: minutes; this bound exists so the build and deployment stages always get
-#: their turn on a day when the provider is slow rather than dead.
-DEFAULT_BUDGET_SECONDS = 1800
+#: Wall-clock ceiling for the whole loop.  Zero means no cap, which is the
+#: default: rounds, not minutes, are what makes this loop cheap to bound, and a
+#: cap would only truncate work the caller still wants done.  A caller that
+#: shares the job with later stages may pass a positive value instead.
+DEFAULT_BUDGET_SECONDS = 0
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -172,7 +174,9 @@ def stop_reason(state: dict[str, Any], now: float) -> str:
         # a verdict about the rows, not about how much room is left, and only the
         # room-based reasons may trigger another whole pipeline run.
         return "no_progress"
-    if now - float(state["started_at"]) >= int(state["budget_seconds"]):
+    if int(state["budget_seconds"]) > 0 and now - float(state["started_at"]) >= int(
+        state["budget_seconds"]
+    ):
         return "budget"
     if state["rounds"] >= int(state["max_rounds"]):
         return "max_rounds"
@@ -231,9 +235,13 @@ def plan(args: argparse.Namespace) -> int:
     pending = set(state["pending"])
     round_rows = [row for row in queue if source_id(row) in pending]
     write_jsonl(args.round_output, round_rows)
+    budget = int(state["budget_seconds"])
+    remaining = (
+        "no time cap" if budget <= 0 else f"{budget - int(time.time() - state['started_at'])}s of budget left"
+    )
     print(
         f"translation rounds: round {round_number}/{state['max_rounds']}, "
-        f"{len(round_rows)} row(s) pending, {state['budget_seconds'] - int(time.time() - state['started_at'])}s of budget left"
+        f"{len(round_rows)} row(s) pending, {remaining}"
     )
     emit_outputs(
         args.github_output,
@@ -427,7 +435,12 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument("--github-output", type=Path, default=None)
     plan_parser.add_argument("--max-rounds", type=int, default=DEFAULT_MAX_ROUNDS)
     plan_parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
-    plan_parser.add_argument("--budget-seconds", type=int, default=DEFAULT_BUDGET_SECONDS)
+    plan_parser.add_argument(
+        "--budget-seconds",
+        type=int,
+        default=DEFAULT_BUDGET_SECONDS,
+        help="wall-clock cap for the whole loop; 0 (the default) means no cap",
+    )
     plan_parser.add_argument(
         "--single-shot",
         action="store_true",

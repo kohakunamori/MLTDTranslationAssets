@@ -160,9 +160,14 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         # release is built and deployed once at the end of the job.
         self.assertIn("cat .llm-round-draft.jsonl >> .llm-draft.jsonl", run)
         self.assertIn("--summary-out .llm-summary.json", run)
-        # Loop bounds: rounds, per-row attempts and wall clock.  The loop must
-        # also be able to stop on its own decision rather than on an exception.
-        self.assertIn("--budget-seconds", run)
+        # Loop bounds: rounds and per-row attempts.  The loop must also be able to
+        # stop on its own decision rather than on an exception.
+        self.assertIn("--max-rounds 4", run)
+        self.assertIn("--max-attempts 4", run)
+        # No wall-clock cap: minutes are not the scarce resource once the retry
+        # happens inside the job, and a cap would truncate wanted work.
+        self.assertIn("--budget-seconds 0", run)
+        self.assertNotIn("--budget-seconds 1800", run)
         self.assertIn("while :; do", run)
         self.assertIn('if [ "$run" != 1 ]; then break; fi', run)
         upload = self.steps["Upload translation diagnostics"]["with"]["path"]
@@ -171,7 +176,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         helper = (WORKFLOW.parents[2] / "scripts" / "llm_translation_rounds.py").read_text(encoding="utf-8")
         self.assertIn("DEFAULT_MAX_ROUNDS", helper)
         self.assertIn("DEFAULT_MAX_ATTEMPTS", helper)
-        self.assertIn("DEFAULT_BUDGET_SECONDS", helper)
+        self.assertIn("DEFAULT_BUDGET_SECONDS = 0", helper)
 
     def test_backfill_is_bounded_and_continues_only_after_a_truncated_loop(self):
         run = self.steps["Translate the queue in bounded rounds"]["run"]

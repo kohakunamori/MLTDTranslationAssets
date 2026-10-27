@@ -125,6 +125,14 @@ class TranslationRoundsTests(unittest.TestCase):
             if "=" in line
         )
 
+    def age_state(self, seconds: float) -> None:
+        """Backdate the loop start so a time cap can be exercised without waiting."""
+        import time as _time
+
+        state = json.loads(self.state.read_text(encoding="utf-8"))
+        state["started_at"] = _time.time() - seconds
+        self.state.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
     # -- plan ------------------------------------------------------------
     def test_first_plan_offers_the_whole_queue(self):
         outputs = self.plan()
@@ -193,11 +201,27 @@ class TranslationRoundsTests(unittest.TestCase):
         self.assertEqual(outputs["run"], "0")
         self.assertEqual(outputs["stopped"], "no_progress")
 
-    def test_budget_exhaustion_is_its_own_reason(self):
-        self.plan("--budget-seconds", "0")
-        outputs = self.plan("--budget-seconds", "0")
+    def test_a_time_cap_is_opt_in_and_honoured_when_asked_for(self):
+        """The loop has no time cap unless a caller explicitly asks for one."""
+        self.plan("--budget-seconds", "60")
+        self.age_state(seconds=120)
+        outputs = self.plan()
         self.assertEqual(outputs["run"], "0")
         self.assertEqual(outputs["stopped"], "budget")
+
+    def test_no_time_cap_by_default(self):
+        """Ageing the loop must not stop it when nobody set a cap.
+
+        Before 2026-10-27 another whole pipeline run was the only recovery for a
+        refused row, so minutes were the scarce resource and a cap was the lesser
+        evil.  With the retry inside the job the scarce resource is rounds, and a
+        cap would only truncate work that is already paid for.
+        """
+        self.plan()
+        self.age_state(seconds=86400)
+        outputs = self.plan()
+        self.assertEqual(outputs["run"], "1")
+        self.assertEqual(outputs["stopped"], "")
 
     def test_max_rounds_is_its_own_reason(self):
         self.plan("--max-rounds", "1")

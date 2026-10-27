@@ -356,14 +356,17 @@ jobs:
           : > .llm-draft.jsonl
           while :; do
             # Every bound is stated here instead of relying on the helper's
-            # defaults: 30 minutes of wall clock, four rounds, and four attempts
-            # per row are the policy this job promises its caller.
+            # defaults: four rounds and four attempts per row are the policy this
+            # job promises its caller.  There is deliberately no wall-clock cap --
+            # rounds are what makes the loop affordable, and a cap would only cut
+            # short work the caller still wants done.  `--budget-seconds 0` says so
+            # out loud rather than leaving it to a default.
             python scripts/llm_translation_rounds.py plan \
               --queue .llm-queue.jsonl \
               --state "$state" \
               --round-output .llm-round-queue.jsonl \
               --plan-json .llm-loop-plan.json \
-              --budget-seconds 1800 \
+              --budget-seconds 0 \
               --max-rounds 4 \
               --max-attempts 4 \
               --github-output "$GITHUB_OUTPUT" \
