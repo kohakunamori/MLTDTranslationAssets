@@ -113,11 +113,20 @@ def test_gateway_requires_a_published_release_or_explicit_deploy(stage, extra, e
     assert job['uses'] == './.github/workflows/cloudflare-gateway.yml'
 
 
-def test_backlog_continuation_is_after_publication_and_must_make_progress():
+def test_backlog_continuation_is_after_publication_and_needs_a_truncated_loop():
     job = workflow('auto-track-jp-assets.yml')['jobs']['continue-backlog']
-    good = states('translate', **{'needs.translate.outputs.remaining': '50', 'needs.translate.outputs.updated': '500'})
+    good = states('translate', **{'needs.translate.outputs.remaining': '50',
+                                  'needs.translate.outputs.stopped': 'budget'})
     assert evaluate(job['if'], good)
-    for key, value in [('needs.translate.outputs.updated', '0'), ('needs.translate.outputs.remaining', '0'),
+    assert evaluate(job['if'], dict(good, **{'needs.translate.outputs.stopped': 'max_rounds'}))
+    # The translate job retries its own leftovers up to four rounds, so another
+    # whole run is only justified when that loop was cut short.  A loop that
+    # decided to stop would sample the same rows for the same verdicts, and each
+    # re-dispatch pays a full rebuild plus a gateway deployment: asset 1077950
+    # spent three of them (~48 minutes) settling three lines.
+    for stopped in ('drained', 'no_progress', 'limited', ''):
+        assert not evaluate(job['if'], dict(good, **{'needs.translate.outputs.stopped': stopped}))
+    for key, value in [('needs.translate.outputs.remaining', '0'),
                        ('needs.gateway.result', 'failure'), ('inputs.max_items', '1')]:
         assert not evaluate(job['if'], dict(good, **{key: value}))
     assert 'gateway' in job['needs']

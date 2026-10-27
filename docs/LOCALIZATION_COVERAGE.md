@@ -39,12 +39,19 @@ accepted text intact; successful drafts pass token validation and enter the
 existing machine-draft publication stage. General kana counts remain review
 candidates, not an automatic instruction to overwrite every Japanese name.
 
-Default translation runs process at most 500 unique sources, commit validated
-progress, and dispatch the next batch only when untranslated work remains and
-the previous apply step actually updated rows. Explicit `max_items` smoke runs
-stop after one batch. This prevents a large recovered source surface from
-losing all its drafts at the three-hour job timeout, and prevents no-progress
-provider/validation failures from endlessly dispatching themselves.
+Default translation runs process at most 500 unique sources per model round and,
+after a round settles, re-attempt the rows it left behind in the same job: up to
+four rounds, four attempts per row and thirty minutes of wall clock, all counted
+from the original queue. Accepted rows leave the pending set as soon as they are
+recorded, so no row is translated twice and the accumulated draft is applied,
+validated, promoted and committed exactly once. The job reports why the loop
+stopped: `drained`, `no_progress` (the last round settled nothing), `budget`,
+`max_rounds` or `limited` (an explicit `max_items` smoke run, which is always a
+single round). Only `budget` and `max_rounds` dispatch another whole pipeline
+run; the others would repeat the same work for the same answer. This keeps a
+large recovered source surface from losing all its drafts at the three-hour job
+timeout, and settles rows refused for a re-sampling artefact without paying for
+a rebuild and a gateway deployment per line.
 
 ## Images
 

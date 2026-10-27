@@ -330,13 +330,22 @@ jobs:
       always() && !cancelled() && needs.translate.result == 'success' &&
       needs.translate.outputs.ready == 'true' &&
       needs.translate.outputs.remaining != '' && needs.translate.outputs.remaining != '0' &&
-      needs.translate.outputs.updated != '' && needs.translate.outputs.updated != '0' &&
       needs.release.result != 'failure' && needs.gateway.result != 'failure' &&
-      (inputs.max_items == '0' || inputs.max_items == '')
+      (inputs.max_items == '0' || inputs.max_items == '') &&
+      (needs.translate.outputs.stopped == 'budget' ||
+       needs.translate.outputs.stopped == 'max_rounds')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Continue only a backlog that made verified progress
+      - name: Continue only a backlog this run ran out of room for
+        # The translation job now retries its own leftovers in-place (bounded by
+        # a wall-clock budget and a round count), so an unfinished queue is only
+        # worth another whole run when that loop was cut short: `budget` or
+        # `max_rounds`.  Every other reason means retrying again today would do
+        # the same work for the same answer -- `no_progress` (the last round
+        # settled nothing), `drained`, or `limited` (an operator-set max_items).
+        # Before this, three unlucky rows cost three extra pipeline runs: each
+        # one rebuilt the release and redeployed the gateway to settle one line.
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

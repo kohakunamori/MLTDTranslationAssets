@@ -76,7 +76,7 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertIs(restore['fail-on-cache-miss'], True)
 
     def test_partial_item_failures_do_not_discard_accepted_rows(self):
-        translate = self.steps["Translate with the existing provider pool"]
+        translate = self.steps["Translate the queue in bounded rounds"]
         self.assertEqual(translate["id"], "translate")
         self.assertIs(translate["continue-on-error"], True)
         apply_step = self.steps["Apply LLM translations"]
@@ -139,11 +139,53 @@ class LlmTranslateWorkflowTests(unittest.TestCase):
         self.assertLess(names.index("Verify source synchronization and detect image coverage"), names.index("Collect untranslated rows"))
         self.assertIn("--require-source-sync", self.steps["Verify source synchronization and detect image coverage"]["run"])
 
-    def test_backfill_is_bounded_and_continues_only_after_real_progress(self):
-        self.assertIn('then limit=500; fi', self.steps["Translate with the existing provider pool"]["run"])
+    def test_leftovers_are_retried_in_this_job_instead_of_a_new_run(self):
+        """2026-10-27: three untranslated rows cost three whole pipeline runs.
+
+        The QA gate rejects a sample deterministically, so re-sampling the same
+        rows in the same job is what settles them; a re-dispatch paid a release
+        build plus a gateway deployment (~16 minutes) for one line each time.
+        """
+        translate = self.steps["Translate the queue in bounded rounds"]
+        run = translate["run"]
+        self.assertIn("scripts/llm_translation_rounds.py plan", run)
+        self.assertIn("scripts/llm_translation_rounds.py record", run)
+        self.assertIn("scripts/llm_translation_rounds.py finish", run)
+        # The round input must be the *pending subset of the original queue*: the
+        # pool's failure report drops bundle/key/task, so its rows cannot be
+        # translated again as-is.
+        self.assertIn("--input .llm-round-queue.jsonl", run)
+        self.assertIn("--round-output .llm-round-queue.jsonl", run)
+        # Rounds accumulate into the single draft the apply step consumes, so the
+        # release is built and deployed once at the end of the job.
+        self.assertIn("cat .llm-round-draft.jsonl >> .llm-draft.jsonl", run)
+        self.assertIn("--summary-out .llm-summary.json", run)
+        # Loop bounds: rounds, per-row attempts and wall clock.  The loop must
+        # also be able to stop on its own decision rather than on an exception.
+        self.assertIn("--budget-seconds", run)
+        self.assertIn("while :; do", run)
+        self.assertIn('if [ "$run" != 1 ]; then break; fi', run)
+        upload = self.steps["Upload translation diagnostics"]["with"]["path"]
+        for name in (".llm-loop-state.json", ".llm-loop-plan.json", ".llm-round-summary-*.json"):
+            self.assertIn(name, upload)
+        helper = (WORKFLOW.parents[2] / "scripts" / "llm_translation_rounds.py").read_text(encoding="utf-8")
+        self.assertIn("DEFAULT_MAX_ROUNDS", helper)
+        self.assertIn("DEFAULT_MAX_ATTEMPTS", helper)
+        self.assertIn("DEFAULT_BUDGET_SECONDS", helper)
+
+    def test_backfill_is_bounded_and_continues_only_after_a_truncated_loop(self):
+        run = self.steps["Translate the queue in bounded rounds"]["run"]
+        self.assertIn('limit=500', run)
+        self.assertIn('--max-items "$limit"', run)
+        # An operator-set max_items is one bounded batch, never a retry loop.
+        self.assertIn("single_shot=(--single-shot)", run)
         parent = yaml.safe_load((WORKFLOW.parent / 'auto-track-jp-assets.yml').read_text(encoding='utf-8'))
         followup = parent["jobs"]["continue-backlog"]
-        self.assertIn("needs.translate.outputs.updated != '0'", followup["if"])
+        # Only a loop that ran out of budget or rounds is worth another whole
+        # run; `no_progress` means tomorrow's run would do nothing new today.
+        self.assertIn("needs.translate.outputs.stopped == 'budget'", followup["if"])
+        self.assertIn("needs.translate.outputs.stopped == 'max_rounds'", followup["if"])
+        self.assertNotIn("needs.translate.outputs.updated != '0'", followup["if"])
         self.assertIn("needs.translate.outputs.remaining != '0'", followup["if"])
         self.assertIn("inputs.max_items == '0'", followup["if"])
         self.assertEqual(self.steps["Refresh translation backlog report"]["id"], "backlog")

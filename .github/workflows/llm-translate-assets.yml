@@ -33,6 +33,8 @@ name: Reusable - synchronize and translate sources
         value: ${{ jobs.draft.outputs.remaining }}
       updated:
         value: ${{ jobs.draft.outputs.updated }}
+      stopped:
+        value: ${{ jobs.draft.outputs.stopped }}
       image_remaining:
         value: ${{ jobs.images.outputs.remaining }}
       image_completed:
@@ -205,6 +207,11 @@ jobs:
       published: ${{ steps.commit.outputs.published == 'true' || steps.apply.outputs.published == 'true' }}
       remaining: ${{ steps.backlog.outputs.remaining }}
       updated: ${{ steps.apply.outputs.updated }}
+      # Why the in-job retry loop stopped: `drained`, `no_progress`, `budget`,
+      # `max_rounds` or `limited`.  Only the two middle reasons mean rows are
+      # still waiting because this run ran out of room; the caller uses it to
+      # decide whether another whole pipeline run is worth it.
+      stopped: ${{ steps.translate.outputs.stopped }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -304,11 +311,24 @@ jobs:
         run: |
           printf '%s\n' '{"schema_version":1,"speakers":{}}' > .llm-character-evidence.json
 
-      - name: Translate with the existing provider pool
+      - name: Translate the queue in bounded rounds
         # A handful of items always end up failing every provider attempt. That
         # is not a reason to discard the ~99% that succeeded: tolerate the exit
         # code here and let the apply/commit steps publish what was accepted.
         # The summary step below still fails the run when nothing was accepted.
+        #
+        # Those leftovers are usually not broken rows.  The pool samples
+        # non-deterministically, and a line refused twice for writing "68" where
+        # the reviewer wants "六十八" is routinely accepted on a later sample, so
+        # the retry belongs in this job.  Until 2026-10-27 the only retry was a
+        # re-dispatch from the caller, and each one cost a full build plus a
+        # gateway deployment: asset 1077950 spent three extra end-to-end runs
+        # (~48 minutes) settling three lines.  Each round here costs seconds.
+        #
+        # Everything is bounded so a bad day cannot hang the job: a wall-clock
+        # budget, a round count, an attempt budget per row (a row that survives
+        # every round is disagreeing with a QA rule, not with the dice), and the
+        # per-round row cap below.
         id: translate
         if: steps.collect.outputs.queue_size != '0'
         continue-on-error: true
@@ -321,28 +341,82 @@ jobs:
             exit 0
           fi
           limit='${{ inputs.max_items }}'
-          # Large recovered surfaces must survive the three-hour job timeout.
-          # Default runs drain the backlog through bounded follow-up runs.
-          if [ -z "$limit" ] || [ "$limit" = 0 ]; then limit=500; fi
-          args=(
-            --input .llm-queue.jsonl
-            --output .llm-draft.jsonl
-            --failed-output .llm-failed.jsonl
-            --summary .llm-summary.json
-            --config "$MLTD_LLM_CONFIG_PATH"
-            --no-default-resume
-            # The public Assets repository uses the tested single-item path;
-            # the optional Batch V2 adapter is not part of this repository.
-            --batch-mode single
-            --glossary glossary/authoritative-terms.json
-            --authoritative-terms glossary/authoritative-terms.json
-            --character-evidence .llm-character-evidence.json
-            --prompt-source compiled
-            --system-prompt .llm-system-prompt.md
-            --prompt-manifest pipelines/text/configs/mltd-zhcn-system.manifest.json
-          )
-          if [ -n "$limit" ] && [ "$limit" != 0 ]; then args+=(--max-items "$limit"); fi
-          python pipelines/text/translate_mltd_api_pool.py "${args[@]}"
+          # An operator-supplied limit means "translate this many rows, now": one
+          # round, no retry.  A scheduled run keeps 500 rows per round so a large
+          # recovered surface still survives the three-hour job timeout.
+          single_shot=()
+          if [ -n "$limit" ] && [ "$limit" != 0 ]; then
+            single_shot=(--single-shot)
+          else
+            limit=500
+          fi
+
+          state=.llm-loop-state.json
+          rm -f "$state" .llm-draft.jsonl .llm-failed.jsonl .llm-summary.json
+          : > .llm-draft.jsonl
+          while :; do
+            # Every bound is stated here instead of relying on the helper's
+            # defaults: 30 minutes of wall clock, four rounds, and four attempts
+            # per row are the policy this job promises its caller.
+            python scripts/llm_translation_rounds.py plan \
+              --queue .llm-queue.jsonl \
+              --state "$state" \
+              --round-output .llm-round-queue.jsonl \
+              --plan-json .llm-loop-plan.json \
+              --budget-seconds 1800 \
+              --max-rounds 4 \
+              --max-attempts 4 \
+              --github-output "$GITHUB_OUTPUT" \
+              "${single_shot[@]}"
+            # The round number comes from the state, so the per-round file names
+            # cannot drift from the number the summary reports.
+            round=$(python -c 'import json; d=json.load(open(".llm-loop-plan.json")); print(d["round"] if d["run"] else "")')
+            run=$(python -c 'import json; print(json.load(open(".llm-loop-plan.json"))["run"])')
+            if [ "$run" != 1 ]; then break; fi
+            rm -f .llm-round-draft.jsonl .llm-round-failed.jsonl ".llm-round-summary-${round}.json"
+            started=$SECONDS
+            # The public Assets repository uses the tested single-item path; the
+            # optional Batch V2 adapter is not part of this repository.  A
+            # non-zero exit still leaves the rows this round did finish on disk,
+            # and the record step below is what counts them.
+            python pipelines/text/translate_mltd_api_pool.py \
+              --input .llm-round-queue.jsonl \
+              --output .llm-round-draft.jsonl \
+              --failed-output .llm-round-failed.jsonl \
+              --summary ".llm-round-summary-${round}.json" \
+              --config "$MLTD_LLM_CONFIG_PATH" \
+              --no-default-resume \
+              --batch-mode single \
+              --glossary glossary/authoritative-terms.json \
+              --authoritative-terms glossary/authoritative-terms.json \
+              --character-evidence .llm-character-evidence.json \
+              --prompt-source compiled \
+              --system-prompt .llm-system-prompt.md \
+              --prompt-manifest pipelines/text/configs/mltd-zhcn-system.manifest.json \
+              --max-items "$limit" \
+              || echo "::warning title=Translation round ${round}::the provider pool exited non-zero; the rows it did finish are kept."
+            if [ -f .llm-round-draft.jsonl ]; then
+              cat .llm-round-draft.jsonl >> .llm-draft.jsonl
+            fi
+            python scripts/llm_translation_rounds.py record \
+              --state "$state" \
+              --draft .llm-round-draft.jsonl \
+              --failed .llm-round-failed.jsonl \
+              --elapsed "$((SECONDS - started))" \
+              --github-output "$GITHUB_OUTPUT"
+          done
+
+          summary_args=()
+          for file in .llm-round-summary-*.json; do
+            if [ -f "$file" ]; then summary_args+=(--round-summary "$file"); fi
+          done
+          python scripts/llm_translation_rounds.py finish \
+            --state "$state" \
+            --queue .llm-queue.jsonl \
+            --failed-out .llm-failed.jsonl \
+            --summary-out .llm-summary.json \
+            --github-output "$GITHUB_OUTPUT" \
+            "${summary_args[@]}"
 
       - name: Apply LLM translations
         # Explicitly not gated on the tolerated translate failure above; still
@@ -443,6 +517,9 @@ jobs:
             .llm-failed.jsonl
             .llm-draft.jsonl
             .llm-queue.jsonl
+            .llm-loop-state.json
+            .llm-loop-plan.json
+            .llm-round-summary-*.json
             .llm-asset-check.json
             .llm-publish.json
             .llm-publish-lyrics.json
@@ -495,11 +572,13 @@ jobs:
           fi
           accepted=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("accepted", 0))')
           failed=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("failed", 0))')
+          rounds=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("rounds", 0))')
+          stopped=$(python -c 'import json; print(json.load(open(".llm-summary.json")).get("stopped", ""))')
           queue=0
           if [ -f .llm-queue.jsonl ]; then queue=$(wc -l < .llm-queue.jsonl); fi
-          echo "accepted=$accepted failed=$failed queue=$queue"
+          echo "accepted=$accepted failed=$failed queue=$queue rounds=$rounds stopped=$stopped"
           if [ "$failed" -gt 0 ]; then
-            echo "::warning title=Partial LLM translation failures::$failed of $((accepted + failed)) items failed every provider attempt; the $accepted accepted rows were still published. Inspect the llm-translation-diagnostics artifact."
+            echo "::warning title=Partial LLM translation failures::$failed of $((accepted + failed)) items could not be settled in $rounds retry round(s) (the loop stopped: $stopped); the $accepted accepted rows were still published. A row that survives every round is disagreeing with a QA rule rather than with the sampler, so inspect the llm-translation-diagnostics artifact."
           fi
           # A total provider outage has to be loud, but a queue that only holds a
           # few stubborn rows would otherwise fail - and open an issue - every
