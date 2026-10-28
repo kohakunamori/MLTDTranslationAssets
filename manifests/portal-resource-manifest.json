@@ -54485,8 +54485,8 @@
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 118026,
-          "translated": 118008,
+          "total": 118028,
+          "translated": 118010,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -77089,8 +77089,8 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 185494,
-      "translated": 185476,
+      "total": 185496,
+      "translated": 185478,
       "unit": "句",
       "untranslated": 0
     },
@@ -77151,29 +77151,29 @@
     {
       "id": "system",
       "pending": 18,
-      "total": 185494,
-      "translated": 185476,
+      "total": 185496,
+      "translated": 185478,
       "untranslated": 0
     }
   ],
-  "generated_at": "2026-10-28T06:03:16.139180+00:00",
+  "generated_at": "2026-10-28T15:02:41.552442+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1077980",
-    "assets_commit": "ee49b734b87c108d65ef9193159fd959df83c08c",
-    "release_id": "assets-1077980",
+    "asset_version": "1078000",
+    "assets_commit": "16b0a9d7cffea91f35678969398834969d958faa",
+    "release_id": "assets-1078000",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "7d0b4ee6b92cbff6345e6924196d8c1bc95f715fcf89f578c51cb51767c97f0a",
+    "source_manifest_sha256": "6e901af63c2dab11693534d040e94042c68c0a123fbd73d669f456231d8cd66c",
     "status": "published",
-    "updated_at": "2026-10-28T15:00:00+09:00"
+    "updated_at": "2026-10-29T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "ee49b734b87c108d65ef9193159fd959df83c08c",
+    "commit": "16b0a9d7cffea91f35678969398834969d958faa",
     "generated_entry_count": 13536,
-    "generated_manifest_sha256": "7d0b4ee6b92cbff6345e6924196d8c1bc95f715fcf89f578c51cb51767c97f0a",
+    "generated_manifest_sha256": "6e901af63c2dab11693534d040e94042c68c0a123fbd73d669f456231d8cd66c",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "ab466c1c09da1071330956e5bd44af0d88e1a519f2393e3ee188da42f719985c",
+    "source_catalogue_sha256": "3a29bbd0af6a33185b16de59ff23fa1fd1e49917ab861253b93a62627c156b00",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77182,8 +77182,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 419641,
-    "translated": 419542,
+    "total": 419643,
+    "translated": 419544,
     "untranslated": 0
   }
 }
