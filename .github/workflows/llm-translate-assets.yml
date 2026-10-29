@@ -309,7 +309,7 @@ jobs:
         if: steps.collect.outputs.queue_size != '0'
         shell: bash
         run: |
-          printf '%s\n' '{"schema_version":1,"speakers":{}}' > .llm-character-evidence.json
+          python -m pipelines.text.asset_translation_context --idols glossary/idols.json --output .llm-character-evidence.json
 
       - name: Translate the queue in bounded rounds
         # A handful of items always end up failing every provider attempt. That

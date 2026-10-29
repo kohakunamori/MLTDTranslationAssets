@@ -40,6 +40,7 @@ from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
 from pipelines.text.mltd_lyric_rules import is_english_bypass, join_lyric_lines, validate_lyric_tokens
 from pipelines.core.hashing import sha256_text
 from scripts.japanese_residue import repair_reason
+from pipelines.text.asset_translation_context import enrich_queue
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -118,41 +119,43 @@ def collect(args: argparse.Namespace) -> int:
     wanted_version = str(args.asset_version or "").strip()
     output = args.output
     output.parent.mkdir(parents=True, exist_ok=True)
-    count = 0
+    queue: list[dict[str, Any]] = []
     seen: set[str] = set()
+    for path, line_no, row, kind in queue_rows(ROOT, scope):
+        repair = repair_reason(row) if kind == "locales" else None
+        if not repair and (row.get("status") != "untranslated" or str(row.get("zh", ""))):
+            continue
+        source = str(row.get("ja", ""))
+        if kind == "lyrics" and is_english_bypass(source):
+            # Confirmed policy: a pure-English lyric line stays English
+            # ("english bypass").  Queueing it would spend tokens and then
+            # fight the policy on every run.
+            continue
+        if wanted_version and kind == "locales" and str(row.get("asset_version")) != wanted_version:
+            continue
+        sid = str(row.get("source_sha256", ""))
+        if not source or sid != sha256_text(source):
+            raise SystemExit(f"invalid source identity at {path}:{line_no}")
+        if sid in seen:
+            continue
+        seen.add(sid)
+        queue.append({
+            "source": source,
+            "source_sha256": sid,
+            "bundle": row.get("bundle", ""),
+            "key": row_scope_key(row),
+            "task": "ASSETS_LYRICS" if kind == "lyrics" else "ASSETS_TEXT",
+            "asset_version": row.get("asset_version"),
+            "source_client_version": row.get("source_client_version"),
+            "translation": "",
+            "status": "pending",
+            "repair_reason": repair,
+        })
+    enrich_queue(ROOT, queue, scope_paths(ROOT, scope))
     with output.open("w", encoding="utf-8", newline="\n") as stream:
-        for path, line_no, row, kind in queue_rows(ROOT, scope):
-            repair = repair_reason(row) if kind == "locales" else None
-            if not repair and (row.get("status") != "untranslated" or str(row.get("zh", ""))):
-                continue
-            source = str(row.get("ja", ""))
-            if kind == "lyrics" and is_english_bypass(source):
-                # Confirmed policy: a pure-English lyric line stays English
-                # ("english bypass").  Queueing it would spend tokens and then
-                # fight the policy on every run.
-                continue
-            if wanted_version and kind == "locales" and str(row.get("asset_version")) != wanted_version:
-                continue
-            sid = str(row.get("source_sha256", ""))
-            if not source or sid != sha256_text(source):
-                raise SystemExit(f"invalid source identity at {path}:{line_no}")
-            if sid in seen:
-                continue
-            seen.add(sid)
-            stream.write(json.dumps({
-                "source": source,
-                "source_sha256": sid,
-                "bundle": row.get("bundle", ""),
-                "key": row_scope_key(row),
-                "task": "ASSETS_LYRICS" if kind == "lyrics" else "ASSETS_TEXT",
-                "asset_version": row.get("asset_version"),
-                "source_client_version": row.get("source_client_version"),
-                "translation": "",
-                "status": "pending",
-                "repair_reason": repair,
-            }, ensure_ascii=False, separators=(",", ":")) + "\n")
-            count += 1
-    print(json.dumps({"queue": str(output), "items": count,
+        for queued in queue:
+            stream.write(json.dumps(queued, ensure_ascii=False, separators=(",", ":")) + "\n")
+    print(json.dumps({"queue": str(output), "items": len(queue),
                       "scope": scope,
                       "asset_version": wanted_version or None}, ensure_ascii=False))
     return 0

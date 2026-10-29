@@ -696,6 +696,10 @@ def first_example_key(row: dict[str, Any]) -> str:
 
 
 def classify_task(row: dict[str, Any]) -> str:
+    # The public Assets adapter supplies `task`, not `task_hint`. Without this
+    # explicit route lyric slots silently fall through to UI/DESCRIPTION.
+    if row.get("task") == "ASSETS_LYRICS":
+        return "ASSETS_LYRICS"
     # Source-specific extractors may know the semantic surface better than the
     # generic GTX heuristics (for example event-unit dialogue has no GTX key).
     # Honor only the closed production task vocabulary; unknown hints fall back
@@ -814,6 +818,8 @@ def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "
     task = classify_task(row)
     codes, _ = speaker_info(row)
     lines = [f"TASK={task}"]
+    if row.get("surface_hint") == "MAIL":
+        lines.append("SURFACE=MAIL")
     if codes and task == "DIALOGUE":
         # usage_profile.speaker_names is useful evidence but is not a reliable
         # positional identity map: the enriched queue contains cross-speaker name
@@ -831,7 +837,15 @@ def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "
             "NOTE=This source is reused. Produce one translation valid across all listed usages."
         )
     lyric_context = isinstance(usage, dict) and usage.get("category") == "LIVE_LYRICS"
-    if task in {"DIALOGUE", "TITLE"} or lyric_context:
+    shared_context = task == "SHARED" or (
+        task == "ASSETS_LYRICS" and len(row.get("context_examples", [])) > 1
+    )
+    if shared_context:
+        # Do not privilege the first scene when the source hash is reused.
+        lines.extend(["", "USAGE_CONTEXTS (source-only evidence; translate SOURCE only):",
+                      json.dumps(row.get("context_examples", [])[:3], ensure_ascii=False),
+                      "NOTE=Choose wording valid across these usages; preserve unresolved ambiguity."])
+    if not shared_context and (task in {"DIALOGUE", "TITLE", "ASSETS_LYRICS"} or lyric_context):
         previous, following = nearest_context(row)
         if previous:
             lines.extend(["", "PREVIOUS:", previous])

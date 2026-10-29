@@ -21,3 +21,4 @@
 重打包后的汉化资源由私有 Cloudflare R2 bucket 分发，Git 保留汉化源文件和发布元数据。
 详见 [R2 发布及缓存机制](asset-server/cloudflare/README.md) 和 [汉化目录规划](docs/LOCALIZATION_LAYOUT.md)。
 CI 已统一为质量检查、生产发布和模型冒烟三个入口，运行机制与阶段图见 [CI 说明](docs/CI.md)。
+大模型译文效果、人工参考对照与分阶段优化见 [汉化质量优化](docs/TRANSLATION_QUALITY.md)。

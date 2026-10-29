@@ -16,6 +16,7 @@
         "SHARED_SIMPLE": {"reasoning_effort": "none", "max_tokens": 2048},
         "DESCRIPTION": {"reasoning_effort": "low", "max_tokens": 2048},
         "DIALOGUE": {"reasoning_effort": "low", "max_tokens": 2048},
+        "ASSETS_LYRICS": {"reasoning_effort": "low", "max_tokens": 2048},
         "SHARED": {"reasoning_effort": "high", "max_tokens": 2048}
       },
       "cache_warmup": false,

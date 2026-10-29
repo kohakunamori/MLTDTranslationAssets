@@ -161,6 +161,8 @@ jobs:
         run: |
           python -m pytest -q -n "$PYTEST_WORKERS" --dist worksteal \
             scripts/test_llm_translate_untranslated.py \
+            scripts/test_asset_translation_context.py \
+            scripts/test_audit_human_lyrics.py \
             scripts/test_llm_translate_workflow.py \
             scripts/test_text_job_handoff.py \
             scripts/test_translation_prompt_policy.py \
