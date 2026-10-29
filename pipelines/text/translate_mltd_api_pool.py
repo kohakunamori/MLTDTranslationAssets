@@ -25,6 +25,8 @@ from pipelines.core.jsonl import read_jsonl
 from pipelines.text.translation_tokens import validate_translation
 from pipelines.text.mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
 from pipelines.text.mltd_translation_prompt import compile_prompt_bundle, snapshot_status
+from pipelines.text.mltd_natural_prompt import contextual_prompt
+from pipelines.text.mltd_lyric_rules import join_lyric_lines, validate_lyric_tokens
 from pipelines.text.translate_gtx_queue import (
     ACCEPTED_STATUS,
     BASIC_BLOCKING_QA_CODES,
@@ -69,6 +71,7 @@ class ModelConfig:
     cache_warmup_delay_seconds: float = 1.0
     cache_partition_by_reasoning: bool = True
     requests_per_minute: float = 0.0
+    min_reasoning_effort: str = ""
 
 
 @dataclass
@@ -622,6 +625,9 @@ def load_model_config(path: Path) -> list[ModelConfig]:
         cache_warmup_attempts = int(row.get("cache_warmup_attempts", 5))
         cache_warmup_delay_seconds = float(row.get("cache_warmup_delay_seconds", 1.0))
         requests_per_minute = float(row.get("requests_per_minute", 0.0) or 0.0)
+        min_reasoning_effort = str(row.get("min_reasoning_effort", "")).strip().lower()
+        if min_reasoning_effort not in {"", "minimal", "low", "medium", "high", "xhigh", "max"}:
+            raise ValueError(f"{ident}: invalid min_reasoning_effort")
         if cache_warmup_attempts < 1 or cache_warmup_delay_seconds < 0:
             raise ValueError(
                 f"{ident}: cache_warmup_attempts must be >=1 and delay >=0"
@@ -652,6 +658,7 @@ def load_model_config(path: Path) -> list[ModelConfig]:
                 row.get("cache_partition_by_reasoning", True)
             ),
             requests_per_minute=requests_per_minute,
+            min_reasoning_effort=min_reasoning_effort,
         ))
     if not result:
         raise ValueError("API config contains no enabled models")
@@ -786,6 +793,22 @@ def nearest_context(row: dict[str, Any]) -> tuple[str, str]:
     return "", ""
 
 
+def effective_reasoning_params(cfg: ModelConfig, params: dict[str, Any]) -> dict[str, Any]:
+    """Respect a provider's configured reasoning floor without enabling reasoning.
+
+    `none` remains an explicit opt-out. Only enabled efforts below the provider's
+    declared minimum are raised; no extra network probe or retry is required.
+    """
+    result = dict(params)
+    levels = ("minimal", "low", "medium", "high", "xhigh", "max")
+    requested = str(result.get("reasoning_effort", cfg.request_params.get(
+        "reasoning_effort", cfg.reasoning_effort)) or "").strip().lower()
+    floor = cfg.min_reasoning_effort
+    if floor and requested in levels and levels.index(requested) < levels.index(floor):
+        result["reasoning_effort"] = floor
+    return result
+
+
 def task_request_params_for_row(
     cfg: ModelConfig,
     row: dict[str, Any],
@@ -811,10 +834,10 @@ def task_request_params_for_row(
             except (TypeError, ValueError):
                 current_max = 0
             params["max_tokens"] = max(current_max, 512)
-    return task, params
+    return task, effective_reasoning_params(cfg, params)
 
 
-def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "") -> str:
+def build_legacy_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "") -> str:
     task = classify_task(row)
     codes, _ = speaker_info(row)
     lines = [f"TASK={task}"]
@@ -889,6 +912,14 @@ def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "
             ]
         )
     return "\n".join(lines).strip() + "\n"
+
+
+def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "", *, style: str = "natural") -> str:
+    if style == "legacy":
+        return build_legacy_user_prompt(row, masked_source, feedback)
+    if style != "natural":
+        raise ValueError("unknown user prompt style")
+    return contextual_prompt(row, masked_source, classify_task(row), build_legacy_user_prompt, feedback)
 
 
 def extract_chat_text(doc: dict[str, Any]) -> str:
@@ -1073,6 +1104,7 @@ async def request_translation(
     rate_limiter: AsyncRequestRateLimiter | None = None,
     request_guard: Callable[[], bool] | None = None,
 ) -> tuple[str, dict[str, Any]]:
+    request_params = effective_reasoning_params(cfg, request_params or {})
     api_key = os.environ.get(cfg.api_key_env, "") if cfg.api_key_env else ""
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -1167,6 +1199,7 @@ async def request_translation(
             doc.get("usage", {}) if isinstance(doc, dict) else {}
         )
     return text, {
+        "reported_model": str(doc.get("model", "")) if isinstance(doc, dict) else "",
         "latency_seconds": elapsed,
         "usage": usage,
         "prompt_cache_diagnostics": (
@@ -1282,7 +1315,11 @@ def validate_candidate(
         translated = restore_tokens(raw_text, tokens)
         translated = restore_authoritative_terms(translated, term_targets)
         translated = restore_numeric_literals(translated, numeric_targets or [])
-        validate_translation(source, translated)
+        if classify_task(source_row) == "ASSETS_LYRICS":
+            translated = join_lyric_lines(source, translated)
+            validate_lyric_tokens(source, translated)
+        else:
+            validate_translation(source, translated)
     except Exception as exc:
         return None, f"structure:{exc}"
     candidate = {
@@ -1357,6 +1394,7 @@ async def translate_with_model(
             cfg.reasoning_effort,
             last_error,
         )
+        attempt_request_params = effective_reasoning_params(cfg, attempt_request_params)
         if attempt > 1 and attempt_request_params != task_request_params:
             stats[cfg.id]["adaptive_retries"] += 1
             stats[cfg.id][f"task::{task}::adaptive_retries"] += 1
@@ -1418,6 +1456,7 @@ async def translate_with_model(
                     "provider": cfg.endpoint,
                     "model_id": cfg.id,
                     "model": cfg.model,
+                    "reported_model": meta.get("reported_model", ""),
                     "task": task,
                     "reasoning_effort": successful_request_params.get(
                         "reasoning_effort", cfg.reasoning_effort
@@ -1439,6 +1478,12 @@ async def translate_with_model(
                     "The previous response used its completion budget without "
                     "returning final text. Return the final translation immediately "
                     "and keep internal reasoning minimal."
+                )
+            elif "possible_context_spill" in qa_error:
+                feedback = (
+                    "The draft is unexpectedly long for this lyric slot and may have imported neighboring text. "
+                    "Re-translate SOURCE alone. Keep deictic or unfinished wording without spelling out PREVIOUS/NEXT. "
+                    "Do not copy neighboring-slot content into the answer."
                 )
             else:
                 feedback = (

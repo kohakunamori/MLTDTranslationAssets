@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from collections import Counter
 from pathlib import Path
 
@@ -19,6 +20,7 @@ if str(REPO) not in sys.path:
 from pipelines.core.hashing import sha256_text
 from pipelines.core.jsonl import read_jsonl, write_jsonl
 from pipelines.text.translation_tokens import KANA_RE, PROTECTED_TOKEN_RE, validate_translation
+from pipelines.text.mltd_lyric_rules import validate_lyric_tokens
 
 NUMBER_RE = re.compile(r"\d+(?:\.\d+)?%?")
 JP_PERCENT_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)パーセント")
@@ -198,6 +200,9 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
     sid = str(queue_row.get("source_sha256", "")) or source_id(source)
     translation = str(candidate.get("translation", ""))
     issues: list[dict] = []
+    usage = queue_row.get("usage_profile", {})
+    lyric = queue_row.get("task") == "ASSETS_LYRICS" or (
+        isinstance(usage, dict) and usage.get("category") == "LIVE_LYRICS")
 
     if queue_row.get("_queue_missing"):
         issues.append(_issue("queue_source_missing", "reject"))
@@ -212,8 +217,29 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
     elif translation == source:
         issues.append(_issue("unchanged_translation", "review"))
 
+    unsupported = sorted({ord(char) for char in translation
+                          if char not in source and unicodedata.category(char) in {"Cn", "Cs"}})
+    if unsupported:
+        issues.append(_issue("introduced_unsupported_unicode", "reject",
+                             "codepoints=" + ",".join(f"U+{code:04X}" for code in unsupported)))
+
+    cyrillic = sorted({ord(char) for char in translation if char not in source
+                       and unicodedata.category(char).startswith("L")
+                       and unicodedata.name(char, "").startswith("CYRILLIC")})
+    if cyrillic:
+        issues.append(_issue("introduced_cyrillic", "reject",
+                             "codepoints=" + ",".join(f"U+{code:04X}" for code in cyrillic)))
+    if "{$P$}先生先生" in translation and not any(x in source for x in ["先生先生", "さん先生", "先生さん"]):
+        issues.append(_issue("duplicated_player_honorific", "reject"))
+    if lyric and (queue_row.get("context_examples") or queue_row.get("expanded_context_examples")):
+        source_plain = PROTECTED_TOKEN_RE.sub("", source)
+        target_plain = PROTECTED_TOKEN_RE.sub("", translation)
+        if len(target_plain) > max(26, 2 * len(source_plain)):
+            issues.append(_issue("possible_context_spill", "reject",
+                                 "long lyric draft requires source-scope review; not a confirmed semantic error"))
+
     try:
-        validate_translation(source, translation)
+        (validate_lyric_tokens if lyric else validate_translation)(source, translation)
     except Exception as exc:
         issues.append(_issue("protected_token_mismatch", "reject", str(exc)))
 

@@ -45,8 +45,9 @@ class ProductionContextTests(unittest.TestCase):
         prompt = build_user_prompt(queued, queued["source"])
         self.assertEqual(classify_task(queued), "DIALOGUE")
         self.assertIn("SPEAKER=001har", prompt)
-        self.assertIn("PREVIOUS:\n明日は練習です。", prompt)
-        self.assertIn("NEXT:\n一緒に行きましょう。", prompt)
+        self.assertIn("明日は練習です。", prompt)
+        self.assertIn("一緒に行きましょう。", prompt)
+        self.assertIn('"speaker_code": "p"', prompt)
         self.assertNotIn("参考译文", prompt)
         self.assertNotIn("別の場面", prompt)
 
@@ -60,8 +61,8 @@ class ProductionContextTests(unittest.TestCase):
         prompt = build_user_prompt(queued, queued["source"])
         self.assertEqual(classify_task(queued), "ASSETS_LYRICS")
         self.assertIn("TASK=ASSETS_LYRICS", prompt)
-        self.assertIn("PREVIOUS:\n夢の続きを", prompt)
-        self.assertIn("NEXT:\nその先の空へ", prompt)
+        self.assertIn("夢の続きを", prompt)
+        self.assertIn("その先の空へ", prompt)
 
     def test_reused_text_accumulates_speakers_and_does_not_privilege_first_scene(self):
         source = "これからもみんなと一緒に新しい舞台を作っていきましょう。"
@@ -73,7 +74,10 @@ class ProductionContextTests(unittest.TestCase):
         queued, = self.collect()
         self.assertEqual(classify_task(queued), "SHARED")
         self.assertEqual(queued["usage_profile"]["speaker_codes"], ["001har", "002chi"])
-        self.assertIn("USAGE_CONTEXTS", build_user_prompt(queued, source))
+        prompt = build_user_prompt(queued, source)
+        self.assertIn("SPEAKER=MULTIPLE", prompt)
+        self.assertIn('"speaker_code": "001har"', prompt)
+        self.assertIn('"speaker_code": "002chi"', prompt)
 
     def test_master_delta_is_not_mistaken_for_a_transcript(self):
         self.write("locales/master/delta.jsonl", [
@@ -90,7 +94,19 @@ class ProductionContextTests(unittest.TestCase):
             row("ここで待っています。", "scene_2000_001har", status="untranslated"),
         ])
         queued, = self.collect()
-        self.assertNotIn("PREVIOUS:", build_user_prompt(queued, queued["source"]))
+        self.assertNotIn("別の選択肢を選んだ返事です。", build_user_prompt(queued, queued["source"]))
+
+    def test_default_window_includes_three_source_turns_with_speaker_labels(self):
+        self.write("locales/story/scene.jsonl", [
+            row("缺失片段之前。", "scene_0999_p"),
+            *[row(f"原文{i}。", f"scene_{i:04d}_001har", status="untranslated" if i == 1004 else "accepted")
+              for i in range(1001, 1008)],
+        ])
+        queued, = self.collect()
+        peers = queued["context_examples"][0]["context"]
+        self.assertEqual([p["relative"] for p in peers], list(range(-3, 4)))
+        self.assertEqual({p["speaker_code"] for p in peers}, {"001har"})
+        self.assertNotIn("缺失片段之前", build_user_prompt(queued, queued["source"]))
 
     def test_empty_queue_and_event_without_speaker(self):
         self.assertEqual(self.collect(), [])

@@ -27,7 +27,7 @@ def speaker_evidence(path: Path) -> dict:
     return {"schema_version": 1, "speakers": speakers}
 
 
-def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]]) -> None:
+def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *, window_size: int = 3) -> None:
     """Enrich in place while retaining the existing source-hash output identity.
 
     Only numbered speech keys within one scene and ordered lyric slots establish
@@ -35,6 +35,8 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]]) -
     Shared source text accumulates all speakers before any task is selected.
     Read one file at a time; never load the entire locale catalogue into memory.
     """
+    if window_size not in range(1, 5):
+        raise ValueError("context window must be between 1 and 4")
     wanted = {row["source_sha256"]: row for row in queue}
     if not wanted:
         return
@@ -80,17 +82,21 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]]) -
                 if len(state["contexts"]) >= MAX_CONTEXTS:
                     continue
                 window = []
-                for peer_index in range(max(0, index - 1), min(len(ordered), index + 2)):
+                for peer_index in range(max(0, index - window_size), min(len(ordered), index + window_size + 1)):
                     peer_order, peer = ordered[peer_index]
-                    if kind != "lyrics" and peer_index != index and abs(peer_order - order) != 1:
+                    if kind != "lyrics" and abs(peer_order - order) != abs(peer_index - index):
                         # A gap can mark a branch or a partial source inventory.
                         # Missing context is better evidence than a false neighbor.
                         continue
                     source = str(peer.get("ja", ""))
                     if peer.get("source_sha256") != sha256_text(source):
                         raise ValueError(f"invalid neighboring source identity: {path}")
-                    window.append({"relative": peer_index - index, "source": source})
-                signature = (row.get("bundle"), tuple((p["relative"], p["source"]) for p in window))
+                    peer_context = {"relative": peer_index - index, "source": source}
+                    peer_speech = SPEECH_KEY.fullmatch(str(peer.get("item_key", "")))
+                    if peer_speech:
+                        peer_context["speaker_code"] = peer_speech["speaker"].lower()
+                    window.append(peer_context)
+                signature = (row.get("bundle"), tuple((p["relative"], p["source"], p.get("speaker_code")) for p in window))
                 if signature not in state["seen"]:
                     state["seen"].add(signature)
                     state["contexts"].append({"logical": row.get("bundle", ""), "context": window})

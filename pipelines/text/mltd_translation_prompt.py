@@ -14,6 +14,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from pipelines.text.mltd_natural_prompt import NATURAL_POLICY
 
 PROMPT_VERSION = "mltd-zhcn-system"
 
@@ -169,20 +170,25 @@ def compile_prompt_bundle(
     character_evidence_path: Path,
     *,
     output_path: Path | None = None,
+    policy_style: str = "natural",
 ) -> PromptBundle:
+    if policy_style not in {"legacy", "natural"}:
+        raise ValueError("unknown system prompt policy style")
+    policy = NATURAL_POLICY if policy_style == "natural" else BASE
     glossary_doc = json.loads(glossary_path.read_text(encoding="utf-8-sig"))
     evidence_doc = json.loads(character_evidence_path.read_text(encoding="utf-8-sig"))
     chars, stats = character_text(evidence_doc)
-    prompt = BASE.strip() + "\n\n" + glossary_text(glossary_doc) + "\n\n" + chars + "\n"
+    prompt = policy.strip() + "\n\n" + glossary_text(glossary_doc) + "\n\n" + chars + "\n"
     data = prompt.encode("utf-8")
     manifest: dict[str, Any] = {
         "schema_version": 3,
-        "prompt_version": PROMPT_VERSION,
+        "prompt_version": "mltd-zhcn-natural-v2" if policy_style == "natural" else PROMPT_VERSION,
+        "policy_style": policy_style,
         "output": str(output_path) if output_path is not None else None,
         "prompt_sha256": sha(data),
         "prompt_bytes": len(data),
         "prompt_chars": len(prompt),
-        "policy_sha256": sha(BASE.strip().encode("utf-8")),
+        "policy_sha256": sha(policy.strip().encode("utf-8")),
         **stats,
         "sources": {
             "glossary": {
