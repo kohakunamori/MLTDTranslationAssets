@@ -6,6 +6,12 @@
 
 可以在 [汉化查阅站](https://mltd-portal.nyaneko.cn) 浏览内容，安装汉化版请前往 [MLTDTranslationClient](https://github.com/kohakunamori/MLTDTranslationClient/releases)。
 
+## 版权与鸣谢
+
+游戏原作、人工译文、校对、图片及字体等成果的权利归相应权利人所有。本项目为非官方汉化，鸣谢与公开可访问不代表获得使用授权。
+现有 LICENSE 仅及许可人有权许可的部分，不覆盖原游戏与无权转授的第三方内容。
+请阅读 [版权与使用声明](COPYRIGHT.md)及[鸣谢与参考署名](ACKNOWLEDGEMENTS.md)，复用时保留作者、出处、适用许可及修改说明。
+
 ## 贡献
 
 后续开放贡献仍在规划。
