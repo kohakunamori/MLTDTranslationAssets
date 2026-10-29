@@ -1,8 +1,8 @@
 {
-  "asset_version": 1078000,
-  "last_synced_at": "2026-10-28T15:02:41.552442+00:00",
+  "asset_version": 1078010,
+  "last_synced_at": "2026-10-29T06:02:03.899286+00:00",
   "matsurihi_api": "https://api.matsurihi.me/api/mltd/v2/version/assets",
   "asset_root": "https://td-assets.bn765.com/{version}/production/2018/Android",
-  "index_name": "a519a0b3ddceeb726c4e840458ca7d89b8e4fb90.data",
-  "remote_updated_at": "2026-10-29T00:00:00+09:00"
+  "index_name": "d113024e4e6ffc17d64cc9efcab2cee274a79486.data",
+  "remote_updated_at": "2026-10-29T15:00:00+09:00"
 }

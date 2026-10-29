@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "asset_version": "1078000",
-  "official_index_sha256": "b9f5061152a9d083479f6fb3d7a15124cdd8a9ec627b9c69e861bbf5c17a0223",
+  "asset_version": "1078010",
+  "official_index_sha256": "c3e683e6a9fdbb0c63b8b0e2283fb55dc563c298209d83e0f170880d25e82d71",
   "source_sync_complete": true,
   "sources": {
     "gtx_text": {
@@ -20,7 +20,8 @@
   "locales": {
     "accepted": 419544,
     "accepted_with_kana_candidates": 4304,
-    "pending": 99
+    "pending": 99,
+    "untranslated": 8
   },
   "repair_candidates": [],
   "images": {
