@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
 
 from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
 from pipelines.text.mltd_translation_prompt import BASE  # noqa: E402
+from pipelines.text.mltd_natural_prompt import NATURAL_POLICY  # noqa: E402
 
 
 class LyricLineBreakPolicyTests(unittest.TestCase):
@@ -59,6 +60,12 @@ class LyricLineBreakPolicyTests(unittest.TestCase):
         self.assertIn("one line", str(caught.exception))
         # The joined form the prompt asks for is the form the library accepted.
         validate_lyric_tokens(source, "我已经不复存在 （交叠相织吧 Precious tone）")
+
+    def test_natural_policy_protects_names_catchphrases_and_special_terms(self):
+        self.assertIn("只能依据 GLOSSARY", NATURAL_POLICY)
+        self.assertIn("不要按汉字字面、日语读音或当前场景临时改名", NATURAL_POLICY)
+        self.assertIn("不要因为说话者身份自行添加", NATURAL_POLICY)
+        self.assertIn("特殊术语在相邻句中随意换名", NATURAL_POLICY)
 
 
 if __name__ == "__main__":

@@ -53,14 +53,17 @@ Agent 审读在查看 A/B 对应关系前记录，逐条保留理由，格式另
 
 ## 实际歌词修订与人工成果保护
 
-只修改原有 `translation_stage=llm_translated` 的三行，两个原文身份：
+只修改原有 `translation_stage=llm_translated` 的 6 个槽位、5 个原文身份：
 
 | 位置 | 旧译 | 本轮采用的机器候选 |
 | --- | --- | --- |
 | `scrobj_bntht+` index 729、`scrobj_newbn+` index 482 | 大家一起 手工制作舞台 | 大家一起亲手打造舞台 |
 | `scrobj_everl+` index 32 | 一边确认着你的睡脸 | 望着你的睡颜 |
+| `locales/master/official-1077790-untranslated.jsonl` `igp_shop_order_warning_message_tail_02` | となります | 成为 |
+| `locales/master/official-1077750-untranslated.jsonl` `igp_021mat_chat_12108_121083_2001_p_a` | 含西里尔垃圾的未完句 | 对于茉莉来说，不是我强加给她的偶像形象，\n而是 |
+| `scrobj_lmlad+` index 1069 | 就这样　卸下螺丝のまま……不对，就这样　保持卸下螺丝的状态 | 就这样　保持螺丝拆下的状态 |
 
-候选仅根据日文与日文语境重新生成，再按原文审读；输入未包含人译或旧中文。`translation_stage` 继续保留机器来源，更新日期并重建 `all_lyrics.jsonl`。没有把这次 Agent 复读标为人工翻译。来源未明及原有人工条目未自动覆盖。
+候选仅根据日文与日文语境或同一项目已有确定术语重新审读；输入未包含网络人译全文。`translation_stage` 继续保留机器来源，更新日期并重建 `all_lyrics.jsonl`。没有把这次 Agent 复读标为人工翻译。来源未明及原有人工条目未自动覆盖。
 
 其中 `scrobj_everl+` index 32 的“望着你的睡颜”中文更自然，但比日文 `確かめながら` 弱化了“确认/一边……一边……”的持续承接；本轮没有把这个可争议的风格取舍伪装成确定性修复，保留为人工复核项。
 
@@ -86,6 +89,6 @@ python scripts/translation_quality_experiment.py summarize --mapping '<study>/ma
 | `candidate-natural-system-v4.md` | `bf82923410bee1144612cca8954bd5a87232709e3f8635278ecc9228f64db14f` |
 | `holdout-results-v4.jsonl` | `752cf7b5379757a84e1bcfd0d92b7be8dba21f97a49a1e4fa0899e4e642f4493` |
 
-代码验证覆盖生产请求参数、实际保存的来源、邻句与说话者、异常拒收后的定向重译、无参考泄漏、恢复一致性和额度熔断，已加入发布离线门禁；仓库数据另跑 `validate_repo.py`。这些验证证明链路与数据契约，不证明全部翻译正确。
+`validate_repo.py` 是结构发布门禁：它检查 JSONL、source hash、状态、保留标记、保留分隔符和歌词显示约束，但不会对全部历史 accepted 行重放 `mltd_translation_quality.evaluate_row` 的语义启发式。新模型草稿在队列接受前仍会经过该质量评估；历史 accepted 行的重放结果只应作为人工复核队列，不能直接变成全库硬拒收。修复前的一次本地扫描覆盖 27,061 条 machine-stage locale 和 1,487 条 machine-stage lyric：locale 有 1 条确定性 REJECT、1,403 条 REVIEW，lyrics 有 33 条 REVIEW；其中许多 REVIEW 是主体、省略、口吻或术语候选，不能自动判错。代码验证覆盖生产请求参数、实际保存的来源、邻句与说话者、异常拒收后的定向重译、无参考泄漏、恢复一致性和额度熔断，已加入发布离线门禁；仓库数据另跑 `validate_repo.py`。这些验证证明链路与数据契约，不证明全部翻译正确。
 
 独立人工验收、完整模型审校、提示词/上下文贡献拆分，以及完整邮件分支语境仍是后续工作。尤其省略主体、双关和多场景复用的语义问题，不能只靠长度或字符规则解决；本轮没有为此改动跨仓库的译文身份契约。

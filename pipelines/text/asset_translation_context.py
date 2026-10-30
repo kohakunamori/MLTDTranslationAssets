@@ -12,7 +12,10 @@ from pipelines.core.jsonl import read_jsonl
 
 SPEECH_KEY = re.compile(r"^(?P<scene>.+)_(?P<order>\d{4})_(?P<speaker>\d{3}[a-z]{3}|p)$", re.I)
 COMMAND_KEY = re.compile(r"^commands\[(\d+)\]\.text$")
-MAIL_KEY = re.compile(r"^mail_(?P<speaker>\d{3}[a-z]{3})_\d+_text$", re.I)
+MAIL_KEY = re.compile(
+    r"^mail_(?P<speaker>\d{3}[a-z]{3})_(?P<mail_id>\d+)_(?P<surface>text|title|reply[1-3])$",
+    re.I,
+)
 MAX_CONTEXTS = 3
 
 
@@ -61,8 +64,19 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *
                 if speech:
                     state["speakers"].add(speech["speaker"].lower())
                 if mail:
-                    state["speakers"].add(mail["speaker"].lower())
-                state["surfaces"].add("MAIL" if mail else kind)
+                    surface = mail["surface"].lower()
+                    if surface in {"text", "title"}:
+                        # The body and subject are authored by the idol named in
+                        # the mail key. Reply choices are producer-side options.
+                        state["speakers"].add(mail["speaker"].lower())
+                    else:
+                        state["speakers"].add("p")
+                    state["surfaces"].add(
+                        "MAIL" if surface == "text" else
+                        "MAIL_TITLE" if surface == "title" else "MAIL_REPLY"
+                    )
+                elif sid in wanted:
+                    state["surfaces"].add(kind)
             if category == "master":
                 continue
             group = (row.get("bundle"), row.get("asset_version"))
@@ -115,6 +129,12 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *
             queued["usage_profile"]["category"] = "LIVE_LYRICS"
         elif state["surfaces"] == {"MAIL"}:
             queued["surface_hint"] = "MAIL"
+        elif state["surfaces"] == {"MAIL_TITLE"}:
+            queued["surface_hint"] = "MAIL_TITLE"
+            queued["task_hint"] = "TITLE"
+        elif state["surfaces"] == {"MAIL_REPLY"}:
+            queued["surface_hint"] = "MAIL_REPLY"
+            queued["task_hint"] = "DIALOGUE"
         elif categories == ["event-unit"]:
             # These source rows carry command text but no speaker metadata.
             # Never infer a speaker from a unit's membership or its filename.

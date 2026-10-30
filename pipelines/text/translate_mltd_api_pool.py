@@ -841,9 +841,10 @@ def build_legacy_user_prompt(row: dict[str, Any], masked_source: str, feedback: 
     task = classify_task(row)
     codes, _ = speaker_info(row)
     lines = [f"TASK={task}"]
-    if row.get("surface_hint") == "MAIL":
-        lines.append("SURFACE=MAIL")
-    if codes and task == "DIALOGUE":
+    surface = str(row.get("surface_hint", ""))
+    if surface in {"MAIL", "MAIL_TITLE", "MAIL_REPLY"}:
+        lines.append("SURFACE=" + surface)
+    if codes and (task == "DIALOGUE" or surface == "MAIL_TITLE"):
         # usage_profile.speaker_names is useful evidence but is not a reliable
         # positional identity map: the enriched queue contains cross-speaker name
         # associations on some rows.  Send only stable speaker codes here; the

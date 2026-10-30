@@ -137,6 +137,26 @@ class ProductionContextTests(unittest.TestCase):
         self.assertIn("SPEAKER=051tmg", prompt)
         self.assertNotIn("NEXT:", prompt)
 
+    def test_mail_titles_use_the_idol_identity_but_reply_options_use_producer_identity(self):
+        self.write("locales/master/mail.jsonl", [
+            row("木下ひなたです", "mail_035hin_1000_title", status="untranslated"),
+            row("なんでも食べるぞ！", "mail_035hin_2000_reply1", status="untranslated"),
+        ])
+        queued = {item["key"]: item for item in self.collect()}
+        title = queued["mail_035hin_1000_title"]
+        reply = queued["mail_035hin_2000_reply1"]
+        self.assertEqual(classify_task(title), "TITLE")
+        self.assertEqual(title["surface_hint"], "MAIL_TITLE")
+        title_prompt = build_user_prompt(title, title["source"])
+        self.assertIn("SURFACE=MAIL_TITLE", title_prompt)
+        self.assertIn("SPEAKER=035hin", title_prompt)
+        self.assertEqual(classify_task(reply), "DIALOGUE")
+        self.assertEqual(reply["surface_hint"], "MAIL_REPLY")
+        reply_prompt = build_user_prompt(reply, reply["source"])
+        self.assertIn("SURFACE=MAIL_REPLY", reply_prompt)
+        self.assertIn("SPEAKER=p", reply_prompt)
+        self.assertNotIn("SPEAKER=035hin", reply_prompt)
+
 
 if __name__ == "__main__":
     unittest.main()
