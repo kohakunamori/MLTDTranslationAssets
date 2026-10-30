@@ -163,6 +163,7 @@ jobs:
             scripts/test_llm_translate_untranslated.py \
             scripts/test_asset_translation_context.py \
             scripts/test_translation_model_capabilities.py \
+            scripts/test_authoritative_term_review_queue.py \
             scripts/test_translation_quality_experiment.py \
             scripts/test_audit_human_lyrics.py \
             scripts/test_llm_translate_workflow.py \
