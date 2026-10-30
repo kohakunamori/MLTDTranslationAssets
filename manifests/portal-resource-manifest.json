@@ -52812,8 +52812,8 @@
         "MB_jp.gtx": {
           "pending": 5,
           "total": 10068,
-          "translated": 10058,
-          "untranslated": 5
+          "translated": 10061,
+          "untranslated": 2
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -52826,9 +52826,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 10068,
-      "translated": 10058,
+      "translated": 10061,
       "unit": "句",
-      "untranslated": 5
+      "untranslated": 2
     },
     {
       "blocked": 0,
@@ -54485,8 +54485,8 @@
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 118034,
-          "translated": 118016,
+          "total": 118036,
+          "translated": 118018,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -76089,6 +76089,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_001har_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_002chi_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76102,6 +76108,12 @@
           "untranslated": 0
         },
         "season_a_2026_002chi_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_002chi_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76125,6 +76137,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_003mik_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_004yuk_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76138,6 +76156,12 @@
           "untranslated": 0
         },
         "season_a_2026_004yuk_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_004yuk_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76161,6 +76185,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_005yay_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_006mak_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76179,6 +76209,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_006mak_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 6,
+          "untranslated": 1
+        },
         "season_a_2026_007ior_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76192,6 +76228,12 @@
           "untranslated": 0
         },
         "season_a_2026_007ior_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_007ior_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76215,6 +76257,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_008tak_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_009rit_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76228,6 +76276,12 @@
           "untranslated": 0
         },
         "season_a_2026_009rit_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_009rit_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76251,6 +76305,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_010azu_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_011ami_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76264,6 +76324,12 @@
           "untranslated": 0
         },
         "season_a_2026_011ami_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_011ami_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76287,6 +76353,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_012mam_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_013hib_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76300,6 +76372,12 @@
           "untranslated": 0
         },
         "season_a_2026_013hib_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_013hib_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76323,6 +76401,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_014mir_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_015siz_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76341,6 +76425,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_015siz_400_jp.gtx": {
+          "pending": 0,
+          "total": 6,
+          "translated": 6,
+          "untranslated": 0
+        },
         "season_a_2026_016tsu_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76354,6 +76444,12 @@
           "untranslated": 0
         },
         "season_a_2026_016tsu_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_016tsu_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76377,6 +76473,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_017kth_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_018ele_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76390,6 +76492,12 @@
           "untranslated": 0
         },
         "season_a_2026_018ele_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_018ele_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76413,6 +76521,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_019min_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_020meg_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76426,6 +76540,12 @@
           "untranslated": 0
         },
         "season_a_2026_020meg_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_020meg_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76449,6 +76569,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_021mat_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_022ser_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76462,6 +76588,12 @@
           "untranslated": 0
         },
         "season_a_2026_022ser_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_022ser_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76485,6 +76617,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_023aka_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_024ann_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76498,6 +76636,12 @@
           "untranslated": 0
         },
         "season_a_2026_024ann_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_024ann_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76521,6 +76665,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_025roc_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 6,
+          "untranslated": 1
+        },
         "season_a_2026_026yur_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76539,6 +76689,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_026yur_400_jp.gtx": {
+          "pending": 0,
+          "total": 6,
+          "translated": 6,
+          "untranslated": 0
+        },
         "season_a_2026_027say_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76552,6 +76708,12 @@
           "untranslated": 0
         },
         "season_a_2026_027say_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_027say_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76575,6 +76737,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_028ari_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_029umi_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76588,6 +76756,12 @@
           "untranslated": 0
         },
         "season_a_2026_029umi_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_029umi_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76611,6 +76785,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_030iku_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_031tom_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76624,6 +76804,12 @@
           "untranslated": 0
         },
         "season_a_2026_031tom_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_031tom_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76647,6 +76833,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_032emi_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_033sih_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76665,6 +76857,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_033sih_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 6,
+          "untranslated": 1
+        },
         "season_a_2026_034ayu_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76678,6 +76876,12 @@
           "untranslated": 0
         },
         "season_a_2026_034ayu_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_034ayu_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76701,6 +76905,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_035hin_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_036kan_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76714,6 +76924,12 @@
           "untranslated": 0
         },
         "season_a_2026_036kan_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_036kan_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76737,6 +76953,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_037nao_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_038chz_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76750,6 +76972,12 @@
           "untranslated": 0
         },
         "season_a_2026_038chz_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_038chz_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76773,6 +77001,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_039kon_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_040tam_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76786,6 +77020,12 @@
           "untranslated": 0
         },
         "season_a_2026_040tam_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_040tam_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76809,6 +77049,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_041fuk_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_042miy_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76822,6 +77068,12 @@
           "untranslated": 0
         },
         "season_a_2026_042miy_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_042miy_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76845,6 +77097,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_043nor_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_044miz_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76858,6 +77116,12 @@
           "untranslated": 0
         },
         "season_a_2026_044miz_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_044miz_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76881,6 +77145,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_045kar_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_046rio_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76894,6 +77164,12 @@
           "untranslated": 0
         },
         "season_a_2026_046rio_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_046rio_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76917,6 +77193,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_047sub_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_048rei_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76930,6 +77212,12 @@
           "untranslated": 0
         },
         "season_a_2026_048rei_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_048rei_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76953,6 +77241,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_049mom_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_050jul_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -76966,6 +77260,12 @@
           "untranslated": 0
         },
         "season_a_2026_050jul_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_050jul_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -76989,6 +77289,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_051tmg_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_052kao_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -77002,6 +77308,12 @@
           "untranslated": 0
         },
         "season_a_2026_052kao_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_052kao_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -77025,6 +77337,12 @@
           "translated": 7,
           "untranslated": 0
         },
+        "season_a_2026_201xxx_400_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
         "season_a_2026_202xxx_100_jp.gtx": {
           "pending": 0,
           "total": 3,
@@ -77038,6 +77356,12 @@
           "untranslated": 0
         },
         "season_a_2026_202xxx_300_jp.gtx": {
+          "pending": 0,
+          "total": 7,
+          "translated": 7,
+          "untranslated": 0
+        },
+        "season_a_2026_202xxx_400_jp.gtx": {
           "pending": 0,
           "total": 7,
           "translated": 7,
@@ -77089,18 +77413,18 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 185502,
-      "translated": 185484,
+      "total": 185880,
+      "translated": 185859,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 3
     },
     {
       "blocked": 0,
       "bundles": {
         "CM_jp.gtx": {
           "pending": 70,
-          "total": 26545,
-          "translated": 26475,
+          "total": 26546,
+          "translated": 26476,
           "untranslated": 0
         }
       },
@@ -77113,8 +77437,8 @@
       "pending": 70,
       "reused": 0,
       "suggested": 0,
-      "total": 26545,
-      "translated": 26475,
+      "total": 26546,
+      "translated": 26476,
       "unit": "句",
       "untranslated": 0
     }
@@ -77137,9 +77461,9 @@
     {
       "id": "dialogue",
       "pending": 75,
-      "total": 37630,
-      "translated": 37550,
-      "untranslated": 5
+      "total": 37631,
+      "translated": 37554,
+      "untranslated": 2
     },
     {
       "id": "story",
@@ -77151,29 +77475,29 @@
     {
       "id": "system",
       "pending": 18,
-      "total": 185502,
-      "translated": 185484,
-      "untranslated": 0
+      "total": 185880,
+      "translated": 185859,
+      "untranslated": 3
     }
   ],
-  "generated_at": "2026-10-30T06:02:23.561951+00:00",
+  "generated_at": "2026-10-30T15:02:00.961681+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1078030",
-    "assets_commit": "b6c9a02168ae4e749f49878af3c0b1eaf27a9192",
-    "release_id": "assets-1078030",
+    "asset_version": "1078050",
+    "assets_commit": "47ff8a3698afd3fe69501342d87cacd06270c4c3",
+    "release_id": "assets-1078050",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "da573f9fa4aa2299a4b3083034437761760a0920fb78d584ae2f88ea387071a9",
+    "source_manifest_sha256": "3adb2d727d8410ab0842b8092560da707890b5f530b68537064578cfe388259a",
     "status": "published",
-    "updated_at": "2026-10-30T15:00:00+09:00"
+    "updated_at": "2026-10-31T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "b6c9a02168ae4e749f49878af3c0b1eaf27a9192",
-    "generated_entry_count": 13536,
-    "generated_manifest_sha256": "da573f9fa4aa2299a4b3083034437761760a0920fb78d584ae2f88ea387071a9",
+    "commit": "47ff8a3698afd3fe69501342d87cacd06270c4c3",
+    "generated_entry_count": 13590,
+    "generated_manifest_sha256": "3adb2d727d8410ab0842b8092560da707890b5f530b68537064578cfe388259a",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "d6c5989a75320fcf6093666b7bbaba024ab1314e1abc6e10d056a09ce27122cd",
+    "source_catalogue_sha256": "fd7d37ae676f9ef87832ce4a103bbe6eeee54850f54ff5bab11c8cad90af683d",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77182,8 +77506,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 419672,
-    "translated": 419568,
+    "total": 420051,
+    "translated": 419947,
     "untranslated": 5
   }
 }
