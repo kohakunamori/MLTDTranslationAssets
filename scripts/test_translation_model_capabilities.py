@@ -14,7 +14,9 @@ from pipelines.text.translate_mltd_api_pool import (
     ModelConfig, load_model_config, request_translation,
     task_request_params_for_row, translate_with_model,
     validate_candidate,
+    build_parser,
 )
+from pipelines.text.mltd_translation_quality import evaluate_row, load_glossary
 
 
 def config(**kwargs):
@@ -128,6 +130,26 @@ class CapabilityTests(unittest.TestCase):
         asyncio.run(run())
         self.assertEqual(len(requests), 2)
         self.assertIn("Re-translate SOURCE alone", requests[1]["messages"][-1]["content"])
+
+    def test_authoritative_terms_target_is_checked_as_the_preferred_translation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            glossary_path = Path(tmp) / "authoritative-terms.json"
+            glossary_path.write_text(json.dumps({"entries": {
+                "茜ちゃん": {"target": "小茜", "category": "character_nickname"}
+            }}, ensure_ascii=False), encoding="utf-8")
+            glossary = load_glossary(glossary_path)
+        source = "茜ちゃん、また明日。"
+        result = evaluate_row(
+            {"source": source, "source_sha256": sha256_text(source), "task_hint": "DIALOGUE"},
+            {"source": source, "source_sha256": sha256_text(source), "translation": "茜酱，明天见。"},
+            glossary,
+        )
+        self.assertIn("preferred_term_missing", {issue["code"] for issue in result["issues"]})
+
+    def test_production_cli_defaults_use_the_checked_in_authoritative_terms(self):
+        args = build_parser().parse_args(["--config", "local-config.json"])
+        self.assertEqual(args.glossary, Path("glossary/authoritative-terms.json"))
+        self.assertEqual(args.authoritative_terms, Path("glossary/authoritative-terms.json"))
 
 
 if __name__ == "__main__":

@@ -2143,12 +2143,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument(
         "--glossary",
         type=Path,
-        default=Path("localization/quality/glossary.json"),
+        default=Path("glossary/authoritative-terms.json"),
     )
     ap.add_argument(
         "--authoritative-terms",
         type=Path,
-        default=Path("localization/quality/authoritative-terms.json"),
+        default=Path("glossary/authoritative-terms.json"),
     )
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument(

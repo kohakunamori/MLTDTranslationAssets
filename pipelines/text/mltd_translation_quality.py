@@ -185,9 +185,14 @@ def applicable_glossary(source: str, glossary: dict) -> list[dict]:
             spec = {"preferred": spec}
         if not isinstance(spec, dict):
             continue
+        # Production passes ``glossary/authoritative-terms.json``, whose
+        # evidence-backed field is named ``target``. The older review glossary
+        # uses ``preferred``. Treat both as the same required target so a
+        # terminology check cannot silently disappear at the CLI boundary.
+        preferred = spec.get("preferred", spec.get("target", ""))
         result.append({
             "source_term": jp,
-            "preferred": str(spec.get("preferred", "")),
+            "preferred": str(preferred),
             "forbidden": [str(x) for x in spec.get("forbidden", [])],
             "category": str(spec.get("category", "")),
             "notes": str(spec.get("notes", "")),

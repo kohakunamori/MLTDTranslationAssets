@@ -10,7 +10,7 @@
 - 非歌词显式提示保留真实换行及空段落；歌词仍按运行时要求每槽一行。模型若照抄日文展示换行，由既有 `join_lyric_lines` 规则衔接，再用与应用、发布相同的歌词校验器检查，不能为凑一行丢掉内容。
 - 本地比较工具只允许日文场景字段进入请求，剔除隐藏参考及旧译注释；生产修复任务仍可显式携带待修旧译作为负面证据。第三方参考全文没有进入本轮翻译或审校请求。
 
-主要代码在 `pipelines/text/mltd_natural_prompt.py`、`asset_translation_context.py` 与 `translate_mltd_api_pool.py`。保留 `policy_style="legacy"` 和 `build_legacy_user_prompt` 供固定对照使用；命令行生产入口默认采用新方案。
+主要代码在 `pipelines/text/mltd_natural_prompt.py`、`asset_translation_context.py` 与 `translate_mltd_api_pool.py`。保留 `policy_style="legacy"` 和 `build_legacy_user_prompt` 供固定对照使用；命令行生产入口默认采用新方案。 CLI 的 glossary 与 authoritative-terms 默认路径也已指向仓库内的 `glossary/authoritative-terms.json`，避免脱离 workflow 参数时静默跳过术语保护。
 
 ## 修复实际调用不兼容
 
@@ -89,6 +89,6 @@ python scripts/translation_quality_experiment.py summarize --mapping '<study>/ma
 | `candidate-natural-system-v4.md` | `bf82923410bee1144612cca8954bd5a87232709e3f8635278ecc9228f64db14f` |
 | `holdout-results-v4.jsonl` | `752cf7b5379757a84e1bcfd0d92b7be8dba21f97a49a1e4fa0899e4e642f4493` |
 
-`validate_repo.py` 是结构发布门禁：它检查 JSONL、source hash、状态、保留标记、保留分隔符和歌词显示约束，但不会对全部历史 accepted 行重放 `mltd_translation_quality.evaluate_row` 的语义启发式。新模型草稿在队列接受前仍会经过该质量评估；历史 accepted 行的重放结果只应作为人工复核队列，不能直接变成全库硬拒收。修复前的一次本地扫描覆盖 27,061 条 machine-stage locale 和 1,487 条 machine-stage lyric：locale 有 1 条确定性 REJECT、1,403 条 REVIEW，lyrics 有 33 条 REVIEW；其中许多 REVIEW 是主体、省略、口吻或术语候选，不能自动判错。代码验证覆盖生产请求参数、实际保存的来源、邻句与说话者、异常拒收后的定向重译、无参考泄漏、恢复一致性和额度熔断，已加入发布离线门禁；仓库数据另跑 `validate_repo.py`。这些验证证明链路与数据契约，不证明全部翻译正确。
+`validate_repo.py` 是结构发布门禁：它检查 JSONL、source hash、状态、保留标记、保留分隔符和歌词显示约束，但不会对全部历史 accepted 行重放 `mltd_translation_quality.evaluate_row` 的语义启发式。新模型草稿在队列接受前仍会经过该质量评估；历史 accepted 行的重放结果只应作为人工复核队列，不能直接变成全库硬拒收。修复前的一次本地扫描覆盖 27,061 条 machine-stage locale 和 1,487 条 machine-stage lyric；修复 `target`/`preferred` 字段兼容并应用本轮定向修订后，重放结果为 locale PASS 25,659、REVIEW 1,402，lyrics PASS 1,455、REVIEW 32，REJECT 为 0。许多 REVIEW 是主体、省略、口吻、歌曲标题或术语候选，不能自动判错；例如日文隐含主语对应的中文“我们”、英文/片假名歌曲名和歌词节奏都需要按上下文人工判断。代码验证覆盖生产请求参数、实际保存的来源、邻句与说话者、异常拒收后的定向重译、无参考泄漏、恢复一致性和额度熔断，已加入发布离线门禁；仓库数据另跑 `validate_repo.py`。这些验证证明链路与数据契约，不证明全部翻译正确。
 
 独立人工验收、完整模型审校、提示词/上下文贡献拆分，以及完整邮件分支语境仍是后续工作。尤其省略主体、双关和多场景复用的语义问题，不能只靠长度或字符规则解决；本轮没有为此改动跨仓库的译文身份契约。
