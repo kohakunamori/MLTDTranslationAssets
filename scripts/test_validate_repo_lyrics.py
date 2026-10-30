@@ -54,6 +54,18 @@ class ValidateLyricsTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             tool.validate_lyrics(self._root([broken]))
 
+    def test_pending_stage_must_identify_machine_translation(self):
+        broken = row("scrobj_x.unity3d", 1, "あ", zh="甲", status="pending")
+        broken["translation_stage"] = "human_translated"
+        with self.assertRaises(SystemExit):
+            tool.validate_lyrics(self._root([broken]))
+
+    def test_declared_accepted_stage_must_be_a_known_provenance(self):
+        broken = row("scrobj_x.unity3d", 1, "あ", zh="甲", status="accepted")
+        broken["translation_stage"] = "untranslated"
+        with self.assertRaises(SystemExit):
+            tool.validate_lyrics(self._root([broken]))
+
     def test_untranslated_row_may_not_carry_text(self):
         broken = row("scrobj_x.unity3d", 1, "あ", zh="甲", status="untranslated")
         with self.assertRaises(SystemExit):

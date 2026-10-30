@@ -122,12 +122,24 @@ def validate_lyric_tokens(source: str, translated: str) -> None:
         raise ValueError(
             f"protected token mismatch: source={dict(before)!r} translation={dict(after)!r}"
         )
-    if source.count("<") != translated.count("<") or source.count(">") != translated.count(">"):
+    source_angle_shape = "".join(char for char in source if char in "<>")
+    translated_angle_shape = "".join(char for char in translated if char in "<>")
+    if source_angle_shape != translated_angle_shape:
         raise ValueError(
-            "angle bracket count changed: "
-            f"source=({source.count('<')},{source.count('>')}) "
-            f"translation=({translated.count('<')},{translated.count('>')})"
+            "angle bracket shape changed: "
+            f"source={source_angle_shape!r} translation={translated_angle_shape!r}"
         )
+    for label, value in (("source", source), ("translation", translated)):
+        depth = 0
+        for char in value:
+            if char == "<":
+                depth += 1
+            elif char == ">":
+                depth -= 1
+                if depth < 0:
+                    raise ValueError(f"{label} angle brackets are not balanced")
+        if depth:
+            raise ValueError(f"{label} angle brackets are not balanced")
     if "\n" in translated or "\r" in translated:
         raise ValueError("lyric translation must stay on one line")
     ceiling = max(LYRIC_LENGTH_FLOOR, LYRIC_LENGTH_MULTIPLE * len(source))

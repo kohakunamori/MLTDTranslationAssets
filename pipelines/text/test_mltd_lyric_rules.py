@@ -78,6 +78,13 @@ class LyricTokenTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_lyric_tokens("<size=24>やあ", "你好")
 
+    def test_angle_brackets_keep_order_and_balance(self):
+        validate_lyric_tokens("<a><b>", "<甲><乙>")
+        for translation in ("><甲", "<甲>>", "<<甲>"):
+            with self.subTest(translation=translation):
+                with self.assertRaises(ValueError):
+                    validate_lyric_tokens("<a><b>", translation)
+
     def test_placeholders_survive_verbatim(self):
         validate_lyric_tokens("{0}よ", "{0}呀")
         with self.assertRaises(ValueError) as caught:

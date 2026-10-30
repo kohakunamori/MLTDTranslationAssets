@@ -30,7 +30,6 @@ if str(ROOT) not in sys.path:
 from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
 from pipelines.core.hashing import sha256_text  # noqa: E402
 from pipelines.text.translation_tokens import (  # noqa: E402
-    PROTECTED_TOKEN_RE,
     validate_translation_tokens,
 )
 
@@ -260,6 +259,24 @@ def validate_lyrics(root: Path) -> dict[str, int]:
                 if status not in VALID_STATUSES:
                     print(f"ERROR: {path}:{line_no} invalid status '{status}'", file=sys.stderr)
                     sys.exit(1)
+                stage = row.get("translation_stage")
+                if stage is not None:
+                    if stage not in VALID_TRANSLATION_STAGES:
+                        print(f"ERROR: {path}:{line_no} invalid translation_stage '{stage}'", file=sys.stderr)
+                        sys.exit(1)
+                    if status == "untranslated" and stage != "untranslated":
+                        print(f"ERROR: {path}:{line_no} untranslated row must have translation_stage=untranslated", file=sys.stderr)
+                        sys.exit(1)
+                    if status == "pending" and stage != "llm_translated":
+                        print(f"ERROR: {path}:{line_no} pending row must have translation_stage=llm_translated", file=sys.stderr)
+                        sys.exit(1)
+                    if status == "accepted" and stage not in ACCEPTED_STAGES:
+                        print(
+                            f"ERROR: {path}:{line_no} accepted row must have translation_stage "
+                            f"in {sorted(ACCEPTED_STAGES)}, got {stage!r}",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
                 counts[status] += 1
                 translated = str(row["zh"])
                 if status == "untranslated" and translated:
