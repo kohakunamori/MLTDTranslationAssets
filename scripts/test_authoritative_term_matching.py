@@ -2,19 +2,25 @@
 import asyncio
 from collections import defaultdict
 import json
+from pathlib import Path
 import unittest
 
 import httpx
 
 from pipelines.core.hashing import sha256_text
 from pipelines.text.authoritative_term_matching import TermMatch, find_term_matches
+from pipelines.text.build_authoritative_terms import _source_variant_entries
 from pipelines.text.mltd_translation_quality import applicable_glossary, evaluate_row
 from pipelines.text.translate_mltd_api_pool import (
     ModelConfig,
+    load_authoritative_terms,
     mask_authoritative_terms,
     restore_authoritative_terms,
     translate_with_model,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
+REAL_GLOSSARY_PATH = ROOT / "glossary/authoritative-terms.json"
 
 
 def _matches(text, terms):
@@ -207,6 +213,115 @@ class GlossaryQualityTests(unittest.TestCase):
             if issue["code"] == "preferred_term_missing"
         ]
         self.assertEqual(len(missing), 2)
+
+
+class FullNameWhitespaceVariantTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.glossary = json.loads(
+            REAL_GLOSSARY_PATH.read_text(encoding="utf-8")
+        )
+        cls.terms = load_authoritative_terms(REAL_GLOSSARY_PATH)
+
+    def test_real_glossary_variants_share_canonical_targets(self):
+        expected = {
+            "島原 エレナ": ("島原エレナ", "岛原艾琳娜"),
+            "エミリー スチュアート": (
+                "エミリースチュアート",
+                "艾米莉·斯图亚特",
+            ),
+        }
+        entries = self.glossary["entries"]
+        canonical_entries = {
+            source: spec
+            for source, spec in entries.items()
+            if "source_variant_of" not in spec
+        }
+        derived = _source_variant_entries(canonical_entries)
+        self.assertEqual(
+            {variant: entries[variant] for variant in derived},
+            derived,
+        )
+        self.assertEqual(
+            self.glossary["counts"]["fullname_source_variants"],
+            len(expected),
+        )
+        self.assertEqual(self.glossary["counts"]["entries"], len(entries))
+        for variant, (canonical, target) in expected.items():
+            with self.subTest(variant=variant):
+                spec = entries[variant]
+                self.assertEqual(spec["category"], "character_name")
+                self.assertEqual(spec["source_variant_of"], canonical)
+                self.assertEqual(spec["target"], entries[canonical]["target"])
+                self.assertEqual(spec["target"], target)
+
+    def test_production_masking_and_glossary_rules_emit_canonical_targets(self):
+        cases = [
+            ("島原 エレナと練習する", "島原 エレナ", "岛原艾琳娜"),
+            ("エミリー スチュアート", "エミリー スチュアート", "艾米莉·斯图亚特"),
+        ]
+        for source, variant, target in cases:
+            with self.subTest(source=source):
+                masked, targets, applied = mask_authoritative_terms(
+                    source, self.terms
+                )
+                self.assertEqual(applied, [variant])
+                self.assertEqual(targets, [target])
+                self.assertIn("__MLTD_TERM_000__", masked)
+                self.assertNotIn(variant, masked)
+                self.assertEqual(
+                    [
+                        (rule["source_term"], rule["preferred"])
+                        for rule in applicable_glossary(source, self.glossary)
+                    ],
+                    [(variant, target)],
+                )
+
+    def test_reordered_and_embedded_controls_remain_unmasked(self):
+        for source in [
+            "スチュアート エミリー",
+            "島原 へ行く",
+            "エミリースチュアートマン",
+        ]:
+            with self.subTest(source=source):
+                masked, targets, applied = mask_authoritative_terms(
+                    source, self.terms
+                )
+                self.assertEqual((masked, targets, applied), (source, [], []))
+                self.assertEqual(
+                    applicable_glossary(source, self.glossary),
+                    [],
+                )
+
+    def test_variant_helper_derives_targets_from_synthetic_mappings(self):
+        canonical = {
+            "テストアイドル": {
+                "target": "测试偶像",
+                "category": "character_name",
+            }
+        }
+        self.assertEqual(
+            _source_variant_entries(
+                canonical,
+                {"テスト アイドル": "テストアイドル"},
+            ),
+            {
+                "テスト アイドル": {
+                    "target": "测试偶像",
+                    "category": "character_name",
+                    "evidence": (
+                        "observed_source_fullname_space_variant"
+                        "+canonical_authoritative_target"
+                    ),
+                    "source_variant_of": "テストアイドル",
+                }
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "missing canonical"):
+            _source_variant_entries(
+                canonical,
+                {"登録 なし": "登録なし"},
+            )
 
 
 class AuthoritativeTranslationPipelineTests(unittest.TestCase):

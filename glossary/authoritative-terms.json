@@ -8,11 +8,12 @@
     "character_name_min_majority_ratio": 0.8
   },
   "counts": {
-    "entries": 90,
+    "entries": 92,
     "curated": 38,
     "evidence_backed_character_names": 26,
     "idol_names": 26,
-    "owner_ruled_character_names": 3
+    "owner_ruled_character_names": 3,
+    "fullname_source_variants": 2
   },
   "entries": {
     "{$P$}さん": {
@@ -594,6 +595,18 @@
       "evidence_count": 3,
       "evidence_total": 3,
       "majority_ratio": 1.0
+    },
+    "島原 エレナ": {
+      "target": "岛原艾琳娜",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "島原エレナ"
+    },
+    "エミリー スチュアート": {
+      "target": "艾米莉·斯图亚特",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "エミリースチュアート"
     }
   }
 }

@@ -157,6 +157,44 @@ _OWNER_RULED_IDOL_NAMES = {
     },
 }
 
+# Explicit full-name spellings observed in accepted machine-translated source
+# rows.  These are literal aliases, not a whitespace-normalization rule: adding
+# one must never make two neighbouring ordinary words match a character name.
+_FULLNAME_SOURCE_VARIANTS = {
+    "島原 エレナ": "島原エレナ",
+    "エミリー スチュアート": "エミリースチュアート",
+}
+
+
+def _source_variant_entries(
+    canonical_entries: dict[str, dict],
+    variants: dict[str, str] | None = None,
+) -> dict[str, dict]:
+    """Derive literal full-name variants from their canonical glossary rows."""
+    selected = _FULLNAME_SOURCE_VARIANTS if variants is None else variants
+    entries: dict[str, dict] = {}
+    for variant, canonical_source in selected.items():
+        if variant in canonical_entries:
+            raise ValueError(f"source variant already has an entry: {variant}")
+        canonical = canonical_entries.get(canonical_source)
+        if not isinstance(canonical, dict):
+            raise ValueError(f"missing canonical source entry: {canonical_source}")
+        target = str(canonical.get("target", "")).strip()
+        if canonical.get("category") != "character_name" or not target:
+            raise ValueError(
+                f"canonical source is not a targeted character name: {canonical_source}"
+            )
+        entries[variant] = {
+            "target": target,
+            "category": "character_name",
+            "evidence": (
+                "observed_source_fullname_space_variant"
+                "+canonical_authoritative_target"
+            ),
+            "source_variant_of": canonical_source,
+        }
+    return entries
+
 
 def _idol_name_entries() -> dict[str, dict]:
     """Idol full names the image surfaces must render (owner ruling 2026-09-26).
@@ -289,6 +327,8 @@ def main() -> int:
         }
         evidence_names += 1
 
+    entries.update(_source_variant_entries(entries))
+
     doc = {
         "schema_version": 1,
         "policy": {
@@ -304,6 +344,7 @@ def main() -> int:
             "evidence_backed_character_names": evidence_names,
             "idol_names": len(_idol_name_entries()),
             "owner_ruled_character_names": len(_OWNER_RULED_IDOL_NAMES),
+            "fullname_source_variants": len(_FULLNAME_SOURCE_VARIANTS),
         },
         "entries": entries,
     }

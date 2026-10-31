@@ -112,9 +112,19 @@ def glossary_text(doc: dict) -> str:
     entries = doc.get("entries", {}) if isinstance(doc, dict) else {}
     lines = ["GLOSSARY"]
     for src, spec in sorted(entries.items()):
+        if isinstance(spec, str):
+            spec = {"preferred": spec}
         if not isinstance(spec, dict):
             continue
-        preferred = str(spec.get("preferred", "")).strip()
+        # Supported target fields: authoritative ``glossary/authoritative-terms.json``
+        # entries carry ``target``; the older review glossary carries
+        # ``preferred``.  Read both (non-empty ``preferred`` wins, else
+        # ``target``) so the compiled prompt keeps a target rule for
+        # authoritative entries instead of degrading them to bare source terms.
+        # The masking path still enforces these targets at translation time; this
+        # restores the prompt-side rules.  A present-but-empty/None field counts
+        # as absent, so nothing emits a bare ``src=>``.
+        preferred = str(spec.get("preferred") or spec.get("target") or "").strip()
         forbidden = [str(x) for x in spec.get("forbidden", []) if str(x).strip()]
         line = f"{src}=>{preferred}" if preferred else src
         if forbidden:
