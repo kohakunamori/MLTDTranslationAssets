@@ -16,6 +16,14 @@
 系统提示词来自 `pipelines/text/mltd_translation_prompt.py`，权威术语来自 `glossary/authoritative-terms.json`。
 `accepted` 表示可进入构建，不能等同于人工质量验收；`translation_stage` 缺失的历史数据也不能直接标成人工翻译。
 
+权威术语匹配采用“最长优先”的字面子串匹配：同一段原文里较长的词项先命中，避免短词抢先覆盖长词；
+并加入片假名词内误匹配保护——当候选词项只出现在片假名连写内部、并未独立成词时不予遮蔽，
+以免把歌曲名、外来语或品牌名的局部片段当成整词命中。命中后统一替换为 `__MLTD_TERM_nnn__` 占位符，
+模型只看到标记、看不到术语原文；恢复阶段逐条核对标记数量，数量不符即判失败。
+该策略只作用于已审核列入 `glossary/authoritative-terms.json` 的条目，术语的原文、目标与证据保持原样。
+`scripts/test_authoritative_term_matching.py` 作为离线回归纳入发布门禁，只验证匹配与遮蔽/恢复契约，
+不构成译文质量验收；来源登记、署名与再发布限制仍以 [版权声明](../COPYRIGHT.md) 与 [鸣谢](../ACKNOWLEDGEMENTS.md) 为准。
+
 `research-tools/` 保留了官方历史译文 benchmark、上下文和审校工具，但没有接入当前生产 CI。
 本轮直接运行其中 `evaluate_translation_benchmark.py --help` 遇到旧导入路径错误；不能把归档能力当作现行发布门禁。
 

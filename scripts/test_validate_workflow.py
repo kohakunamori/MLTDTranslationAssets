@@ -128,6 +128,16 @@ class SparseCheckoutTests(unittest.TestCase):
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn("scripts/test_bundle_incremental.py", run)
 
+    def test_authoritative_term_matching_is_in_the_publish_gate(self):
+        """The matching contract (longest-first, katakana guard) must stay gated.
+
+        ``scripts/test_authoritative_term_matching.py`` pins how a source term
+        is selected before masking, so dropping it from the suite would let a
+        matching regression ship without the offline gate noticing.
+        """
+        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
+        self.assertIn("scripts/test_authoritative_term_matching.py", run)
+
 
 if __name__ == "__main__":
     unittest.main()

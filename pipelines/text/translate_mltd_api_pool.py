@@ -22,6 +22,7 @@ if str(REPO) not in sys.path:
 
 from pipelines.core.hashing import sha256_bytes, sha256_text
 from pipelines.core.jsonl import read_jsonl
+from pipelines.text.authoritative_term_matching import find_term_matches
 from pipelines.text.translation_tokens import validate_translation
 from pipelines.text.mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
 from pipelines.text.mltd_translation_prompt import compile_prompt_bundle, snapshot_status
@@ -187,22 +188,19 @@ def mask_authoritative_terms(
 ) -> tuple[str, list[str], list[str]]:
     targets: list[str] = []
     applied: list[str] = []
-    value = text
-    for source in sorted(terms, key=len, reverse=True):
-        if source not in value:
-            continue
-        target = terms[source]
-
-        def repl(_: re.Match[str]) -> str:
-            index = len(targets)
-            if index > 999:
-                raise ValueError("too many authoritative terms in one source")
-            targets.append(target)
-            applied.append(source)
-            return f"__MLTD_TERM_{index:03d}__"
-
-        value = re.sub(re.escape(source), repl, value)
-    return value, targets, applied
+    parts: list[str] = []
+    cursor = 0
+    for match in find_term_matches(text, terms):
+        index = len(targets)
+        if index > 999:
+            raise ValueError("too many authoritative terms in one source")
+        targets.append(terms[match.term])
+        applied.append(match.term)
+        parts.append(text[cursor:match.start])
+        parts.append(f"__MLTD_TERM_{index:03d}__")
+        cursor = match.end
+    parts.append(text[cursor:])
+    return "".join(parts), targets, applied
 
 
 def restore_authoritative_terms(text: str, targets: list[str]) -> str:

@@ -292,7 +292,7 @@ def main() -> int:
     doc = {
         "schema_version": 1,
         "policy": {
-            "match": "literal_substring_longest_first",
+            "match": "literal_substring_longest_first_with_katakana_word_internal_guard",
             "model_sees_markers_not_authoritative_source_terms": True,
             "exact_source_terms_can_skip_model": True,
             "character_name_min_exact_evidence": args.min_exact_evidence,

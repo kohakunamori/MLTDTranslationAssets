@@ -19,6 +19,7 @@ if str(REPO) not in sys.path:
 
 from pipelines.core.hashing import sha256_text
 from pipelines.core.jsonl import read_jsonl, write_jsonl
+from pipelines.text.authoritative_term_matching import find_term_matches
 from pipelines.text.translation_tokens import KANA_RE, PROTECTED_TOKEN_RE, validate_translation
 from pipelines.text.mltd_lyric_rules import validate_lyric_tokens
 
@@ -178,9 +179,14 @@ def _issue(code: str, severity: str, detail: str = "") -> dict:
 
 def applicable_glossary(source: str, glossary: dict) -> list[dict]:
     result: list[dict] = []
-    for jp, spec in glossary.get("entries", {}).items():
-        if jp not in source:
+    entries = glossary.get("entries", {})
+    seen: set[str] = set()
+    for match in find_term_matches(source, entries):
+        jp = match.term
+        if jp in seen:
             continue
+        seen.add(jp)
+        spec = entries[jp]
         if isinstance(spec, str):
             spec = {"preferred": spec}
         if not isinstance(spec, dict):
