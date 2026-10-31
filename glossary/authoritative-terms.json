@@ -8,12 +8,12 @@
     "character_name_min_majority_ratio": 0.8
   },
   "counts": {
-    "entries": 92,
+    "entries": 93,
     "curated": 38,
     "evidence_backed_character_names": 26,
     "idol_names": 26,
     "owner_ruled_character_names": 3,
-    "fullname_source_variants": 2
+    "fullname_source_variants": 3
   },
   "entries": {
     "{$P$}さん": {
@@ -607,6 +607,12 @@
       "category": "character_name",
       "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
       "source_variant_of": "エミリースチュアート"
+    },
+    "徳川 まつり": {
+      "target": "德川茉莉",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "徳川まつり"
     }
   }
 }

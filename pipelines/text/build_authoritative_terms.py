@@ -163,6 +163,7 @@ _OWNER_RULED_IDOL_NAMES = {
 _FULLNAME_SOURCE_VARIANTS = {
     "島原 エレナ": "島原エレナ",
     "エミリー スチュアート": "エミリースチュアート",
+    "徳川 まつり": "徳川まつり",
 }
 
 

@@ -230,6 +230,7 @@ class FullNameWhitespaceVariantTests(unittest.TestCase):
                 "エミリースチュアート",
                 "艾米莉·斯图亚特",
             ),
+            "徳川 まつり": ("徳川まつり", "德川茉莉"),
         }
         entries = self.glossary["entries"]
         canonical_entries = {
@@ -259,6 +260,7 @@ class FullNameWhitespaceVariantTests(unittest.TestCase):
         cases = [
             ("島原 エレナと練習する", "島原 エレナ", "岛原艾琳娜"),
             ("エミリー スチュアート", "エミリー スチュアート", "艾米莉·斯图亚特"),
+            ("徳川 まつり⑧ ね？", "徳川 まつり", "德川茉莉"),
         ]
         for source, variant, target in cases:
             with self.subTest(source=source):
