@@ -41016,8 +41016,8 @@
         "event_0454_story_01_jp.gtx": {
           "pending": 0,
           "total": 33,
-          "translated": 32,
-          "untranslated": 1
+          "translated": 33,
+          "untranslated": 0
         },
         "event_0454_story_02_jp.gtx": {
           "pending": 0,
@@ -41028,8 +41028,8 @@
         "event_0454_story_03_jp.gtx": {
           "pending": 0,
           "total": 41,
-          "translated": 39,
-          "untranslated": 2
+          "translated": 40,
+          "untranslated": 1
         },
         "event_0454_story_04_jp.gtx": {
           "pending": 0,
@@ -49124,9 +49124,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 96470,
-      "translated": 96466,
+      "translated": 96468,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 1
     },
     {
       "blocked": 0,
@@ -52902,8 +52902,8 @@
         "MB_jp.gtx": {
           "pending": 5,
           "total": 10068,
-          "translated": 10062,
-          "untranslated": 1
+          "translated": 10063,
+          "untranslated": 0
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -52916,9 +52916,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 10068,
-      "translated": 10062,
+      "translated": 10063,
       "unit": "句",
-      "untranslated": 1
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -77552,15 +77552,15 @@
       "id": "dialogue",
       "pending": 75,
       "total": 37648,
-      "translated": 37572,
-      "untranslated": 1
+      "translated": 37573,
+      "untranslated": 0
     },
     {
       "id": "story",
       "pending": 1,
       "total": 105452,
-      "translated": 105448,
-      "untranslated": 3
+      "translated": 105450,
+      "untranslated": 1
     },
     {
       "id": "system",
@@ -77574,20 +77574,20 @@
   "kind": "assets",
   "release": {
     "asset_version": "1078300",
-    "assets_commit": "caf43583c08ae3363d91587fc21be059e80af773",
+    "assets_commit": "46d8ab0965b60d3a58cd4763b1804530a5abbdce",
     "release_id": "assets-1078300",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "5af727a0cc8690b797141f2fad4a34e5ef46a720659e1ff3fcdf809ee23ea076",
+    "source_manifest_sha256": "97a356d2d962b4578c124be7835d8e93694610c5969599db39d8f723a2f08d70",
     "status": "published",
     "updated_at": "2026-10-31T15:00:02+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "caf43583c08ae3363d91587fc21be059e80af773",
+    "commit": "46d8ab0965b60d3a58cd4763b1804530a5abbdce",
     "generated_entry_count": 13606,
-    "generated_manifest_sha256": "5af727a0cc8690b797141f2fad4a34e5ef46a720659e1ff3fcdf809ee23ea076",
+    "generated_manifest_sha256": "97a356d2d962b4578c124be7835d8e93694610c5969599db39d8f723a2f08d70",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "c772bd91b399bd075646ee13300d0b4c50ce9ee4a510ed47a9e59a490b8fe179",
+    "source_catalogue_sha256": "7a50c4383cd81698633ab48678e2689e6d0199345b694391f69ed6e6a5a6db83",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77597,7 +77597,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 420816,
-    "translated": 420709,
-    "untranslated": 8
+    "translated": 420712,
+    "untranslated": 5
   }
 }
