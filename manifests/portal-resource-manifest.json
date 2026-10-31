@@ -52901,9 +52901,9 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 5,
-          "total": 10068,
-          "translated": 10063,
-          "untranslated": 0
+          "total": 10084,
+          "translated": 10076,
+          "untranslated": 3
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -52915,10 +52915,10 @@
       "pending": 5,
       "reused": 0,
       "suggested": 0,
-      "total": 10068,
-      "translated": 10063,
+      "total": 10084,
+      "translated": 10076,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 3
     },
     {
       "blocked": 0,
@@ -54575,9 +54575,9 @@
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 118303,
-          "translated": 118283,
-          "untranslated": 2
+          "total": 118313,
+          "translated": 118295,
+          "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -77503,18 +77503,18 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 186147,
-      "translated": 186126,
+      "total": 186157,
+      "translated": 186138,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 1
     },
     {
       "blocked": 0,
       "bundles": {
         "CM_jp.gtx": {
           "pending": 70,
-          "total": 26563,
-          "translated": 26493,
+          "total": 26564,
+          "translated": 26494,
           "untranslated": 0
         }
       },
@@ -77527,8 +77527,8 @@
       "pending": 70,
       "reused": 0,
       "suggested": 0,
-      "total": 26563,
-      "translated": 26493,
+      "total": 26564,
+      "translated": 26494,
       "unit": "句",
       "untranslated": 0
     }
@@ -77551,9 +77551,9 @@
     {
       "id": "dialogue",
       "pending": 75,
-      "total": 37648,
-      "translated": 37573,
-      "untranslated": 0
+      "total": 37665,
+      "translated": 37587,
+      "untranslated": 3
     },
     {
       "id": "story",
@@ -77565,29 +77565,29 @@
     {
       "id": "system",
       "pending": 18,
-      "total": 186147,
-      "translated": 186126,
-      "untranslated": 3
+      "total": 186157,
+      "translated": 186138,
+      "untranslated": 1
     }
   ],
-  "generated_at": "2026-10-31T06:03:08.013865+00:00",
+  "generated_at": "2026-10-31T15:02:33.522333+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1078300",
-    "assets_commit": "46d8ab0965b60d3a58cd4763b1804530a5abbdce",
-    "release_id": "assets-1078300",
+    "asset_version": "1078400",
+    "assets_commit": "ecad79851596ee191ad18ceb5282fd3e3f07f655",
+    "release_id": "assets-1078400",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "97a356d2d962b4578c124be7835d8e93694610c5969599db39d8f723a2f08d70",
+    "source_manifest_sha256": "f2a1ddf156b9f2c27160c47661fd3278d3a11dff074f66297d3c3206077c969f",
     "status": "published",
-    "updated_at": "2026-10-31T15:00:02+09:00"
+    "updated_at": "2026-11-01T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "46d8ab0965b60d3a58cd4763b1804530a5abbdce",
+    "commit": "ecad79851596ee191ad18ceb5282fd3e3f07f655",
     "generated_entry_count": 13606,
-    "generated_manifest_sha256": "97a356d2d962b4578c124be7835d8e93694610c5969599db39d8f723a2f08d70",
+    "generated_manifest_sha256": "f2a1ddf156b9f2c27160c47661fd3278d3a11dff074f66297d3c3206077c969f",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "7a50c4383cd81698633ab48678e2689e6d0199345b694391f69ed6e6a5a6db83",
+    "source_catalogue_sha256": "6863f381fe8de596db7d8eb228bdee2cecb0bb1c5d40f14f0986557623b42a6f",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77596,8 +77596,8 @@
     "pending": 99,
     "reused": 0,
     "suggested": 0,
-    "total": 420816,
-    "translated": 420712,
-    "untranslated": 5
+    "total": 420843,
+    "translated": 420738,
+    "untranslated": 6
   }
 }
