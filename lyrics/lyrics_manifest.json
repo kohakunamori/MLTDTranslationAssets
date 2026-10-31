@@ -5,7 +5,7 @@
   "counts": {
     "total_songs": 495,
     "total_slots": 14258,
-    "translated_slots": 12557,
+    "translated_slots": 12576,
     "english_bypass_slots": 1682
   },
   "songs": [
@@ -2452,7 +2452,7 @@
     {
       "bundle": "scrobj_yoruak.unity3d",
       "slots": 19,
-      "translated": 0
+      "translated": 19
     },
     {
       "bundle": "scrobj_zenit+.unity3d",
