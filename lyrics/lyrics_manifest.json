@@ -3,8 +3,8 @@
   "kind": "mltd-lyrics-manifest",
   "description": "Bilingual synchronized lyrics with scrobj slot alignment",
   "counts": {
-    "total_songs": 494,
-    "total_slots": 14239,
+    "total_songs": 495,
+    "total_slots": 14258,
     "translated_slots": 12557,
     "english_bypass_slots": 1682
   },
@@ -2448,6 +2448,11 @@
       "bundle": "scrobj_yokase.unity3d",
       "slots": 19,
       "translated": 19
+    },
+    {
+      "bundle": "scrobj_yoruak.unity3d",
+      "slots": 19,
+      "translated": 0
     },
     {
       "bundle": "scrobj_zenit+.unity3d",
