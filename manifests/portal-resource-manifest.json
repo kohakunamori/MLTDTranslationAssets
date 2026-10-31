@@ -12078,8 +12078,8 @@
         "card_blst_027say0704_jp.gtx": {
           "pending": 0,
           "total": 21,
-          "translated": 20,
-          "untranslated": 1
+          "translated": 21,
+          "untranslated": 0
         },
         "card_blst_028ari0054_jp.gtx": {
           "pending": 0,
@@ -14198,9 +14198,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 15667,
-      "translated": 15665,
+      "translated": 15666,
       "unit": "句",
-      "untranslated": 1
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -28176,8 +28176,8 @@
         "CD_jp.gtx": {
           "pending": 3,
           "total": 25538,
-          "translated": 25533,
-          "untranslated": 2
+          "translated": 25534,
+          "untranslated": 1
         }
       },
       "description": "队长技、演出技能与专属介绍",
@@ -28190,9 +28190,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 25538,
-      "translated": 25533,
+      "translated": 25534,
       "unit": "句",
-      "untranslated": 2
+      "untranslated": 1
     },
     {
       "blocked": 0,
@@ -41022,8 +41022,8 @@
         "event_0454_story_02_jp.gtx": {
           "pending": 0,
           "total": 55,
-          "translated": 54,
-          "untranslated": 1
+          "translated": 55,
+          "untranslated": 0
         },
         "event_0454_story_03_jp.gtx": {
           "pending": 0,
@@ -41034,8 +41034,8 @@
         "event_0454_story_04_jp.gtx": {
           "pending": 0,
           "total": 57,
-          "translated": 56,
-          "untranslated": 1
+          "translated": 57,
+          "untranslated": 0
         },
         "event_0454_story_05_jp.gtx": {
           "pending": 0,
@@ -41046,8 +41046,8 @@
         "event_0454_story_intro_jp.gtx": {
           "pending": 0,
           "total": 33,
-          "translated": 32,
-          "untranslated": 1
+          "translated": 33,
+          "untranslated": 0
         },
         "event_unit_talk_1000.unity3d": {
           "pending": 0,
@@ -49124,9 +49124,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 96470,
-      "translated": 96463,
+      "translated": 96466,
       "unit": "句",
-      "untranslated": 6
+      "untranslated": 3
     },
     {
       "blocked": 0,
@@ -54576,8 +54576,8 @@
         "MD_jp.gtx": {
           "pending": 18,
           "total": 118303,
-          "translated": 118282,
-          "untranslated": 3
+          "translated": 118283,
+          "untranslated": 2
         },
         "guest_001_after_202xxx_jp.gtx": {
           "pending": 0,
@@ -76758,8 +76758,8 @@
         "season_a_2026_025roc_400_jp.gtx": {
           "pending": 0,
           "total": 7,
-          "translated": 6,
-          "untranslated": 1
+          "translated": 7,
+          "untranslated": 0
         },
         "season_a_2026_026yur_100_jp.gtx": {
           "pending": 0,
@@ -77504,9 +77504,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 186147,
-      "translated": 186124,
+      "translated": 186126,
       "unit": "句",
-      "untranslated": 5
+      "untranslated": 3
     },
     {
       "blocked": 0,
@@ -77514,8 +77514,8 @@
         "CM_jp.gtx": {
           "pending": 70,
           "total": 26563,
-          "translated": 26490,
-          "untranslated": 3
+          "translated": 26493,
+          "untranslated": 0
         }
       },
       "description": "事务所各房间触碰与日常工作台词",
@@ -77528,9 +77528,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 26563,
-      "translated": 26490,
+      "translated": 26493,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 0
     }
   ],
   "domains": [
@@ -77545,49 +77545,49 @@
       "id": "card",
       "pending": 5,
       "total": 84796,
-      "translated": 84788,
-      "untranslated": 3
+      "translated": 84790,
+      "untranslated": 1
     },
     {
       "id": "dialogue",
       "pending": 75,
       "total": 37648,
-      "translated": 37569,
-      "untranslated": 4
+      "translated": 37572,
+      "untranslated": 1
     },
     {
       "id": "story",
       "pending": 1,
       "total": 105452,
-      "translated": 105445,
-      "untranslated": 6
+      "translated": 105448,
+      "untranslated": 3
     },
     {
       "id": "system",
       "pending": 18,
       "total": 186147,
-      "translated": 186124,
-      "untranslated": 5
+      "translated": 186126,
+      "untranslated": 3
     }
   ],
   "generated_at": "2026-10-31T06:03:08.013865+00:00",
   "kind": "assets",
   "release": {
     "asset_version": "1078300",
-    "assets_commit": "ecc0154d5653dd978e0bdfe93dc28420833d8711",
+    "assets_commit": "caf43583c08ae3363d91587fc21be059e80af773",
     "release_id": "assets-1078300",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "188cd444e3a9aaf009c3dfa0d2de18deda8b6c36480758883d1ff5a19707b605",
+    "source_manifest_sha256": "5af727a0cc8690b797141f2fad4a34e5ef46a720659e1ff3fcdf809ee23ea076",
     "status": "published",
     "updated_at": "2026-10-31T15:00:02+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "ecc0154d5653dd978e0bdfe93dc28420833d8711",
+    "commit": "caf43583c08ae3363d91587fc21be059e80af773",
     "generated_entry_count": 13606,
-    "generated_manifest_sha256": "188cd444e3a9aaf009c3dfa0d2de18deda8b6c36480758883d1ff5a19707b605",
+    "generated_manifest_sha256": "5af727a0cc8690b797141f2fad4a34e5ef46a720659e1ff3fcdf809ee23ea076",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "e9e5d05a3c58b94524486dfd189faeefa36bcc530e7939ea227c22bd67fbb96d",
+    "source_catalogue_sha256": "c772bd91b399bd075646ee13300d0b4c50ce9ee4a510ed47a9e59a490b8fe179",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77597,7 +77597,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 420816,
-    "translated": 420699,
-    "untranslated": 18
+    "translated": 420709,
+    "untranslated": 8
   }
 }
