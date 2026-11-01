@@ -1522,6 +1522,19 @@ async def translate_with_model(
             last_error = qa_error
             stats[cfg.id]["qa_retries"] += 1
             stats[cfg.id][task_prefix + "qa_retries"] += 1
+            # Narrow correction for residue leakage; shared so that a lyric row
+            # failing the length check and this code at once still asks for the
+            # introduced markers to be dropped instead of retrying unconstrained.
+            # SOURCE itself may legitimately carry private-use sentinels, so the
+            # removal scope names the SOURCE-absence condition and the preservation
+            # of source-present private use instead of leaving both implicit.
+            marker_correction = (
+                "Remove only the private-use/internal marker characters and other "
+                "unexpected characters that do not occur in SOURCE. A private-use "
+                "character that SOURCE itself contains is legitimate content and "
+                "must be kept, as must all protected tokens and visible Arabic "
+                "numeric literals."
+            )
             if qa_error == "empty_translation":
                 feedback = (
                     "The previous response used its completion budget without "
@@ -1533,6 +1546,14 @@ async def translate_with_model(
                     "The draft is unexpectedly long for this lyric slot and may have imported neighboring text. "
                     "Re-translate SOURCE alone. Keep deictic or unfinished wording without spelling out PREVIOUS/NEXT. "
                     "Do not copy neighboring-slot content into the answer."
+                )
+                if "introduced_unsupported_unicode" in qa_error:
+                    feedback += " " + marker_correction
+            elif "introduced_unsupported_unicode" in qa_error:
+                feedback = (
+                    f"Previous output failed deterministic QA ({qa_error}). "
+                    "Re-translate the same SOURCE only and change nothing else. "
+                    + marker_correction
                 )
             else:
                 feedback = (

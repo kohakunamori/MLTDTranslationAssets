@@ -267,8 +267,15 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
     elif translation == source:
         issues.append(_issue("unchanged_translation", "review"))
 
+    # Unassigned (Cn), surrogate (Cs) and private-use (Co) codepoints are not
+    # reviewable translated text when SOURCE does not carry them; private use is
+    # included because it is how internal marker leakage looks, for example the
+    # U+E200/U+E201/U+E202 term wrapper.  A private-use codepoint can still have
+    # a glyph in a private font, so the SOURCE-presence check decides: what
+    # SOURCE itself carries stays allowed, exactly like the scripts below.
     unsupported = sorted({ord(char) for char in translation
-                          if char not in source and unicodedata.category(char) in {"Cn", "Cs"}})
+                          if char not in source
+                          and unicodedata.category(char) in {"Cn", "Cs", "Co"}})
     introduced_blocked_scripts = introduced_blocked_script_codepoints(source, translation)
     if unsupported or introduced_blocked_scripts:
         detail_parts: list[str] = []
