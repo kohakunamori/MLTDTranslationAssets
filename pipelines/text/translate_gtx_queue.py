@@ -55,7 +55,7 @@ from pipelines.text.build_character_voice_evidence import (
 from pipelines.text.classify_translation_risk import load_risk_index
 from pipelines.text.mltd_character_profiles import load_character_profiles, select_character_profile
 
-MARKER_RE = re.compile(r"__MLTD_TOKEN_(\d{3})__")
+MARKER_RE = re.compile(r"__MLTD_TOKEN_(\d{3})__", re.IGNORECASE)
 ACCEPTED_STATUS = "machine_translated"
 
 # Production-basic QA blocks runtime/source corruption, empty/meta output,
@@ -68,6 +68,7 @@ BASIC_BLOCKING_QA_CODES = {
     "empty_translation",
     "protected_token_mismatch",
     "introduced_unsupported_unicode",
+    "introduced_pipeline_marker",
     "introduced_cyrillic",
     "duplicated_player_honorific",
     "possible_context_spill",

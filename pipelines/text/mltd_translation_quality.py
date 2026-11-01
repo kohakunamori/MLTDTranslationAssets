@@ -31,7 +31,14 @@ NUMBER_RE = re.compile(r"\d+(?:\.\d+)?%?")
 JP_PERCENT_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)パーセント")
 # Pipeline placeholders are normally restored before QA. Mask any that survive
 # so the script check below never mistakes infrastructure for translated text.
-PIPELINE_MARKER_RE = re.compile(r"__MLTD_(?:TERM|TOKEN|NUMBER)_\d+__")
+# The shape is matched case-insensitively and exactly: exactly three index
+# digits or the literal letters NNN inside the wrapper.  __MLTD_TERM_nnn__ and
+# __mltd_TOKEN_NNN__ are the same infrastructure with the wrapper's case lost,
+# while ordinary "NNN" text, __MLTD_FOO_NNN__ and __MLTD_TERM_NNNN__ stay
+# content.
+PIPELINE_MARKER_RE = re.compile(
+    r"__MLTD_(?:TERM|TOKEN|NUMBER)_(?:\d{3}|NNN)__", re.IGNORECASE
+)
 TRADITIONAL_CHAR_MAP_PATH = (
     REPO / "localization/quality/traditional-to-simplified-char-map.json"
 )
@@ -185,6 +192,34 @@ def script_scan_text(value: str) -> str:
     return PIPELINE_MARKER_RE.sub("", PROTECTED_TOKEN_RE.sub("", value))
 
 
+def pipeline_marker_counts(value: str) -> Counter[str]:
+    """Return the exact pipeline-marker multiset carried by ``value``."""
+    return Counter(PIPELINE_MARKER_RE.findall(value))
+
+
+def pipeline_marker_sequence(value: str) -> list[str]:
+    """Return pipeline markers in their original textual order."""
+    return PIPELINE_MARKER_RE.findall(value)
+
+
+def pipeline_marker_delta(
+    source: str, translation: str
+) -> tuple[Counter[str], Counter[str], bool]:
+    """Return added/missing markers and whether equal multisets were reordered."""
+    source_sequence = pipeline_marker_sequence(source)
+    translation_sequence = pipeline_marker_sequence(translation)
+    source_counts = Counter(source_sequence)
+    translation_counts = Counter(translation_sequence)
+    added = translation_counts - source_counts
+    missing = source_counts - translation_counts
+    order_changed = not added and not missing and source_sequence != translation_sequence
+    return (
+        added,
+        missing,
+        order_changed,
+    )
+
+
 def introduced_blocked_script_codepoints(source: str, translation: str) -> list[tuple[str, int]]:
     """Return (script, codepoint) pairs introduced by translation only.
 
@@ -292,6 +327,23 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
                     for script, code in introduced_blocked_scripts))
         issues.append(_issue("introduced_unsupported_unicode", "reject",
                              "; ".join(detail_parts)))
+
+    added_markers, missing_markers, order_changed = pipeline_marker_delta(
+        source, translation
+    )
+    if added_markers or missing_markers or order_changed:
+        detail_parts = []
+        if added_markers:
+            detail_parts.append(f"added={dict(added_markers)!r}")
+        if missing_markers:
+            detail_parts.append(f"missing={dict(missing_markers)!r}")
+        if order_changed:
+            detail_parts.append("order_changed")
+        issues.append(_issue(
+            "introduced_pipeline_marker",
+            "reject",
+            "; ".join(detail_parts),
+        ))
 
     cyrillic = sorted({ord(char) for char in translation if char not in source
                        and unicodedata.category(char).startswith("L")

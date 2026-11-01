@@ -41,11 +41,29 @@ from pipelines.text.translate_gtx_queue import (
     source_id,
 )
 
-TERM_MARKER_RE = re.compile(r"__MLTD_TERM_(\d{3})__")
-NUMBER_MARKER_RE = re.compile(r"__MLTD_NUMBER_(\d{3})__")
+TERM_MARKER_RE = re.compile(r"__MLTD_TERM_(\d{3})__", re.IGNORECASE)
+NUMBER_MARKER_RE = re.compile(r"__MLTD_NUMBER_(\d{3})__", re.IGNORECASE)
 EXISTING_MARKER_OR_NUMBER_RE = re.compile(
-    r"__MLTD_(?:TERM|TOKEN)_\d{3}__|" + NUMBER_RE.pattern
+    r"__MLTD_(?:TERM|TOKEN|NUMBER)_\d{3}__|" + NUMBER_RE.pattern,
+    re.IGNORECASE,
 )
+PIPELINE_MARKER_RESTORE_ERROR_SIGNATURES = (
+    "structure:unexpected authoritative term marker in output",
+    "structure:authoritative term marker mismatch",
+    "structure:unknown numeric marker",
+    "structure:unresolved numeric marker remains",
+    "structure:numeric markers changed:",
+    "structure:protected-token markers changed",
+    "structure:unknown protected-token marker",
+    "structure:unresolved protected-token marker remains",
+)
+
+
+def is_pipeline_marker_feedback(error: str) -> bool:
+    """Identify pipeline-marker leaks that fail during marker restoration."""
+    return "introduced_pipeline_marker" in error or error.startswith(
+        PIPELINE_MARKER_RESTORE_ERROR_SIGNATURES
+    )
 
 CONFIG_ENVIRONMENT_KEYS = {
     "http_proxy": "HTTP_PROXY",
@@ -235,7 +253,7 @@ def mask_numeric_literals(text: str) -> tuple[str, list[str]]:
 
     def repl(match: re.Match[str]) -> str:
         value = match.group(0)
-        if value.startswith("__MLTD_"):
+        if value.upper().startswith("__MLTD_"):
             return value
         index = len(targets)
         if index > 999:
@@ -1535,6 +1553,13 @@ async def translate_with_model(
                 "must be kept, as must all protected tokens and visible Arabic "
                 "numeric literals."
             )
+            pipeline_marker_correction = (
+                "Keep pipeline marker literals that SOURCE itself contains. Remove "
+                "pipeline markers that are not present in SOURCE. Preserve protected "
+                "tokens in their original count and order, do not carry internal "
+                "marker indices into the final translation, and keep visible Arabic "
+                "numeric literals exactly."
+            )
             if qa_error == "empty_translation":
                 feedback = (
                     "The previous response used its completion budget without "
@@ -1546,6 +1571,16 @@ async def translate_with_model(
                     "The draft is unexpectedly long for this lyric slot and may have imported neighboring text. "
                     "Re-translate SOURCE alone. Keep deictic or unfinished wording without spelling out PREVIOUS/NEXT. "
                     "Do not copy neighboring-slot content into the answer."
+                )
+                if "introduced_unsupported_unicode" in qa_error:
+                    feedback += " " + marker_correction
+                if is_pipeline_marker_feedback(qa_error):
+                    feedback += " " + pipeline_marker_correction
+            elif is_pipeline_marker_feedback(qa_error):
+                feedback = (
+                    f"Previous output failed deterministic QA ({qa_error}). "
+                    "Re-translate the same SOURCE only and change nothing else. "
+                    + pipeline_marker_correction
                 )
                 if "introduced_unsupported_unicode" in qa_error:
                     feedback += " " + marker_correction

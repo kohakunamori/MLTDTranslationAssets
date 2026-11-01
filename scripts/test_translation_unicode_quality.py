@@ -42,7 +42,10 @@ from pipelines.text.mltd_translation_quality import (  # noqa: E402
 )
 from pipelines.text.translate_mltd_api_pool import (  # noqa: E402
     ModelConfig,
+    mask_numeric_literals,
+    restore_numeric_literals,
     translate_with_model,
+    validate_candidate,
 )
 
 
@@ -112,6 +115,7 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
         replies: list[str],
         *,
         row_extra: dict | None = None,
+        authoritative_terms: dict[str, str] | None = None,
     ) -> tuple[dict | None, str, defaultdict, list[dict]]:
         """Drive ``translate_with_model`` against scripted mock answers."""
         requests: list[dict] = []
@@ -141,7 +145,7 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
                     "SYSTEM",
                     row,
                     self.glossary,
-                    {},
+                    authoritative_terms or {},
                     stats,
                 )
             return candidate, error, stats
@@ -265,6 +269,278 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
 
         codes = {item["code"] for item in self.evaluate(source, translation)["issues"]}
         self.assertNotIn("introduced_unsupported_unicode", codes)
+
+    def test_introduced_pipeline_markers_are_blocked_case_insensitively(self) -> None:
+        leaks = [
+            "__MLTD_TERM_NNN__",
+            "__mltd_TOKEN_NNN__",
+            "__Mltd_NUMBER_nnn__",
+        ]
+        for marker in leaks:
+            with self.subTest(marker=marker):
+                result = self.evaluate("また明日ね。", "明天见。" + marker)
+                issues = result["issues"]
+                marker_issue = next(
+                    item for item in issues if item["code"] == "introduced_pipeline_marker"
+                )
+                self.assertNotIn(
+                    "introduced_unsupported_unicode",
+                    {item["code"] for item in issues},
+                )
+                self.assertIn("added=", marker_issue["detail"])
+                self.assertNotIn("U+", marker_issue["detail"])
+
+    def test_pipeline_marker_lookalikes_are_not_blocked(self) -> None:
+        translations = [
+            "明天见。NNN",
+            "明天见。__MLTD_FOO_NNN__",
+            "明天见。__MLTD_TERM_NN__",
+            "明天见。__MLTD_TERM_NNNN__",
+            "明天见。__MLTD_TERM_NNN",
+            "明天见。__MLTD_TERMN_NNN__",
+            "明天见。__MLTD_TERM_ABC__",
+        ]
+        for translation in translations:
+            with self.subTest(translation=translation):
+                result = self.evaluate("また明日ね。", translation)
+                self.assertNotIn(
+                    "introduced_pipeline_marker",
+                    {item["code"] for item in result["issues"]},
+                )
+                self.assertNotEqual(result["qa_verdict"], "REJECT")
+
+    def test_source_pipeline_marker_multiset_is_preserved(self) -> None:
+        markers = [
+            "__MLTD_TERM_NNN__",
+            "__MLTD_TOKEN_NNN__",
+            "__MLTD_NUMBER_NNN__",
+        ]
+        for marker in markers:
+            with self.subTest(marker=marker):
+                source = "また明日ね。" + marker
+                kept = self.evaluate(source, "明天见。" + marker)
+                self.assertNotIn(
+                    "introduced_pipeline_marker",
+                    {item["code"] for item in kept["issues"]},
+                )
+
+                duplicated = self.evaluate(source, "明天见。" + marker + marker)
+                duplicate_codes = {
+                    item["code"] for item in duplicated["issues"]
+                }
+                self.assertIn("introduced_pipeline_marker", duplicate_codes)
+
+                missing = self.evaluate(source, "明天见。")
+                self.assertIn(
+                    "introduced_pipeline_marker",
+                    {item["code"] for item in missing["issues"]},
+                )
+
+    def test_source_pipeline_marker_order_is_preserved(self) -> None:
+        source = "また明日ね。__MLTD_TERM_NNN____MLTD_TOKEN_NNN__"
+        translation = "明天见。__MLTD_TOKEN_NNN____MLTD_TERM_NNN__"
+        result = self.evaluate(source, translation)
+        self.assertEqual(result["qa_verdict"], "REJECT")
+        issue = next(
+            item
+            for item in result["issues"]
+            if item["code"] == "introduced_pipeline_marker"
+        )
+        self.assertIn("order_changed", issue["detail"])
+        self.assertNotIn("added=", issue["detail"])
+        self.assertNotIn("missing=", issue["detail"])
+
+    def test_numeric_marker_restore_remains_stable(self) -> None:
+        source = "獲得数は2026年。"
+        masked, targets = mask_numeric_literals(source)
+        self.assertIn("__MLTD_NUMBER_000__", masked)
+        self.assertEqual(restore_numeric_literals(masked, targets), source)
+        for marker in (
+            "__MLTD_NUMBER_000__",
+            "__mltd_number_000__",
+            "__MLTD_Number_000__",
+        ):
+            with self.subTest(marker=marker):
+                self.assertEqual(mask_numeric_literals(marker), (marker, []))
+
+    def test_source_template_survives_numeric_masking_round_trip(self) -> None:
+        source = "獲得数は2026、__MLTD_NUMBER_NNN__枚です。"
+        expected = "获得数是2026，__MLTD_NUMBER_NNN__枚。"
+        candidate, error, stats, requests = self._translate_with_scripted_replies(
+            source,
+            ["获得数是__MLTD_NUMBER_000__，__MLTD_NUMBER_NNN__枚。"],
+        )
+
+        self.assertEqual(error, "")
+        self.assertIsNotNone(candidate)
+        self.assertEqual(candidate["translation"], expected)
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(stats["test"]["accepted"], 1)
+
+    def test_indexed_source_pipeline_marker_is_rejected_as_invalid(self) -> None:
+        cases = [
+            ("__MLTD_TERM_000__", "unexpected authoritative term marker"),
+            ("__mltd_TERM_000__", "unexpected authoritative term marker"),
+            ("__MLTD_term_000__", "unexpected authoritative term marker"),
+            ("__MLTD_TOKEN_000__", "unknown protected-token marker"),
+            ("__mltd_TOKEN_000__", "unknown protected-token marker"),
+            ("__MLTD_token_000__", "unknown protected-token marker"),
+            ("__MLTD_NUMBER_000__", "unknown numeric marker"),
+            ("__mltd_number_000__", "unknown numeric marker"),
+            ("__MLTD_Number_000__", "unknown numeric marker"),
+        ]
+        for marker, expected_error in cases:
+            with self.subTest(marker=marker):
+                source = "また明日ね。" + marker
+                row = {
+                    "source": source,
+                    "source_sha256": sha256_text(source),
+                    "task_hint": "DIALOGUE",
+                }
+                candidate, error = validate_candidate(
+                    row, marker, [], [], self.glossary
+                )
+                self.assertIsNone(candidate)
+                self.assertIn("structure:", error)
+                self.assertIn(expected_error, error)
+
+    def test_pipeline_marker_retry_then_clean_candidate(self) -> None:
+        source = "また明日ね。"
+        candidate, error, stats, requests = self._translate_with_scripted_replies(
+            source,
+            ["明天见。__MLTD_TERM_NNN__", "明天见。"],
+        )
+
+        self.assertEqual(error, "")
+        self.assertIsNotNone(candidate)
+        self.assertEqual(candidate["translation"], "明天见。")
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(stats["test"]["requests"], 2)
+        self.assertEqual(stats["test"]["qa_retries"], 1)
+        self.assertEqual(stats["test"]["accepted"], 1)
+        correction = retry_correction(requests[1]["messages"][-1]["content"])
+        self.assertIn("introduced_pipeline_marker", correction)
+        self.assertIn("Keep pipeline marker literals", correction)
+        self.assertIn("Remove pipeline markers", correction)
+        self.assertNotIn("U+", correction)
+
+    def test_pipeline_marker_repeated_leak_is_not_accepted(self) -> None:
+        source = "また明日ね。"
+        leak = "明天见。__mltd_TOKEN_NNN__"
+        candidate, error, stats, requests = self._translate_with_scripted_replies(
+            source,
+            [leak, leak],
+        )
+
+        self.assertIsNone(candidate)
+        self.assertIn("introduced_pipeline_marker", error)
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(stats["test"]["requests"], 2)
+        self.assertEqual(stats["test"]["qa_retries"], 2)
+        self.assertEqual(stats["test"]["accepted"], 0)
+
+    def test_indexed_marker_restore_errors_use_pipeline_feedback(self) -> None:
+        source = "また明日ね。"
+        for leak in ("__MLTD_TERM_000__", "__MLTD_NUMBER_000__"):
+            with self.subTest(leak=leak):
+                candidate, error, stats, requests = self._translate_with_scripted_replies(
+                    source,
+                    ["明天见。" + leak, "明天见。"],
+                )
+
+                self.assertEqual(error, "")
+                self.assertIsNotNone(candidate)
+                self.assertEqual(candidate["translation"], "明天见。")
+                self.assertEqual(len(requests), 2)
+                self.assertEqual(stats["test"]["qa_retries"], 1)
+                self.assertEqual(stats["test"]["accepted"], 1)
+                correction = retry_correction(requests[1]["messages"][-1]["content"])
+                self.assertIn("Keep pipeline marker literals", correction)
+                self.assertIn("Remove pipeline markers", correction)
+                self.assertIn("structure:", correction)
+                self.assertNotIn("introduced_unsupported_unicode", correction)
+
+    def test_authoritative_term_marker_count_errors_use_pipeline_feedback(self) -> None:
+        source = "ジュリアは元気です。"
+        terms = {"ジュリア": "茱莉亚"}
+        clean = "__MLTD_TERM_000__很有精神。"
+        leaks = [
+            "她很有精神。",
+            "__MLTD_TERM_000____MLTD_TERM_000__很有精神。",
+        ]
+        for leak in leaks:
+            with self.subTest(leak=leak):
+                candidate, error, stats, requests = self._translate_with_scripted_replies(
+                    source,
+                    [leak, clean],
+                    authoritative_terms=terms,
+                )
+
+                self.assertEqual(error, "")
+                self.assertIsNotNone(candidate)
+                self.assertEqual(candidate["translation"], "茱莉亚很有精神。")
+                self.assertEqual(len(requests), 2)
+                self.assertEqual(stats["test"]["qa_retries"], 1)
+                self.assertEqual(stats["test"]["accepted"], 1)
+                correction = retry_correction(requests[1]["messages"][-1]["content"])
+                self.assertIn("authoritative term marker mismatch", correction)
+                self.assertIn("Keep pipeline marker literals", correction)
+                self.assertNotIn("introduced_unsupported_unicode", correction)
+
+    def test_unknown_protected_token_marker_uses_pipeline_feedback(self) -> None:
+        source = "また明日ね。"
+        candidate, error, stats, requests = self._translate_with_scripted_replies(
+            source,
+            ["明天见。__MLTD_TOKEN_000__", "明天见。"],
+        )
+
+        self.assertEqual(error, "")
+        self.assertIsNotNone(candidate)
+        self.assertEqual(candidate["translation"], "明天见。")
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(stats["test"]["qa_retries"], 1)
+        correction = retry_correction(requests[1]["messages"][-1]["content"])
+        self.assertIn("unknown protected-token marker", correction)
+        self.assertIn("Keep pipeline marker literals", correction)
+        self.assertNotIn("introduced_unsupported_unicode", correction)
+
+    def test_pipeline_marker_feedback_combines_with_context_spill(self) -> None:
+        source = "それも嘘なの？"
+        leaky = "之前你说无法从噩梦里醒过来，__MLTD_TERM_NNN__都是谎言吗？"
+        clean = "那也是谎言吗？"
+        candidate, error, stats, requests = self._translate_with_scripted_replies(
+            source,
+            [leaky, clean],
+            row_extra={
+                "task": "ASSETS_LYRICS",
+                "context_examples": [
+                    {"context": [{"relative": -1, "source": "一人で悪夢から目覚められない。"}]}
+                ],
+            },
+        )
+
+        self.assertEqual(error, "")
+        self.assertEqual(candidate["translation"], clean)
+        self.assertEqual(stats["test"]["qa_retries"], 1)
+        correction = retry_correction(requests[1]["messages"][-1]["content"])
+        self.assertIn("unexpectedly long", correction)
+        self.assertIn("Re-translate SOURCE alone", correction)
+        self.assertIn("Keep pipeline marker literals", correction)
+
+    def test_unicode_residue_retry_keeps_unicode_feedback_only(self) -> None:
+        source = "あずささん、今、鼻歌を歌っていましたか？"
+        residues = ["\uC988", "\ue000"]
+        for residue in residues:
+            with self.subTest(residue=residue):
+                candidate, error, stats, requests = self._translate_with_scripted_replies(
+                    source,
+                    ["梓小姐，您刚才是在哼歌吗？" + residue, "梓小姐，您刚才是在哼歌吗？"],
+                )
+                self.assertEqual(error, "")
+                self.assertEqual(stats["test"]["qa_retries"], 1)
+                correction = retry_correction(requests[1]["messages"][-1]["content"])
+                self.assertIn("introduced_unsupported_unicode", correction)
+                self.assertNotIn("introduced_pipeline_marker", correction)
 
     def test_bounded_retry_saves_clean_candidate_after_script_reject(self) -> None:
         source = "あずささん、今、鼻歌を歌っていましたか？"
