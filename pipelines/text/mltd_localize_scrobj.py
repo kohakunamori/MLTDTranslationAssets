@@ -27,6 +27,10 @@ from pathlib import Path
 from typing import Iterable
 
 import UnityPy
+try:  # UnityPy's own split matcher keeps this branch in lockstep with its loader.
+    from UnityPy.environment import reSplit as _UNITYPY_SPLIT_RE
+except ImportError:  # pragma: no cover - UnityPy moved the private helper
+    _UNITYPY_SPLIT_RE = re.compile(r"(.*?([^/\\]+?))\.split\d+")
 
 _MODULE_DIR = Path(__file__).resolve().parent
 if str(_MODULE_DIR) not in sys.path:
@@ -95,20 +99,7 @@ class LyricSlot:
         return sha256_text(self.text)
 
 
-def read_slots(bundle: Path) -> list[LyricSlot]:
-    """Every non-empty lyric line of every ``scenario`` object, in bundle order.
-
-    Returns localizable (Japanese) lines first, then the remaining lines: that is
-    the order the existing library uses, and it keeps the "translated" rows
-    contiguous for the portal and the review UI.
-    """
-    bundle = Path(bundle)
-    if not bundle.is_file():
-        raise LyricBundleError(f"lyric bundle not found: {bundle}")
-    try:
-        environment = UnityPy.load(str(bundle))
-    except Exception as exc:  # noqa: BLE001 - any container error is "not a lyric bundle"
-        raise LyricBundleError(f"{bundle}: not a readable UnityFS archive ({type(exc).__name__}: {exc})") from exc
+def _slots_from_environment(environment, bundle: Path) -> list[LyricSlot]:
     wide: list[LyricSlot] = []
     rest: list[LyricSlot] = []
     scenario_objects = 0
@@ -138,6 +129,40 @@ def read_slots(bundle: Path) -> list[LyricSlot]:
     if not scenario_objects:
         raise LyricBundleError(f"{bundle}: no MonoBehaviour with a scenario[] array")
     return wide + rest
+
+
+def read_slots(bundle: Path) -> list[LyricSlot]:
+    """Every non-empty lyric line of every ``scenario`` object, in bundle order.
+
+    Returns localizable (Japanese) lines first, then the remaining lines: that is
+    the order the existing library uses, and it keeps the "translated" rows
+    contiguous for the portal and the review UI.
+    """
+    bundle = Path(bundle)
+    if not bundle.is_file():
+        raise LyricBundleError(f"lyric bundle not found: {bundle}")
+    if _UNITYPY_SPLIT_RE.match(str(bundle)):
+        # UnityPy merges .splitN parts into bytes and closes each part, so path
+        # loading keeps split support without retaining a bundle handle.
+        try:
+            environment = UnityPy.load(str(bundle))
+        except Exception as exc:  # noqa: BLE001 - any container error is "not a lyric bundle"
+            raise LyricBundleError(f"{bundle}: not a readable UnityFS archive ({type(exc).__name__}: {exc})") from exc
+        return _slots_from_environment(environment, bundle)
+    try:
+        stream = bundle.open("rb")
+    except Exception as exc:  # noqa: BLE001 - any container error is "not a lyric bundle"
+        raise LyricBundleError(f"{bundle}: not a readable UnityFS archive ({type(exc).__name__}: {exc})") from exc
+    # UnityPy keeps path-opened handles alive; scope the stream so exceptions
+    # cannot leave the bundle locked on Windows.  Stream loading also loses the
+    # bundle directory used to resolve dependencies, so restore it before use.
+    with stream:
+        try:
+            environment = UnityPy.load(stream)
+        except Exception as exc:  # noqa: BLE001 - any container error is "not a lyric bundle"
+            raise LyricBundleError(f"{bundle}: not a readable UnityFS archive ({type(exc).__name__}: {exc})") from exc
+        environment.path = str(bundle.parent)
+        return _slots_from_environment(environment, bundle)
 
 
 def slot_rows(bundle_name: str, slots: Iterable[LyricSlot], updated_at: str) -> list[dict]:

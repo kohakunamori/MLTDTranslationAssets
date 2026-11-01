@@ -73,6 +73,34 @@
         "iteration4/voice-review-20261031.json:VOICE-4-002 talk_905 bare-subject evidence",
         "glossary/idols.json and glossary/authoritative-terms.json canonical spelling"
       ]
+    },
+    {
+      "source_form": "のり子",
+      "target": "法子",
+      "idol_id": 43,
+      "typed_record_key": "ld_idol_firstname_43",
+      "canonical_source": "福田のり子",
+      "canonical_target": "福田法子",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_43 ja=のり子 zh=法子 (accepted legacy)",
+        "igp_jp.gtx:ld_idol_firstname_43 ja=のり子 zh=法子 (accepted legacy)",
+        "glossary/idols.json id=43 and authoritative-terms.json 福田のり子 -> 福田法子"
+      ]
+    },
+    {
+      "source_form": "エレナ",
+      "target": "艾琳娜",
+      "idol_id": 18,
+      "typed_record_key": "ld_idol_firstname_18",
+      "canonical_source": "島原エレナ",
+      "canonical_target": "岛原艾琳娜",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_18 ja=エレナ zh=艾琳娜 (accepted legacy)",
+        "igp_jp.gtx:ld_idol_firstname_18 ja=エレナ zh=艾琳娜 (accepted legacy)",
+        "glossary/idols.json id=18 and authoritative-terms.json 島原エレナ -> 岛原艾琳娜"
+      ]
     }
   ]
 }

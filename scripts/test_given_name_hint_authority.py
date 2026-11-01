@@ -18,6 +18,8 @@ EXPECTED = {
     "やよい": ("弥生", 5, "高槻やよい", "高槻弥生"),
     "あずさ": ("梓", 10, "三浦あずさ", "三浦梓"),
     "まつり": ("茉莉", 21, "徳川まつり", "德川茉莉"),
+    "のり子": ("法子", 43, "福田のり子", "福田法子"),
+    "エレナ": ("艾琳娜", 18, "島原エレナ", "岛原艾琳娜"),
 }
 
 
@@ -34,7 +36,11 @@ class GivenNameHintAuthorityTests(unittest.TestCase):
             for entry in document.entries
         }
         self.assertEqual(actual, EXPECTED)
-        self.assertEqual(document.entries[0].review_basis, "project_evidence+agent_review_not_human_reviewed")
+        for entry in document.entries:
+            self.assertEqual(
+                entry.review_basis,
+                "project_evidence+agent_review_not_human_reviewed",
+            )
 
         glossary = json.loads(
             (ROOT / "glossary" / "authoritative-terms.json").read_text(

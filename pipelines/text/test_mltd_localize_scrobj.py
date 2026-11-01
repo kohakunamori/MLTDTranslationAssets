@@ -4,12 +4,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # ``pipelines/text`` is a package, so pytest puts ``pipelines/`` on sys.path and
 # the sibling module would not resolve by bare name.  Insert the directory the
 # way mltd_localization_pipeline.py does, so the test runs from any CWD.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import mltd_localize_scrobj as scrobj_module  # noqa: E402
 from mltd_localize_scrobj import (  # noqa: E402
     bilingual_line,
     LyricBundleError,
@@ -338,6 +340,115 @@ class AggregateTests(unittest.TestCase):
             self.assertEqual(manifest["counts"]["total_slots"], 2)
             self.assertEqual(manifest["counts"]["translated_slots"], 1)
             self.assertEqual(len((root / "all_lyrics.jsonl").read_text(encoding="utf-8").split("\n")) - 1, 2)
+
+
+class _FakeUnityType:
+    name = "MonoBehaviour"
+
+
+class _FakeUnityObject:
+    def __init__(self, tree):
+        self.type = _FakeUnityType()
+        self._tree = tree
+
+    def read_typetree(self):
+        return self._tree
+
+
+class _FakeUnityEnvironment:
+    def __init__(self, *texts: str):
+        self.path = None
+        self.objects = [
+            _FakeUnityObject(
+                {"scenario": [{"str": text, "tick": 9600, "absTime": 1.5}]}
+            )
+            for text in texts
+        ]
+
+
+class ReaderLoadingStrategyTests(unittest.TestCase):
+    def test_split_bundle_uses_unitypy_path_loader(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "song.unity3d.split0"
+            path.write_bytes(b"split")
+            environment = _FakeUnityEnvironment("あ")
+            with mock.patch.object(scrobj_module.UnityPy, "load", return_value=environment) as load:
+                slots = read_slots(path)
+            self.assertEqual([slot.text for slot in slots], ["あ"])
+            self.assertEqual(load.call_args.args, (str(path),))
+            self.assertIsInstance(load.call_args.args[0], str)
+
+    def test_stream_bundle_closes_stream_and_restores_bundle_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "song.unity3d"
+            path.write_bytes(b"bundle")
+            environment = _FakeUnityEnvironment("あ")
+            streams = []
+
+            def fake_load(stream):
+                streams.append(stream)
+                return environment
+
+            with mock.patch.object(scrobj_module.UnityPy, "load", side_effect=fake_load):
+                slots = read_slots(path)
+            self.assertEqual([slot.text for slot in slots], ["あ"])
+            self.assertEqual(environment.path, str(path.parent))
+            self.assertEqual(len(streams), 1)
+            self.assertFalse(isinstance(streams[0], str))
+            self.assertTrue(streams[0].closed)
+
+    def test_stream_load_error_closes_stream_and_preserves_cause(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "song.unity3d"
+            path.write_bytes(b"garbage")
+            streams = []
+
+            def fake_load(stream):
+                streams.append(stream)
+                raise ValueError("boom")
+
+            with mock.patch.object(scrobj_module.UnityPy, "load", side_effect=fake_load):
+                with self.assertRaises(LyricBundleError) as caught:
+                    read_slots(path)
+            self.assertEqual(
+                str(caught.exception),
+                f"{path}: not a readable UnityFS archive (ValueError: boom)",
+            )
+            self.assertIsInstance(caught.exception.__cause__, ValueError)
+            self.assertEqual(len(streams), 1)
+            self.assertTrue(streams[0].closed)
+
+    def test_stream_reader_error_closes_stream(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "song.unity3d"
+            path.write_bytes(b"bundle")
+            environment = _FakeUnityEnvironment()
+            streams = []
+
+            def fake_load(stream):
+                streams.append(stream)
+                return environment
+
+            with mock.patch.object(scrobj_module.UnityPy, "load", side_effect=fake_load):
+                with self.assertRaises(LyricBundleError) as caught:
+                    read_slots(path)
+            self.assertIn("no MonoBehaviour with a scenario[] array", str(caught.exception))
+            self.assertEqual(len(streams), 1)
+            self.assertTrue(streams[0].closed)
+
+    def test_split_load_error_preserves_cause(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "song.unity3d.split0"
+            path.write_bytes(b"split")
+            with mock.patch.object(scrobj_module.UnityPy, "load", side_effect=ValueError("boom")) as load:
+                with self.assertRaises(LyricBundleError) as caught:
+                    read_slots(path)
+            self.assertEqual(
+                str(caught.exception),
+                f"{path}: not a readable UnityFS archive (ValueError: boom)",
+            )
+            self.assertIsInstance(caught.exception.__cause__, ValueError)
+            self.assertEqual(load.call_args.args, (str(path),))
 
 
 class ReaderContractTests(unittest.TestCase):

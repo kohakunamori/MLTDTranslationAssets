@@ -60,6 +60,8 @@ class GivenNameHintTests(unittest.TestCase):
             "やよいちゃんは決まりそう？": "やよい",
             "あずささん、今、鼻歌を歌っていましたか？": "あずさ",
             "まつりさん、おはよう。": "まつり",
+            "のり子さん、今日も元気だね。": "のり子",
+            "エレナさん、おはよう。": "エレナ",
             "莉緒とこのみさん、企画を進めます。": "このみ",
         }
         for source, expected in positives.items():
@@ -76,6 +78,10 @@ class GivenNameHintTests(unittest.TestCase):
             "明るい未来の舞台を夢見ている。",
             "一歩ずつ歩いていこう。",
             "秋祭りは来週だ。",
+            "のり子",
+            "エレナ",
+            "のり子の話をしていた。",
+            "エレナの笑顔が印象的だった。",
         ]
         for source in negatives:
             self.assertEqual(applicable_given_name_hints(_row(source), document), (), source)
@@ -85,6 +91,16 @@ class GivenNameHintTests(unittest.TestCase):
             context_examples=[{"context": [{"relative": 0, "source": "このみさん"}]}],
         )
         self.assertEqual(applicable_given_name_hints(context_only, document), ())
+        for context_name in ("のり子さん", "エレナさん"):
+            context_only = _row(
+                "こんにちは。",
+                context_examples=[
+                    {"context": [{"relative": 0, "source": context_name}]}
+                ],
+            )
+            self.assertEqual(
+                applicable_given_name_hints(context_only, document), (), context_name
+            )
 
     def test_typed_key_and_mail_reply_source_gate(self):
         document = load_given_name_hints(HINTS_PATH)
@@ -122,6 +138,17 @@ class GivenNameHintTests(unittest.TestCase):
                     document,
                 )],
                 [entry.source_form],
+            )
+            self.assertEqual(
+                applicable_given_name_hints(
+                    _row(
+                        entry.source_form,
+                        key=entry.typed_record_key,
+                        surface_hint="MAIL_REPLY",
+                    ),
+                    document,
+                ),
+                (),
             )
 
     def test_occurrence_metadata_is_order_independent_and_conservative(self):
@@ -231,6 +258,29 @@ class GivenNameHintTests(unittest.TestCase):
         self.assertLess(prompt.index("NAME_HINTS"), prompt.index("SOURCE:"))
         block = render_given_name_hints(row, document)
         self.assertEqual(block.count("このみ => 木实"), 1)
+
+        for source, expected in (
+            ("のり子さん、今日も元気だね。", "のり子 => 法子"),
+            ("エレナさん、おはよう。", "エレナ => 艾琳娜"),
+        ):
+            prompt = build_user_prompt(
+                _row(source),
+                source,
+                style="legacy",
+                given_name_hints=document,
+            )
+            self.assertIn(expected, prompt)
+            self.assertIn("NAME_HINTS", prompt)
+            self.assertLess(prompt.index("NAME_HINTS"), prompt.index("SOURCE:"))
+
+        for source in ("のり子", "エレナ"):
+            prompt = build_user_prompt(
+                _row(source),
+                source,
+                style="legacy",
+                given_name_hints=document,
+            )
+            self.assertNotIn("NAME_HINTS", prompt)
 
     def test_cli_defaults_to_committed_hint_file(self):
         args = build_parser().parse_args(["--config", "models.json"])
