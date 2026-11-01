@@ -157,14 +157,91 @@ _OWNER_RULED_IDOL_NAMES = {
     },
 }
 
-# Explicit full-name spellings observed in accepted machine-translated source
-# rows.  These are literal aliases, not a whitespace-normalization rule: adding
-# one must never make two neighbouring ordinary words match a character name.
+# Explicit full-name spellings observed in accepted Japanese source records.
+# These are literal aliases, not a separator-normalization rule: adding one
+# must never make two neighbouring ordinary words match a character name.
 _FULLNAME_SOURCE_VARIANTS = {
     "島原 エレナ": "島原エレナ",
     "エミリー スチュアート": "エミリースチュアート",
+    "エミリー・スチュアート": "エミリースチュアート",
     "徳川 まつり": "徳川まつり",
+    "エミリー　スチュアート": "エミリースチュアート",
+    "天海 春香": "天海春香",
+    "如月 千早": "如月千早",
+    "星井 美希": "星井美希",
+    "萩原 雪歩": "萩原雪歩",
+    "高槻 やよい": "高槻やよい",
+    "菊地 真": "菊地真",
+    "水瀬 伊織": "水瀬伊織",
+    "四条 貴音": "四条貴音",
+    "秋月 律子": "秋月律子",
+    "三浦 あずさ": "三浦あずさ",
+    "双海 亜美": "双海亜美",
+    "双海 真美": "双海真美",
+    "我那覇 響": "我那覇響",
+    "春日 未来": "春日未来",
+    "最上 静香": "最上静香",
+    "伊吹 翼": "伊吹翼",
+    "田中 琴葉": "田中琴葉",
+    "佐竹 美奈子": "佐竹美奈子",
+    "所 恵美": "所恵美",
+    "箱崎 星梨花": "箱崎星梨花",
+    "野々原 茜": "野々原茜",
+    "望月 杏奈": "望月杏奈",
+    "七尾 百合子": "七尾百合子",
+    "高山 紗代子": "高山紗代子",
+    "松田 亜利沙": "松田亜利沙",
+    "高坂 海美": "高坂海美",
+    "中谷 育": "中谷育",
+    "天空橋 朋花": "天空橋朋花",
+    "北沢 志保": "北沢志保",
+    "舞浜 歩": "舞浜歩",
+    "木下 ひなた": "木下ひなた",
+    "矢吹 可奈": "矢吹可奈",
+    "横山 奈緒": "横山奈緒",
+    "二階堂 千鶴": "二階堂千鶴",
+    "馬場 このみ": "馬場このみ",
+    "大神 環": "大神環",
+    "豊川 風花": "豊川風花",
+    "宮尾 美也": "宮尾美也",
+    "福田 のり子": "福田のり子",
+    "真壁 瑞希": "真壁瑞希",
+    "篠宮 可憐": "篠宮可憐",
+    "百瀬 莉緒": "百瀬莉緒",
+    "永吉 昴": "永吉昴",
+    "北上 麗花": "北上麗花",
+    "周防 桃子": "周防桃子",
+    "白石 紬": "白石紬",
+    "桜守 歌織": "桜守歌織",
 }
+
+# Separators a literal alias may insert inside its canonical spelling.  The
+# observed separator class selects both the recorded evidence sentence and the
+# metadata count bucket, so counts stay meaningful when a new kind is added.
+_FULLNAME_VARIANT_SEPARATORS = frozenset({" ", "\u3000", "\u30fb"})
+_FULLNAME_VARIANT_KINDS = (
+    (frozenset({" ", "\u3000"}), "space_variant"),
+    (frozenset({"\u30fb"}), "separator_variant"),
+)
+
+
+def _fullname_variant_kind(variant: str) -> str:
+    """Return the recorded separator class of one literal full-name alias."""
+    inserted = frozenset(
+        char for char in variant if char in _FULLNAME_VARIANT_SEPARATORS
+    )
+    for separators, kind in _FULLNAME_VARIANT_KINDS:
+        if inserted and inserted <= separators:
+            return kind
+    raise ValueError(f"unclassified source variant separator: {variant}")
+
+
+def _fullname_variant_kind_counts(
+    variants: dict[str, str] | None = None,
+) -> Counter[str]:
+    """Count literal aliases per separator class, defaulting to the table."""
+    selected = _FULLNAME_SOURCE_VARIANTS if variants is None else variants
+    return Counter(_fullname_variant_kind(variant) for variant in selected)
 
 
 def _source_variant_entries(
@@ -175,11 +252,25 @@ def _source_variant_entries(
     selected = _FULLNAME_SOURCE_VARIANTS if variants is None else variants
     entries: dict[str, dict] = {}
     for variant, canonical_source in selected.items():
+        kind = _fullname_variant_kind(variant)
         if variant in canonical_entries:
             raise ValueError(f"source variant already has an entry: {variant}")
         canonical = canonical_entries.get(canonical_source)
         if not isinstance(canonical, dict):
             raise ValueError(f"missing canonical source entry: {canonical_source}")
+        stripped = "".join(
+            char for char in variant if char not in _FULLNAME_VARIANT_SEPARATORS
+        )
+        if stripped != canonical_source:
+            raise ValueError(
+                "source variant is not a separator spelling of "
+                f"{canonical_source}: {variant}"
+            )
+        if (
+            variant[0] in _FULLNAME_VARIANT_SEPARATORS
+            or variant[-1] in _FULLNAME_VARIANT_SEPARATORS
+        ):
+            raise ValueError(f"source variant has an edge separator: {variant}")
         target = str(canonical.get("target", "")).strip()
         if canonical.get("category") != "character_name" or not target:
             raise ValueError(
@@ -189,7 +280,7 @@ def _source_variant_entries(
             "target": target,
             "category": "character_name",
             "evidence": (
-                "observed_source_fullname_space_variant"
+                f"observed_source_fullname_{kind}"
                 "+canonical_authoritative_target"
             ),
             "source_variant_of": canonical_source,
@@ -330,6 +421,7 @@ def main() -> int:
 
     entries.update(_source_variant_entries(entries))
 
+    variant_kinds = _fullname_variant_kind_counts()
     doc = {
         "schema_version": 1,
         "policy": {
@@ -346,6 +438,10 @@ def main() -> int:
             "idol_names": len(_idol_name_entries()),
             "owner_ruled_character_names": len(_OWNER_RULED_IDOL_NAMES),
             "fullname_source_variants": len(_FULLNAME_SOURCE_VARIANTS),
+            "fullname_source_variants_space": variant_kinds["space_variant"],
+            "fullname_source_variants_separator": variant_kinds[
+                "separator_variant"
+            ],
         },
         "entries": entries,
     }
@@ -353,6 +449,7 @@ def main() -> int:
     args.output.write_text(
         json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(json.dumps(doc["counts"], ensure_ascii=False, indent=2))
     return 0

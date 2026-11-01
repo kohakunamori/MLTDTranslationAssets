@@ -166,6 +166,7 @@ jobs:
             scripts/test_authoritative_term_review_queue.py \
             scripts/test_authoritative_term_matching.py \
             scripts/test_translation_quality_experiment.py \
+            scripts/test_translation_unicode_quality.py \
             scripts/test_audit_human_lyrics.py \
             scripts/test_llm_translate_workflow.py \
             scripts/test_text_job_handoff.py \

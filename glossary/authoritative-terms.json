@@ -8,12 +8,14 @@
     "character_name_min_majority_ratio": 0.8
   },
   "counts": {
-    "entries": 93,
+    "entries": 142,
     "curated": 38,
     "evidence_backed_character_names": 26,
     "idol_names": 26,
     "owner_ruled_character_names": 3,
-    "fullname_source_variants": 3
+    "fullname_source_variants": 52,
+    "fullname_source_variants_space": 51,
+    "fullname_source_variants_separator": 1
   },
   "entries": {
     "{$P$}さん": {
@@ -608,11 +610,305 @@
       "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
       "source_variant_of": "エミリースチュアート"
     },
+    "エミリー・スチュアート": {
+      "target": "艾米莉·斯图亚特",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_separator_variant+canonical_authoritative_target",
+      "source_variant_of": "エミリースチュアート"
+    },
     "徳川 まつり": {
       "target": "德川茉莉",
       "category": "character_name",
       "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
       "source_variant_of": "徳川まつり"
+    },
+    "エミリー　スチュアート": {
+      "target": "艾米莉·斯图亚特",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "エミリースチュアート"
+    },
+    "天海 春香": {
+      "target": "天海春香",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "天海春香"
+    },
+    "如月 千早": {
+      "target": "如月千早",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "如月千早"
+    },
+    "星井 美希": {
+      "target": "星井美希",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "星井美希"
+    },
+    "萩原 雪歩": {
+      "target": "萩原雪步",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "萩原雪歩"
+    },
+    "高槻 やよい": {
+      "target": "高槻弥生",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "高槻やよい"
+    },
+    "菊地 真": {
+      "target": "菊地真",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "菊地真"
+    },
+    "水瀬 伊織": {
+      "target": "水濑伊织",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "水瀬伊織"
+    },
+    "四条 貴音": {
+      "target": "四条贵音",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "四条貴音"
+    },
+    "秋月 律子": {
+      "target": "秋月律子",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "秋月律子"
+    },
+    "三浦 あずさ": {
+      "target": "三浦梓",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "三浦あずさ"
+    },
+    "双海 亜美": {
+      "target": "双海亚美",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "双海亜美"
+    },
+    "双海 真美": {
+      "target": "双海真美",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "双海真美"
+    },
+    "我那覇 響": {
+      "target": "我那霸响",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "我那覇響"
+    },
+    "春日 未来": {
+      "target": "春日未来",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "春日未来"
+    },
+    "最上 静香": {
+      "target": "最上静香",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "最上静香"
+    },
+    "伊吹 翼": {
+      "target": "伊吹翼",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "伊吹翼"
+    },
+    "田中 琴葉": {
+      "target": "田中琴叶",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "田中琴葉"
+    },
+    "佐竹 美奈子": {
+      "target": "佐竹美奈子",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "佐竹美奈子"
+    },
+    "所 恵美": {
+      "target": "所惠美",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "所恵美"
+    },
+    "箱崎 星梨花": {
+      "target": "箱崎星梨花",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "箱崎星梨花"
+    },
+    "野々原 茜": {
+      "target": "野野原茜",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "野々原茜"
+    },
+    "望月 杏奈": {
+      "target": "望月杏奈",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "望月杏奈"
+    },
+    "七尾 百合子": {
+      "target": "七尾百合子",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "七尾百合子"
+    },
+    "高山 紗代子": {
+      "target": "高山纱代子",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "高山紗代子"
+    },
+    "松田 亜利沙": {
+      "target": "松田亚利沙",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "松田亜利沙"
+    },
+    "高坂 海美": {
+      "target": "高坂海美",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "高坂海美"
+    },
+    "中谷 育": {
+      "target": "中谷育",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "中谷育"
+    },
+    "天空橋 朋花": {
+      "target": "天空桥朋花",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "天空橋朋花"
+    },
+    "北沢 志保": {
+      "target": "北泽志保",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "北沢志保"
+    },
+    "舞浜 歩": {
+      "target": "舞滨步",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "舞浜歩"
+    },
+    "木下 ひなた": {
+      "target": "木下日向",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "木下ひなた"
+    },
+    "矢吹 可奈": {
+      "target": "矢吹可奈",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "矢吹可奈"
+    },
+    "横山 奈緒": {
+      "target": "横山奈绪",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "横山奈緒"
+    },
+    "二階堂 千鶴": {
+      "target": "二阶堂千鹤",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "二階堂千鶴"
+    },
+    "馬場 このみ": {
+      "target": "马场木实",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "馬場このみ"
+    },
+    "大神 環": {
+      "target": "大神环",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "大神環"
+    },
+    "豊川 風花": {
+      "target": "丰川风花",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "豊川風花"
+    },
+    "宮尾 美也": {
+      "target": "宫尾美也",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "宮尾美也"
+    },
+    "福田 のり子": {
+      "target": "福田法子",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "福田のり子"
+    },
+    "真壁 瑞希": {
+      "target": "真壁瑞希",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "真壁瑞希"
+    },
+    "篠宮 可憐": {
+      "target": "篠宫可怜",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "篠宮可憐"
+    },
+    "百瀬 莉緒": {
+      "target": "百濑莉绪",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "百瀬莉緒"
+    },
+    "永吉 昴": {
+      "target": "永吉昴",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "永吉昴"
+    },
+    "北上 麗花": {
+      "target": "北上丽花",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "北上麗花"
+    },
+    "周防 桃子": {
+      "target": "周防桃子",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "周防桃子"
+    },
+    "白石 紬": {
+      "target": "白石䌷",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "白石紬"
+    },
+    "桜守 歌織": {
+      "target": "樱守歌织",
+      "category": "character_name",
+      "evidence": "observed_source_fullname_space_variant+canonical_authoritative_target",
+      "source_variant_of": "桜守歌織"
     }
   }
 }

@@ -17,14 +17,21 @@ REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from pipelines.core.hashing import sha256_text
-from pipelines.core.jsonl import read_jsonl, write_jsonl
-from pipelines.text.authoritative_term_matching import find_term_matches
-from pipelines.text.translation_tokens import KANA_RE, PROTECTED_TOKEN_RE, validate_translation
-from pipelines.text.mltd_lyric_rules import validate_lyric_tokens
+from pipelines.core.hashing import sha256_text  # noqa: E402
+from pipelines.core.jsonl import read_jsonl, write_jsonl  # noqa: E402
+from pipelines.text.authoritative_term_matching import find_term_matches  # noqa: E402
+from pipelines.text.translation_tokens import (  # noqa: E402
+    KANA_RE,
+    PROTECTED_TOKEN_RE,
+    validate_translation,
+)
+from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
 
 NUMBER_RE = re.compile(r"\d+(?:\.\d+)?%?")
 JP_PERCENT_RE = re.compile(r"(?P<number>\d+(?:\.\d+)?)パーセント")
+# Pipeline placeholders are normally restored before QA. Mask any that survive
+# so the script check below never mistakes infrastructure for translated text.
+PIPELINE_MARKER_RE = re.compile(r"__MLTD_(?:TERM|TOKEN|NUMBER)_\d+__")
 TRADITIONAL_CHAR_MAP_PATH = (
     REPO / "localization/quality/traditional-to-simplified-char-map.json"
 )
@@ -170,6 +177,38 @@ def introduced_traditional_chars(source: str, translation: str) -> Counter[str]:
     )
 
 
+INTRODUCED_BLOCKED_SCRIPTS = ("HANGUL", "DEVANAGARI")
+
+
+def script_scan_text(value: str) -> str:
+    """Return value with formatting tokens and pipeline markers removed."""
+    return PIPELINE_MARKER_RE.sub("", PROTECTED_TOKEN_RE.sub("", value))
+
+
+def introduced_blocked_script_codepoints(source: str, translation: str) -> list[tuple[str, int]]:
+    """Return (script, codepoint) pairs introduced by translation only.
+
+    Hangul and Devanagari are legitimate content when SOURCE itself uses them
+    (for example a Korean or Devanagari title).  Only characters absent from
+    SOURCE are residue.  This deliberately does not ban other non-Chinese
+    scripts or ordinary kana, which stays a non-blocking review signal below.
+    """
+    source_chars = set(script_scan_text(source))
+    introduced: list[tuple[str, int]] = []
+    seen: set[int] = set()
+    for char in script_scan_text(translation):
+        code = ord(char)
+        if char in source_chars or code in seen:
+            continue
+        name = unicodedata.name(char, "")
+        for script in INTRODUCED_BLOCKED_SCRIPTS:
+            if script in name:
+                seen.add(code)
+                introduced.append((script, code))
+                break
+    return introduced
+
+
 def _issue(code: str, severity: str, detail: str = "") -> dict:
     row = {"code": code, "severity": severity}
     if detail:
@@ -230,9 +269,22 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
 
     unsupported = sorted({ord(char) for char in translation
                           if char not in source and unicodedata.category(char) in {"Cn", "Cs"}})
-    if unsupported:
+    introduced_blocked_scripts = introduced_blocked_script_codepoints(source, translation)
+    if unsupported or introduced_blocked_scripts:
+        detail_parts: list[str] = []
+        if unsupported:
+            detail_parts.append(
+                "codepoints=" + ",".join(f"U+{code:04X}" for code in unsupported))
+        if introduced_blocked_scripts:
+            # Reuse the existing blocking code so the bounded QA retry path
+            # (BASIC_BLOCKING_QA_CODES) receives script residue as feedback
+            # without a shared-list edit or a repository-wide hard reject.
+            detail_parts.append(
+                "scripts=" + ",".join(
+                    f"{script}:U+{code:04X}"
+                    for script, code in introduced_blocked_scripts))
         issues.append(_issue("introduced_unsupported_unicode", "reject",
-                             "codepoints=" + ",".join(f"U+{code:04X}" for code in unsupported)))
+                             "; ".join(detail_parts)))
 
     cyrillic = sorted({ord(char) for char in translation if char not in source
                        and unicodedata.category(char).startswith("L")

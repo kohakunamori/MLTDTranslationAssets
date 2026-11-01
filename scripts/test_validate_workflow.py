@@ -138,6 +138,16 @@ class SparseCheckoutTests(unittest.TestCase):
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn("scripts/test_authoritative_term_matching.py", run)
 
+    def test_translation_unicode_quality_is_in_the_publish_gate(self):
+        """The Unicode quality contract must stay gated.
+
+        ``scripts/test_translation_unicode_quality.py`` pins how translation
+        quality treats unsupported Unicode; dropping it from the suite would
+        let a Unicode regression ship without the offline gate noticing.
+        """
+        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
+        self.assertIn("scripts/test_translation_unicode_quality.py", run)
+
 
 if __name__ == "__main__":
     unittest.main()
