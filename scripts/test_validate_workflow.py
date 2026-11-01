@@ -147,6 +147,10 @@ class SparseCheckoutTests(unittest.TestCase):
         """
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn("scripts/test_given_name_hints.py", run)
+        # Committed locale evidence must run where its data is checked out.
+        authority_run = self.step("validate", "Run repository validation")["run"]
+        self.assertIn("python -m unittest scripts.test_given_name_hint_authority", authority_run)
+        self.assertNotIn("test_given_name_hint_authority", run)
 
     def test_translation_unicode_quality_is_in_the_publish_gate(self):
         """The Unicode quality contract must stay gated.

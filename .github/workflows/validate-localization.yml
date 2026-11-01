@@ -90,6 +90,8 @@ jobs:
       - name: Run repository validation
         run: |
           python scripts/validate_repo.py
+          # This evidence check reads locales/, which the regression job omits.
+          python -m unittest scripts.test_given_name_hint_authority
 
   regression:
     name: Offline regression
