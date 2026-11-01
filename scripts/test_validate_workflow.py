@@ -138,6 +138,16 @@ class SparseCheckoutTests(unittest.TestCase):
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn("scripts/test_authoritative_term_matching.py", run)
 
+    def test_given_name_hints_are_in_the_publish_gate(self):
+        """The scoped first-name hint contract must stay gated.
+
+        ``scripts/test_given_name_hints.py`` pins the source-gated name hint
+        behavior that keeps ordinary words such as ``未来`` and ``好み`` safe;
+        dropping it would let an unsafe global alias mechanism ship unchecked.
+        """
+        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
+        self.assertIn("scripts/test_given_name_hints.py", run)
+
     def test_translation_unicode_quality_is_in_the_publish_gate(self):
         """The Unicode quality contract must stay gated.
 

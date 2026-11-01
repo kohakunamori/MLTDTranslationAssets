@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "mltd-scoped-given-name-hints",
+  "status": "project_evidence_and_agent_review_not_human_reviewed",
+  "policy": {
+    "application": "per_row_prompt_hint_only",
+    "never_mask": true,
+    "never_restore_or_replace": true,
+    "never_translate_honorific_by_fixed_rule": true,
+    "never_add_persona": true,
+    "typed_record_gate_excludes_mail_reply": true
+  },
+  "honorifics": [
+    "お姉さん",
+    "姉さん",
+    "ねえさん",
+    "ちゃん",
+    "さん",
+    "くん",
+    "さま",
+    "様",
+    "先輩",
+    "先生"
+  ],
+  "entries": [
+    {
+      "source_form": "このみ",
+      "target": "木实",
+      "idol_id": 39,
+      "typed_record_key": "ld_idol_firstname_39",
+      "canonical_source": "馬場このみ",
+      "canonical_target": "马场木实",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "iteration4/voice-review-20261031.json:VOICE-4-002 talk_828,talk_1424",
+        "iteration4/semantic-detail-review-20261101.json:findings 20,21,33,34,44-48"
+      ]
+    },
+    {
+      "source_form": "やよい",
+      "target": "弥生",
+      "idol_id": 5,
+      "typed_record_key": "ld_idol_firstname_5",
+      "canonical_source": "高槻やよい",
+      "canonical_target": "高槻弥生",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "iteration4/voice-review-20261031.json:VOICE-4-002 talk_1012",
+        "iteration4/semantic-detail-review-20261101.json:finding 19"
+      ]
+    },
+    {
+      "source_form": "あずさ",
+      "target": "梓",
+      "idol_id": 10,
+      "typed_record_key": "ld_idol_firstname_10",
+      "canonical_source": "三浦あずさ",
+      "canonical_target": "三浦梓",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "iteration4/voice-review-20261031.json:VOICE-4-002 talk_833,talk_954"
+      ]
+    },
+    {
+      "source_form": "まつり",
+      "target": "茉莉",
+      "idol_id": 21,
+      "typed_record_key": "ld_idol_firstname_21",
+      "canonical_source": "徳川まつり",
+      "canonical_target": "德川茉莉",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "iteration4/voice-review-20261031.json:VOICE-4-002 talk_905 bare-subject evidence",
+        "glossary/idols.json and glossary/authoritative-terms.json canonical spelling"
+      ]
+    }
+  ]
+}

@@ -27,6 +27,11 @@ from pipelines.text.translation_tokens import validate_translation
 from pipelines.text.mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
 from pipelines.text.mltd_translation_prompt import compile_prompt_bundle, snapshot_status
 from pipelines.text.mltd_natural_prompt import contextual_prompt
+from pipelines.text.mltd_given_name_hints import (
+    GivenNameHints,
+    load_default_given_name_hints,
+    render_given_name_hints,
+)
 from pipelines.text.mltd_lyric_rules import join_lyric_lines, validate_lyric_tokens
 from pipelines.text.translate_gtx_queue import (
     ACCEPTED_STATUS,
@@ -835,7 +840,13 @@ def task_request_params_for_row(
     return task, effective_reasoning_params(cfg, params)
 
 
-def build_legacy_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "") -> str:
+def build_legacy_user_prompt(
+    row: dict[str, Any],
+    masked_source: str,
+    feedback: str = "",
+    *,
+    given_name_hints: GivenNameHints | None = None,
+) -> str:
     task = classify_task(row)
     codes, _ = speaker_info(row)
     lines = [f"TASK={task}"]
@@ -867,6 +878,13 @@ def build_legacy_user_prompt(row: dict[str, Any], masked_source: str, feedback: 
         lines.extend(["", "USAGE_CONTEXTS (source-only evidence; translate SOURCE only):",
                       json.dumps(row.get("context_examples", [])[:3], ensure_ascii=False),
                       "NOTE=Choose wording valid across these usages; preserve unresolved ambiguity."])
+
+    hint_row = dict(row)
+    hint_row["source"] = masked_source
+    hint_block = render_given_name_hints(hint_row, given_name_hints)
+    if hint_block:
+        lines.extend(["", hint_block])
+
     if not shared_context and (task in {"DIALOGUE", "TITLE", "ASSETS_LYRICS"} or lyric_context):
         previous, following = nearest_context(row)
         if previous:
@@ -913,12 +931,38 @@ def build_legacy_user_prompt(row: dict[str, Any], masked_source: str, feedback: 
     return "\n".join(lines).strip() + "\n"
 
 
-def build_user_prompt(row: dict[str, Any], masked_source: str, feedback: str = "", *, style: str = "natural") -> str:
+def build_user_prompt(
+    row: dict[str, Any],
+    masked_source: str,
+    feedback: str = "",
+    *,
+    style: str = "natural",
+    given_name_hints: GivenNameHints | None = None,
+) -> str:
     if style == "legacy":
-        return build_legacy_user_prompt(row, masked_source, feedback)
+        return build_legacy_user_prompt(
+            row, masked_source, feedback, given_name_hints=given_name_hints
+        )
     if style != "natural":
         raise ValueError("unknown user prompt style")
-    return contextual_prompt(row, masked_source, classify_task(row), build_legacy_user_prompt, feedback)
+
+    def legacy_formatter(
+        prompt_row: dict[str, Any], prompt_source: str, prompt_feedback: str
+    ) -> str:
+        return build_legacy_user_prompt(
+            prompt_row,
+            prompt_source,
+            prompt_feedback,
+            given_name_hints=given_name_hints,
+        )
+
+    return contextual_prompt(
+        row,
+        masked_source,
+        classify_task(row),
+        legacy_formatter,
+        feedback,
+    )
 
 
 def extract_chat_text(doc: dict[str, Any]) -> str:
@@ -1354,6 +1398,7 @@ async def translate_with_model(
     authoritative_terms: dict[str, str],
     stats: dict[str, dict[str, float]],
     request_guard: Callable[[], bool] | None = None,
+    given_name_hints: GivenNameHints | None = None,
 ) -> tuple[dict[str, Any] | None, str]:
     source = str(row.get("source", ""))
     sid = str(row.get("source_sha256", ""))
@@ -1402,7 +1447,12 @@ async def translate_with_model(
                 client,
                 cfg,
                 system_prompt,
-                build_user_prompt(row, masked_source, feedback),
+                build_user_prompt(
+                    row,
+                    masked_source,
+                    feedback,
+                    given_name_hints=given_name_hints,
+                ),
                 attempt_request_params,
                 rate_limiter,
                 request_guard,
@@ -1573,6 +1623,7 @@ async def worker(
     all_model_ids: set[str],
     disabled_model_ids: set[str],
     model_stats: dict[str, dict[str, float]],
+    given_name_hints: GivenNameHints | None = None,
 ) -> None:
     while True:
         item = await work_queue.get()
@@ -1610,6 +1661,7 @@ async def worker(
             authoritative_terms,
             model_stats,
             lambda: cfg.id not in disabled_model_ids,
+            given_name_hints,
         )
         if result is not None:
             await result_queue.put(("accepted", result))
@@ -1713,6 +1765,7 @@ def preview_pending(
     done_ids: set[str],
     count: int,
     authoritative_terms: dict[str, str],
+    given_name_hints: GivenNameHints | None = None,
 ) -> list[dict[str, Any]]:
     result = []
     with input_path.open("r", encoding="utf-8-sig") as handle:
@@ -1738,7 +1791,11 @@ def preview_pending(
                         else None
                     ),
                     "authoritative_terms": applied_terms,
-                    "user_prompt": build_user_prompt(row, masked),
+                    "user_prompt": build_user_prompt(
+                        row,
+                        masked,
+                        given_name_hints=given_name_hints,
+                    ),
                 }
             )
             if len(result) >= count:
@@ -1806,6 +1863,10 @@ async def async_main(args: argparse.Namespace) -> int:
     done_ids = completed_ids(resume_paths + [args.output])
     glossary = load_glossary(args.glossary)
     authoritative_terms = load_authoritative_terms(args.authoritative_terms)
+    given_name_hints_path = Path(
+        getattr(args, "given_name_hints", "glossary/given-name-hints.json")
+    )
+    given_name_hints = load_default_given_name_hints(given_name_hints_path)
     authoritative_terms_sha256 = (
         sha256_bytes(args.authoritative_terms.read_bytes())
         if args.authoritative_terms.is_file()
@@ -1823,6 +1884,9 @@ async def async_main(args: argparse.Namespace) -> int:
         "already_completed": len(done_ids),
         "authoritative_term_count": len(authoritative_terms),
         "authoritative_terms_sha256": authoritative_terms_sha256,
+        "given_name_hints": str(given_name_hints_path),
+        "given_name_hints_sha256": given_name_hints.sha256,
+        "given_name_hint_count": len(given_name_hints.entries),
         "models": [
             {
                 "id": cfg.id,
@@ -1856,6 +1920,7 @@ async def async_main(args: argparse.Namespace) -> int:
                         done_ids,
                         args.preview_items,
                         authoritative_terms,
+                        given_name_hints,
                     )
                 },
                 ensure_ascii=False,
@@ -1942,7 +2007,7 @@ async def async_main(args: argparse.Namespace) -> int:
             ) if batch_mode != "single" else worker(
                 cfg, clients[cfg.id], rate_limiters[cfg.id], work_queue,
                 result_queue, system_prompt, glossary, authoritative_terms,
-                all_model_ids, disabled_model_ids, model_stats,
+                all_model_ids, disabled_model_ids, model_stats, given_name_hints,
             )
         )
         for cfg in models
@@ -2147,6 +2212,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--authoritative-terms",
         type=Path,
         default=Path("glossary/authoritative-terms.json"),
+    )
+    ap.add_argument(
+        "--given-name-hints",
+        type=Path,
+        default=Path("glossary/given-name-hints.json"),
+        help="scoped project-reviewed given-name prompt hints",
     )
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument(
