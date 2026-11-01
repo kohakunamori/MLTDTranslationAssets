@@ -270,7 +270,6 @@ def _select_given_name_hints(
     if hints is None or not masked_source:
         return ()
     surface = str(row.get("surface_hint", ""))
-    key = str(row.get("key", row.get("item_key", "")) or "")
     selected: list[GivenNameHint] = []
     seen: set[str] = set()
 
@@ -280,15 +279,9 @@ def _select_given_name_hints(
             selected.append(entry)
 
     if surface != "MAIL_REPLY":
-        typed_entry = hints.by_typed_key.get(key)
-        typed_match = _TYPED_KEY_RE.fullmatch(key)
-        if typed_entry is None and typed_match is not None:
-            typed_id = int(typed_match.group(1))
-            typed_entry = next(
-                (entry for entry in hints.entries if entry.idol_id == typed_id),
-                None,
-            )
-        if typed_entry is not None and masked_source.strip() == typed_entry.source_form:
+        exact_source = masked_source.strip()
+        typed_entry = _typed_entry_for_row(row, hints, exact_source)
+        if typed_entry is not None:
             add(typed_entry)
 
     for entry in hints.entries:
@@ -303,6 +296,49 @@ def _select_given_name_hints(
                 break
             start = masked_source.find(entry.source_form, start + 1)
     return tuple(selected)
+
+
+def _typed_entry_for_key(hints: GivenNameHints, key: str) -> GivenNameHint | None:
+    """Resolve one reviewed typed-name key, with the legacy firstname alias."""
+    entry = hints.by_typed_key.get(key)
+    if entry is not None:
+        return entry
+    typed_match = _TYPED_KEY_RE.fullmatch(key)
+    if typed_match is None:
+        return None
+    typed_id = int(typed_match.group(1))
+    return next((entry for entry in hints.entries if entry.idol_id == typed_id), None)
+
+
+def _typed_entry_for_row(
+    row: Mapping[str, Any],
+    hints: GivenNameHints,
+    exact_source: str,
+) -> GivenNameHint | None:
+    """Apply the typed gate only when every recorded occurrence is compatible."""
+    usage = row.get("usage_profile")
+    if isinstance(usage, Mapping) and "name_occurrence_keys" in usage:
+        raw_keys = usage.get("name_occurrence_keys")
+        if not isinstance(raw_keys, list):
+            return None
+        if not raw_keys or not all(isinstance(key, str) and key for key in raw_keys):
+            return None
+        keys = list(raw_keys)
+        entries: list[GivenNameHint] = []
+        for occurrence_key in keys:
+            entry = hints.by_typed_key.get(occurrence_key)
+            if entry is None or entry.source_form != exact_source:
+                return None
+            entries.append(entry)
+        if any(entry.idol_id != entries[0].idol_id for entry in entries[1:]):
+            return None
+        return entries[0]
+
+    key = str(row.get("key", row.get("item_key", "")) or "")
+    typed_entry = _typed_entry_for_key(hints, key)
+    if typed_entry is not None and exact_source == typed_entry.source_form:
+        return typed_entry
+    return None
 
 
 def applicable_given_name_hints(

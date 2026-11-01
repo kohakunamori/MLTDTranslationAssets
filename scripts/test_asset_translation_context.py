@@ -8,7 +8,12 @@ from unittest.mock import patch
 
 from scripts import llm_translate_untranslated as collector
 from pipelines.text.asset_translation_context import speaker_evidence
+from pipelines.text.mltd_given_name_hints import load_given_name_hints
 from pipelines.text.translate_mltd_api_pool import build_user_prompt, classify_task
+
+
+ROOT = Path(__file__).resolve().parents[1]
+HINTS_PATH = ROOT / "glossary" / "given-name-hints.json"
 
 
 def row(source, key, *, bundle="scene.gtx", status="accepted", **extra):
@@ -23,14 +28,15 @@ class ProductionContextTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
-    def write(self, name, rows):
-        path = self.root / name
+    def write(self, name, rows, root=None):
+        path = (root or self.root) / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
 
-    def collect(self):
-        output = self.root / "queue.jsonl"
-        with patch.object(collector, "ROOT", self.root):
+    def collect(self, root=None):
+        root = root or self.root
+        output = root / "queue.jsonl"
+        with patch.object(collector, "ROOT", root):
             collector.collect(argparse.Namespace(scope="all", asset_version="", output=output))
         return [json.loads(line) for line in output.read_text(encoding="utf-8").split("\n") if line]
 
@@ -156,6 +162,51 @@ class ProductionContextTests(unittest.TestCase):
         self.assertIn("SURFACE=MAIL_REPLY", reply_prompt)
         self.assertIn("SPEAKER=p", reply_prompt)
         self.assertNotIn("SPEAKER=035hin", reply_prompt)
+
+    def test_same_source_mixed_usage_suppresses_name_hint_in_both_orders(self):
+        hints = load_given_name_hints(HINTS_PATH)
+        konomi = next(entry for entry in hints.entries if entry.source_form == "このみ")
+        generic = "display_character_039kon"
+        for case, order in enumerate((
+            (generic, konomi.typed_record_key),
+            (konomi.typed_record_key, generic),
+        )):
+            with self.subTest(order=order):
+                case_root = self.root / f"case-{case}"
+                prefix = f"locales/mixed-{case}"
+                self.write(f"{prefix}/first.jsonl", [row("このみ", order[0], status="untranslated")], root=case_root)
+                self.write(f"{prefix}/second.jsonl", [row("このみ", order[1], status="untranslated")], root=case_root)
+                queued, = self.collect(root=case_root)
+                self.assertEqual(
+                    queued["usage_profile"]["name_occurrence_keys"],
+                    sorted(order),
+                )
+                prompt = build_user_prompt(queued, queued["source"], given_name_hints=hints)
+                self.assertNotIn("NAME_HINTS", prompt)
+                self.assertNotIn("このみ => 木实", prompt)
+
+    def test_same_source_all_typed_keys_enable_hint_in_both_orders(self):
+        hints = load_given_name_hints(HINTS_PATH)
+        konomi = next(entry for entry in hints.entries if entry.source_form == "このみ")
+        typed_keys = (
+            konomi.typed_record_key,
+            f"ld_idol_firstname_{konomi.idol_id}",
+        )
+        expected_keys = sorted(set(typed_keys))
+        for case, order in enumerate((typed_keys, tuple(reversed(typed_keys)))):
+            with self.subTest(order=order):
+                case_root = self.root / f"case-{case}"
+                prefix = f"locales/all-typed-{case}"
+                self.write(f"{prefix}/first.jsonl", [row("このみ", order[0], status="untranslated")], root=case_root)
+                self.write(f"{prefix}/second.jsonl", [row("このみ", order[1], status="untranslated")], root=case_root)
+                queued, = self.collect(root=case_root)
+                self.assertEqual(
+                    queued["usage_profile"]["name_occurrence_keys"],
+                    expected_keys,
+                )
+                prompt = build_user_prompt(queued, queued["source"], given_name_hints=hints)
+                self.assertIn("NAME_HINTS", prompt)
+                self.assertIn("このみ => 木实", prompt)
 
 
 if __name__ == "__main__":

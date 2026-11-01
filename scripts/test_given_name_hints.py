@@ -124,6 +124,53 @@ class GivenNameHintTests(unittest.TestCase):
                 [entry.source_form],
             )
 
+    def test_occurrence_metadata_is_order_independent_and_conservative(self):
+        document = load_given_name_hints(HINTS_PATH)
+        konomi = next(entry for entry in document.entries if entry.source_form == "このみ")
+        typed = konomi.typed_record_key
+        alias = f"ld_idol_firstname_{konomi.idol_id}"
+        generic = "display_character_039kon"
+
+        def selected(keys, source="このみ"):
+            row = _row(
+                source,
+                key=generic,
+                usage_profile={"name_occurrence_keys": keys},
+            )
+            return [entry.source_form for entry in applicable_given_name_hints(row, document)]
+
+        self.assertEqual(selected([typed, alias]), ["このみ"])
+        self.assertEqual(selected([alias, typed]), ["このみ"])
+        self.assertEqual(selected([generic, typed]), [])
+        self.assertEqual(selected([typed, generic]), [])
+        self.assertEqual(selected([typed, ""]), [])
+        self.assertEqual(selected([typed], source="こんにちは。"), [])
+        other = next(entry for entry in document.entries if entry.idol_id != konomi.idol_id)
+        self.assertEqual(selected([typed, other.typed_record_key]), [])
+        for entry in document.entries:
+            alias_key = f"ld_idol_firstname_{entry.idol_id}"
+            row = _row(
+                entry.source_form,
+                key=generic,
+                usage_profile={"name_occurrence_keys": [entry.typed_record_key, alias_key]},
+            )
+            self.assertEqual(
+                [item.source_form for item in applicable_given_name_hints(row, document)],
+                [entry.source_form],
+            )
+        self.assertEqual(
+            applicable_given_name_hints(
+                _row(
+                    "こんにちは。",
+                    key=generic,
+                    usage_profile={"name_occurrence_keys": [typed]},
+                    context_examples=[{"context": [{"relative": 0, "source": "このみ"}]}],
+                ),
+                document,
+            ),
+            (),
+        )
+
     def test_loader_rejects_duplicate_unknown_and_malformed_documents(self):
         base = json.loads(HINTS_PATH.read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as tmp:

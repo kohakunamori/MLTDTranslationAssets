@@ -58,9 +58,13 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *
                 if sid != sha256_text(str(row.get("ja", ""))):
                     raise ValueError(f"invalid context source identity: {path}")
                 state = states.setdefault(sid, {"speakers": set(), "categories": set(), "surfaces": set(), "occurrences": 0,
-                                                "contexts": [], "seen": set()})
+                                                "contexts": [], "seen": set(), "name_occurrence_keys": set()})
                 state["occurrences"] += 1
                 state["categories"].add(category)
+                occurrence_key = key
+                if not occurrence_key and row.get("index") is not None:
+                    occurrence_key = str(row["index"])
+                state["name_occurrence_keys"].add(occurrence_key)
                 if speech:
                     state["speakers"].add(speech["speaker"].lower())
                 if mail:
@@ -124,6 +128,7 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *
             "categories": categories, "speaker_codes": speakers,
             "catalogue_occurrences": state["occurrences"],
             "multi_speaker": len(speakers) > 1, "multi_category": len(categories) > 1,
+            "name_occurrence_keys": sorted(state["name_occurrence_keys"]),
         }
         if queued["task"] == "ASSETS_LYRICS":
             queued["usage_profile"]["category"] = "LIVE_LYRICS"
