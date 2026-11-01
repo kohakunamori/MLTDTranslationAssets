@@ -52902,8 +52902,8 @@
         "MB_jp.gtx": {
           "pending": 5,
           "total": 10084,
-          "translated": 10076,
-          "untranslated": 3
+          "translated": 10078,
+          "untranslated": 1
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -52916,9 +52916,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 10084,
-      "translated": 10076,
+      "translated": 10078,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 1
     },
     {
       "blocked": 0,
@@ -77552,8 +77552,8 @@
       "id": "dialogue",
       "pending": 75,
       "total": 37665,
-      "translated": 37587,
-      "untranslated": 3
+      "translated": 37589,
+      "untranslated": 1
     },
     {
       "id": "story",
@@ -77574,20 +77574,20 @@
   "kind": "assets",
   "release": {
     "asset_version": "1078400",
-    "assets_commit": "64826725cde22531e3d64b896741271623d4229f",
+    "assets_commit": "23897597c5cb44c9507ffb8ffbba515dd4e6cf0b",
     "release_id": "assets-1078400",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "a1a61b66f6826a8cf52a93d659de0abbc96096514ac5e0a92e9418a43e99d986",
+    "source_manifest_sha256": "2ee311d4fcee20c7fb3c30ca375d6e3eb6b9c9e999e76e935e4bc9cf67923ad8",
     "status": "published",
     "updated_at": "2026-11-01T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "64826725cde22531e3d64b896741271623d4229f",
+    "commit": "23897597c5cb44c9507ffb8ffbba515dd4e6cf0b",
     "generated_entry_count": 13606,
-    "generated_manifest_sha256": "a1a61b66f6826a8cf52a93d659de0abbc96096514ac5e0a92e9418a43e99d986",
+    "generated_manifest_sha256": "2ee311d4fcee20c7fb3c30ca375d6e3eb6b9c9e999e76e935e4bc9cf67923ad8",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "73a55c17fefac5fc1d15178866b5574010f5bcb33d2b439b180409e249c25093",
+    "source_catalogue_sha256": "f664002c77727437719d31b233510bd346840bf7a5fc33f82e6f234fb72b2600",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77597,7 +77597,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 420843,
-    "translated": 420738,
-    "untranslated": 6
+    "translated": 420740,
+    "untranslated": 4
   }
 }
