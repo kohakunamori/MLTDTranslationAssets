@@ -52900,9 +52900,9 @@
       "blocked": 0,
       "bundles": {
         "MB_jp.gtx": {
-          "pending": 5,
+          "pending": 2,
           "total": 10084,
-          "translated": 10079,
+          "translated": 10082,
           "untranslated": 0
         }
       },
@@ -52912,11 +52912,11 @@
       "icon": "📝",
       "id": "message_board",
       "name": "剧场白板日常留言",
-      "pending": 5,
+      "pending": 2,
       "reused": 0,
       "suggested": 0,
       "total": 10084,
-      "translated": 10079,
+      "translated": 10082,
       "unit": "句",
       "untranslated": 0
     },
@@ -77512,9 +77512,9 @@
       "blocked": 0,
       "bundles": {
         "CM_jp.gtx": {
-          "pending": 70,
+          "pending": 69,
           "total": 26564,
-          "translated": 26494,
+          "translated": 26495,
           "untranslated": 0
         }
       },
@@ -77524,11 +77524,11 @@
       "icon": "🏢",
       "id": "theater_comm",
       "name": "剧场工作互动对话",
-      "pending": 70,
+      "pending": 69,
       "reused": 0,
       "suggested": 0,
       "total": 26564,
-      "translated": 26494,
+      "translated": 26495,
       "unit": "句",
       "untranslated": 0
     }
@@ -77550,9 +77550,9 @@
     },
     {
       "id": "dialogue",
-      "pending": 75,
+      "pending": 71,
       "total": 37665,
-      "translated": 37590,
+      "translated": 37594,
       "untranslated": 0
     },
     {
@@ -77574,30 +77574,30 @@
   "kind": "assets",
   "release": {
     "asset_version": "1078400",
-    "assets_commit": "c9632ab6205cf9fee251826cd7450f9b757addb2",
+    "assets_commit": "2897179278c2b2a9a81cacd3c43cd9b698f2c2df",
     "release_id": "assets-1078400",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "bb45c4e9214c6473d5a9a456bef25bd78a0d80d9ffaeb281ef6dad2f1430e8c2",
+    "source_manifest_sha256": "6f64483311fb62719039412c02124b1ac42e44cd578c47b7558adfb332b6ee5e",
     "status": "published",
     "updated_at": "2026-11-01T00:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "c9632ab6205cf9fee251826cd7450f9b757addb2",
+    "commit": "2897179278c2b2a9a81cacd3c43cd9b698f2c2df",
     "generated_entry_count": 13606,
-    "generated_manifest_sha256": "bb45c4e9214c6473d5a9a456bef25bd78a0d80d9ffaeb281ef6dad2f1430e8c2",
+    "generated_manifest_sha256": "6f64483311fb62719039412c02124b1ac42e44cd578c47b7558adfb332b6ee5e",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "3a03623950d7aeb6273264968c4ec833c35e39b9a265e99d5d0b54fedbbc98fb",
+    "source_catalogue_sha256": "91e67c0828589df161b4926a8f9328d5d9cfa07abec5408744b50c0a230034c5",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
   "totals": {
     "blocked": 0,
-    "pending": 99,
+    "pending": 95,
     "reused": 0,
     "suggested": 0,
     "total": 420843,
-    "translated": 420743,
+    "translated": 420747,
     "untranslated": 1
   }
 }
