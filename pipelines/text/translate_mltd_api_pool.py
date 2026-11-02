@@ -1545,13 +1545,15 @@ async def translate_with_model(
             # introduced markers to be dropped instead of retrying unconstrained.
             # SOURCE itself may legitimately carry private-use sentinels, so the
             # removal scope names the SOURCE-absence condition and the preservation
-            # of source-present private use instead of leaving both implicit.
+            # of source-present private use instead of leaving both implicit. The
+            # explicit format list keeps invisible residue corrections actionable.
             marker_correction = (
-                "Remove only the private-use/internal marker characters and other "
-                "unexpected characters that do not occur in SOURCE. A private-use "
-                "character that SOURCE itself contains is legitimate content and "
-                "must be kept, as must all protected tokens and visible Arabic "
-                "numeric literals."
+                "Remove only the private-use/internal marker characters, invisible "
+                "format/space-control characters (zero-width space, byte-order mark, "
+                "no-break space, and right-to-left mark), and other unexpected "
+                "characters that do not occur in SOURCE. A private-use character "
+                "that SOURCE itself contains is legitimate content and must be kept, "
+                "as must all protected tokens and visible Arabic numeric literals."
             )
             pipeline_marker_correction = (
                 "Keep pipeline marker literals that SOURCE itself contains. Remove "

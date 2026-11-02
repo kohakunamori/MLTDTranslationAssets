@@ -203,6 +203,94 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
                 self.assertNotIn("introduced_unsupported_unicode", codes)
                 self.assertNotEqual(result["qa_verdict"], "REJECT")
 
+    def test_introduced_invisible_format_codepoints_are_rejected(self) -> None:
+        cases = [
+            ("\u00a0", "U+00A0"),
+            ("\u200b", "U+200B"),
+            ("\u200f", "U+200F"),
+            ("\ufeff", "U+FEFF"),
+        ]
+        for char, codepoint in cases:
+            with self.subTest(codepoint=codepoint):
+                result = self.evaluate("また明日ね。", "明天见。" + char)
+
+                self.assertEqual(result["qa_verdict"], "REJECT")
+                issue = next(
+                    item
+                    for item in result["issues"]
+                    if item["code"] == "introduced_unsupported_unicode"
+                )
+                self.assertEqual(issue["detail"], f"format_codepoints={codepoint}")
+
+    def test_source_present_invisible_format_codepoints_are_allowed(self) -> None:
+        source = "前\u200b後\ufeff左\u00a0右\u200f。"
+        translation = "前\u200b后\ufeff左\u00a0右\u200f。"
+
+        result = self.evaluate(source, translation)
+
+        self.assertNotIn(
+            "introduced_unsupported_unicode",
+            {item["code"] for item in result["issues"]},
+        )
+        self.assertNotEqual(result["qa_verdict"], "REJECT")
+
+    def test_only_invisible_format_codepoint_missing_from_source_is_reported(self) -> None:
+        source = "前\u200b後。"
+        translation = "前\u200b后\ufeff。"
+
+        result = self.evaluate(source, translation)
+
+        issue = next(
+            item
+            for item in result["issues"]
+            if item["code"] == "introduced_unsupported_unicode"
+        )
+        self.assertEqual(issue["detail"], "format_codepoints=U+FEFF")
+        self.assertNotIn("U+200B", issue["detail"])
+
+    def test_duplicated_invisible_format_codepoint_is_reported(self) -> None:
+        source = "前\u200b後\ufeff左\u00a0右\u200f。"
+        translation = "前\u200b\u200b后\ufeff左\u00a0右\u200f。"
+
+        result = self.evaluate(source, translation)
+
+        issue = next(
+            item
+            for item in result["issues"]
+            if item["code"] == "introduced_unsupported_unicode"
+        )
+        self.assertEqual(issue["detail"], "format_codepoints=U+200B")
+        self.assertNotIn("U+FEFF", issue["detail"])
+        self.assertNotIn("U+00A0", issue["detail"])
+        self.assertNotIn("U+200F", issue["detail"])
+
+    def test_plain_whitespace_is_not_an_invisible_format_rejection(self) -> None:
+        result = self.evaluate("また明日ね。", "明 天\n见\u3000。")
+
+        self.assertNotIn(
+            "introduced_unsupported_unicode",
+            {item["code"] for item in result["issues"]},
+        )
+        self.assertNotEqual(result["qa_verdict"], "REJECT")
+
+    def test_invisible_format_and_script_details_remain_distinct(self) -> None:
+        format_result = self.evaluate("また明日ね。", "明天见。\u200b")
+        format_issue = next(
+            item
+            for item in format_result["issues"]
+            if item["code"] == "introduced_unsupported_unicode"
+        )
+        self.assertEqual(format_issue["detail"], "format_codepoints=U+200B")
+
+        script_result = self.evaluate("また明日ね。", "明天见。\uc988")
+        script_issue = next(
+            item
+            for item in script_result["issues"]
+            if item["code"] == "introduced_unsupported_unicode"
+        )
+        self.assertEqual(script_issue["detail"], "scripts=HANGUL:U+C988")
+        self.assertNotIn("format_codepoints", script_issue["detail"])
+
     def test_introduced_private_use_sentinel_is_rejected(self) -> None:
         source = "（……どうやらまつりには、俺の考えなんて\nお見通しだったみたいだな）"
         leaked = entity_sentinel("徳川茉莉")
@@ -541,6 +629,31 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
                 correction = retry_correction(requests[1]["messages"][-1]["content"])
                 self.assertIn("introduced_unsupported_unicode", correction)
                 self.assertNotIn("introduced_pipeline_marker", correction)
+
+    def test_invisible_format_rejection_uses_blocking_retry_feedback(self) -> None:
+        source = "あずささん、今、鼻歌を歌っていましたか？"
+        clean = "梓小姐，您刚才是在哼歌吗？"
+        for residue in ("\u00a0", "\u200b", "\u200f", "\ufeff"):
+            with self.subTest(residue=residue):
+                leaked = clean[:2] + residue + clean[2:]
+                candidate, error, stats, requests = self._translate_with_scripted_replies(
+                    source,
+                    [leaked, clean],
+                )
+
+                self.assertEqual(error, "")
+                self.assertIsNotNone(candidate)
+                self.assertEqual(candidate["translation"], clean)
+                self.assertEqual(stats["test"]["qa_retries"], 1)
+                self.assertEqual(stats["test"]["accepted"], 1)
+                correction = retry_correction(requests[1]["messages"][-1]["content"])
+                self.assertIn("introduced_unsupported_unicode", correction)
+                self.assertIn("format/space-control", correction)
+                self.assertIn("zero-width space", correction)
+                self.assertIn("byte-order mark", correction)
+                self.assertIn("no-break space", correction)
+                self.assertIn("right-to-left mark", correction)
+                self.assertIn("do not occur in SOURCE", correction)
 
     def test_bounded_retry_saves_clean_candidate_after_script_reject(self) -> None:
         source = "あずささん、今、鼻歌を歌っていましたか？"

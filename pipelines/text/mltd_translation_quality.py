@@ -185,6 +185,12 @@ def introduced_traditional_chars(source: str, translation: str) -> Counter[str]:
 
 
 INTRODUCED_BLOCKED_SCRIPTS = ("HANGUL", "DEVANAGARI")
+INTRODUCED_INVISIBLE_FORMAT_CODEPOINTS = frozenset({
+    0x00A0,  # NO-BREAK SPACE
+    0x200B,  # ZERO WIDTH SPACE
+    0x200F,  # RIGHT-TO-LEFT MARK
+    0xFEFF,  # ZERO WIDTH NO-BREAK SPACE / BOM
+})
 
 
 def script_scan_text(value: str) -> str:
@@ -242,6 +248,23 @@ def introduced_blocked_script_codepoints(source: str, translation: str) -> list[
                 introduced.append((script, code))
                 break
     return introduced
+
+
+def introduced_invisible_format_codepoints(source: str, translation: str) -> list[int]:
+    """Return unsupported invisible/space-control codepoints introduced by translation.
+
+    Counts, rather than SOURCE membership, are the compatibility rule: equal or
+    fewer occurrences than SOURCE may be preserved, while additional copies
+    introduced by the translation remain residue.
+    Ordinary spaces, line breaks, and U+3000 IDEOGRAPHIC SPACE are not gated.
+    """
+    source_counts = Counter(source)
+    translation_counts = Counter(translation)
+    return sorted(
+        code
+        for code in INTRODUCED_INVISIBLE_FORMAT_CODEPOINTS
+        if translation_counts[chr(code)] > source_counts[chr(code)]
+    )
 
 
 def _issue(code: str, severity: str, detail: str = "") -> dict:
@@ -311,12 +334,17 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
     unsupported = sorted({ord(char) for char in translation
                           if char not in source
                           and unicodedata.category(char) in {"Cn", "Cs", "Co"}})
+    unsupported_format = introduced_invisible_format_codepoints(source, translation)
     introduced_blocked_scripts = introduced_blocked_script_codepoints(source, translation)
-    if unsupported or introduced_blocked_scripts:
+    if unsupported or unsupported_format or introduced_blocked_scripts:
         detail_parts: list[str] = []
         if unsupported:
             detail_parts.append(
                 "codepoints=" + ",".join(f"U+{code:04X}" for code in unsupported))
+        if unsupported_format:
+            detail_parts.append(
+                "format_codepoints=" + ",".join(
+                    f"U+{code:04X}" for code in unsupported_format))
         if introduced_blocked_scripts:
             # Reuse the existing blocking code so the bounded QA retry path
             # (BASIC_BLOCKING_QA_CODES) receives script residue as feedback
