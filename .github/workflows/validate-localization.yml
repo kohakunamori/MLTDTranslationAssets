@@ -14,7 +14,6 @@ on:
       - 'scripts/**'
       - 'schema/**'
       - 'asset-server/**'
-      - 'configs/image-cohort.json'
       - 'configs/localization-pipeline.json'
       - '.github/workflows/**'
       - '.github/actionlint.yaml'
@@ -30,7 +29,6 @@ on:
       - 'scripts/**'
       - 'schema/**'
       - 'asset-server/**'
-      - 'configs/image-cohort.json'
       - 'configs/localization-pipeline.json'
       - '.github/workflows/**'
       - '.github/actionlint.yaml'
@@ -177,7 +175,6 @@ jobs:
             scripts/test_promote_merged_locales.py \
             scripts/test_build_generated_release.py \
             scripts/test_bundle_incremental.py \
-            scripts/test_image_ci_state.py \
             scripts/test_localization_features.py \
             scripts/test_localization_coverage.py \
             scripts/test_image_model_contract.py \
