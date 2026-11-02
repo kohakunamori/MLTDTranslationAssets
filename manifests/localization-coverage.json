@@ -19,7 +19,7 @@
   },
   "locales": {
     "accepted": 420740,
-    "accepted_with_kana_candidates": 4347,
+    "accepted_with_kana_candidates": 4107,
     "pending": 99,
     "untranslated": 4
   },
@@ -28,7 +28,7 @@
     "mode": "coverage_detection_only",
     "generation_enabled": false,
     "measurement": "bundle inventory including thumbnails; Japanese presence requires visual/OCR review",
-    "generated_source_commit": "64826725cde22531e3d64b896741271623d4229f",
+    "generated_source_commit": "8bf07394fc3de8bd75537b36ee2d21a8ab3e7455",
     "families": {
       "comic": {
         "official_bundles": 974,
