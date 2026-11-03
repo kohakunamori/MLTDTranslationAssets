@@ -18,9 +18,9 @@
     }
   },
   "locales": {
-    "accepted": 420743,
-    "accepted_with_kana_candidates": 4107,
-    "pending": 99,
+    "accepted": 420747,
+    "accepted_with_kana_candidates": 3991,
+    "pending": 95,
     "untranslated": 1
   },
   "repair_candidates": [],
@@ -28,7 +28,7 @@
     "mode": "coverage_detection_only",
     "generation_enabled": false,
     "measurement": "bundle inventory including thumbnails; Japanese presence requires visual/OCR review",
-    "generated_source_commit": "8bf07394fc3de8bd75537b36ee2d21a8ab3e7455",
+    "generated_source_commit": "2897179278c2b2a9a81cacd3c43cd9b698f2c2df",
     "families": {
       "comic": {
         "official_bundles": 974,
