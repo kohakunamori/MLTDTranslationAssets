@@ -28175,8 +28175,8 @@
       "bundles": {
         "CD_jp.gtx": {
           "pending": 3,
-          "total": 25538,
-          "translated": 25534,
+          "total": 25562,
+          "translated": 25558,
           "untranslated": 1
         }
       },
@@ -28189,8 +28189,8 @@
       "pending": 3,
       "reused": 0,
       "suggested": 0,
-      "total": 25538,
-      "translated": 25534,
+      "total": 25562,
+      "translated": 25558,
       "unit": "句",
       "untranslated": 1
     },
@@ -46305,6 +46305,12 @@
           "translated": 16,
           "untranslated": 0
         },
+        "job_story_001har_10000_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 20,
+          "untranslated": 0
+        },
         "job_story_001har_1000_jp.gtx": {
           "pending": 0,
           "total": 8,
@@ -46519,6 +46525,12 @@
           "pending": 0,
           "total": 22,
           "translated": 22,
+          "untranslated": 0
+        },
+        "job_story_005yay_10000_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 20,
           "untranslated": 0
         },
         "job_story_005yay_1000_jp.gtx": {
@@ -48303,6 +48315,12 @@
           "translated": 21,
           "untranslated": 0
         },
+        "job_story_038chz_10000_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 20,
+          "untranslated": 0
+        },
         "job_story_038chz_1000_jp.gtx": {
           "pending": 0,
           "total": 8,
@@ -48517,6 +48535,12 @@
           "pending": 0,
           "total": 22,
           "translated": 22,
+          "untranslated": 0
+        },
+        "job_story_042miy_10000_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 20,
           "untranslated": 0
         },
         "job_story_042miy_1000_jp.gtx": {
@@ -49123,8 +49147,8 @@
       "pending": 1,
       "reused": 0,
       "suggested": 0,
-      "total": 96470,
-      "translated": 96469,
+      "total": 96550,
+      "translated": 96549,
       "unit": "句",
       "untranslated": 0
     },
@@ -52901,9 +52925,9 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 2,
-          "total": 10092,
-          "translated": 10087,
-          "untranslated": 3
+          "total": 10100,
+          "translated": 10094,
+          "untranslated": 4
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -52915,10 +52939,10 @@
       "pending": 2,
       "reused": 0,
       "suggested": 0,
-      "total": 10092,
-      "translated": 10087,
+      "total": 10100,
+      "translated": 10094,
       "unit": "句",
-      "untranslated": 3
+      "untranslated": 4
     },
     {
       "blocked": 0,
@@ -54575,8 +54599,8 @@
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 118313,
-          "translated": 118295,
+          "total": 118337,
+          "translated": 118319,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -77503,8 +77527,8 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 186157,
-      "translated": 186139,
+      "total": 186181,
+      "translated": 186163,
       "unit": "句",
       "untranslated": 0
     },
@@ -77513,9 +77537,9 @@
       "bundles": {
         "CM_jp.gtx": {
           "pending": 69,
-          "total": 26564,
+          "total": 26565,
           "translated": 26495,
-          "untranslated": 0
+          "untranslated": 1
         }
       },
       "description": "事务所各房间触碰与日常工作台词",
@@ -77527,10 +77551,10 @@
       "pending": 69,
       "reused": 0,
       "suggested": 0,
-      "total": 26564,
+      "total": 26565,
       "translated": 26495,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 1
     }
   ],
   "domains": [
@@ -77544,50 +77568,50 @@
     {
       "id": "card",
       "pending": 5,
-      "total": 84796,
-      "translated": 84790,
+      "total": 84820,
+      "translated": 84814,
       "untranslated": 1
     },
     {
       "id": "dialogue",
       "pending": 71,
-      "total": 37673,
-      "translated": 37599,
-      "untranslated": 3
+      "total": 37682,
+      "translated": 37606,
+      "untranslated": 5
     },
     {
       "id": "story",
       "pending": 1,
-      "total": 105452,
-      "translated": 105451,
+      "total": 105532,
+      "translated": 105531,
       "untranslated": 0
     },
     {
       "id": "system",
       "pending": 18,
-      "total": 186157,
-      "translated": 186139,
+      "total": 186181,
+      "translated": 186163,
       "untranslated": 0
     }
   ],
-  "generated_at": "2026-11-04T06:02:04.435430+00:00",
+  "generated_at": "2026-11-05T06:02:07.512767+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1078500",
-    "assets_commit": "5377e3cfdbf20cd5314c89907d3c739d6ab14bd6",
-    "release_id": "assets-1078500",
+    "asset_version": "1078550",
+    "assets_commit": "d6383924d41bc4fe5ee7795ab2f10d560743b7cf",
+    "release_id": "assets-1078550",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "f5748f63e43a263d6a80d50e14d85c4afa5ab81feb7d672f33a1a4c2a3344d30",
+    "source_manifest_sha256": "c11ff2e535ef0f524a5773ef87b07f659e3c288bb2f47efd3c8b98285dc139bf",
     "status": "published",
-    "updated_at": "2026-11-04T15:00:00+09:00"
+    "updated_at": "2026-11-05T15:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "5377e3cfdbf20cd5314c89907d3c739d6ab14bd6",
-    "generated_entry_count": 13606,
-    "generated_manifest_sha256": "f5748f63e43a263d6a80d50e14d85c4afa5ab81feb7d672f33a1a4c2a3344d30",
+    "commit": "d6383924d41bc4fe5ee7795ab2f10d560743b7cf",
+    "generated_entry_count": 13610,
+    "generated_manifest_sha256": "c11ff2e535ef0f524a5773ef87b07f659e3c288bb2f47efd3c8b98285dc139bf",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "b37dd8bd0c2da3de65347aea04422d0f8e83d8ffcb6b4e915b904c6b728068f9",
+    "source_catalogue_sha256": "a6f608a28a12e88c4d5844a1cda9ce26f0032364b7bb3df6c4d62b1c991fc9a4",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77596,8 +77620,8 @@
     "pending": 95,
     "reused": 0,
     "suggested": 0,
-    "total": 420851,
-    "translated": 420752,
-    "untranslated": 4
+    "total": 420988,
+    "translated": 420887,
+    "untranslated": 6
   }
 }
