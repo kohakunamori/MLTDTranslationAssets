@@ -3,6 +3,7 @@ import copy
 import base64
 import io
 import json
+import urllib.error
 from pathlib import Path
 
 from PIL import Image
@@ -415,6 +416,39 @@ def test_stop_with_explicit_google_filter_message_is_held_once_then_other_inputs
     assert len(calls) == 2  # one refusal, then one request for the next input
     first_sha = queue['bundles'][0]['tasks'][0]['sha256']
     assert progress['tasks'][first_sha] == {'status': 'manual_review', 'reason': 'provider_safety_decision'}
+    assert progress['tasks'][second['sha256']]['status'] == 'generated'
+    assert 'provider_error' not in progress
+    images.generate(work)
+    assert len(calls) == 2
+
+
+def test_openai_safety_refusal_is_held_once_then_other_inputs_continue(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, _, output, _ = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    queue = images.read(work / 'queue.json')
+    other = work / 'other.png'
+    Image.new('RGB', (20, 20), 'yellow').save(other)
+    second = dict(queue['bundles'][0]['tasks'][0], input=other.name, sha256=images.sha(other))
+    queue['bundles'].append(dict(queue['bundles'][0], logical='event_0454_05.unity3d', tasks=[second]))
+    images.write(work / 'queue.json', queue)
+    calls = []
+    body = json.dumps({'error': {'code': 'None', 'type': 'invalid_request_error',
+        'message': 'chatgpt.com: 400 Bad Request: Your request was rejected by the safety system. '
+                   'safety_violations=[sexual].'}}).encode('utf-8')
+    def edit(*args):
+        calls.append(True)
+        if len(calls) == 1:
+            raise urllib.error.HTTPError('https://api.test/v1/images/edits', 400, 'Bad Request', {},
+                                         io.BytesIO(body))
+        return output.read_bytes(), {'requested_image_model': 'gemini-3.1-flash-image'}
+    monkeypatch.setattr(provider, 'image_edit', edit)
+    images.generate(work)
+    progress = images.read(work / 'results.json')
+    assert len(calls) == 2  # one refusal, then one request for the next input
+    first_sha = queue['bundles'][0]['tasks'][0]['sha256']
+    assert progress['tasks'][first_sha] == {'status': 'manual_review',
+                                            'reason': {'code': 'moderation_blocked', 'http_status': 400}}
     assert progress['tasks'][second['sha256']]['status'] == 'generated'
     assert 'provider_error' not in progress
     images.generate(work)

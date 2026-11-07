@@ -494,8 +494,17 @@ def generate(work, max_seconds=7200):
                         reason = {'message': str(reason)}
                     safe_error = {k: str(reason[k]).replace(provider_config.api_key(config), '[REDACTED]')[:400]
                                   for k in ('code', 'type', 'param', 'message') if k in reason}
-                    reason = {'code': 'moderation_blocked', 'http_status': error.code} if (
-                        error.code in (400, 403) and reason.get('code') == 'moderation_blocked') else None
+                    message = str(reason.get('message', ''))
+                    # Gemini reports a policy block as code=moderation_blocked;
+                    # OpenAI/chatgpt.com reports the same decision as a plain 400
+                    # whose message names its safety system. Both are explicit
+                    # provider refusals: hold this one texture for review, never
+                    # retry it, and let the rest of the batch continue.
+                    refused = error.code in (400, 403) and (
+                        reason.get('code') == 'moderation_blocked'
+                        or 'safety_violations' in message
+                        or 'safety system' in message)
+                    reason = {'code': 'moderation_blocked', 'http_status': error.code} if refused else None
                     if reason is None:
                         progress['provider_error'] = {'http_status': error.code, **safe_error}
                         write(work / 'results.json', progress)
