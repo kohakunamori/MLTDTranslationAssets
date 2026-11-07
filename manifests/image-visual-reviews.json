@@ -214,6 +214,162 @@
         ],
         "verdict": "reject"
       }
+    },
+    "c862d9a71bb26ccae691871190499818d97a9cdc137e6fbe5bfa0348cf4aebbf": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb",
+        "candidate_sha256": "8d073c9f69485194300c91f37b99482567f18fb910f8af4b70b8679046e29fc2",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "2581eefdc943710c7cf3dd9036928bfff10b18bf559e653f76ce030fdf724b55": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3",
+        "candidate_sha256": "04358d818c387cce66cf393e824abe2406602e17c3e7a4151dcc989519c5388a",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "活动形式「プラチナスターチューン」(Platinum Star Tune) 误译为了「白金星光剧场」（对应的是 Theater）。Tune 通行应为「白金星光调律」或「白金星光协奏」等对应 Tune 的术语，而非剧场。",
+            "expected_text": "白金星光调律（或根据项目术语表对应的 Tune 译名）",
+            "observed_text": "白金星光剧场",
+            "region": "右上角活动类别横条"
+          },
+          {
+            "detail": "原标题「夜と、明かりと。」为并列短语（意为“与夜、与灯火”），被擅自改写/脑补成了句子「在夜色中明亮闪耀。」，脱离原意。",
+            "expected_text": "夜与、灯火与。（或《夜与灯火。》）",
+            "observed_text": "在夜色中明亮闪耀。",
+            "region": "右上角主标题文字"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "d9738598d8a87fb1066e2346574f83572ba059e3364cf8a732517c414c6d11ca": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48",
+        "candidate_sha256": "7a8b2423d7b35c932cc16dcbe4875da7a7f2f499f8980e5fe47e793dd791ddc5",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "cc4269b6c9d3a143eacb6dc06414a62e9cbd74035fd8cad363e36fee83970785": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5",
+        "candidate_sha256": "886ab35490f1a51ea55445449800f6e2e5d6fbc21730356d5e16c63574ad5d04",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "d011e2b23754a839c9840296ac5f542d26f7786be9069693dd1d681505017ebd": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "47e65baa51f533f0faf8ca7eb685aa9748dc45b3eb7f61865e7ba5b9352290c3",
+        "candidate_sha256": "195a7cbf54626cc70d0d6e9c960fba26c6f5bd39fe0f1f834573729c19741e9b",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "曲名翻译错误。原曲名为《夜を明かして。》（意为通宵/彻夜），被错误翻译为“夏日的明灯。”，语义完全错误。",
+            "expected_text": "夜暮破晓。 / 彻夜长明。 / 迎来黎明。（或保留原曲名《夜を明かして。》/官方译名）",
+            "observed_text": "夏日的明灯。",
+            "region": "上方及中部唱片封面与称号排行榜标题"
+          },
+          {
+            "detail": "第二行称号原文字样包含“月”，候选图中被臆测翻译为“特别版”，与原文不符。",
+            "expected_text": "对应日文原曲名变体（含“月…”）",
+            "observed_text": "夏日的明灯。特别版",
+            "region": "中部右侧复合称号铭牌"
+          }
+        ],
+        "verdict": "reject"
+      }
     }
   }
 }
