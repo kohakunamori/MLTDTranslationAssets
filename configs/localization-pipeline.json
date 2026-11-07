@@ -16,7 +16,7 @@
     "requests_per_minute": 2,
     "concurrency": 1,
     "batch_bundles": 12,
-    "compliance_retries": 1,
+    "compliance_retries": 2,
     "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Switched from imas-trans-image to gpt-image-2.5 on 2026-11-07 after the native provider returned HTTP 429 capacity exhaustion. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
   }
 }

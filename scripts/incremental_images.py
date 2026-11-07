@@ -262,8 +262,12 @@ def reuse_generation(work, task, prompt, config):
         return None
     if (entry['prompt_sha256'] != hashlib.sha256(prompt.encode()).hexdigest()
             or entry['effective_model'] != config['image_provider']['model']
-            or entry['mode'] != config['image_provider']['mode']) and not config.get('reuse_existing_results'):
-        raise ValueError('A saved image generation exists with a different request; review before regenerating')
+            or entry['mode'] != config['image_provider']['mode']):
+        if not config.get('reuse_existing_results'):
+            raise ValueError('A saved image generation exists with a different request; review before regenerating')
+        # A checkpoint produced by another model or protocol cannot stand in
+        # for this configuration's output: regenerate with the configured model.
+        return None
     result = entry['result']
     if result.get('status') == 'manual_review' and result.get('reason') == 'provider_safety_decision':
         return dict(result)
@@ -437,19 +441,40 @@ def generate(work, max_seconds=7200):
             if sha(source) != task['sha256']:
                 raise ValueError('Image input changed before provider call')
             prompt = image_prompt(task, policy.get('prompt_profile', 'legacy'))
+            acceptance_on = policy.get('visual_acceptance', {}).get('enabled') is True
+
+            def usable(result):
+                # A restored result is only kept when the visual gate is off,
+                # when it passes, or when this configuration's retry budget for
+                # that texture is already spent (a further identical retry can
+                # only bill for the same input again).
+                if result.get('status') != 'generated' or not acceptance_on:
+                    return True
+                if visually_approved(work, task, result, prompt):
+                    return True
+                return result.get('attempts', 1) >= 1 + policy.get('compliance_retries', 0)
+
             if task['sha256'] in progress['tasks']:
-                review_generated(work, task, progress['tasks'][task['sha256']], prompt, policy, public['defaults']['base_url'])
+                recorded = progress['tasks'][task['sha256']]
+                review_generated(work, task, recorded, prompt, policy, public['defaults']['base_url'])
+                if usable(recorded):
+                    write(work / 'results.json', progress)
+                    continue
+                print('IMAGE_REUSE_REJECTED', bundle['logical'], flush=True)
+                progress['tasks'].pop(task['sha256'], None)
                 write(work / 'results.json', progress)
-                continue
             reused = reuse_generation(work, task, prompt, config)
             if reused is not None:
                 progress['tasks'][task['sha256']] = reused
                 review_generated(work, task, reused, prompt, policy, public['defaults']['base_url'])
-                progress.pop('provider_error', None)
+                if usable(reused):
+                    progress.pop('provider_error', None)
+                    write(work / 'results.json', progress)
+                    print('IMAGE_REUSED', bundle['logical'], reused['status'], flush=True)
+                    continue
+                print('IMAGE_REUSE_REJECTED', bundle['logical'], True, flush=True)
+                progress['tasks'].pop(task['sha256'], None)
                 write(work / 'results.json', progress)
-                print('IMAGE_REUSED', bundle['logical'], reused['status'], flush=True)
-                continue
-            acceptance_on = policy.get('visual_acceptance', {}).get('enabled') is True
             attempts = 1 + (policy.get('compliance_retries', 0) if acceptance_on else 0)
             retry_note = ''
             for attempt in range(1, attempts + 1):

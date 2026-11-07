@@ -504,6 +504,34 @@ def test_durable_generation_survives_loss_of_actions_cache_without_another_api_c
         images.generate(work)
 
 
+def test_cached_result_rejected_by_visual_acceptance_is_regenerated_not_reused(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, _, output, results = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': {
+        'model': 'gpt-image-2.5', 'api_protocol': 'images_edits', 'requests_per_minute': 2,
+        'concurrency': 1, 'compliance_retries': 0, 'restoration_mode': 'whole_image',
+        'prompt_profile': 'preserve_layout',
+        'visual_acceptance': {'enabled': True, 'model': 'gemini-3.8-flash-high',
+                              'api_protocol': 'gemini_generate_content'}}})
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    result = dict(results['tasks'][task['sha256']])
+    result.pop('output')
+    cache_path = tmp_path / 'images/candidates' / (result['sha256'] + '.png')
+    cache_path.parent.mkdir(parents=True); cache_path.write_bytes(output.read_bytes())
+    entry = {'prompt_sha256': images.hashlib.sha256(images.image_prompt(task).encode()).hexdigest(),
+             'effective_model': 'imas-trans-image', 'mode': 'gemini_generate_content',
+             'output': cache_path.relative_to(tmp_path).as_posix(), 'result': result}
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: entry}})
+    monkeypatch.setattr(images, 'review_generated', lambda *args, **kwargs: None)
+    monkeypatch.setattr(images, 'visually_approved', lambda *args: False)
+    calls = []
+    monkeypatch.setattr(provider, 'image_edit',
+                        lambda *args: (calls.append(True), (output.read_bytes(), {}))[1])
+    images.generate(work)
+    assert calls  # the rejected cached image was not published as-is; it was regenerated
+
+
 def test_durable_explicit_refusal_is_not_submitted_again(tmp_path, monkeypatch):
     import provider_config as provider
     work, _, _, _ = task_fixture(tmp_path, monkeypatch)
@@ -518,7 +546,7 @@ def test_durable_explicit_refusal_is_not_submitted_again(tmp_path, monkeypatch):
     assert images.read(work / 'results.json')['tasks'][task['sha256']] == entry['result']
 
 
-def test_new_visual_policy_reuses_old_generation_and_durable_review_after_cache_loss(tmp_path, monkeypatch):
+def test_same_model_generation_is_reused_and_durable_review_survives_cache_loss(tmp_path, monkeypatch):
     import image_visual_review as visual
     work, source, output, results = task_fixture(tmp_path, monkeypatch)
     policy = {'model': 'gpt-image-2.5', 'api_protocol': 'images_edits', 'requests_per_minute': 2,
@@ -527,13 +555,15 @@ def test_new_visual_policy_reuses_old_generation_and_durable_review_after_cache_
     images.write(tmp_path / 'configs/localization-pipeline.json', {'images': policy})
     images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
     monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-secret')
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    prompt_sha = images.hashlib.sha256(images.image_prompt(task, 'preserve_layout').encode()).hexdigest()
     digest = images.sha(source)
     result = results['tasks'][digest]
     candidate = tmp_path / 'images/candidates' / (result['sha256'] + '.png')
     candidate.parent.mkdir(parents=True); candidate.write_bytes(output.read_bytes())
     images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {digest: {
-        'effective_model': 'gemini-3.1-flash-image', 'mode': 'gemini_generate_content',
-        'prompt_sha256': 'older-prompt', 'output': candidate.relative_to(tmp_path).as_posix(),
+        'effective_model': 'gpt-image-2.5', 'mode': 'images_edits',
+        'prompt_sha256': prompt_sha, 'output': candidate.relative_to(tmp_path).as_posix(),
         'result': {k: result[k] for k in ('status', 'sha256', 'provider')}}}})
     monkeypatch.setattr(visual.provider, 'image_edit', lambda *a: pytest.fail('Old generation was billed again'))
     calls = []
@@ -547,7 +577,7 @@ def test_new_visual_policy_reuses_old_generation_and_durable_review_after_cache_
     for p in (work / 'visual-reviews').glob('*.json'): p.unlink()
     images.generate(work)
     assert len(calls) == 1  # persisted failed review is reused too
-    assert images.read(tmp_path / 'manifests/image-generation-cache.json')['tasks'][digest]['prompt_sha256'] == 'older-prompt'
+    assert images.read(tmp_path / 'manifests/image-generation-cache.json')['tasks'][digest]['prompt_sha256'] == prompt_sha
 
 
 def test_lossless_unity_encoding_accepts_odd_comic_strip_dimensions():
