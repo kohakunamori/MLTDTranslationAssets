@@ -51,7 +51,8 @@ def identity(row):
     return [row['catalog_hash'], row['remote'], row['declared_size']]
 
 
-def select(index, state, published, limit, published_fingerprints=None):
+def select(index, state, published, limit, published_fingerprints=None, only=None):
+    scoped = set(only) if only is not None else None
     pending, counts = [], {}
     for logical, row in sorted(index.items()):
         family = classify(logical)
@@ -74,7 +75,8 @@ def select(index, state, published, limit, published_fingerprints=None):
             count['deferred'] += 1
         else:
             count['pending'] += 1
-            pending.append((logical, row))
+            if scoped is None or logical in scoped:
+                pending.append((logical, row))
     # Latest comic pages first; deterministic across resumptions.
     pending.sort(key=lambda item: (-1 if thumbnail_parent(item[0]) else 0 if item[0].startswith('ex4c') else 1,
                                   -int(re.findall(r'\d+', item[0].removesuffix('.unity3d'))[-1])
@@ -100,13 +102,21 @@ def text_regions(path):
     return boxes
 
 
-def prepare(work, limit):
+def prepare(work, limit, only=None):
     import UnityPy  # Hosted preparation only.
     from build_generated_release import download, load_official_index, load_version_manifest
     version = load_version_manifest(ROOT / 'manifests/asset-version.json')
     index_path = work / version['index_name']
     download(f"{version['asset_root']}/{version['index_name']}", index_path, None)
     index = load_official_index(index_path)
+    scoped = [name for name in dict.fromkeys(only)] if only is not None else None
+    if scoped is not None:
+        missing = [name for name in scoped if name not in index]
+        if missing:
+            raise ValueError('Requested bundles are not in the current official index: ' + ', '.join(missing))
+        unregistered = [name for name in scoped if classify(name) is None]
+        if unregistered:
+            raise ValueError('Requested bundles are not a registered image family: ' + ', '.join(unregistered))
     state = read(ROOT / 'manifests/image-incremental.json', {'bundles': {}})
     published, published_sources, published_fingerprints = {}, {}, {}
     from r2_release_storage import retained_versions
@@ -117,9 +127,10 @@ def prepare(work, limit):
                 published[entry['logical_key']] = entry['runtime_path'].rsplit('/', 1)[-1]
                 published_sources[entry['logical_key']] = entry['source_sha256']
                 published_fingerprints[entry['logical_key']] = entry['artifact_sha256']
-    chosen, counts, remaining = select(index, state['bundles'], published, limit, published_fingerprints)
+    chosen, counts, remaining = select(index, state['bundles'], published, limit, published_fingerprints, only=scoped)
     document = {'schema_version': 1, 'asset_version': version['asset_version'], 'families': counts,
                 'pending_bundles': remaining, 'selected_bundles': len(chosen), 'bundles': [],
+                'requested_bundles': scoped,
                 'scope': 'registered image families; not all game Texture2D assets'}
     for logical, record in chosen:
         archive = work / 'bundles' / record['remote']
@@ -199,6 +210,15 @@ def prepare(work, limit):
     return document
 
 
+# Explicit native model/protocol pairs this pipeline is allowed to call. This is
+# an allow-list, not a default: an unknown pair is refused rather than guessed.
+ALLOWED_IMAGE_MODELS = (
+    ('gemini-3.1-flash-image', 'gemini_generate_content'),
+    ('gpt-image-2.5', 'images_edits'),
+    ('imas-trans-image', 'gemini_generate_content'),
+)
+
+
 def validate_image_policy(policy):
     translation.validate(policy.get('translator', {'kind': 'llm'}))
     if policy.get('translator', {}).get('kind') == 'command':
@@ -206,15 +226,18 @@ def validate_image_policy(policy):
             raise ValueError('Command translation requires serial whole-image processing')
         return
     protocol = policy.get('api_protocol', 'gemini_generate_content')
-    if ((policy.get('model'), protocol) not in (('gemini-3.1-flash-image', 'gemini_generate_content'), ('gpt-image-2.5', 'images_edits'))
+    if ((policy.get('model'), protocol) not in ALLOWED_IMAGE_MODELS
             or policy.get('requests_per_minute') != 2 or policy.get('concurrency') != 1):
         raise ValueError('Image API policy requires an explicit native model/protocol pair and serial RPM 2')
-    if policy['model'] == 'gpt-image-2.5':
+    retries = policy.get('compliance_retries', 0)
+    if type(retries) is not int or not 0 <= retries <= 3:
+        raise ValueError('compliance_retries must be an integer 0..3')
+    if policy['model'] in ('gpt-image-2.5', 'imas-trans-image'):
         acceptance = policy.get('visual_acceptance', {})
         if (acceptance.get('enabled') is not True or acceptance.get('model') != 'gemini-3.8-flash-high'
                 or acceptance.get('api_protocol') != 'gemini_generate_content'
                 or policy.get('restoration_mode') != 'whole_image' or policy.get('prompt_profile') != 'preserve_layout'):
-            raise ValueError('GPT image translation requires preserve-layout whole-image visual acceptance')
+            raise ValueError('This image model requires preserve-layout whole-image visual acceptance')
 
 
 def image_prompt(task, profile='legacy'):
@@ -301,6 +324,20 @@ def review_generated(work, task, result, prompt, policy, base_url):
     report = visual.review(source_bytes, candidate_bytes, prompt, visual.config(base_url), report_path)
     result.update(visual_review=report, normalized_output=candidate.relative_to(work).as_posix(),
                   normalized_sha256=sha(candidate), normalization=audit)
+
+
+def visually_approved(work, task, result, reference):
+    """True only when the stored whole-image review passes for this exact pair.
+
+    Reference is the canonical base prompt (not an attempt-specific retry note),
+    so package() re-binds the same identity even after a retry.
+    """
+    import image_visual_review as visual
+    candidate = work / result.get('normalized_output', '__missing_candidate__')
+    if not candidate.is_file():
+        return False
+    return visual.approved(result.get('visual_review', {}), (work / task['input']).read_bytes(),
+                           candidate.read_bytes(), reference)
 
 
 def checkpoint_generations(work, queue, results, policy):
@@ -412,48 +449,67 @@ def generate(work, max_seconds=7200):
                 write(work / 'results.json', progress)
                 print('IMAGE_REUSED', bundle['logical'], reused['status'], flush=True)
                 continue
-            try:
-                backend = translation.create(policy, ROOT, config=config, prompt=prompt)
-                response = request_image(config, work, progress, task, source, prompt, start + max_seconds, backend)
-                if response is None:
-                    return
-                raw, metadata = response
-                image = Image.open(io.BytesIO(raw)); image.load()
-                original = Image.open(source)
-                if policy.get('restoration_mode') != 'whole_image' and abs(image.width / image.height / (original.width / original.height) - 1) > .01:
-                    progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_changed_geometry'}
-                else:
+            acceptance_on = policy.get('visual_acceptance', {}).get('enabled') is True
+            attempts = 1 + (policy.get('compliance_retries', 0) if acceptance_on else 0)
+            retry_note = ''
+            for attempt in range(1, attempts + 1):
+                attempt_prompt = prompt + retry_note
+                try:
+                    backend = translation.create(policy, ROOT, config=config, prompt=attempt_prompt)
+                    response = request_image(config, work, progress, task, source, attempt_prompt, start + max_seconds, backend)
+                    if response is None:
+                        return
+                    raw, metadata = response
+                    image = Image.open(io.BytesIO(raw)); image.load()
+                    original = Image.open(source)
+                    if policy.get('restoration_mode') != 'whole_image' and abs(image.width / image.height / (original.width / original.height) - 1) > .01:
+                        progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_changed_geometry', **({'attempts': attempt} if policy.get('compliance_retries', 0) else {})}
+                        break
                     output = source.with_name(source.stem + '-generated.png')
                     output.write_bytes(raw)
                     progress['tasks'][task['sha256']] = {'status': 'generated',
                         'output': output.relative_to(work).as_posix(), 'sha256': sha(output), 'provider': metadata,
-                        'generation_prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest()}
-            except provider_config.ProviderImageDeclined:
-                progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_safety_decision'}
-            except urllib.error.HTTPError as error:
-                # Never log provider bodies (they can echo credentials). Only
-                # explicit moderation decisions are held without automatic retry.
-                try:
-                    reason = json.loads(error.read(8192)).get('error', {})
-                except (ValueError, AttributeError):
-                    reason = {}
-                if not isinstance(reason, dict):
-                    reason = {'message': str(reason)}
-                safe_error = {k: str(reason[k]).replace(provider_config.api_key(config), '[REDACTED]')[:400]
-                              for k in ('code', 'type', 'param', 'message') if k in reason}
-                reason = {'code': 'moderation_blocked', 'http_status': error.code} if (
-                    error.code in (400, 403) and reason.get('code') == 'moderation_blocked') else None
-                if reason is None:
-                    progress['provider_error'] = {'http_status': error.code, **safe_error}
-                    write(work / 'results.json', progress)
-                    raise RuntimeError(f'Image provider HTTP {error.code}: {json.dumps(safe_error)}; '
-                                       'generated progress retained') from None
-                progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': reason}
-            progress.pop('provider_error', None)
-            write(work / 'results.json', progress)
-            review_generated(work, task, progress['tasks'][task['sha256']], prompt, policy, public['defaults']['base_url'])
-            write(work / 'results.json', progress)
-            print('IMAGE_RESULT', bundle['logical'], progress['tasks'][task['sha256']]['status'], flush=True)
+                        'generation_prompt_sha256': hashlib.sha256(attempt_prompt.encode()).hexdigest(),
+                        **({'attempts': attempt} if policy.get('compliance_retries', 0) else {})}
+                except provider_config.ProviderImageDeclined:
+                    progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_safety_decision', **({'attempts': attempt} if policy.get('compliance_retries', 0) else {})}
+                    break
+                except urllib.error.HTTPError as error:
+                    # Never log provider bodies (they can echo credentials). Only
+                    # explicit moderation decisions are held without automatic retry.
+                    try:
+                        reason = json.loads(error.read(8192)).get('error', {})
+                    except (ValueError, AttributeError):
+                        reason = {}
+                    if not isinstance(reason, dict):
+                        reason = {'message': str(reason)}
+                    safe_error = {k: str(reason[k]).replace(provider_config.api_key(config), '[REDACTED]')[:400]
+                                  for k in ('code', 'type', 'param', 'message') if k in reason}
+                    reason = {'code': 'moderation_blocked', 'http_status': error.code} if (
+                        error.code in (400, 403) and reason.get('code') == 'moderation_blocked') else None
+                    if reason is None:
+                        progress['provider_error'] = {'http_status': error.code, **safe_error}
+                        write(work / 'results.json', progress)
+                        raise RuntimeError(f'Image provider HTTP {error.code}: {json.dumps(safe_error)}; '
+                                           'generated progress retained') from None
+                    progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': reason, **({'attempts': attempt} if policy.get('compliance_retries', 0) else {})}
+                    break
+                progress.pop('provider_error', None)
+                write(work / 'results.json', progress)
+                # Bind the review to the canonical base prompt, so a retried
+                # attempt still matches package()'s reference identity.
+                review_generated(work, task, progress['tasks'][task['sha256']], prompt, policy, public['defaults']['base_url'])
+                write(work / 'results.json', progress)
+                result = progress['tasks'][task['sha256']]
+                print('IMAGE_RESULT', bundle['logical'], result['status'], 'attempt', attempt, flush=True)
+                if result['status'] != 'generated':
+                    break
+                if not acceptance_on or visually_approved(work, task, result, prompt):
+                    break
+                if attempt < attempts:
+                    retry_note = ('\n\n上一次结果未通过合规检查：仍有日文或假名残留，或画面/版式被改动。'
+                                  '请把所有日文完整翻译成简体中文，绝不保留任何假名，除文字区域外不得改动画面。')
+                    print('IMAGE_RETRY', bundle['logical'], attempt, flush=True)
     progress.pop('provider_error', None)
     write(work / 'results.json', progress)
 
@@ -596,14 +652,21 @@ def main():
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--limit', type=int, default=0, help='0 uses the shared image batch policy')
     parser.add_argument('--max-seconds', type=int, default=7200)
+    parser.add_argument('--bundles', default='',
+                        help='Comma-separated exact logical bundle names to scope a prepare run '
+                             '(e.g. event_0454_info.unity3d,event_0454_title.unity3d). '
+                             'Empty prepares the normal policy batch.')
     args = parser.parse_args()
+    only = [name.strip() for name in args.bundles.split(',') if name.strip()] or None
+    if args.limit == 0 and only is not None:
+        args.limit = len(only)
     if args.limit == 0:
         args.limit = read(ROOT / 'configs/localization-pipeline.json')['images']['batch_bundles']
     if not 1 <= args.limit <= 50:
         raise ValueError('Batch size must be 1..50 bundles')
     args.work.mkdir(parents=True, exist_ok=True)
     if args.action == 'prepare':
-        prepare(args.work, args.limit)
+        prepare(args.work, args.limit, only=only)
     elif args.action == 'generate':
         generate(args.work, args.max_seconds)
     else:
@@ -612,3 +675,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

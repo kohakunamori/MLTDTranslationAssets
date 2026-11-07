@@ -40,6 +40,9 @@ run-name: Assets [${{ github.event_name == 'push' && 'release' || inputs.stage |
       max_items:
         description: 'Translation smoke limit; 0 continues resumable batches'
         default: '0'
+      bundles:
+        description: 'Images stage: comma-separated exact logical bundle names (e.g. event_0454_info.unity3d,...); empty uses the normal policy batch'
+        default: ''
       max_bundles:
         description: 'Optional source extraction limit'
         default: '0'
@@ -297,6 +300,7 @@ jobs:
     with:
       enabled: true
       max_items: ${{ inputs.max_items || '0' }}
+      bundles: ${{ inputs.bundles || '' }}
     secrets: inherit
 
   release:
@@ -358,6 +362,7 @@ jobs:
     needs: [plan, images, translate, release, gateway]
     if: >-
       always() && !cancelled() && needs.release.result != 'failure' && needs.gateway.result != 'failure' &&
+      (inputs.bundles == '' || inputs.bundles == null) &&
       (inputs.max_items == '0' || inputs.max_items == '') &&
       ((needs.images.result == 'success' && needs.images.outputs.completed != '0' &&
         needs.images.outputs.completed != '' && needs.images.outputs.remaining != '0' &&

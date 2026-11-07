@@ -542,3 +542,77 @@ def test_gc_and_all_publishers_share_one_lock_and_api_job_has_no_heavy_dependenc
     commands = '\n'.join(step.get('run', '') for step in image['localize']['steps'])
     assert 'UnityPy' not in commands and 'tesseract' not in commands
     assert 'generate' in commands
+
+
+def _native_policy(model='imas-trans-image'):
+    return {'model': model, 'api_protocol': 'gemini_generate_content', 'requests_per_minute': 2,
+            'concurrency': 1, 'prompt_profile': 'preserve_layout', 'restoration_mode': 'whole_image',
+            'visual_acceptance': {'enabled': True, 'model': 'gemini-3.8-flash-high',
+                                  'api_protocol': 'gemini_generate_content'},
+            'compliance_retries': 1}
+
+
+def test_image_policy_allow_list_includes_imas_trans_image_and_refuses_unknown():
+    import incremental_images as images
+    images.validate_image_policy(_native_policy('imas-trans-image'))
+    images.validate_image_policy(_native_policy('gemini-3.1-flash-image'))
+    with pytest.raises(ValueError):
+        images.validate_image_policy(_native_policy('some-unlisted-image-model'))
+    bad = _native_policy()
+    bad['compliance_retries'] = 9
+    with pytest.raises(ValueError):
+        images.validate_image_policy(bad)
+
+
+def test_select_scopes_to_requested_bundles_only():
+    row = {'catalog_hash': 'hash', 'remote': 'remote.unity3d', 'declared_size': 10}
+    index = {'event_0454_info.unity3d': dict(row), 'event_0454_title.unity3d': dict(row),
+             'ex4c00001.unity3d': dict(row)}
+    chosen, counts, remaining = images.select(index, {}, {}, 10, only=['event_0454_title.unity3d'])
+    assert [name for name, _ in chosen] == ['event_0454_title.unity3d']
+    assert remaining == 1
+    assert counts['event_banners']['official'] == 1  # inventory still counted for the family
+    unscoped, _, unscoped_remaining = images.select(index, {}, {}, 10)
+    assert unscoped_remaining == 3 and len(unscoped) == 3
+
+
+def test_compliance_failure_retries_translation_then_accepts(tmp_path, monkeypatch):
+    import image_visual_review as visual
+    import provider_config
+    work, source, _, _ = task_fixture(tmp_path, monkeypatch)
+
+    class FakeTime:
+        @staticmethod
+        def time(): return 1000.0
+        @staticmethod
+        def monotonic(): return 0.0
+        @staticmethod
+        def sleep(_seconds): return None
+    monkeypatch.setattr(images, 'time', FakeTime)
+
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': _native_policy()})
+    images.write(tmp_path / 'configs/api-models.example.json', {'defaults': {'base_url': 'https://api.test/v1'}})
+    monkeypatch.setenv('MLTD_LLM_API_KEY', 'test-key')
+
+    calls, prompts = [], []
+    def edit(config, raw, prompt):
+        calls.append(config['image_provider']['model'])
+        prompts.append(prompt)
+        color = 'blue' if len(calls) == 1 else 'green'
+        buffer = io.BytesIO(); Image.new('RGB', (20, 20), color).save(buffer, format='PNG')
+        return buffer.getvalue(), {'requested_image_model': config['image_provider']['model']}
+    monkeypatch.setattr(provider_config, 'image_edit', edit)
+
+    verdicts = iter([('reject', False), ('pass', True)])
+    def request(*_args):
+        verdict, ok = next(verdicts)
+        return {'verdict': verdict, 'checks': dict.fromkeys(visual.CHECKS, ok), 'issues': []}
+    monkeypatch.setattr(visual, 'request_review', request)
+
+    images.generate(work)
+    result = images.read(work / 'results.json')['tasks'][images.sha(source)]
+    assert len(calls) == 2                       # first attempt rejected, retried once
+    assert result['status'] == 'generated' and result['attempts'] == 2
+    assert '绝不保留任何假名' in prompts[1]        # retry uses the stricter note
+    assert images.visually_approved(work, images.read(work / 'queue.json')['bundles'][0]['tasks'][0],
+                                    result, prompts[0]) is True

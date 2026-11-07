@@ -7,7 +7,9 @@ GitHub-hosted runner，模型请求串行限速。固定 937 张批次的脚本�
 
 ## 1. 架构与模型规范
 
-- **图像生成与编辑模型**：`gemini-3.1-flash-image`，生产端走 Gemini 原生 `generateContent`。调用串行，启动间隔至少 30 秒（RPM 2），所有调用经过 `provider_config.throttle_image_request()`。源透明度由宿主端恢复，不采用模型透明度。
+- **图像生成与编辑模型**：显式白名单内的原生模型：`gemini-3.1-flash-image`、
+  `gpt-image-2.5`、`imas-trans-image`（均走对应原生协议，见
+  `scripts/incremental_images.py` 的 `ALLOWED_IMAGE_MODELS`，非白名单组合直接拒绝）。调用串行，启动间隔至少 30 秒（RPM 2），所有调用经过 `provider_config.throttle_image_request()`。源透明度由宿主端恢复，不采用模型透明度。
 - **视觉审校与布局识别模型**：`gpt-5.6-luna`（用于识别多 Sprite 布局、文本区域分类与质量检测）
 - **底层纹理编码**：ASTC (Adaptive Scalable Texture Compression) 与 RGB24/RGBA32，保持 UnityFS 资源包非目标像素完全不变。
 

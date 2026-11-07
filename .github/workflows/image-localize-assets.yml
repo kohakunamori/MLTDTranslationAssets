@@ -8,6 +8,10 @@ name: Reusable - incremental image localization
       max_items:
         type: string
         default: '0'
+      bundles:
+        type: string
+        default: ''
+        description: 'Comma-separated exact logical bundle names to scope this batch; empty uses the normal policy batch'
     outputs:
       ready:
         value: ${{ jobs.publish.outputs.ready }}
@@ -76,7 +80,14 @@ jobs:
       - name: Discover current image backlog and prepare a bounded batch
         env:
           IMAGE_LIMIT: ${{ inputs.max_items }}
-        run: python -u scripts/incremental_images.py prepare --work work/image-batch --limit "$IMAGE_LIMIT"
+          IMAGE_BUNDLES: ${{ inputs.bundles }}
+        run: |
+          set -euo pipefail
+          args=(--work work/image-batch --limit "$IMAGE_LIMIT")
+          if [ -n "${IMAGE_BUNDLES:-}" ]; then
+            args+=(--bundles "$IMAGE_BUNDLES")
+          fi
+          python -u scripts/incremental_images.py prepare "${args[@]}"
       - id: queue
         run: echo "sha=$(sha256sum work/image-batch/queue.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4

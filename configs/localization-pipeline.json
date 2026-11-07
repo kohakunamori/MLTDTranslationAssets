@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "images": {
-    "generation_enabled": false,
+    "generation_enabled": true,
     "translator": {"kind": "llm"},
     "publication_enabled": true,
-    "model": "gpt-image-2.5",
-    "api_protocol": "images_edits",
+    "model": "imas-trans-image",
+    "api_protocol": "gemini_generate_content",
     "prompt_profile": "preserve_layout",
     "restoration_mode": "whole_image",
     "visual_acceptance": {
@@ -16,6 +16,7 @@
     "requests_per_minute": 2,
     "concurrency": 1,
     "batch_bundles": 12,
-    "disabled_reason": "Automatic image generation remains disabled at the user's request; publish existing and explicitly human-approved image sources only."
+    "compliance_retries": 1,
+    "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
   }
 }

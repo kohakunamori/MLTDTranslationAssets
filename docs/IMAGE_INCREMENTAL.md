@@ -1,8 +1,14 @@
 # 图片增量汉化
 
 生产入口 `auto-track-jp-assets.yml` 的 `stage=images` 可以独立补图片积压；
-日常 `translate/full` 也调用同一图片阶段。当前汉化模型为 `gpt-image-2.5`，走 OpenAI
-`/v1/images/edits`；视觉验收模型为 `gemini-3.8-flash-high`，走原生 Gemini `generateContent`。
+日常 `translate/full` 也调用同一图片阶段。图片模型走显式白名单
+（`scripts/incremental_images.py` 的 `ALLOWED_IMAGE_MODELS`）：
+`gemini-3.1-flash-image`、`gpt-image-2.5`，以及原生 Gemini 生成协议的
+`imas-trans-image`（`gemini_generate_content`）。非白名单组合直接拒绝，不静默换模型。
+当前 `configs/localization-pipeline.json` 使用 `imas-trans-image`；视觉验收模型为
+`gemini-3.8-flash-high`，走原生 Gemini `generateContent`。
+`stage=images` 支持 `bundles` 输入，用逗号分隔精确的 bundle 逻辑名只处理指定包
+（如活动 0454 的 9 个图包）；留空才走常规批次策略。
 图片汉化使用 `preserve_layout` 配置读取 `configs/image-translation-prompt.txt` 通用提示词，
 该模板专用于 MLTD 批量资源汉化，保留漫画、教程、横幅、贴图等各自版式；不包含指定图片的译文或角色名。
 游戏 LOGO、系列品牌和游戏名称标识整体保护，包括其中的日文，不得汉化、重拼或重绘。
@@ -61,6 +67,12 @@ flowchart LR
 
 模型作业不安装 UnityPy 或 OCR，只有 Pillow 和标准库；最长 150 分钟，API 预算 7,200 秒。
 进度按输入队列 SHA 缓存，生成结果即时记录，重跑不重复调用已完成任务。
+整图视觉验收未通过（残留日文/假名或画面被改动）时，按 `compliance_retries`
+（0..3，当前 1）对同一任务自动重试翻译；重试用更强的「不得保留假名」提示，但仍受
+RPM 2 与总时长预算约束，且只重试「已出图但验收不合格」的结果。显式内容拒绝、
+HTTP 错误与画布比例错误仍按原规则处理，不自动重试。
+视觉验收绑定原图、规范后的候选、参考文字、模型及验收提示词的 SHA；重试时绑定仍用
+canonical 基础提示词，保证 `package` 的参考身份一致。
 样本检查期间的未批准模型结果另存于 `images/candidates/`，来源与请求摘要记录在
 `manifests/image-generation-cache.json`。即使 Actions 缓存过期或批次组成变化，也先按输入 PNG SHA
 复用已有结果；切换到新验收配置时，旧模型/提示词的结果先复用并重新验收，不能因此重复生成。
