@@ -5,7 +5,9 @@
 （`scripts/incremental_images.py` 的 `ALLOWED_IMAGE_MODELS`）：
 `gemini-3.1-flash-image`、`gpt-image-2.5`，以及原生 Gemini 生成协议的
 `imas-trans-image`（`gemini_generate_content`）。非白名单组合直接拒绝，不静默换模型。
-当前 `configs/localization-pipeline.json` 使用 `imas-trans-image`；视觉验收模型为
+当前 `configs/localization-pipeline.json` 使用 `gpt-image-2.5`（`images_edits`）；
+2026-11-07 因 `imas-trans-image` 原生协议报 HTTP 429 配额耗尽而切换，切回时同步
+`model` 与 `api_protocol` 两个字段。视觉验收模型为
 `gemini-3.8-flash-high`，走原生 Gemini `generateContent`。
 `stage=images` 支持 `bundles` 输入，用逗号分隔精确的 bundle 逻辑名只处理指定包
 （如活动 0454 的 9 个图包）；留空才走常规批次策略。

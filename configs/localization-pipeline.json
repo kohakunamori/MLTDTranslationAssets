@@ -4,8 +4,8 @@
     "generation_enabled": true,
     "translator": {"kind": "llm"},
     "publication_enabled": true,
-    "model": "imas-trans-image",
-    "api_protocol": "gemini_generate_content",
+    "model": "gpt-image-2.5",
+    "api_protocol": "images_edits",
     "prompt_profile": "preserve_layout",
     "restoration_mode": "whole_image",
     "visual_acceptance": {
@@ -17,6 +17,6 @@
     "concurrency": 1,
     "batch_bundles": 12,
     "compliance_retries": 1,
-    "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
+    "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Switched from imas-trans-image to gpt-image-2.5 on 2026-11-07 after the native provider returned HTTP 429 capacity exhaustion. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
   }
 }
