@@ -123,6 +123,97 @@
           }
         ]
       }
+    },
+    "22af6bd8955e04af8eee16d99c326c2bd3f5766adf0b00e7c12bfba6b410c1c5": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "34c122b45dab5d423bc41181c62f3115632ba1d47ec3844c792d9a2a1904f9ec",
+        "candidate_sha256": "31c8e32b12aee9c4ab55998111a74a5fc712487422beed77c217477b81c9c83d",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "374569aadbed0d6ae5f347b81ebba62b34abaffbc6e05c3313abc775c4cf9976": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8",
+        "candidate_sha256": "ed47fbe1cef7d7b29ee6bba330d748d0766fdb3812899c93c101eb6f97dbed7f",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "6fb4870094c06a3c9857c9f15f3fb0eef1dc543f868b4a6f65a9afa7e258aa63": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "70b1d1e5d66dfb70d9aee35fa6a4b8091e6fd0ad3d3bd3d8894c7e9748c35646",
+        "candidate_sha256": "aef734a8cb5608e1f374183c29135d2fcfcfdd5d42d93f07d5d0122954356fbc",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": false,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "顶部胶囊框内的活动类型文字未翻译，保留了日文片假名。",
+            "expected_text": "白金星光音调（或相应官方活动译名）",
+            "observed_text": "プラチナスターチューン",
+            "region": "顶部活动标签"
+          },
+          {
+            "detail": "标题漏译了句尾的助词与句号，且右侧残留擦除原文字的白圈瑕疵痕迹。",
+            "expected_text": "夜与灯火。 / 夜与灯光。",
+            "observed_text": "夜，与灯光",
+            "region": "主标题区域"
+          }
+        ],
+        "verdict": "reject"
+      }
     }
   }
 }

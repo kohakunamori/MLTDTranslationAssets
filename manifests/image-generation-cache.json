@@ -223,6 +223,87 @@
           "output_format": "png"
         }
       }
+    },
+    "34c122b45dab5d423bc41181c62f3115632ba1d47ec3844c792d9a2a1904f9ec": {
+      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/89d0323afab27f0be2797edfa7d0e9178959d8c3689ede1fa8e84e19d66cf5a3.png",
+      "result": {
+        "status": "generated",
+        "sha256": "89d0323afab27f0be2797edfa7d0e9178959d8c3689ede1fa8e84e19d66cf5a3",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            206,
+            206
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": true
+        }
+      }
+    },
+    "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8": {
+      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/ef3cd9eb610d4b4f787e65b3a5f5ae42d2db1f36babe5ab4a06c060ecc020b34.png",
+      "result": {
+        "status": "generated",
+        "sha256": "ef3cd9eb610d4b4f787e65b3a5f5ae42d2db1f36babe5ab4a06c060ecc020b34",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            512,
+            512
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "70b1d1e5d66dfb70d9aee35fa6a4b8091e6fd0ad3d3bd3d8894c7e9748c35646": {
+      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/525a3058db61629eefc10c740e57dc3ac7ba99d7f40adfc9a2e24c6c0ab38d94.png",
+      "result": {
+        "status": "generated",
+        "sha256": "525a3058db61629eefc10c740e57dc3ac7ba99d7f40adfc9a2e24c6c0ab38d94",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            340,
+            340
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": true
+        }
+      }
     }
   }
 }
