@@ -311,6 +311,11 @@ def gemini_edit(config:dict,source:bytes,prompt:str,
 
  Pad to a supported aspect ratio without stretching the source, verify the
  returned geometry, then remove only that padding. No model substitution.
+
+ Upstream aliases do not always honour every requested aspectRatio. When the
+ prompt-fitted ratio comes back at a different geometry, retry the same model
+ once on a 1:1 padded canvas (the ratio verified to round-trip here) and crop
+ the original region back. A second mismatch is still a hard error.
  """
  import io,math
  from PIL import Image
@@ -318,36 +323,46 @@ def gemini_edit(config:dict,source:bytes,prompt:str,
  original=Image.open(io.BytesIO(source)).convert('RGBA')
  if original.width*original.height>16_777_216:raise ValueError('Image input exceeds bounded size')
  ratios=((1,1),(1,4),(1,8),(4,1),(8,1),(1,2),(2,1),(3,4),(4,3),(2,3),(3,2),(4,5),(5,4),(9,16),(16,9),(21,9))
+
+ def attempt(a,b):
+  scale=max(math.ceil(original.width/a),math.ceil(original.height/b))
+  canvas=Image.new('RGB',(scale*a,scale*b),'white')
+  canvas.paste(original,(0,0),original.getchannel('A'))
+  buffer=io.BytesIO();canvas.save(buffer,format='PNG')
+  aspect=f'{a}:{b}'
+  payload={'contents':[{'role':'user','parts':[{'text':prompt},
+     {'inlineData':{'mimeType':'image/png','data':base64.b64encode(buffer.getvalue()).decode('ascii')}}]}],
+     'generationConfig':{'responseModalities':['TEXT','IMAGE'],
+        'imageConfig':{'aspectRatio':aspect,'imageSize':'2K' if max(canvas.size)>2000 else '1K'}}}
+  url=image['base_url'].removesuffix('/v1')+'/v1beta/models/'+urllib.parse.quote(image['model'],safe='')+':generateContent'
+  request=urllib.request.Request(url,data=json.dumps(payload).encode(),method='POST',
+     headers={**headers(config,'application/json'),'x-goog-api-key':api_key(config)})
+  throttle_image_request(config)
+  try:result=send(config,request,timeout)
+  except json.JSONDecodeError:
+   raise ProviderImageResponseError({'reason':'invalid_json'}) from None
+  outputs=gemini_image_parts(result)
+  try:
+   raw=base64.b64decode(outputs[0]['data'],validate=True)
+   edited=Image.open(io.BytesIO(raw));edited.load()
+  except (ValueError,TypeError,OSError):
+   raise ProviderImageResponseError({'reason':'invalid_image'}) from None
+  error=abs((edited.width/edited.height)/(a/b)-1)
+  return a,b,aspect,canvas,edited,error
+
  a,b=min(ratios,key=lambda pair:abs(math.log((pair[0]/pair[1])/(original.width/original.height))))
- scale=max(math.ceil(original.width/a),math.ceil(original.height/b))
- canvas=Image.new('RGB',(scale*a,scale*b),'white')
- canvas.paste(original,(0,0),original.getchannel('A'))
- buffer=io.BytesIO();canvas.save(buffer,format='PNG')
- aspect=f'{a}:{b}'
- payload={'contents':[{'role':'user','parts':[{'text':prompt},
-    {'inlineData':{'mimeType':'image/png','data':base64.b64encode(buffer.getvalue()).decode('ascii')}}]}],
-    'generationConfig':{'responseModalities':['TEXT','IMAGE'],
-       'imageConfig':{'aspectRatio':aspect,'imageSize':'2K' if max(canvas.size)>2000 else '1K'}}}
- url=image['base_url'].removesuffix('/v1')+'/v1beta/models/'+urllib.parse.quote(image['model'],safe='')+':generateContent'
- request=urllib.request.Request(url,data=json.dumps(payload).encode(),method='POST',
-    headers={**headers(config,'application/json'),'x-goog-api-key':api_key(config)})
- throttle_image_request(config)
- try:result=send(config,request,timeout)
- except json.JSONDecodeError:
-  raise ProviderImageResponseError({'reason':'invalid_json'}) from None
- outputs=gemini_image_parts(result)
- try:
-  raw=base64.b64decode(outputs[0]['data'],validate=True)
-  edited=Image.open(io.BytesIO(raw));edited.load()
- except (ValueError,TypeError,OSError):
-  raise ProviderImageResponseError({'reason':'invalid_image'}) from None
- error=abs((edited.width/edited.height)/(a/b)-1)
+ a,b,aspect,canvas,edited,error=attempt(a,b)
+ fallback=False
+ if error>.01 and (a,b)!=(1,1):
+  a,b,aspect,canvas,edited,error=attempt(1,1)
+  fallback=True
  if error>.01:raise ValueError('Gemini changed the padded canvas aspect ratio')
  normalized=edited.convert('RGB').resize(canvas.size,Image.Resampling.LANCZOS).crop((0,0,*original.size))
  output=io.BytesIO();normalized.save(output,format='PNG')
  return output.getvalue(),{'requested_image_model':image['model'],'endpoint':'/v1beta/models/:generateContent',
     'mode':'gemini_generate_content','aspect_ratio':aspect,'input_size':list(canvas.size),
-    'provider_output_size':list(edited.size),'aspect_ratio_error':error,'padding_removed':True}
+    'provider_output_size':list(edited.size),'aspect_ratio_error':error,'padding_removed':True,
+    'aspect_ratio_fallback':fallback}
 
 
 def image_edit(config:dict,source:bytes,prompt:str,

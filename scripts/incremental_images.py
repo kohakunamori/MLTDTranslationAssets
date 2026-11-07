@@ -474,6 +474,15 @@ def generate(work, max_seconds=7200):
                 except provider_config.ProviderImageDeclined:
                     progress['tasks'][task['sha256']] = {'status': 'manual_review', 'reason': 'provider_safety_decision', **({'attempts': attempt} if policy.get('compliance_retries', 0) else {})}
                     break
+                except ValueError as error:
+                    # A bounded geometry refusal is recorded against this one
+                    # texture; the rest of the batch still runs. The reason text
+                    # is this client's own message, never provider output.
+                    progress['tasks'][task['sha256']] = {'status': 'manual_review',
+                        'reason': 'provider_changed_geometry', 'detail': str(error)[:200],
+                        **({'attempts': attempt} if policy.get('compliance_retries', 0) else {})}
+                    print('IMAGE_GEOMETRY_HOLD', bundle['logical'], str(error)[:80], flush=True)
+                    break
                 except urllib.error.HTTPError as error:
                     # Never log provider bodies (they can echo credentials). Only
                     # explicit moderation decisions are held without automatic retry.

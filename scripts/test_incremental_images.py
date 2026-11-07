@@ -225,6 +225,31 @@ def test_native_image_model_protocol_pads_without_distortion_then_removes_paddin
     assert meta['requested_image_model'] == 'gemini-3.1-flash-image' and meta['padding_removed']
 
 
+def test_native_image_model_falls_back_to_square_padding_when_alias_ignores_ratio(monkeypatch):
+    import provider_config as provider
+    config = copy.deepcopy(provider.DEFAULTS)
+    config['image_provider'].update(base_url='https://api.test/v1', model='imas-trans-image',
+                                    mode='gemini_generate_content', api_key='test-secret')
+    original = Image.new('RGBA', (40, 20), (255, 0, 0, 128))
+    source = io.BytesIO(); original.save(source, format='PNG')
+    ratios = []
+    def send(config, request, timeout):
+        payload = json.loads(request.data)
+        ratios.append(payload['generationConfig']['imageConfig']['aspectRatio'])
+        raw = base64.b64decode(payload['contents'][0]['parts'][1]['inlineData']['data'])
+        canvas = Image.open(io.BytesIO(raw)).size
+        # The alias ignores a 2:1 request and answers square; 1:1 round-trips.
+        size = (canvas[1], canvas[1]) if len(ratios) == 1 else canvas
+        output = io.BytesIO(); Image.new('RGB', size, 'blue').save(output, format='PNG')
+        return {'candidates': [{'content': {'parts': [{'inlineData': {'data': base64.b64encode(output.getvalue()).decode()}}]}}]}
+    monkeypatch.setattr(provider, 'send', send)
+    monkeypatch.setattr(provider, 'throttle_image_request', lambda _: None)
+    raw, meta = provider.image_edit(config, source.getvalue(), 'Translate Japanese')
+    assert ratios == ['2:1', '1:1']
+    assert Image.open(io.BytesIO(raw)).size == (40, 20)
+    assert meta['aspect_ratio'] == '1:1' and meta['aspect_ratio_fallback'] is True
+
+
 def test_native_moderation_decision_is_never_retried_as_transport_failure(monkeypatch):
     import provider_config as provider
     config = copy.deepcopy(provider.DEFAULTS)
