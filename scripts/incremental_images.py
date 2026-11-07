@@ -373,12 +373,10 @@ def checkpoint_generations(work, queue, results, policy):
             mode = result['provider'].get('mode', policy.get('api_protocol', 'gemini_generate_content'))
             replaced = None
             if previous is not None and previous.get('result', {}).get('sha256') != result['sha256']:
-                # A different model, protocol or prompt produces a different
-                # answer by design: replacing it is expected. The same request
-                # yielding different bytes is a real conflict, never silent.
-                if (previous.get('effective_model') == model and previous.get('mode') == mode
-                        and previous.get('prompt_sha256') == prompt_sha):
-                    raise ValueError('Existing durable generation differs; do not replace it silently')
+                # Image models are not deterministic: a retry of the very same
+                # request legitimately yields different bytes. Replace the
+                # checkpoint and keep the displaced provenance here, so the
+                # replacement is recorded rather than silent.
                 replaced = {'sha256': previous.get('result', {}).get('sha256'),
                             'effective_model': previous.get('effective_model'),
                             'mode': previous.get('mode'),

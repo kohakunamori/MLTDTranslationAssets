@@ -521,7 +521,7 @@ def test_package_replaces_a_generation_from_another_model_and_records_it(tmp_pat
     assert entry['supersedes']['sha256'] == 'f' * 64
 
 
-def test_package_refuses_conflicting_bytes_for_the_same_request(tmp_path, monkeypatch):
+def test_package_records_replacement_of_a_nondeterministic_retry(tmp_path, monkeypatch):
     work, source, _, results = task_fixture(tmp_path, monkeypatch)
     task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
     prompt_sha = images.hashlib.sha256(images.image_prompt(task).encode()).hexdigest()
@@ -530,8 +530,11 @@ def test_package_refuses_conflicting_bytes_for_the_same_request(tmp_path, monkey
                 'result': {'status': 'generated', 'sha256': 'f' * 64}}
     images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: previous}})
     images.write(work / 'results.json', results)
-    with pytest.raises(ValueError, match='do not replace it silently'):
-        images.package(work)
+    images.package(work)
+    entry = images.read(tmp_path / 'manifests/image-generation-cache.json')['tasks'][task['sha256']]
+    assert entry['result']['sha256'] == results['tasks'][task['sha256']]['sha256']
+    assert entry['supersedes']['sha256'] == 'f' * 64
+    assert (tmp_path / entry['output']).is_file()
 
 
 def test_cached_result_rejected_by_visual_acceptance_is_regenerated_not_reused(tmp_path, monkeypatch):
