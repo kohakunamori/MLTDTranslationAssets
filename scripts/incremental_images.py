@@ -367,15 +367,29 @@ def checkpoint_generations(work, queue, results, policy):
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(raw.read_bytes())
             previous = cache['tasks'].get(task['sha256'])
+            prompt_sha = result.get('generation_prompt_sha256') or hashlib.sha256(
+                image_prompt(task, policy.get('prompt_profile', 'legacy')).encode()).hexdigest()
+            model = result['provider']['requested_image_model']
+            mode = result['provider'].get('mode', policy.get('api_protocol', 'gemini_generate_content'))
+            replaced = None
             if previous is not None and previous.get('result', {}).get('sha256') != result['sha256']:
-                raise ValueError('Existing durable generation differs; do not replace it silently')
-            if previous is None:
-                cache['tasks'][task['sha256']] = {'prompt_sha256': result.get('generation_prompt_sha256',
-                    hashlib.sha256(image_prompt(task, policy.get('prompt_profile', 'legacy')).encode()).hexdigest()),
-                    'effective_model': result['provider']['requested_image_model'],
-                    'mode': result['provider'].get('mode', policy.get('api_protocol', 'gemini_generate_content')),
-                    'output': destination.relative_to(ROOT).as_posix(),
-                    'result': {k: result[k] for k in ('status', 'sha256', 'provider')}}
+                # A different model, protocol or prompt produces a different
+                # answer by design: replacing it is expected. The same request
+                # yielding different bytes is a real conflict, never silent.
+                if (previous.get('effective_model') == model and previous.get('mode') == mode
+                        and previous.get('prompt_sha256') == prompt_sha):
+                    raise ValueError('Existing durable generation differs; do not replace it silently')
+                replaced = {'sha256': previous.get('result', {}).get('sha256'),
+                            'effective_model': previous.get('effective_model'),
+                            'mode': previous.get('mode'),
+                            'prompt_sha256': previous.get('prompt_sha256')}
+            if previous is None or replaced is not None:
+                entry = {'prompt_sha256': prompt_sha, 'effective_model': model, 'mode': mode,
+                         'output': destination.relative_to(ROOT).as_posix(),
+                         'result': {k: result[k] for k in ('status', 'sha256', 'provider')}}
+                if replaced is not None:
+                    entry['supersedes'] = replaced
+                cache['tasks'][task['sha256']] = entry
             report = result.get('visual_review')
             if report and report.get('binding'):
                 key = hashlib.sha256(json.dumps(report['binding'], sort_keys=True).encode()).hexdigest()

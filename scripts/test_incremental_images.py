@@ -504,6 +504,36 @@ def test_durable_generation_survives_loss_of_actions_cache_without_another_api_c
         images.generate(work)
 
 
+def test_package_replaces_a_generation_from_another_model_and_records_it(tmp_path, monkeypatch):
+    work, source, _, results = task_fixture(tmp_path, monkeypatch)
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    prompt_sha = images.hashlib.sha256(images.image_prompt(task).encode()).hexdigest()
+    previous = {'prompt_sha256': prompt_sha, 'effective_model': 'imas-trans-image',
+                'mode': 'gemini_generate_content', 'output': 'images/candidates/old.png',
+                'result': {'status': 'generated', 'sha256': 'f' * 64}}
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: previous}})
+    images.write(work / 'results.json', results)
+    images.package(work)
+    entry = images.read(tmp_path / 'manifests/image-generation-cache.json')['tasks'][task['sha256']]
+    assert entry['effective_model'] == 'gemini-3.1-flash-image'
+    assert entry['result']['sha256'] == results['tasks'][task['sha256']]['sha256']
+    assert entry['supersedes']['effective_model'] == 'imas-trans-image'
+    assert entry['supersedes']['sha256'] == 'f' * 64
+
+
+def test_package_refuses_conflicting_bytes_for_the_same_request(tmp_path, monkeypatch):
+    work, source, _, results = task_fixture(tmp_path, monkeypatch)
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    prompt_sha = images.hashlib.sha256(images.image_prompt(task).encode()).hexdigest()
+    previous = {'prompt_sha256': prompt_sha, 'effective_model': 'gemini-3.1-flash-image',
+                'mode': 'gemini_generate_content', 'output': 'images/candidates/old.png',
+                'result': {'status': 'generated', 'sha256': 'f' * 64}}
+    images.write(tmp_path / 'manifests/image-generation-cache.json', {'tasks': {task['sha256']: previous}})
+    images.write(work / 'results.json', results)
+    with pytest.raises(ValueError, match='do not replace it silently'):
+        images.package(work)
+
+
 def test_cached_result_rejected_by_visual_acceptance_is_regenerated_not_reused(tmp_path, monkeypatch):
     import provider_config as provider
     work, _, output, results = task_fixture(tmp_path, monkeypatch)
