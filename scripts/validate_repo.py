@@ -33,7 +33,7 @@ from pipelines.core.hashing import sha256_text  # noqa: E402
 from pipelines.text.translation_tokens import (  # noqa: E402
     validate_translation_tokens,
 )
-from scripts.scenario_text_layout import audit as audit_candidate_layout  # noqa: E402
+from scripts.scenario_text_layout import audit as audit_candidate_layout, blocking  # noqa: E402
 
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -377,7 +377,7 @@ def main() -> int:
     if args.layout_report:
         args.layout_report.parent.mkdir(parents=True, exist_ok=True)
         args.layout_report.write_text(json.dumps(layout, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    hard = [row for row in layout if any(issue != 'over_target' for issue in row['issues'])]
+    hard = [row for row in layout if blocking(row['issues'])]
     print(f'Candidate layout report: rows={len(layout)} blocking_issues={len(hard)}')
     if args.layout_strict and hard:
         print('ERROR: candidate layout strict mode found blocking issues', file=sys.stderr)

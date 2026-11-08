@@ -2,7 +2,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from scripts.scenario_text_layout import Policy, apply_category, atoms, lint, policy_for, reflow, width
+from scripts.scenario_text_layout import (Policy, apply_category, atoms, blocking, lint,
+                                          policy_for, reflow, width)
 
 
 class LayoutTests(unittest.TestCase):
@@ -52,6 +53,16 @@ class LayoutTests(unittest.TestCase):
     def test_blank_and_cr(self):
         self.assertIn('empty_line', lint('甲\n', Policy()))
         with self.assertRaises(ValueError): reflow('甲\r\n乙', Policy())
+
+    def test_source_line_preference_does_not_merge(self):
+        out = reflow('不要换台哦！\n……话说，这次的直播可没有广告啦～♪', Policy(), 2)
+        self.assertEqual(out.count('\n'), 1)
+        self.assertFalse(blocking(lint(out, Policy(), 2)))
+
+    def test_mismatch_is_report_only(self):
+        issues = lint('你好', Policy(), 2)
+        self.assertIn('line_count_mismatch', issues)
+        self.assertFalse(blocking(issues))
 
     def test_stable(self):
         text = '甲' * 20 + '\n' + '乙' * 20

@@ -24,6 +24,12 @@ TOKEN = re.compile(r'\{[^{}\n]+\}|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]|<[^<>\n]+>|\\[n
 NO_START = set('，。、；：？！!?;:,.）》」』】〕〉…')
 NO_END = set('（《「『【〔〈(')
 PUNCT = set('，。、；：？！!?;:,')
+NON_BLOCKING = {'over_target', 'line_count_mismatch'}
+
+
+def blocking(issues: list[str]) -> list[str]:
+    """Candidate findings that are not yet safe to publish."""
+    return [issue for issue in issues if issue not in NON_BLOCKING]
 
 
 @dataclass(frozen=True)
@@ -77,9 +83,11 @@ def width(text: str, policy: Policy = Policy()) -> int:
     return total
 
 
-def lint(text: str, policy: Policy) -> list[str]:
+def lint(text: str, policy: Policy, source_lines: int | None = None) -> list[str]:
     issues = []
     lines = text.split('\n')
+    if source_lines is not None and len(lines) != min(policy.lines, max(1, source_lines)):
+        issues.append('line_count_mismatch')
     if len(lines) > policy.lines: issues.append('line_count')
     if any(width(line, policy) > policy.ceiling for line in lines): issues.append('over_ceiling')
     elif any(width(line, policy) > policy.target for line in lines): issues.append('over_target')
@@ -90,7 +98,7 @@ def lint(text: str, policy: Policy) -> list[str]:
     return issues
 
 
-def reflow(text: str, policy: Policy) -> str:
+def reflow(text: str, policy: Policy, preferred_lines: int | None = None) -> str:
     """DP over indivisible atoms; refuse infeasible candidates instead of truncating."""
     if '\r' in text: raise ValueError('carriage return requires manual review')
     flat = text.replace('\n', '')
@@ -129,14 +137,16 @@ def reflow(text: str, policy: Policy) -> str:
                     if old is None or candidate[0] < old[0]: dp[line_no, end] = candidate
         candidate = dp.get((count, n))
         if candidate:
-            score = candidate[0] + count * 10
+            preferred = len(text.split('\n')) if preferred_lines is None else preferred_lines
+            preferred = min(policy.lines, max(1, preferred))
+            score = candidate[0] + count * 10 + (0 if count == preferred else 500)
             if best is None or score < best[0]: best = (score, candidate[1])
     if best is None: raise ValueError('no token-safe layout within candidate budget')
     lines = []; start = 0
     for end in best[1]: lines.append(''.join(aa[start:end])); start = end
     result = '\n'.join(lines)
     if result.replace('\n', '') != flat: raise AssertionError('reflow changed characters')
-    if any(issue != 'over_target' for issue in lint(result, policy)):
+    if any(issue not in NON_BLOCKING for issue in lint(result, policy, preferred_lines)):
         raise ValueError('candidate failed post-layout lint')
     return result
 
@@ -150,7 +160,7 @@ def audit(root: Path, category: str | None = None) -> list[dict]:
             row = json.loads(line)
             policy = policy_for(path.parent.name, row)
             if policy is None or not row.get('zh'): continue
-            issues = lint(row['zh'], policy)
+            issues = lint(row['zh'], policy, str(row.get('ja', '')).count('\n') + 1)
             if issues:
                 records.append({'path': path.relative_to(root).as_posix(), 'line': number,
                                 'item_key': row['item_key'], 'issues': issues,
@@ -173,19 +183,19 @@ def apply_category(root: Path, category: str) -> dict:
             row = json.loads(line)
             policy = policy_for(category, row)
             if policy is None or not row.get('zh'): continue
-            issues = lint(row['zh'], policy)
-            if not any(issue != 'over_target' for issue in issues): continue
+            issues = lint(row['zh'], policy, str(row.get('ja', '')).count('\n') + 1)
+            if not blocking(issues): continue
             counts['candidates'] += 1
             before = row['zh']
             try:
-                after = reflow(before, policy)
+                after = reflow(before, policy, str(row.get('ja', '')).count('\n') + 1)
                 if after.replace('\n', '') != before.replace('\n', ''):
                     raise ValueError('text changed')
                 if protected_tokens(before) != protected_tokens(after):
                     raise ValueError('protected token changed')
                 probe = dict(row, zh=after)
                 if 'over_target' in lint(after, policy): counts['still_over_target'] += 1
-                if any(issue != 'over_target' for issue in lint(after, policy)):
+                if blocking(lint(after, policy, str(row.get('ja', '')).count('\n') + 1)):
                     raise ValueError('post-layout lint failed')
                 compact = ': ' not in line
                 lines[index] = json.dumps(probe, ensure_ascii=False, separators=(',', ':') if compact else None)
@@ -224,7 +234,7 @@ def main() -> int:
         result = apply_category(args.root, args.category)
         print(f'apply category={args.category} {result}')
         return 1 if result.get('blocked') else 0
-    return int(args.strict and any(any(i != 'over_target' for i in r['issues']) for r in records))
+    return int(args.strict and any(blocking(r['issues']) for r in records))
 
 
 if __name__ == '__main__': raise SystemExit(main())
