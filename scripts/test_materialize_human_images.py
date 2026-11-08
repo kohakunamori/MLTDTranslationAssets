@@ -58,7 +58,10 @@ def test_published_manual_result_skips_network_and_repack(tmp_path, monkeypatch)
     assert human.materialize(tmp_path, tmp_path / "work") == 0
 
 
-def test_manual_publication_is_independent_from_disabled_generation():
+def test_manual_publication_is_independent_from_generation_switch():
+    # The generation switch is operational state (it flips with provider
+    # availability), so pinning its current value would make this a snapshot
+    # test. What must hold is that manual publication never depends on it.
     root = Path(__file__).resolve().parents[1]
     workflow = yaml.safe_load((root / ".github/workflows/assets-generated.yml").read_text(encoding="utf-8"))
     steps = workflow["jobs"]["build"]["steps"]
@@ -70,5 +73,7 @@ def test_manual_publication_is_independent_from_disabled_generation():
     assert "-r pipelines/image/requirements-injection.txt" in manual["run"]
     assert "human-image-env/bin/python scripts/materialize_human_images.py" in manual["run"]
     policy = json.loads((root / "configs/localization-pipeline.json").read_text(encoding="utf-8"))["images"]
-    assert policy["generation_enabled"] is False
     assert policy["publication_enabled"] is True
+    body = (root / "scripts/materialize_human_images.py").read_text(encoding="utf-8")
+    for model_call in ("translation.", "incremental_images", "request_image", "generate("):
+        assert model_call not in body, f"manual publication must not reach the image model: {model_call}"
