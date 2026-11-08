@@ -472,13 +472,22 @@ def generate(work, max_seconds=7200):
 
             if task['sha256'] in progress['tasks']:
                 recorded = progress['tasks'][task['sha256']]
-                review_generated(work, task, recorded, prompt, policy, public['defaults']['base_url'])
-                if usable(recorded):
+                bound = ((recorded.get('visual_review') or {}).get('binding') or {}).get('reference_sha256')
+                # Decide against the binding stored with the old result: reviewing
+                # first would rebind it to the current prompt and hide the change.
+                if bound and bound != hashlib.sha256(prompt.encode('utf-8')).hexdigest():
+                    print('IMAGE_PROMPT_CHANGED', bundle['logical'], flush=True)
+                    progress['tasks'].pop(task['sha256'], None)
+                    write(work / 'results.json', progress)
+                elif usable(recorded):
+                    review_generated(work, task, recorded, prompt, policy, public['defaults']['base_url'])
                     write(work / 'results.json', progress)
                     continue
-                print('IMAGE_REUSE_REJECTED', bundle['logical'], flush=True)
-                progress['tasks'].pop(task['sha256'], None)
-                write(work / 'results.json', progress)
+                else:
+                    review_generated(work, task, recorded, prompt, policy, public['defaults']['base_url'])
+                    print('IMAGE_REUSE_REJECTED', bundle['logical'], flush=True)
+                    progress['tasks'].pop(task['sha256'], None)
+                    write(work / 'results.json', progress)
             reused = reuse_generation(work, task, prompt, config)
             if reused is not None:
                 progress['tasks'][task['sha256']] = reused
