@@ -26,6 +26,17 @@ def test_discovery_expands_beyond_frozen_cohort_and_changes_are_requeued():
     assert all(name != 'music_001.unity3d' for name, _ in chosen)
 
 
+def test_explicitly_requested_bundle_is_retried_after_manual_review():
+    row = {'catalog_hash': 'hash', 'remote': 'remote.unity3d', 'declared_size': 10}
+    index = {'event_0454.unity3d': row}
+    state = {'event_0454.unity3d': {'identity': images.identity(row), 'status': 'manual_review'}}
+    name = 'event_0454.unity3d'
+    assert images.select(index, state, {}, 10, {}, only={name})[0] == []
+    chosen, counts, remaining = images.select(index, state, {}, 10, {}, only={name}, force={name})
+    assert [item[0] for item in chosen] == [name] and remaining == 1
+    assert counts['event_ui']['pending'] == 1
+
+
 def task_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(images, 'ROOT', tmp_path)
     monkeypatch.setattr(images, 'text_regions', lambda _: [])

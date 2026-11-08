@@ -51,8 +51,9 @@ def identity(row):
     return [row['catalog_hash'], row['remote'], row['declared_size']]
 
 
-def select(index, state, published, limit, published_fingerprints=None, only=None):
+def select(index, state, published, limit, published_fingerprints=None, only=None, force=None):
     scoped = set(only) if only is not None else None
+    forced = set(force or ())
     pending, counts = [], {}
     for logical, row in sorted(index.items()):
         family = classify(logical)
@@ -65,7 +66,13 @@ def select(index, state, published, limit, published_fingerprints=None, only=Non
         same = old and old['identity'] == identity(row)
         if same and thumbnail_parent(logical):
             same = old.get('derivation', {}).get('dependency') == thumbnail_dependency(logical, index, state, published, published_fingerprints)
-        if same:
+        if same and logical in forced:
+            # An explicitly requested bundle is retried even when its previous
+            # decision was manual_review; the operator asked for another attempt.
+            count['pending'] += 1
+            if scoped is None or logical in scoped:
+                pending.append((logical, row))
+        elif same:
             status = old['status'] if old['status'] in ('manual_review', 'ocr_no_text', 'no_texture') else 'completed'
             count[status] += 1
         elif published.get(logical) == row['remote'] and not thumbnail_parent(logical):
@@ -127,7 +134,8 @@ def prepare(work, limit, only=None):
                 published[entry['logical_key']] = entry['runtime_path'].rsplit('/', 1)[-1]
                 published_sources[entry['logical_key']] = entry['source_sha256']
                 published_fingerprints[entry['logical_key']] = entry['artifact_sha256']
-    chosen, counts, remaining = select(index, state['bundles'], published, limit, published_fingerprints, only=scoped)
+    chosen, counts, remaining = select(index, state['bundles'], published, limit, published_fingerprints,
+                                       only=scoped, force=scoped)
     document = {'schema_version': 1, 'asset_version': version['asset_version'], 'families': counts,
                 'pending_bundles': remaining, 'selected_bundles': len(chosen), 'bundles': [],
                 'requested_bundles': scoped,
@@ -140,6 +148,8 @@ def prepare(work, limit, only=None):
         compatible = prior if prior and prior['archive_sha256'] == archive_sha else (
             {'status': 'published_compatible', 'textures': [], 'text_maps': {}}
             if published_sources.get(logical) == archive_sha else None)
+        if scoped is not None and logical in scoped:
+            compatible = None  # An explicitly requested bundle is regenerated, never reused.
         if thumbnail_parent(logical):
             compatible = None  # A parent translation may change without changing the thumbnail's official bytes.
         if compatible is not None:
