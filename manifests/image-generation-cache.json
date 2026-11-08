@@ -3,35 +3,29 @@
   "purpose": "Unapproved generation checkpoints; not installable translations",
   "tasks": {
     "33445a2582cb41e8968182fdbb25961a241b99d54f1ce369abbcfe330d420839": {
-      "logical": "ex4c00966.unity3d",
-      "archive_sha256": "cb81320426734ac6a1db6e9a89561cf7baa777a9cf75c29157676f16eab36da4",
-      "asset_version": "1077750",
-      "prompt_sha256": "ef47def8ed56136157dc0c7cb45f363141a9c458cb6a56620301356f98af83d4",
-      "effective_model": "gemini-3.1-flash-image",
-      "mode": "gemini_generate_content",
-      "review_status": "unapproved",
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/69bb7932ba9ae12a5337e782e43291a7bd9fd98b1b21f44f5cd7472649c38890.png",
       "result": {
         "status": "generated",
-        "sha256": "3c6d15b85f6c3c019cca23c45d82f7684d74f9832ea52937ef3d6388dab614f5",
+        "sha256": "69bb7932ba9ae12a5337e782e43291a7bd9fd98b1b21f44f5cd7472649c38890",
         "provider": {
-          "requested_image_model": "imas-trans-image",
-          "endpoint": "/v1beta/models/:generateContent",
-          "mode": "gemini_generate_content",
-          "aspect_ratio": "1:4",
-          "input_size": [
-            640,
-            2560
-          ],
-          "provider_output_size": [
-            1024,
-            4128
-          ],
-          "aspect_ratio_error": 0.007751937984496138,
-          "padding_removed": true
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
         }
       },
-      "output": "images/candidates/3c6d15b85f6c3c019cca23c45d82f7684d74f9832ea52937ef3d6388dab614f5.png",
-      "output_kind": "raw_model_candidate"
+      "supersedes": {
+        "sha256": "3c6d15b85f6c3c019cca23c45d82f7684d74f9832ea52937ef3d6388dab614f5",
+        "effective_model": "gemini-3.1-flash-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "ef47def8ed56136157dc0c7cb45f363141a9c458cb6a56620301356f98af83d4"
+      }
     },
     "58341c65ed5b834edfba53a287c55cf644e19bb98ff77bc09c59cd6353fc87f8": {
       "logical": "ex4c00965.unity3d",
@@ -47,35 +41,29 @@
       }
     },
     "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2": {
-      "logical": "ex4c00964.unity3d",
-      "archive_sha256": "42329d9cb74149f3fa3a5812b6d1d94c447d321ec75b7ddcc8884a6402a70fff",
-      "asset_version": "1077750",
-      "prompt_sha256": "c1888a6da4bd3376fc506c2686300893dbd85944be129c1af76d80562cc2b678",
-      "effective_model": "gemini-3.1-flash-image",
-      "mode": "gemini_generate_content",
-      "review_status": "unapproved",
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/659b4c98d61894a109413fe64485f8ee8087ecc8c0ef19ffbf093eaae3239cfd.png",
       "result": {
         "status": "generated",
-        "sha256": "56c9eac4adc53494d87d39d5865d1b6791f7d2e80733a0de120ce900df57b9df",
+        "sha256": "659b4c98d61894a109413fe64485f8ee8087ecc8c0ef19ffbf093eaae3239cfd",
         "provider": {
-          "requested_image_model": "gemini-3.1-flash-image",
-          "endpoint": "/v1beta/models/:generateContent",
-          "mode": "gemini_generate_content",
-          "aspect_ratio": "1:4",
-          "input_size": [
-            640,
-            2560
-          ],
-          "provider_output_size": [
-            1024,
-            4128
-          ],
-          "aspect_ratio_error": 0.007751937984496138,
-          "padding_removed": true
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
         }
       },
-      "output": "images/candidates/56c9eac4adc53494d87d39d5865d1b6791f7d2e80733a0de120ce900df57b9df.png",
-      "output_kind": "raw_model_candidate"
+      "supersedes": {
+        "sha256": "56c9eac4adc53494d87d39d5865d1b6791f7d2e80733a0de120ce900df57b9df",
+        "effective_model": "gemini-3.1-flash-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "c1888a6da4bd3376fc506c2686300893dbd85944be129c1af76d80562cc2b678"
+      }
     },
     "cd04b03c9243b305ad4d2ebeb0cdac91b1f7a6f2099d97def42dca858eabab6c": {
       "logical": "ex4c00963.unity3d",
@@ -699,6 +687,120 @@
       "result": {
         "status": "generated",
         "sha256": "6ab9f71f30109d79745901e50d6f5f691d3ec9eacc7079285c94cf8c85f0f814",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "df92a0ce8589f08e8c0bb5717fb8a6353bb147bf1e9a282bb44493fd673c52b3": {
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/a79577c012430be031d5f56f478d27bb5ef532d9f9f4f71cff13fd0736ec1db6.png",
+      "result": {
+        "status": "generated",
+        "sha256": "a79577c012430be031d5f56f478d27bb5ef532d9f9f4f71cff13fd0736ec1db6",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "79ebe3fa1dba6e1e88e26deef468aa4b65c81ad351e2c38cdb9b2db33bc2009d": {
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/c9229834d5dded412cae7eeb87d1edbc2a42116c3695a69e8e921f6f97278ee9.png",
+      "result": {
+        "status": "generated",
+        "sha256": "c9229834d5dded412cae7eeb87d1edbc2a42116c3695a69e8e921f6f97278ee9",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "affa1a130338e92cc0fce723f56f68ef530165667685a405371813338e4b92b1": {
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/186cc81a8e6d33b4b9fa94c2bdff3730e6bae6be7dc71f64abafae2be6c4e21f.png",
+      "result": {
+        "status": "generated",
+        "sha256": "186cc81a8e6d33b4b9fa94c2bdff3730e6bae6be7dc71f64abafae2be6c4e21f",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "c174739c40a2d85cd8ee4d96f5162f7537ec333f9694bd679c3596b541f43307": {
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/4ac899807ca03fa8fb037090fcca2ee5505fbb65308cf5b511ef138f8fbcfcb2.png",
+      "result": {
+        "status": "generated",
+        "sha256": "4ac899807ca03fa8fb037090fcca2ee5505fbb65308cf5b511ef138f8fbcfcb2",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "8c0cb8f3c0072d871568dea40ff99adb9e67ff766f22693f0da682088918eca8": {
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/d4a97ffe20a1806ca2724506870e752ee24e76011e7686ab79add61685418be9.png",
+      "result": {
+        "status": "generated",
+        "sha256": "d4a97ffe20a1806ca2724506870e752ee24e76011e7686ab79add61685418be9",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "33e83f8cc7b1a19af5b86500bb981a4e53827b216321817970e33c6b8c61d550": {
+      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/624e92846478e044b8618917ba9f47f72b67ae5ec5c6af7630b6e1ddcc6abd3b.png",
+      "result": {
+        "status": "generated",
+        "sha256": "624e92846478e044b8618917ba9f47f72b67ae5ec5c6af7630b6e1ddcc6abd3b",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",

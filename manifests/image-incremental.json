@@ -4,12 +4,12 @@
     "ex4c00968.unity3d": {
       "identity": [
         "307a245582cfa3937c23eac22fd43778ed759173",
-        "7dc2f15ba089f5315095e84d74b1d8af53cbdbf1.unity3d",
+        "ab504d9296be2b064dabbd244d6ad7f504b3882f.unity3d",
         354939
       ],
       "archive_sha256": "b4e84b197c705d597ada2987d938c004b96370f9d4875a2f2979698c7d36a6f9",
       "status": "manual_review",
-      "asset_version": "1077750",
+      "asset_version": "1078700",
       "textures": [
         {
           "id": -3113216890991078634,
@@ -4062,12 +4062,12 @@
     "ex4c00967.unity3d": {
       "identity": [
         "65f38e1f349292461339b3e444d2892f14331231",
-        "e1ed13daf1cfa0f9d80988a40975cacd45ba826a.unity3d",
+        "048befc03e9a4de494bd16202ad5f8059d50f98e.unity3d",
         355261
       ],
       "archive_sha256": "cf92fbbaa48c1004c59938d01cfc3c4a123bb477f9ffd85583d61ff9944163ff",
       "status": "manual_review",
-      "asset_version": "1077750",
+      "asset_version": "1078700",
       "textures": [
         {
           "id": -7464440346175550728,
@@ -6288,6 +6288,559 @@
             },
             "issues": [],
             "verdict": "pass"
+          }
+        }
+      }
+    },
+    "ex4c00959_thumb.unity3d": {
+      "identity": [
+        "54224368571d00be8f48437fb712a024f2b6089e",
+        "ca7f6b50aa02041e3de33f953e00ec4c9f5a7442.unity3d",
+        7073
+      ],
+      "archive_sha256": "0c6117a32fadcfd50dcbe88a52aaefa87a1a9e34050be990ee5b379db7bde34c",
+      "asset_version": "1078700",
+      "status": "translated",
+      "textures": [
+        {
+          "id": -1740313612422565654,
+          "localized": "images/localized/469fb002ff9d846e3c1385999f2dac5ef58fd55af0c1737177ffee21bbc39a06.png",
+          "sha256": "469fb002ff9d846e3c1385999f2dac5ef58fd55af0c1737177ffee21bbc39a06",
+          "source_sha256": "300afc3b672d29aab55b44430850cea1d504177b559e74eee76dc452cb1b6de4",
+          "derived_from": {
+            "bundle": "ex4c00959.unity3d",
+            "texture_id": 6621877750307131827,
+            "localized_sha256": "a38eb8a275ee82dbc229d3b2fd769a7126286b370a4f0a7ba1ebf17470c93c4f",
+            "match": {
+              "mean_absolute_rgb_error": 12.776491447642886,
+              "rgb_correlation": 0.9616254379278534,
+              "runner_up_error": 67.68658740091782,
+              "algorithm": "full-texture-lanczos-v1"
+            }
+          }
+        }
+      ],
+      "text_maps": {},
+      "derivation": {
+        "kind": "approved-parent-thumbnail",
+        "parent": "ex4c00959.unity3d",
+        "dependency": "acdc4a636522b8a04f0041cab6f94a4d59b175fdc7c0152776708b0bb0157b3f",
+        "parent_archive_sha256": "8fe7fcd98716928340a295cc16e513ecce6f432c217585b9dc755956dfac1972",
+        "model_called": false
+      }
+    },
+    "ex4c00974.unity3d": {
+      "identity": [
+        "3134f38bf5f4e78906110572b7729ef5fc850dff",
+        "cadf3e3ba91639f6c3591a08dd1be1fad53e154b.unity3d",
+        314232
+      ],
+      "archive_sha256": "a7ad91e6a4004b14634c298946645080890205949077f2d8cdf488914129070b",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "df92a0ce8589f08e8c0bb5717fb8a6353bb147bf1e9a282bb44493fd673c52b3": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "df92a0ce8589f08e8c0bb5717fb8a6353bb147bf1e9a282bb44493fd673c52b3",
+            "candidate_sha256": "7872f44c3e512de2544f7e4efec22f5ad33d616a1187d6e798103596f7ca07bd",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "标题“たとえ昏くても”（即使身处昏暗/即便黑暗）被误译为“即使勉强也……”。",
+                "expected_text": "即使身处黑暗…… / 哪怕身处昏暗……",
+                "observed_text": "即使勉强也……",
+                "region": "顶部标题"
+              },
+              {
+                "detail": "左侧气泡“悪い大人たちにいいように使われてさ… でも ルカなりに必死に生きてきたわけだろ？”（被坏大人们任意摆布……但露卡也是以自己的方式拼命活过来的吧？）被严重错译扭曲原意。",
+                "expected_text": "被坏大人们任意摆布……但露卡也是以自己的方式拼命活过来的吧？",
+                "observed_text": "正因为对不起那些坏大人，才要好好利用……但只有露卡拼命地活了下来，不就很奇怪吗？",
+                "region": "第1格左侧气泡"
+              },
+              {
+                "detail": "“エドガーと一緒に生き延びたかっただけでさ”（只是想和埃德加一起活下去罢了）被错译；左下“物語のキャラだからホントに生きてるわけじゃないのに…”（明明只是故事里的角色，又不是真的活着……）被完全曲解捏造为“可故事的主角就是这样的，所以才活下来的，不是吗……”。",
+                "expected_text": "埃德加想要坚持“正直”，露卡则是就算“做恶”，也只是想和埃德加一起活下去罢了。所以……／不过这很奇怪吧！露卡明明是个恶人，而且只是故事里的角色，又不是真的活着……",
+                "observed_text": "露卡就算被埃德加说「邪恶」，也只是拼命活下去。／可故事的主角就是这样的，所以才活下来的，不是吗……",
+                "region": "第2格气泡"
+              },
+              {
+                "detail": "“ほら 役に命を吹き込むって言うでしょ？”（常说的“给角色注入生命”，对吧？）被错译为“赋予她 让她去完成吗”，丢掉了“注入生命”的核心意义。",
+                "expected_text": "你看，不是常说要“给角色注入生命”吗？",
+                "observed_text": "你看，不就是赋予她 让她去完成吗？",
+                "region": "第3格左下气泡"
+              },
+              {
+                "detail": "“ルカの命は”（露卡的生命）被错译为“露卡的命运”；“昂がそう悩む意味だってきっとあるよ”（昂会为此烦恼也一定是有意义的哦）被篡改为“也很正常，这我能理解哦”。",
+                "expected_text": "露卡的生命确实存在于那里哦。所以昂会为此烦恼，也一定是有意义的哦。",
+                "observed_text": "露卡的命运确实就在那里，所以昂会为此烦恼也很正常，这我能理解哦。",
+                "region": "第4格右上气泡"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00973.unity3d": {
+      "identity": [
+        "ec17dd10fe1a578f2870a7f8b7833059d41d8af1",
+        "bb35a818e5335b365694a80507aca3bdef36461d.unity3d",
+        351203
+      ],
+      "archive_sha256": "8ddf7ce7610bf2f28d83c56d36af79c7608bb1b421290f16ab8f384d8a7099bf",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "79ebe3fa1dba6e1e88e26deef468aa4b65c81ad351e2c38cdb9b2db33bc2009d": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "79ebe3fa1dba6e1e88e26deef468aa4b65c81ad351e2c38cdb9b2db33bc2009d",
+            "candidate_sha256": "f9c574b0e0ceaf53345cbf606759422f8de67c159a8e89ea97996e2259c2f39b",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": true
+            },
+            "issues": [
+              {
+                "detail": "原句为“聖母がにじみ出てしまっているのかもしれませんね～”，意为“也许是（我身上的）圣母属性流露出来了吧”，候选图错译为“圣母从来显现一定哦”，存在错字及语义混乱不通顺的问题。",
+                "expected_text": "说不定是我流露出了圣母的一面呢～",
+                "observed_text": "说不定圣母从来显现一定哦～",
+                "region": "第2格中下方朋花对话气泡"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00972.unity3d": {
+      "identity": [
+        "e274654f427e8080a91790239e4d44b04d28a426",
+        "1abea9cfd29e72545875d0c645d755a9efb72e90.unity3d",
+        321678
+      ],
+      "archive_sha256": "00b6eeb96a1508f9262b388cdd641a7ec7954c2fee2d31e6b9122319c70de6a9",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "affa1a130338e92cc0fce723f56f68ef530165667685a405371813338e4b92b1": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "affa1a130338e92cc0fce723f56f68ef530165667685a405371813338e4b92b1",
+            "candidate_sha256": "0ada0045710b41c2dd36d308ba63dd5e8b621502d1eee5d9b6118d2631b87746",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "标题将春日未来个人曲曲名《素敵なキセキ》（美妙的奇迹）严重错译为吉他。",
+                "expected_text": "美妙的奇迹",
+                "observed_text": "美妙的吉他",
+                "region": "顶部标题"
+              },
+              {
+                "detail": "将“エアギター”（空气吉他）曲解并误译为玩电吉他。",
+                "expected_text": "未来，你在演出现场有弹空气吉他吧？",
+                "observed_text": "你以后打算玩电吉他进行演唱会吧？",
+                "region": "第1格右侧气泡"
+              },
+              {
+                "detail": "“やっぱりいいです！”意为“还是算了/不用了”，被反向错译为肯定附和。",
+                "expected_text": "……还是算啦！",
+                "observed_text": "……果然很棒呢！",
+                "region": "第2格下部气泡"
+              },
+              {
+                "detail": "完全偏离原意，原文意为比起看手部弹琴更想看着台下应援的大家。",
+                "expected_text": "嗯！在舞台上比起盯着手部，我更想看着为我应援的大家呢！",
+                "observed_text": "好！我想在舞台上比起现在更加闪闪发光的我！",
+                "region": "第3格右上气泡"
+              },
+              {
+                "detail": "译文出现语病与严重胡编，漏译对曲名与奇迹的呼应。",
+                "expected_text": "而且我的《美妙的奇迹》，必须和各位粉丝在一起才能引发奇迹！",
+                "observed_text": "比起只有粉丝为之应援的粉丝，不如说是由大家演出，美能让我心怦然心动！",
+                "region": "第3格左下气泡"
+              },
+              {
+                "detail": "译文语句不通顺，存在乱码式语病且曲解原意。",
+                "expected_text": "……这样啊。对我而言的吉他，对未来而言或许就是粉丝的声援吧。呵",
+                "observed_text": "……这样啊 原来你为了让粉丝的声为在未来也能成的自己弹奏吉他的动力啊。呵",
+                "region": "第4格右侧气泡"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00971.unity3d": {
+      "identity": [
+        "9f62ee59c0ff1ad92a73f51db48ce17793321ca0",
+        "f610f3d6d41054b00a6ad931b90a3bc8ad2697b4.unity3d",
+        335176
+      ],
+      "archive_sha256": "fbf2e13a0ad49ef944e6c93b519aaf804746d04a47f8a44a560362739d8f95c8",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "c174739c40a2d85cd8ee4d96f5162f7537ec333f9694bd679c3596b541f43307": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "c174739c40a2d85cd8ee4d96f5162f7537ec333f9694bd679c3596b541f43307",
+            "candidate_sha256": "7a09f9571f7a887ee4eeaee8f1d2e7c3ec6cc3a48d3d1c26c733c5fa53e5dbfb",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "第1格莉绪台词语义完全偏离。原句为明明穿得这么可爱却在闹别扭。",
+                "expected_text": "明明打扮得这么可爱，怎么在闹别扭呢？",
+                "observed_text": "既然真美已经这么可爱了，为什么还要勉强变得更可爱呢？",
+                "region": "第1格莉绪气泡"
+              },
+              {
+                "detail": "第1格真美台词译错，原文为对“可爱”而非“性感”感到不满。",
+                "expected_text": "是可爱？不是性感吗？",
+                "observed_text": "可爱？不去变得更可爱吗？",
+                "region": "第1格真美气泡"
+              },
+              {
+                "detail": "第2格莉绪气泡中“ピンクだし フリルだし”译错为“可爱得恰到好处哦”。",
+                "expected_text": "又是粉色又有荷叶边",
+                "observed_text": "可爱得恰到好处哦",
+                "region": "第2格莉绪小字/粉色气泡旁白"
+              },
+              {
+                "detail": "第3格真美台词严重误译。原文表达的是哥哥没有被迷得神魂颠倒是因为自己过于可爱掩盖了情趣睡衣的性感。",
+                "expected_text": "哥哥看到这副模样的真美却没有神魂颠倒，难道是因为真美可爱的威力把短睡裙的性感都遮盖住了吗！？",
+                "observed_text": "哥哥看到真美酱这副模样，一定会心动不已，无法自拔的！ 到时候，婴美钓偶像就会被揭穿，变得更不害羞了吧！？",
+                "region": "第3格黄色爆炸气泡"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00970.unity3d": {
+      "identity": [
+        "2b78dea3a26254a8886c291a519a868e6e27c349",
+        "e671e6aeeca2ba02c8b7108ce92fc81819fb1b86.unity3d",
+        363615
+      ],
+      "archive_sha256": "a8ce2c258281cb2bd8540ceca9feb216a5f1cdd8e82c9e7bd1181a81915ed3f8",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "8c0cb8f3c0072d871568dea40ff99adb9e67ff766f22693f0da682088918eca8": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "8c0cb8f3c0072d871568dea40ff99adb9e67ff766f22693f0da682088918eca8",
+            "candidate_sha256": "cee0eb3703527c7277c5e3d1f932b8f3ab4de83f88c08624d52f427ece68452a",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": false,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "第3格右侧气泡文字排版严重错乱、重复并出现乱码（如‘学长迷你镐镐了’、‘就完全样样！’），未能忠实翻译原句‘ミニピックくんばっかりかまってたから’与‘先輩ピックくんが嫉妬しちゃったみたい！’。",
+                "expected_text": "因为光顾着照顾迷你镐君，前辈镐君好像吃醋了！",
+                "observed_text": "因为迷你镐小君 学长迷你镐镐了 就完全样样！ 就完全变成了 嫉妒的样子！",
+                "region": "第3格丽花对白气泡"
+              },
+              {
+                "detail": "将正牌大登山镐‘ピックくん’通篇误译混淆为‘迷你镐小君’（如第2格‘ピックくん（本物）！？’误译为‘迷你镐小君（本体）！？’、第4格对大镐说话同样误译为‘等迷你镐小君’、底部注释亦混淆）。",
+                "expected_text": "镐君（本体）！？ / 镐君",
+                "observed_text": "迷你镐小君（本体）！？ / 迷你镐小君",
+                "region": "第2格丽花对白、第4格丽花对白及底部注释"
+              },
+              {
+                "detail": "安抚动作拟声词‘よしよし’（摸摸/乖乖）被误翻为‘点头点头’。",
+                "expected_text": "乖乖 / 摸摸",
+                "observed_text": "点头点头",
+                "region": "第4格丽花抚摸登山镐处的拟声词"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00969.unity3d": {
+      "identity": [
+        "0e7e5511e6686628af2ecb336e99aacf7ef0992e",
+        "0673fb393b4f3ba67529d592b8f4eb47c7b57f10.unity3d",
+        309457
+      ],
+      "archive_sha256": "e342fade17d7460e4c642e761757c4b92b51fc963d985c9a83b2ffa92e62eed3",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "33e83f8cc7b1a19af5b86500bb981a4e53827b216321817970e33c6b8c61d550": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "33e83f8cc7b1a19af5b86500bb981a4e53827b216321817970e33c6b8c61d550",
+            "candidate_sha256": "77ba42bbdacd4307b15060272d5dc4230a53002eb78853bc15f599a69e7a4350",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "第三格千早的气泡文字出现严重错乱与乱码错字（'服想能，如装也传达出这样构心意就好了'），未能正确传达原意。",
+                "expected_text": "同样地，穿上时尚的衣服，也想注入时尚的心情展现给大家呢",
+                "observed_text": "就像这样，我想着，服想能，如装也传达出这样构心意就好了。",
+                "region": "第三格右上气泡"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00966.unity3d": {
+      "identity": [
+        "78e582a5494c73ad92b2d7942f4d5d01f29c61b3",
+        "d9fee21155fb31d829b1d2a61086824545dcb945.unity3d",
+        318271
+      ],
+      "archive_sha256": "cb81320426734ac6a1db6e9a89561cf7baa777a9cf75c29157676f16eab36da4",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "33445a2582cb41e8968182fdbb25961a241b99d54f1ce369abbcfe330d420839": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "33445a2582cb41e8968182fdbb25961a241b99d54f1ce369abbcfe330d420839",
+            "candidate_sha256": "998969c92140ed75f1db2c13c3b8b6ae060c1e767210f688f1be967c88dbf2d2",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": false,
+              "meaning_correct": false,
+              "no_overflow": false,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "文字错乱且严重乱码误译",
+                "expected_text": "ふふ ありがとう未来（呵呵 谢谢未来）",
+                "observed_text": "呵呵，这种有未来宴会吧。",
+                "region": "第1格左下静香气泡"
+              },
+              {
+                "detail": "译文错乱且产生严重乱码",
+                "expected_text": "プロデューサーさんもそう思ったからこういう衣装にしたのかな？（制作人也是这么想才选了这套服装的吗？）",
+                "observed_text": "既然人先生有一制这么说了，也试我也十点想尝毅呢这种下疾状了，我一？",
+                "region": "第2格粉色对话框"
+              },
+              {
+                "detail": "译文不通顺且含乱码错字",
+                "expected_text": "ちょっぴりトゲがあるところも静香ちゃんそっくりだもんね～？（带点刺这点也和静香一模一样呢～？）",
+                "observed_text": "稍微带点也感静香的魅是总之方不是吗一？",
+                "region": "第3格黄色对话框"
+              },
+              {
+                "detail": "译文语义不准确",
+                "expected_text": "そうそう♪（没错没错♪）",
+                "observed_text": "有有♪",
+                "region": "第3格右上角黄色气泡"
+              }
+            ],
+            "verdict": "reject"
+          }
+        }
+      }
+    },
+    "ex4c00965.unity3d": {
+      "identity": [
+        "fc3e346925e6e3359edd98186b1b3f9eaab4ee73",
+        "81140e216c86964535684fba8bcb25de67605240.unity3d",
+        323214
+      ],
+      "archive_sha256": "1094aaca486a5d4125dbf956963c49bf2ee641adaced74bd8a175f740b956d4d",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "58341c65ed5b834edfba53a287c55cf644e19bb98ff77bc09c59cd6353fc87f8": {
+          "approved": false
+        }
+      }
+    },
+    "ex4c00964.unity3d": {
+      "identity": [
+        "8f77d1cd14025a3b1407d426b21ad876f1142c8b",
+        "becb16dbf0d83a428710b43f06526ab17bb6cfc9.unity3d",
+        338981
+      ],
+      "archive_sha256": "42329d9cb74149f3fa3a5812b6d1d94c447d321ec75b7ddcc8884a6402a70fff",
+      "status": "manual_review",
+      "asset_version": "1078700",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+            "candidate_sha256": "b43a551f5f079b09c161600bfc0e2055fa78a5ef348b5774ee3361ee37ca726c",
+            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": true
+            },
+            "issues": [
+              {
+                "detail": "原意为“皮只有苦味，果肉又酸…”，译文不仅句式混乱残缺，还将苦和酸曲解为“清新爽”，存在严重语义错误与语病。",
+                "expected_text": "皮只有苦味，果肉又很酸…",
+                "observed_text": "虽然柠檬的 皮果肉却 非常清新爽……",
+                "region": "第1格左侧气泡"
+              },
+              {
+                "detail": "原意为“像妈妈做的柠檬蛋糕那样甜甜的就好了”，译文出现严重漏字和语义偏差（“给妈蛋糕”）。",
+                "expected_text": "要是能像妈妈做的柠檬蛋糕那样甜甜的就好了…",
+                "observed_text": "要是能给妈蛋糕般 的美味，那就太好了…",
+                "region": "第3格右上气泡"
+              },
+              {
+                "detail": "译文出现明显的错字和语病（“初么”、“你恋不是”）。原意为“哎…那最后尝到恋爱的滋味了吗？”。",
+                "expected_text": "哎…那最后弄清楚恋爱的滋味了吗？",
+                "observed_text": "嗯么…初么的味道 你恋不是 已经知道了呢？",
+                "region": "第4格下方马场木实气泡"
+              }
+            ],
+            "verdict": "reject"
           }
         }
       }

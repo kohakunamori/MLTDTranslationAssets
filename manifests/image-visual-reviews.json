@@ -1046,6 +1046,384 @@
         "issues": [],
         "verdict": "pass"
       }
+    },
+    "1e69374e97b4e332883a52b06e342c7af61199ab1ad1a99dd820ab389e016168": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "df92a0ce8589f08e8c0bb5717fb8a6353bb147bf1e9a282bb44493fd673c52b3",
+        "candidate_sha256": "7872f44c3e512de2544f7e4efec22f5ad33d616a1187d6e798103596f7ca07bd",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "标题“たとえ昏くても”（即使身处昏暗/即便黑暗）被误译为“即使勉强也……”。",
+            "expected_text": "即使身处黑暗…… / 哪怕身处昏暗……",
+            "observed_text": "即使勉强也……",
+            "region": "顶部标题"
+          },
+          {
+            "detail": "左侧气泡“悪い大人たちにいいように使われてさ… でも ルカなりに必死に生きてきたわけだろ？”（被坏大人们任意摆布……但露卡也是以自己的方式拼命活过来的吧？）被严重错译扭曲原意。",
+            "expected_text": "被坏大人们任意摆布……但露卡也是以自己的方式拼命活过来的吧？",
+            "observed_text": "正因为对不起那些坏大人，才要好好利用……但只有露卡拼命地活了下来，不就很奇怪吗？",
+            "region": "第1格左侧气泡"
+          },
+          {
+            "detail": "“エドガーと一緒に生き延びたかっただけでさ”（只是想和埃德加一起活下去罢了）被错译；左下“物語のキャラだからホントに生きてるわけじゃないのに…”（明明只是故事里的角色，又不是真的活着……）被完全曲解捏造为“可故事的主角就是这样的，所以才活下来的，不是吗……”。",
+            "expected_text": "埃德加想要坚持“正直”，露卡则是就算“做恶”，也只是想和埃德加一起活下去罢了。所以……／不过这很奇怪吧！露卡明明是个恶人，而且只是故事里的角色，又不是真的活着……",
+            "observed_text": "露卡就算被埃德加说「邪恶」，也只是拼命活下去。／可故事的主角就是这样的，所以才活下来的，不是吗……",
+            "region": "第2格气泡"
+          },
+          {
+            "detail": "“ほら 役に命を吹き込むって言うでしょ？”（常说的“给角色注入生命”，对吧？）被错译为“赋予她 让她去完成吗”，丢掉了“注入生命”的核心意义。",
+            "expected_text": "你看，不是常说要“给角色注入生命”吗？",
+            "observed_text": "你看，不就是赋予她 让她去完成吗？",
+            "region": "第3格左下气泡"
+          },
+          {
+            "detail": "“ルカの命は”（露卡的生命）被错译为“露卡的命运”；“昂がそう悩む意味だってきっとあるよ”（昂会为此烦恼也一定是有意义的哦）被篡改为“也很正常，这我能理解哦”。",
+            "expected_text": "露卡的生命确实存在于那里哦。所以昂会为此烦恼，也一定是有意义的哦。",
+            "observed_text": "露卡的命运确实就在那里，所以昂会为此烦恼也很正常，这我能理解哦。",
+            "region": "第4格右上气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "f3b4529fc8d177052fd53a55189291c580ff0f30efeac4ab2932b6d022859283": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "79ebe3fa1dba6e1e88e26deef468aa4b65c81ad351e2c38cdb9b2db33bc2009d",
+        "candidate_sha256": "f9c574b0e0ceaf53345cbf606759422f8de67c159a8e89ea97996e2259c2f39b",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "原句为“聖母がにじみ出てしまっているのかもしれませんね～”，意为“也许是（我身上的）圣母属性流露出来了吧”，候选图错译为“圣母从来显现一定哦”，存在错字及语义混乱不通顺的问题。",
+            "expected_text": "说不定是我流露出了圣母的一面呢～",
+            "observed_text": "说不定圣母从来显现一定哦～",
+            "region": "第2格中下方朋花对话气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "a4fd34dd6c88c13752cabdb6c1829edcf92fe04f7a203c77b93b586d93dac7b8": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "affa1a130338e92cc0fce723f56f68ef530165667685a405371813338e4b92b1",
+        "candidate_sha256": "0ada0045710b41c2dd36d308ba63dd5e8b621502d1eee5d9b6118d2631b87746",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "标题将春日未来个人曲曲名《素敵なキセキ》（美妙的奇迹）严重错译为吉他。",
+            "expected_text": "美妙的奇迹",
+            "observed_text": "美妙的吉他",
+            "region": "顶部标题"
+          },
+          {
+            "detail": "将“エアギター”（空气吉他）曲解并误译为玩电吉他。",
+            "expected_text": "未来，你在演出现场有弹空气吉他吧？",
+            "observed_text": "你以后打算玩电吉他进行演唱会吧？",
+            "region": "第1格右侧气泡"
+          },
+          {
+            "detail": "“やっぱりいいです！”意为“还是算了/不用了”，被反向错译为肯定附和。",
+            "expected_text": "……还是算啦！",
+            "observed_text": "……果然很棒呢！",
+            "region": "第2格下部气泡"
+          },
+          {
+            "detail": "完全偏离原意，原文意为比起看手部弹琴更想看着台下应援的大家。",
+            "expected_text": "嗯！在舞台上比起盯着手部，我更想看着为我应援的大家呢！",
+            "observed_text": "好！我想在舞台上比起现在更加闪闪发光的我！",
+            "region": "第3格右上气泡"
+          },
+          {
+            "detail": "译文出现语病与严重胡编，漏译对曲名与奇迹的呼应。",
+            "expected_text": "而且我的《美妙的奇迹》，必须和各位粉丝在一起才能引发奇迹！",
+            "observed_text": "比起只有粉丝为之应援的粉丝，不如说是由大家演出，美能让我心怦然心动！",
+            "region": "第3格左下气泡"
+          },
+          {
+            "detail": "译文语句不通顺，存在乱码式语病且曲解原意。",
+            "expected_text": "……这样啊。对我而言的吉他，对未来而言或许就是粉丝的声援吧。呵",
+            "observed_text": "……这样啊 原来你为了让粉丝的声为在未来也能成的自己弹奏吉他的动力啊。呵",
+            "region": "第4格右侧气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "307243d73b8a5bb407b43fb9a0dee744cacaaeee27fca432a0a7087d3f8d1de9": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "c174739c40a2d85cd8ee4d96f5162f7537ec333f9694bd679c3596b541f43307",
+        "candidate_sha256": "7a09f9571f7a887ee4eeaee8f1d2e7c3ec6cc3a48d3d1c26c733c5fa53e5dbfb",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "第1格莉绪台词语义完全偏离。原句为明明穿得这么可爱却在闹别扭。",
+            "expected_text": "明明打扮得这么可爱，怎么在闹别扭呢？",
+            "observed_text": "既然真美已经这么可爱了，为什么还要勉强变得更可爱呢？",
+            "region": "第1格莉绪气泡"
+          },
+          {
+            "detail": "第1格真美台词译错，原文为对“可爱”而非“性感”感到不满。",
+            "expected_text": "是可爱？不是性感吗？",
+            "observed_text": "可爱？不去变得更可爱吗？",
+            "region": "第1格真美气泡"
+          },
+          {
+            "detail": "第2格莉绪气泡中“ピンクだし フリルだし”译错为“可爱得恰到好处哦”。",
+            "expected_text": "又是粉色又有荷叶边",
+            "observed_text": "可爱得恰到好处哦",
+            "region": "第2格莉绪小字/粉色气泡旁白"
+          },
+          {
+            "detail": "第3格真美台词严重误译。原文表达的是哥哥没有被迷得神魂颠倒是因为自己过于可爱掩盖了情趣睡衣的性感。",
+            "expected_text": "哥哥看到这副模样的真美却没有神魂颠倒，难道是因为真美可爱的威力把短睡裙的性感都遮盖住了吗！？",
+            "observed_text": "哥哥看到真美酱这副模样，一定会心动不已，无法自拔的！ 到时候，婴美钓偶像就会被揭穿，变得更不害羞了吧！？",
+            "region": "第3格黄色爆炸气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "f647ac170f58e2866402278fe20887bf7d3e288908e649937b7003711b2696d5": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "8c0cb8f3c0072d871568dea40ff99adb9e67ff766f22693f0da682088918eca8",
+        "candidate_sha256": "cee0eb3703527c7277c5e3d1f932b8f3ab4de83f88c08624d52f427ece68452a",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "第3格右侧气泡文字排版严重错乱、重复并出现乱码（如‘学长迷你镐镐了’、‘就完全样样！’），未能忠实翻译原句‘ミニピックくんばっかりかまってたから’与‘先輩ピックくんが嫉妬しちゃったみたい！’。",
+            "expected_text": "因为光顾着照顾迷你镐君，前辈镐君好像吃醋了！",
+            "observed_text": "因为迷你镐小君 学长迷你镐镐了 就完全样样！ 就完全变成了 嫉妒的样子！",
+            "region": "第3格丽花对白气泡"
+          },
+          {
+            "detail": "将正牌大登山镐‘ピックくん’通篇误译混淆为‘迷你镐小君’（如第2格‘ピックくん（本物）！？’误译为‘迷你镐小君（本体）！？’、第4格对大镐说话同样误译为‘等迷你镐小君’、底部注释亦混淆）。",
+            "expected_text": "镐君（本体）！？ / 镐君",
+            "observed_text": "迷你镐小君（本体）！？ / 迷你镐小君",
+            "region": "第2格丽花对白、第4格丽花对白及底部注释"
+          },
+          {
+            "detail": "安抚动作拟声词‘よしよし’（摸摸/乖乖）被误翻为‘点头点头’。",
+            "expected_text": "乖乖 / 摸摸",
+            "observed_text": "点头点头",
+            "region": "第4格丽花抚摸登山镐处的拟声词"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "3cbe1a4e27ec3effeacf81518e91956b83ff6bab639170019b7835b5f2747993": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "33e83f8cc7b1a19af5b86500bb981a4e53827b216321817970e33c6b8c61d550",
+        "candidate_sha256": "77ba42bbdacd4307b15060272d5dc4230a53002eb78853bc15f599a69e7a4350",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "第三格千早的气泡文字出现严重错乱与乱码错字（'服想能，如装也传达出这样构心意就好了'），未能正确传达原意。",
+            "expected_text": "同样地，穿上时尚的衣服，也想注入时尚的心情展现给大家呢",
+            "observed_text": "就像这样，我想着，服想能，如装也传达出这样构心意就好了。",
+            "region": "第三格右上气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "2ff1c1b05dde5e3b4dbe4d2fb456621c2fb801cea66b39d292a6f53b279a02ec": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "33445a2582cb41e8968182fdbb25961a241b99d54f1ce369abbcfe330d420839",
+        "candidate_sha256": "998969c92140ed75f1db2c13c3b8b6ae060c1e767210f688f1be967c88dbf2d2",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": false,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "文字错乱且严重乱码误译",
+            "expected_text": "ふふ ありがとう未来（呵呵 谢谢未来）",
+            "observed_text": "呵呵，这种有未来宴会吧。",
+            "region": "第1格左下静香气泡"
+          },
+          {
+            "detail": "译文错乱且产生严重乱码",
+            "expected_text": "プロデューサーさんもそう思ったからこういう衣装にしたのかな？（制作人也是这么想才选了这套服装的吗？）",
+            "observed_text": "既然人先生有一制这么说了，也试我也十点想尝毅呢这种下疾状了，我一？",
+            "region": "第2格粉色对话框"
+          },
+          {
+            "detail": "译文不通顺且含乱码错字",
+            "expected_text": "ちょっぴりトゲがあるところも静香ちゃんそっくりだもんね～？（带点刺这点也和静香一模一样呢～？）",
+            "observed_text": "稍微带点也感静香的魅是总之方不是吗一？",
+            "region": "第3格黄色对话框"
+          },
+          {
+            "detail": "译文语义不准确",
+            "expected_text": "そうそう♪（没错没错♪）",
+            "observed_text": "有有♪",
+            "region": "第3格右上角黄色气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "5b164dcf040026d545a5a8cae443baf72291db893dc164c8d0ec2389e6285395": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "e8c6c8f2e64f95282edc2717e97f526718e636c89f44898cdf4cd3260adde2d2",
+        "candidate_sha256": "b43a551f5f079b09c161600bfc0e2055fa78a5ef348b5774ee3361ee37ca726c",
+        "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "原意为“皮只有苦味，果肉又酸…”，译文不仅句式混乱残缺，还将苦和酸曲解为“清新爽”，存在严重语义错误与语病。",
+            "expected_text": "皮只有苦味，果肉又很酸…",
+            "observed_text": "虽然柠檬的 皮果肉却 非常清新爽……",
+            "region": "第1格左侧气泡"
+          },
+          {
+            "detail": "原意为“像妈妈做的柠檬蛋糕那样甜甜的就好了”，译文出现严重漏字和语义偏差（“给妈蛋糕”）。",
+            "expected_text": "要是能像妈妈做的柠檬蛋糕那样甜甜的就好了…",
+            "observed_text": "要是能给妈蛋糕般 的美味，那就太好了…",
+            "region": "第3格右上气泡"
+          },
+          {
+            "detail": "译文出现明显的错字和语病（“初么”、“你恋不是”）。原意为“哎…那最后尝到恋爱的滋味了吗？”。",
+            "expected_text": "哎…那最后弄清楚恋爱的滋味了吗？",
+            "observed_text": "嗯么…初么的味道 你恋不是 已经知道了呢？",
+            "region": "第4格下方马场木实气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
     }
   }
 }
