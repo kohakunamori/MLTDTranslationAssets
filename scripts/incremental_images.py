@@ -406,6 +406,31 @@ def checkpoint_generations(work, queue, results, policy):
     write(ROOT / 'manifests/image-visual-reviews.json', reviews)
 
 
+def needs_regeneration(result):
+    """True only for defects a further generation attempt can plausibly fix.
+
+    The whole-image reviewer also judges wording and typesetting, and a UI
+    screenshot with dozens of labels nearly always yields a nitpick. Burning
+    the whole retry budget on those never converges, so only missing Japanese,
+    omitted text and erased text are retried; anything else is held for review.
+    """
+    review = result.get('visual_review') or {}
+    assessment = review.get('assessment') or {}
+    if not review.get('binding'):
+        return True  # no usable review at all: one more attempt is justified
+    texts = []
+    for issue in assessment.get('issues') or []:
+        if not isinstance(issue, dict):
+            continue
+        for key in ('region', 'observed_text', 'expected_text', 'detail'):
+            value = issue.get(key)
+            if isinstance(value, str):
+                texts.append(value)
+    blob = '\n'.join(texts)
+    return any(word in blob for word in (
+        '残留', '未翻译', '未译', '漏译', '没有翻译', '没有译', '抹除', '擦除', '涂掉', '日文', '假名'))
+
+
 def request_image(config, work, progress, task, source, prompt, deadline, translator=None):
     """Bound transient response failures; keep failed tasks pending on exhaustion."""
     import provider_config
@@ -584,10 +609,12 @@ def generate(work, max_seconds=7200):
                     break
                 if not acceptance_on or visually_approved(work, task, result, prompt):
                     break
-                if attempt < attempts:
+                if attempt < attempts and needs_regeneration(result):
                     retry_note = ('\n\n上一次结果未通过合规检查：仍有日文或假名残留，或画面/版式被改动。'
                                   '请把所有日文完整翻译成简体中文，绝不保留任何假名，除文字区域外不得改动画面。')
                     print('IMAGE_RETRY', bundle['logical'], attempt, flush=True)
+                elif attempt < attempts:
+                    print('IMAGE_HOLD', bundle['logical'], 'review_nitpick', flush=True)
     progress.pop('provider_error', None)
     write(work / 'results.json', progress)
 

@@ -26,6 +26,19 @@ def test_discovery_expands_beyond_frozen_cohort_and_changes_are_requeued():
     assert all(name != 'music_001.unity3d' for name, _ in chosen)
 
 
+def test_only_residue_defects_are_worth_another_generation_attempt():
+    nitpick = {'visual_review': {'binding': {'reference_sha256': 'x'}, 'assessment': {'issues': [
+        {'region': '确认弹窗右下角', 'observed_text': '确定', 'expected_text': '确认', 'detail': '按钮文案不够贴合'}]}}}
+    assert images.needs_regeneration(nitpick) is False
+    residue = {'visual_review': {'binding': {'reference_sha256': 'x'}, 'assessment': {'issues': [
+        {'region': '顶部活动标签', 'observed_text': 'プラチナスターチューン', 'detail': '日文片假名残留'}]}}}
+    assert images.needs_regeneration(residue) is True
+    erased = {'visual_review': {'binding': {'reference_sha256': 'x'}, 'assessment': {'issues': [
+        {'region': '曲目封面', 'observed_text': '（被抹除涂抹）', 'detail': '文字被擦除'}]}}}
+    assert images.needs_regeneration(erased) is True
+    assert images.needs_regeneration({'visual_review': {'status': 'failed'}}) is True
+
+
 def test_explicitly_requested_bundle_is_retried_after_manual_review():
     row = {'catalog_hash': 'hash', 'remote': 'remote.unity3d', 'declared_size': 10}
     index = {'event_0454.unity3d': row}
@@ -762,7 +775,8 @@ def test_compliance_failure_retries_translation_then_accepts(tmp_path, monkeypat
     verdicts = iter([('reject', False), ('pass', True)])
     def request(*_args):
         verdict, ok = next(verdicts)
-        return {'verdict': verdict, 'checks': dict.fromkeys(visual.CHECKS, ok), 'issues': []}
+        issues = [] if ok else [{'region': '顶部活动标签', 'observed_text': 'テスト', 'detail': '残留日文未翻译'}]
+        return {'verdict': verdict, 'checks': dict.fromkeys(visual.CHECKS, ok), 'issues': issues}
     monkeypatch.setattr(visual, 'request_review', request)
 
     images.generate(work)
