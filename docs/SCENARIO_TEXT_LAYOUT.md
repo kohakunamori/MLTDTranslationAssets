@@ -33,7 +33,7 @@ CI 全仓输出 artifact（report，不阻断历史问题）；首批 event-unit
 
 第二批（基线 c5999eaba）先做 birth：1,201 条、807 个文件，0 条阻断；对照 c5999eaba 审计仅 `zh` 换行变化，其他字段 0 变化。birth 剩余 260 条行数失配、144 条 51–54 单位预警，阻断型 0，已加入 `--strict`。card 预检 12,954 条候选、8 条超出候选预算（如 `card_blst_004yuk0144_1010_004yuk`），整批 all-or-nothing 未写入，留待单独处理。story、dialogue 尚未规整。
 
-第三批（基线 1dad42bae）card：12,951 条、2,441 个文件重排，0 条阻断；对照 1dad42bae 仅 `zh` 换行变化，其他字段 0 变化。card 剩 5,495 条行数失配、2,015 条 51–54 单位预警，阻断型 0。8 条超预算特例进 `manifests/scenario-layout-exceptions.json`：5 条按 item_key 放宽到 3 行（实排 36/36/38 等，均 ≤54），3 条是「变成：」重复拼接脏数据，标记 exclude 交翻译修复；白名单绑定哈希，译文/原文一变即报 `stale_exception` 并重新阻断。story、dialogue 尚未规整。
+第三批（基线 1dad42bae）card：12,951 条、2,438 个文件重排，0 条阻断；对照 1dad42bae 仅 `zh` 换行变化，其他字段 0 变化。card 剩 5,495 条行数失配、2,015 条 51–54 单位预警，阻断型 0。8 条超预算特例进 `manifests/scenario-layout-exceptions.json`：5 条按 item_key 放宽到 3 行（实排 36/36/38 等，均 ≤54），3 条是「变成：」重复拼接脏数据，标记 exclude 交翻译修复；白名单绑定哈希，译文/原文一变即报 `stale_exception` 并重新阻断。story、dialogue 尚未规整。
 
 ## 发布前/后边界
 
