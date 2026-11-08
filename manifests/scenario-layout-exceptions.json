@@ -290,6 +290,54 @@
       "max_lines": 6,
       "reason": "over_budget_needs_extra_lines",
       "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0179_story_04_jp.gtx.jsonl",
+      "item_key": "event_0179_story_04_synopsis",
+      "ja_sha256": "6e14a04174118ff48a95bb2e271b5388e9218c561daa8209ac7ad0584c6dc5a1",
+      "measured": {
+        "total_width": 201,
+        "widths": [
+          48,
+          49,
+          48,
+          56
+        ],
+        "ja_lines": 5,
+        "zh_lines": 4,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0181_story_05_jp.gtx.jsonl",
+      "item_key": "event_0181_story_05_1001_p",
+      "ja_sha256": "db251ad7524ec5312b033cefe1565da91ef5712f5e26100ddc81f1785c51ce18",
+      "measured": {
+        "total_width": 126,
+        "widths": [
+          70,
+          56
+        ],
+        "ja_lines": 2,
+        "zh_lines": 2,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
     }
   ]
 }
