@@ -190,6 +190,106 @@
       "max_lines": 3,
       "reason": "over_budget_needs_third_line",
       "action": "仅本条放宽到 3 行，其余 card 仍 2 行；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0131_story_intro_jp.gtx.jsonl",
+      "item_key": "event_0131_story_intro_1035_president",
+      "ja_sha256": "1242efc3676a5e73f523f17b3c8a9618fd82c6703e6068aeb1cd6d1a890be199",
+      "measured": {
+        "total_width": 112,
+        "widths": [
+          62,
+          50
+        ],
+        "ja_lines": 2,
+        "zh_lines": 2,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0142_story_13_jp.gtx.jsonl",
+      "item_key": "event_0142_story_13_synopsis",
+      "ja_sha256": "32c9e5306230e96bac83b6c3321445626f1e76f1e09565def32e872b4541e43f",
+      "measured": {
+        "total_width": 210,
+        "widths": [
+          36,
+          38,
+          38,
+          38,
+          36,
+          24
+        ],
+        "ja_lines": 5,
+        "zh_lines": 6,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0148_story_05_jp.gtx.jsonl",
+      "item_key": "event_0148_story_05_1056_p",
+      "ja_sha256": "a7c0e667377a50dc73122efefa7535222005621117c1c50f65ee6db4eca00c68",
+      "measured": {
+        "total_width": 112,
+        "widths": [
+          48,
+          0,
+          64
+        ],
+        "ja_lines": 2,
+        "zh_lines": 3,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "exclude",
+      "reason": "paragraph_break_needs_manual_layout",
+      "zh_sha256": "01dc3713517e0909e7c446dbebd22d489c85d8878309932422e0e489bfa0429b",
+      "action": "译文含段落空行，重排会丢失段落结构；排版不改动，需人工确认后再纳入"
+    },
+    {
+      "path": "locales/story/event_0156_story_04_jp.gtx.jsonl",
+      "item_key": "event_0156_story_04_synopsis",
+      "ja_sha256": "e59fbf4e24d884ea0d1706a34e4d2332648fdfa7a0afabac1bc74954712dac41",
+      "measured": {
+        "total_width": 202,
+        "widths": [
+          42,
+          46,
+          40,
+          38,
+          36
+        ],
+        "ja_lines": 5,
+        "zh_lines": 5,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
     }
   ]
 }
