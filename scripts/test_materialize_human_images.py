@@ -77,3 +77,34 @@ def test_manual_publication_is_independent_from_generation_switch():
     body = (root / "scripts/materialize_human_images.py").read_text(encoding="utf-8")
     for model_call in ("translation.", "incremental_images", "request_image", "generate("):
         assert model_call not in body, f"manual publication must not reach the image model: {model_call}"
+
+
+def test_bumped_asset_version_does_not_deadlock_the_overlay_guard(tmp_path, monkeypatch):
+    """A new version has no manifest yet, so a published approval must stay published.
+
+    Otherwise it is recomputed as pending, and the unrelated automatic batch
+    record still waiting for its first release trips the overlay guard: the
+    guard cannot clear until a build runs, and the build cannot run until it
+    passes.
+    """
+    approval = fixture(tmp_path)
+    (tmp_path / "manifests").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "manifests/image-human-approvals.json").write_text(
+        json.dumps({"bundles": [approval]}), encoding="utf-8")
+    prior = tmp_path / "generated/1077750/manifest.json"
+    prior.parent.mkdir(parents=True, exist_ok=True)
+    prior.write_text(json.dumps({"entries": [{"logical_key": approval["logical"],
+        "artifact_sha256": approval["repacked_sha256"],
+        "source_sha256": approval["archive_sha256"]}]}), encoding="utf-8")
+    overlay = tmp_path / "image-overlay/1079000/overlay-manifest.json"
+    overlay.parent.mkdir(parents=True, exist_ok=True)
+    overlay.write_text(json.dumps({"records": [{"logical": "unrelated_thumb.unity3d",
+                                                "translated_sha256": "c" * 64}]}), encoding="utf-8")
+    monkeypatch.setattr(human, "load_version_manifest", lambda path: {"asset_version": "1079000"})
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("A published approval must not download, repack or call a model")
+
+    monkeypatch.setattr(human, "download", unexpected)
+    monkeypatch.setattr(human.subprocess, "run", unexpected)
+    assert human.materialize(tmp_path, tmp_path / "work") == 0

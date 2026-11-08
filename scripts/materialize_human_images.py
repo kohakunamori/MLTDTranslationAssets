@@ -33,6 +33,26 @@ def approved_sources(root, approval):
             raise ValueError(f"Approved image input changed: {name}")
 
 
+def published_entries(root, version):
+    """Publication record for the approvals, independent of build order.
+
+    A bumped asset version has no manifest until its first build, and this step
+    runs before that build. Falling back to the retained releases keeps an
+    already published approval from looking pending, which would otherwise trip
+    the pending-overlay guard below and deadlock the release: the guard cannot
+    clear until a build runs, and the build cannot run until the guard passes.
+    """
+    current = root / "generated" / version["asset_version"] / "manifest.json"
+    if current.exists():
+        return {e["logical_key"]: e for e in read(current).get("entries", [])}
+    from r2_release_storage import retained_versions
+    for number in retained_versions(root):
+        path = root / "generated" / number / "manifest.json"
+        if path.exists():
+            return {e["logical_key"]: e for e in read(path).get("entries", [])}
+    return {}
+
+
 def materialize(root, work):
     manifest = root / "manifests/image-human-approvals.json"
     if not manifest.exists():
@@ -41,8 +61,7 @@ def materialize(root, work):
     for approval in approvals:
         approved_sources(root, approval)
     version = load_version_manifest(root / "manifests/asset-version.json")
-    release_path = root / "generated" / version["asset_version"] / "manifest.json"
-    published = {e["logical_key"]: e for e in read(release_path).get("entries", [])} if release_path.exists() else {}
+    published = published_entries(root, version)
     pending = [a for a in approvals if not (
         a.get("repacked_sha256")
         and published.get(a["logical"], {}).get("artifact_sha256") == a["repacked_sha256"]
