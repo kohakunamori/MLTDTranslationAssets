@@ -213,170 +213,13 @@
       }
     },
     "34c122b45dab5d423bc41181c62f3115632ba1d47ec3844c792d9a2a1904f9ec": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
-      "effective_model": "imas-trans-image",
-      "mode": "gemini_generate_content",
-      "output": "images/candidates/89d0323afab27f0be2797edfa7d0e9178959d8c3689ede1fa8e84e19d66cf5a3.png",
-      "result": {
-        "status": "generated",
-        "sha256": "89d0323afab27f0be2797edfa7d0e9178959d8c3689ede1fa8e84e19d66cf5a3",
-        "provider": {
-          "requested_image_model": "imas-trans-image",
-          "endpoint": "/v1beta/models/:generateContent",
-          "mode": "gemini_generate_content",
-          "aspect_ratio": "1:1",
-          "input_size": [
-            206,
-            206
-          ],
-          "provider_output_size": [
-            1024,
-            1024
-          ],
-          "aspect_ratio_error": 0.0,
-          "padding_removed": true,
-          "aspect_ratio_fallback": true
-        }
-      }
-    },
-    "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
-      "effective_model": "imas-trans-image",
-      "mode": "gemini_generate_content",
-      "output": "images/candidates/ef3cd9eb610d4b4f787e65b3a5f5ae42d2db1f36babe5ab4a06c060ecc020b34.png",
-      "result": {
-        "status": "generated",
-        "sha256": "ef3cd9eb610d4b4f787e65b3a5f5ae42d2db1f36babe5ab4a06c060ecc020b34",
-        "provider": {
-          "requested_image_model": "imas-trans-image",
-          "endpoint": "/v1beta/models/:generateContent",
-          "mode": "gemini_generate_content",
-          "aspect_ratio": "1:1",
-          "input_size": [
-            512,
-            512
-          ],
-          "provider_output_size": [
-            1024,
-            1024
-          ],
-          "aspect_ratio_error": 0.0,
-          "padding_removed": true,
-          "aspect_ratio_fallback": false
-        }
-      }
-    },
-    "70b1d1e5d66dfb70d9aee35fa6a4b8091e6fd0ad3d3bd3d8894c7e9748c35646": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
-      "effective_model": "imas-trans-image",
-      "mode": "gemini_generate_content",
-      "output": "images/candidates/525a3058db61629eefc10c740e57dc3ac7ba99d7f40adfc9a2e24c6c0ab38d94.png",
-      "result": {
-        "status": "generated",
-        "sha256": "525a3058db61629eefc10c740e57dc3ac7ba99d7f40adfc9a2e24c6c0ab38d94",
-        "provider": {
-          "requested_image_model": "imas-trans-image",
-          "endpoint": "/v1beta/models/:generateContent",
-          "mode": "gemini_generate_content",
-          "aspect_ratio": "1:1",
-          "input_size": [
-            340,
-            340
-          ],
-          "provider_output_size": [
-            1024,
-            1024
-          ],
-          "aspect_ratio_error": 0.0,
-          "padding_removed": true,
-          "aspect_ratio_fallback": true
-        }
-      }
-    },
-    "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/dc89d69efc1041b6064884af825e8ea16809dc0fc169152c404fb79c0b61c281.png",
+      "output": "images/candidates/133c75d4caf19e431e2ebdad7d5392fdff51851e3ad07c73b597de9be1458d9c.png",
       "result": {
         "status": "generated",
-        "sha256": "dc89d69efc1041b6064884af825e8ea16809dc0fc169152c404fb79c0b61c281",
-        "provider": {
-          "response_id": null,
-          "requested_image_model": "gpt-image-2.5",
-          "endpoint": "/v1/images/edits",
-          "mode": "images_edits",
-          "quality": "high",
-          "size_requested": "auto",
-          "output_format": "png"
-        }
-      }
-    },
-    "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
-      "effective_model": "gpt-image-2.5",
-      "mode": "images_edits",
-      "output": "images/candidates/45413e3462e86c1e7146d2c432c272866f8d9609ba27a06b05676e5da1634c30.png",
-      "result": {
-        "status": "generated",
-        "sha256": "45413e3462e86c1e7146d2c432c272866f8d9609ba27a06b05676e5da1634c30",
-        "provider": {
-          "response_id": null,
-          "requested_image_model": "gpt-image-2.5",
-          "endpoint": "/v1/images/edits",
-          "mode": "images_edits",
-          "quality": "high",
-          "size_requested": "auto",
-          "output_format": "png"
-        }
-      }
-    },
-    "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
-      "effective_model": "gpt-image-2.5",
-      "mode": "images_edits",
-      "output": "images/candidates/08c0e2b05cb2ccf8ea71ac12daef376ea8b83802bdb727d842e9abbc4991f91b.png",
-      "result": {
-        "status": "generated",
-        "sha256": "08c0e2b05cb2ccf8ea71ac12daef376ea8b83802bdb727d842e9abbc4991f91b",
-        "provider": {
-          "response_id": null,
-          "requested_image_model": "gpt-image-2.5",
-          "endpoint": "/v1/images/edits",
-          "mode": "images_edits",
-          "quality": "high",
-          "size_requested": "auto",
-          "output_format": "png"
-        }
-      }
-    },
-    "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
-      "effective_model": "gpt-image-2.5",
-      "mode": "images_edits",
-      "output": "images/candidates/41892d4b16a0ef3a2f777c9f34f4603290935dcefa917db38eac3efa62a47c72.png",
-      "result": {
-        "status": "generated",
-        "sha256": "41892d4b16a0ef3a2f777c9f34f4603290935dcefa917db38eac3efa62a47c72",
-        "provider": {
-          "response_id": null,
-          "requested_image_model": "gpt-image-2.5",
-          "endpoint": "/v1/images/edits",
-          "mode": "images_edits",
-          "quality": "high",
-          "size_requested": "auto",
-          "output_format": "png"
-        }
-      }
-    },
-    "47e65baa51f533f0faf8ca7eb685aa9748dc45b3eb7f61865e7ba5b9352290c3": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
-      "effective_model": "gpt-image-2.5",
-      "mode": "images_edits",
-      "output": "images/candidates/175c9672a39b0df33953e13d546342b40834400dad83971b4308882a1a4c728d.png",
-      "result": {
-        "status": "generated",
-        "sha256": "175c9672a39b0df33953e13d546342b40834400dad83971b4308882a1a4c728d",
+        "sha256": "133c75d4caf19e431e2ebdad7d5392fdff51851e3ad07c73b597de9be1458d9c",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -388,20 +231,195 @@
         }
       },
       "supersedes": {
-        "sha256": "9d92ead53b6b6acdd74ffbd5fd13c5d5683a8d5c07d4b69e4cc48ff072ded754",
+        "sha256": "89d0323afab27f0be2797edfa7d0e9178959d8c3689ede1fa8e84e19d66cf5a3",
+        "effective_model": "imas-trans-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
+      }
+    },
+    "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/4f67b7ecf32242a2c31cad8664e7bf240120e1b726aa36e60fadfa1a0e476fde.png",
+      "result": {
+        "status": "generated",
+        "sha256": "4f67b7ecf32242a2c31cad8664e7bf240120e1b726aa36e60fadfa1a0e476fde",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "ef3cd9eb610d4b4f787e65b3a5f5ae42d2db1f36babe5ab4a06c060ecc020b34",
+        "effective_model": "imas-trans-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
+      }
+    },
+    "70b1d1e5d66dfb70d9aee35fa6a4b8091e6fd0ad3d3bd3d8894c7e9748c35646": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/966f2908dc1e0dd29574aa91c6e4ef551287fbc8a9c95e308dde11e57b0f1bd9.png",
+      "result": {
+        "status": "generated",
+        "sha256": "966f2908dc1e0dd29574aa91c6e4ef551287fbc8a9c95e308dde11e57b0f1bd9",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "525a3058db61629eefc10c740e57dc3ac7ba99d7f40adfc9a2e24c6c0ab38d94",
+        "effective_model": "imas-trans-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
+      }
+    },
+    "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/a656b27945008fe54e487e4ea71727d8a56ffe3ddde30819bf5473bc39287926.png",
+      "result": {
+        "status": "generated",
+        "sha256": "a656b27945008fe54e487e4ea71727d8a56ffe3ddde30819bf5473bc39287926",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "dc89d69efc1041b6064884af825e8ea16809dc0fc169152c404fb79c0b61c281",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
+      }
+    },
+    "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/849e5a319a1eacf97ff93dab8a6423b0e7b4c76446ef74f2a419c6f431b0f42a.png",
+      "result": {
+        "status": "generated",
+        "sha256": "849e5a319a1eacf97ff93dab8a6423b0e7b4c76446ef74f2a419c6f431b0f42a",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "45413e3462e86c1e7146d2c432c272866f8d9609ba27a06b05676e5da1634c30",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
+      }
+    },
+    "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/2c7c3d8294732feb3a61578020bf5b099825b9ccc912177f7a7109c6cb826383.png",
+      "result": {
+        "status": "generated",
+        "sha256": "2c7c3d8294732feb3a61578020bf5b099825b9ccc912177f7a7109c6cb826383",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "08c0e2b05cb2ccf8ea71ac12daef376ea8b83802bdb727d842e9abbc4991f91b",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
+      }
+    },
+    "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/dd29f5d50af17f12431dbacbf47d3cbd9bbf8420de966ef4a264b437c1f274af.png",
+      "result": {
+        "status": "generated",
+        "sha256": "dd29f5d50af17f12431dbacbf47d3cbd9bbf8420de966ef4a264b437c1f274af",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "41892d4b16a0ef3a2f777c9f34f4603290935dcefa917db38eac3efa62a47c72",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
+      }
+    },
+    "47e65baa51f533f0faf8ca7eb685aa9748dc45b3eb7f61865e7ba5b9352290c3": {
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/7a84f37274ff1a6007c2e9e5a8610f4a152a946e874d347ccec9200e48726b8d.png",
+      "result": {
+        "status": "generated",
+        "sha256": "7a84f37274ff1a6007c2e9e5a8610f4a152a946e874d347ccec9200e48726b8d",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      },
+      "supersedes": {
+        "sha256": "175c9672a39b0df33953e13d546342b40834400dad83971b4308882a1a4c728d",
         "effective_model": "gpt-image-2.5",
         "mode": "images_edits",
         "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "57031751455bec3fd5a611ac4065f44a33126f750004061e22f114c9fa356807": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/95c60017cbb2b2fd4d560da33e5834d773ac954505e2c3d54417d478ae9bb9a5.png",
+      "output": "images/candidates/a703ade74b655b440891f8bdc884944f49a91df87b3d5c560e35d5684f1a3b64.png",
       "result": {
         "status": "generated",
-        "sha256": "95c60017cbb2b2fd4d560da33e5834d773ac954505e2c3d54417d478ae9bb9a5",
+        "sha256": "a703ade74b655b440891f8bdc884944f49a91df87b3d5c560e35d5684f1a3b64",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -411,16 +429,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "95c60017cbb2b2fd4d560da33e5834d773ac954505e2c3d54417d478ae9bb9a5",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "650e8ebf293f791d1a4e211a07de3883c5dfe7cd5e6c9652eb9d1549b43f6ef8": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/79483261eecb936332570bed7e15ea0bec8ae9546e0c4906aa92167547772232.png",
+      "output": "images/candidates/01d5967e6805327f59f36a8038e0f1b39993180a81fe72a5ab35836c4d599889.png",
       "result": {
         "status": "generated",
-        "sha256": "79483261eecb936332570bed7e15ea0bec8ae9546e0c4906aa92167547772232",
+        "sha256": "01d5967e6805327f59f36a8038e0f1b39993180a81fe72a5ab35836c4d599889",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -430,16 +454,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "79483261eecb936332570bed7e15ea0bec8ae9546e0c4906aa92167547772232",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "f8b0265d38633571657176e0f331b2341e9ab699b27af58b83d566d369916e8e": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/b5d187cadc7c5e3755be356294e69893f3639cc111168d56e2f2f3880a7f9c44.png",
+      "output": "images/candidates/0843775c21df365f7769b7e2b54851448ce4aa36615f2bf1923789d7b32caa3d.png",
       "result": {
         "status": "generated",
-        "sha256": "b5d187cadc7c5e3755be356294e69893f3639cc111168d56e2f2f3880a7f9c44",
+        "sha256": "0843775c21df365f7769b7e2b54851448ce4aa36615f2bf1923789d7b32caa3d",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -449,16 +479,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "b5d187cadc7c5e3755be356294e69893f3639cc111168d56e2f2f3880a7f9c44",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "484c0e2db30d3874c24e44a2aa232223efef5ff4aecfcd61f2a925b58299bc2e": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/2192014360a75a2e5990183fcb392a09f0cb3978e5ca80eb5a7e28a3e44dc36a.png",
+      "output": "images/candidates/bbcb72dbea0e5a25ccd352a81213511395f6b49a45a82c7caa30fbe0fdfc60c0.png",
       "result": {
         "status": "generated",
-        "sha256": "2192014360a75a2e5990183fcb392a09f0cb3978e5ca80eb5a7e28a3e44dc36a",
+        "sha256": "bbcb72dbea0e5a25ccd352a81213511395f6b49a45a82c7caa30fbe0fdfc60c0",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -468,16 +504,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "2192014360a75a2e5990183fcb392a09f0cb3978e5ca80eb5a7e28a3e44dc36a",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "ee35d7a7eb4da4a2e2d628d4aa7df719700a64cefe2cf2704235ecaf0fff7143": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/094c60b8d50cdda934afffa6c9169adf6dd2b5023fdf3b9cf15c9abb338a98fa.png",
+      "output": "images/candidates/c2fe0b4ddb3b5873665d7a53d13335b482864a53d20431ce37cd228756466793.png",
       "result": {
         "status": "generated",
-        "sha256": "094c60b8d50cdda934afffa6c9169adf6dd2b5023fdf3b9cf15c9abb338a98fa",
+        "sha256": "c2fe0b4ddb3b5873665d7a53d13335b482864a53d20431ce37cd228756466793",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -487,16 +529,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "094c60b8d50cdda934afffa6c9169adf6dd2b5023fdf3b9cf15c9abb338a98fa",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "7852011ea4516abac9a8a5777690317a5947d92fc4f6bbe63b8f0995626b5787": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/ec4982de5d2d167045e55269149f75710392d9d98c7b8e12d8a9adbc0e54b915.png",
+      "output": "images/candidates/a26cab8af73085c9d454bc7fd1758943de3262f98dcf3bf0434c822242a47323.png",
       "result": {
         "status": "generated",
-        "sha256": "ec4982de5d2d167045e55269149f75710392d9d98c7b8e12d8a9adbc0e54b915",
+        "sha256": "a26cab8af73085c9d454bc7fd1758943de3262f98dcf3bf0434c822242a47323",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -506,16 +554,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "ec4982de5d2d167045e55269149f75710392d9d98c7b8e12d8a9adbc0e54b915",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "a548d6e7e1bb59564afd1fa53b521d2f331a6b686db03be425495266a4263bbe": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/6eafee3eb5b642617d1df8b51beb27529f95a2d43bf0e0791a08aa0c467db226.png",
+      "output": "images/candidates/fc7323e8bc33464c2a9efd63d38b58a66f6b41f989fb5c8c20c5efc2b826691d.png",
       "result": {
         "status": "generated",
-        "sha256": "6eafee3eb5b642617d1df8b51beb27529f95a2d43bf0e0791a08aa0c467db226",
+        "sha256": "fc7323e8bc33464c2a9efd63d38b58a66f6b41f989fb5c8c20c5efc2b826691d",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -525,16 +579,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "6eafee3eb5b642617d1df8b51beb27529f95a2d43bf0e0791a08aa0c467db226",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "c39bd172b7d9dd8826c7603446ae27cdb66e2be42daf8a976f7b4a34d19ea3c6": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/f97ad56a11d7f1a64781600e1f781a33dd5b561e05201a960605e6a1990aeb39.png",
+      "output": "images/candidates/cbef2a288fc99cd6b92afc187c073b6602d7318cd5fb3259e5ad9c49031f42b6.png",
       "result": {
         "status": "generated",
-        "sha256": "f97ad56a11d7f1a64781600e1f781a33dd5b561e05201a960605e6a1990aeb39",
+        "sha256": "cbef2a288fc99cd6b92afc187c073b6602d7318cd5fb3259e5ad9c49031f42b6",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -544,16 +604,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "f97ad56a11d7f1a64781600e1f781a33dd5b561e05201a960605e6a1990aeb39",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "5b43620bc983c6b24d21b2d3712075096654e5d33f481d411d4c5d400de3a121": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/470885bebd888bef0115eadf0167d9754c7c78ade83e63a05dd544faac13490a.png",
+      "output": "images/candidates/59b2957202c17e04fe535ae50809b3dcdea053fc462269b706573351c337c5cd.png",
       "result": {
         "status": "generated",
-        "sha256": "470885bebd888bef0115eadf0167d9754c7c78ade83e63a05dd544faac13490a",
+        "sha256": "59b2957202c17e04fe535ae50809b3dcdea053fc462269b706573351c337c5cd",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -563,16 +629,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "470885bebd888bef0115eadf0167d9754c7c78ade83e63a05dd544faac13490a",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "75d19ed74dd1782b044c40d679193b7fe1f929c4f42f621dd27ac16bc9aedfee": {
-      "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/0dab255dc81a63f6235a6a3f852cf938b0720ada453a64c743bbd035451cac67.png",
+      "output": "images/candidates/533fa02009942e13a33fcbf1f837ee7c9a4015fba2035d05f697c5b4e08d9f44.png",
       "result": {
         "status": "generated",
-        "sha256": "0dab255dc81a63f6235a6a3f852cf938b0720ada453a64c743bbd035451cac67",
+        "sha256": "533fa02009942e13a33fcbf1f837ee7c9a4015fba2035d05f697c5b4e08d9f44",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -582,16 +654,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "0dab255dc81a63f6235a6a3f852cf938b0720ada453a64c743bbd035451cac67",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47"
       }
     },
     "a0f288f046c25d5982de9516f08deb4b69e628d00195d5552bac09d8fc07b787": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/cbab79775d99fc64cf89ba861ebe05ddfe48371c64c289469785225b8b800702.png",
+      "output": "images/candidates/565bc704961999f7ac7e93103e2ab2136d85c0b70faea8ded8cc8e650283c772.png",
       "result": {
         "status": "generated",
-        "sha256": "cbab79775d99fc64cf89ba861ebe05ddfe48371c64c289469785225b8b800702",
+        "sha256": "565bc704961999f7ac7e93103e2ab2136d85c0b70faea8ded8cc8e650283c772",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -601,16 +679,22 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "cbab79775d99fc64cf89ba861ebe05ddfe48371c64c289469785225b8b800702",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "edc28632e5f7ea9025d86edd1483e3d07ae4f5548bcd9e13454269aab22b4527": {
-      "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "gpt-image-2.5",
       "mode": "images_edits",
-      "output": "images/candidates/fd0222d69b7926eb00f05ffdbc08a2afcd4d0b1d68029c2f295bbeaba2572baa.png",
+      "output": "images/candidates/24949c217a26d38bf884abaee28c40ee53eb5b7cf076ac88aa8b780098458f98.png",
       "result": {
         "status": "generated",
-        "sha256": "fd0222d69b7926eb00f05ffdbc08a2afcd4d0b1d68029c2f295bbeaba2572baa",
+        "sha256": "24949c217a26d38bf884abaee28c40ee53eb5b7cf076ac88aa8b780098458f98",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",
@@ -620,6 +704,12 @@
           "size_requested": "auto",
           "output_format": "png"
         }
+      },
+      "supersedes": {
+        "sha256": "fd0222d69b7926eb00f05ffdbc08a2afcd4d0b1d68029c2f295bbeaba2572baa",
+        "effective_model": "gpt-image-2.5",
+        "mode": "images_edits",
+        "prompt_sha256": "0449870a3bf718eba0ec4449fa3b2e378cbee5a6fa667f4560b37504cf01e41b"
       }
     },
     "161705f42a5ab23d450fe7ee762d21f8636f8d43b30088a61f9dcd5ecefd9eda": {
@@ -801,6 +891,25 @@
       "result": {
         "status": "generated",
         "sha256": "624e92846478e044b8618917ba9f47f72b67ae5ec5c6af7630b6e1ddcc6abd3b",
+        "provider": {
+          "response_id": null,
+          "requested_image_model": "gpt-image-2.5",
+          "endpoint": "/v1/images/edits",
+          "mode": "images_edits",
+          "quality": "high",
+          "size_requested": "auto",
+          "output_format": "png"
+        }
+      }
+    },
+    "cd30cbc315d054afb81ea692ac2ee3bc1c38826ea0170109a879a1432e7484a5": {
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "gpt-image-2.5",
+      "mode": "images_edits",
+      "output": "images/candidates/92fa7cc596ea761b1d3be51c13a5933240b18801223afb093e1ec490e51ca989.png",
+      "result": {
+        "status": "generated",
+        "sha256": "92fa7cc596ea761b1d3be51c13a5933240b18801223afb093e1ec490e51ca989",
         "provider": {
           "response_id": null,
           "requested_image_model": "gpt-image-2.5",

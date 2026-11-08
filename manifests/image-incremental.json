@@ -5210,37 +5210,16 @@
       "review_reason": "visual_acceptance_not_passed",
       "visual_reviews": {
         "34c122b45dab5d423bc41181c62f3115632ba1d47ec3844c792d9a2a1904f9ec": {
-          "schema_version": 1,
-          "binding": {
-            "source_sha256": "34c122b45dab5d423bc41181c62f3115632ba1d47ec3844c792d9a2a1904f9ec",
-            "candidate_sha256": "31c8e32b12aee9c4ab55998111a74a5fc712487422beed77c217477b81c9c83d",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
-            "model": "gemini-3.8-flash-high",
-            "mode": "gemini_generate_content",
-            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
-          },
-          "status": "reviewed",
-          "approved": true,
-          "assessment": {
-            "checks": {
-              "artwork_preserved": true,
-              "branding_preserved": true,
-              "layout_preserved": true,
-              "meaning_correct": true,
-              "no_overflow": true,
-              "text_correct": true,
-              "translation_complete": true
-            },
-            "issues": [],
-            "verdict": "pass"
-          }
+          "status": "failed",
+          "approved": false,
+          "reason": "invalid_geometry"
         },
         "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8": {
           "schema_version": 1,
           "binding": {
             "source_sha256": "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8",
-            "candidate_sha256": "ed47fbe1cef7d7b29ee6bba330d748d0766fdb3812899c93c101eb6f97dbed7f",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "candidate_sha256": "ba3801fc25c4a42b7e68135f4a9caddd690ecf65fb5efe5fd4a8dc3657258417",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
@@ -5265,47 +5244,34 @@
           "schema_version": 1,
           "binding": {
             "source_sha256": "70b1d1e5d66dfb70d9aee35fa6a4b8091e6fd0ad3d3bd3d8894c7e9748c35646",
-            "candidate_sha256": "aef734a8cb5608e1f374183c29135d2fcfcfdd5d42d93f07d5d0122954356fbc",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "candidate_sha256": "51a4f93ca9b81385256acea7fa3568029d6c251b91a2036a3c15cf4706f3d7ce",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
           },
           "status": "reviewed",
-          "approved": false,
+          "approved": true,
           "assessment": {
             "checks": {
-              "artwork_preserved": false,
+              "artwork_preserved": true,
               "branding_preserved": true,
               "layout_preserved": true,
-              "meaning_correct": false,
+              "meaning_correct": true,
               "no_overflow": true,
-              "text_correct": false,
-              "translation_complete": false
+              "text_correct": true,
+              "translation_complete": true
             },
-            "issues": [
-              {
-                "detail": "顶部胶囊框内的活动类型文字未翻译，保留了日文片假名。",
-                "expected_text": "白金星光音调（或相应官方活动译名）",
-                "observed_text": "プラチナスターチューン",
-                "region": "顶部活动标签"
-              },
-              {
-                "detail": "标题漏译了句尾的助词与句号，且右侧残留擦除原文字的白圈瑕疵痕迹。",
-                "expected_text": "夜与灯火。 / 夜与灯光。",
-                "observed_text": "夜，与灯光",
-                "region": "主标题区域"
-              }
-            ],
-            "verdict": "reject"
+            "issues": [],
+            "verdict": "pass"
           }
         },
         "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb": {
           "schema_version": 1,
           "binding": {
             "source_sha256": "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb",
-            "candidate_sha256": "8d073c9f69485194300c91f37b99482567f18fb910f8af4b70b8679046e29fc2",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "candidate_sha256": "4defb6bcd963e7fddd7f52a06116e4eae39daa817cb564f9c66976296ff62f12",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
@@ -5330,47 +5296,34 @@
           "schema_version": 1,
           "binding": {
             "source_sha256": "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3",
-            "candidate_sha256": "04358d818c387cce66cf393e824abe2406602e17c3e7a4151dcc989519c5388a",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "candidate_sha256": "6e4f94582c5b01c1f6590a87dd2fc15be8a2a5cbf115d64e4bbf0ff076c68476",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
           },
           "status": "reviewed",
-          "approved": false,
+          "approved": true,
           "assessment": {
             "checks": {
               "artwork_preserved": true,
               "branding_preserved": true,
               "layout_preserved": true,
-              "meaning_correct": false,
+              "meaning_correct": true,
               "no_overflow": true,
-              "text_correct": false,
+              "text_correct": true,
               "translation_complete": true
             },
-            "issues": [
-              {
-                "detail": "活动形式「プラチナスターチューン」(Platinum Star Tune) 误译为了「白金星光剧场」（对应的是 Theater）。Tune 通行应为「白金星光调律」或「白金星光协奏」等对应 Tune 的术语，而非剧场。",
-                "expected_text": "白金星光调律（或根据项目术语表对应的 Tune 译名）",
-                "observed_text": "白金星光剧场",
-                "region": "右上角活动类别横条"
-              },
-              {
-                "detail": "原标题「夜と、明かりと。」为并列短语（意为“与夜、与灯火”），被擅自改写/脑补成了句子「在夜色中明亮闪耀。」，脱离原意。",
-                "expected_text": "夜与、灯火与。（或《夜与灯火。》）",
-                "observed_text": "在夜色中明亮闪耀。",
-                "region": "右上角主标题文字"
-              }
-            ],
-            "verdict": "reject"
+            "issues": [],
+            "verdict": "pass"
           }
         },
         "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48": {
           "schema_version": 1,
           "binding": {
             "source_sha256": "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48",
-            "candidate_sha256": "7a8b2423d7b35c932cc16dcbe4875da7a7f2f499f8980e5fe47e793dd791ddc5",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "candidate_sha256": "d18ec0d573b9801f849d911be3d0deaa31495bbee9a165173b8df0f6b705a385",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
@@ -5395,8 +5348,8 @@
           "schema_version": 1,
           "binding": {
             "source_sha256": "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5",
-            "candidate_sha256": "886ab35490f1a51ea55445449800f6e2e5d6fbc21730356d5e16c63574ad5d04",
-            "reference_sha256": "df5d276fbac85a0480b2a1bfba400e8e1594ae9c9d557db60a03780bc0a03f47",
+            "candidate_sha256": "c3f1e0a9afe09c8f76bc3f3a883c93ca8e3c24562b91f2243534a52649e9b286",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"

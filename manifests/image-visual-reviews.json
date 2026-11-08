@@ -1424,6 +1424,689 @@
         ],
         "verdict": "reject"
       }
+    },
+    "73805395cfe6a628c037a825f7b112cbef8399a0208264aa8d0e27a3302422c2": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8",
+        "candidate_sha256": "ba3801fc25c4a42b7e68135f4a9caddd690ecf65fb5efe5fd4a8dc3657258417",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "4d09dcf20d635ab2cb1a96b15061da4e6d93ca26cedc74e37afa70133c707e02": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "70b1d1e5d66dfb70d9aee35fa6a4b8091e6fd0ad3d3bd3d8894c7e9748c35646",
+        "candidate_sha256": "51a4f93ca9b81385256acea7fa3568029d6c251b91a2036a3c15cf4706f3d7ce",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "8f24a999803f48f2dd5841fd2377917e9941cdd04b39c0adb07a08ed31d07d91": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb",
+        "candidate_sha256": "4defb6bcd963e7fddd7f52a06116e4eae39daa817cb564f9c66976296ff62f12",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "21cf0e0f04d3a2372f66f23e464c247f5ca498346ed7d814e642960952a5f63f": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3",
+        "candidate_sha256": "6e4f94582c5b01c1f6590a87dd2fc15be8a2a5cbf115d64e4bbf0ff076c68476",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "dad97317b85f571102565a52dc45946b0474991a20719d5bee4efad65008b7ab": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48",
+        "candidate_sha256": "d18ec0d573b9801f849d911be3d0deaa31495bbee9a165173b8df0f6b705a385",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "da81f9d2cd5bb8e6992b60c6cc83d3cc504c2c1b14545963b41cbb2aa2b47ec8": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5",
+        "candidate_sha256": "c3f1e0a9afe09c8f76bc3f3a883c93ca8e3c24562b91f2243534a52649e9b286",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "f3efadb53e6c3f259cabc45fa25e1c0a8e656868060bc6f79e0913b145220a43": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "47e65baa51f533f0faf8ca7eb685aa9748dc45b3eb7f61865e7ba5b9352290c3",
+        "candidate_sha256": "f47529277bb6987df62ae55c58f43816fe6134ba3efa278a4dc891136b5c2370",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "左下角竖排文字原文为截断的“号を獲得!!”，译图被擅自改编为“可获得的称号!!”。",
+            "expected_text": "称号获得！！ / 获得称号！！",
+            "observed_text": "可获得的称号!!",
+            "region": "左下角竖排文本区域"
+          },
+          {
+            "detail": "中间第二行原文右侧截断为“特別なイベント称”，译文擅自补全了原图不存在的句末文本并调整了语序结构。",
+            "expected_text": "在综合高分排名中获得 特别的活动称",
+            "observed_text": "在综合高分排名中获得 特别的活动称号！",
+            "region": "中间第二行横排文案"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "85f4325263a1b53287e7d97351912f853563a45452f975149e4d1ff450c33d47": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "cd30cbc315d054afb81ea692ac2ee3bc1c38826ea0170109a879a1432e7484a5",
+        "candidate_sha256": "93ef2d62afd03ebad4c7a02abbd37fabbc7cef160a30acb078cd5eae3a03714a",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": false,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原图卡面上的角色亲笔签名「馬場このみ」和「百瀬莉緒」被恶意抹除，并被错误替换成了卡名文字，严重破坏了卡面原画。",
+            "expected_text": "保留角色亲笔签名「馬場このみ」与「百瀬莉緒」原样",
+            "observed_text": "月明下，边喝边聊",
+            "region": "两张卡面中的手写签名区域"
+          },
+          {
+            "detail": "曲名/卡面名「月明かり、飲み干して」意为“饮尽月光/在月光下一饮而尽”（「飲み干す」为喝光、饮尽），被擅自改写为含义完全不同的“边喝边聊”，违反了专有名词直译及忠实原意的规则。",
+            "expected_text": "月光下，一饮而尽（或：饮尽月光）",
+            "observed_text": "月明下，边喝边聊",
+            "region": "卡片下方的卡名文本区域"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "cfa41d2cb0129de198510d897c01fd0a8dca6206c1a4954229ea1075beae9601": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "57031751455bec3fd5a611ac4065f44a33126f750004061e22f114c9fa356807",
+        "candidate_sha256": "caacd40297323c019a3d1d51abacd5c2117d4df2b2d36376cdb21eca65ba3f6d",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原文任务内容及小标被严重篡改或错误翻译",
+            "expected_text": "第1天♪ / 只要看这就万无一失！待办事项列表 / 【每日】成功完成1次演出 / 【每日】进行1次工作 / 【每日】收集100杯鲜榨柠檬沙瓦",
+            "observed_text": "100天后 / 待办事项列表 / 【每日】观看1次演出 / 【每日】拜访1次事务所 / 【每日】让蜥蜴怪累计饲养达到100只",
+            "region": "上方剪贴板弹窗"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "0adaa3fd3ca207dcbc6d9c26e0078efd1a351375fbde87e8c04f77982de8a604": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "650e8ebf293f791d1a4e211a07de3883c5dfe7cd5e6c9652eb9d1549b43f6ef8",
+        "candidate_sha256": "fd871cb595643bd64c04662af3f715c8fe69763129a34671e3bd621ce842da80",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "弹窗中角色对白被完全擅自改写捏造，未忠实原图日文内容。",
+            "expected_text": "忠实直译原图百濑莉绪与马场木实的对白及标签",
+            "observed_text": "成员趣闻、啊，关于现在的两个人……、虽然也有过吵架的时候……等",
+            "region": "右侧及底部弹窗界面对白区域"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "35f4d77e44a47e42e3e45df0580a6c2a8b3646d74d5fd3f39f9224478cab6a1b": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "f8b0265d38633571657176e0f331b2341e9ab699b27af58b83d566d369916e8e",
+        "candidate_sha256": "a301b421242ee65ccecfe529691615c11a21249e3b98093878b7a3303b88d532",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "655c1eb7bf4f548367b0ab08c259ab59badf164489e9153fb10efff46366a293": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "484c0e2db30d3874c24e44a2aa232223efef5ff4aecfcd61f2a925b58299bc2e",
+        "candidate_sha256": "cad90d6eba4fd47b5df7044aae6bd55a3b4c4ab2f7dba5ae23f35a214352cf21",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "text_correct": false,
+          "translation_complete": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "detail": "原意为奖励演唱会不受pt倍率影响，候选图语义翻译错误。",
+            "expected_text": "奖励演唱会不受pt倍率的影响。",
+            "observed_text": "不会触发奖励演唱会以外的效果。",
+            "region": "上方弹窗红色感叹号提示说明"
+          },
+          {
+            "detail": "マニー指游戏内的金币/Manny，被误译为万能编组。",
+            "expected_text": "使用金币",
+            "observed_text": "使用万能编组",
+            "region": "右侧彩排按钮下方黑条说明"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "f1aa08c8b88a60e1ca369d928fe2a454616639637259ed6a0016011f9a655ccc": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "ee35d7a7eb4da4a2e2d628d4aa7df719700a64cefe2cf2704235ecaf0fff7143",
+        "candidate_sha256": "9e6f5d14e5f9e0c648853d932e7603fada1bcb5b9af2f65427bae7b931eec105",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "横向横幅末尾与左下方块区域重复出现“大量获得”，译文出现重复。",
+            "expected_text": "按原文切分不重复呈现",
+            "observed_text": "大量获得",
+            "region": "底部横幅与左下文字区"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "976d45c1e043c0921cc604205d404a1485df14589ee9a854d5fc5cb921215c6d": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "7852011ea4516abac9a8a5777690317a5947d92fc4f6bbe63b8f0995626b5787",
+        "candidate_sha256": "0796c6753e8e8196d1c8dbd572bacc6ba483c4bb4d4b72131f0ff5b3e9595248",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": false,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原图中角色服装标签为角色与服装说明（共通 このみ / 百瀬 莉緒），候选图被篡改为服装A与服装B。",
+            "expected_text": "通用 这个实 / 百濑莉绪",
+            "observed_text": "服装A / 服装B",
+            "region": "界面中间服装卡片标签"
+          },
+          {
+            "detail": "原图左下方为上一屏文字残留（…用して），候选图擅自篡改为无关文字「示例」。",
+            "expected_text": "……使用（或依原图裁切状态忠实呈现）",
+            "observed_text": "示例",
+            "region": "左下角竖排文字"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "86df174948421e584cda8ff344baa66d04494a0b5ba6a3f81f3c4c8ae2e7d64c": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "a548d6e7e1bb59564afd1fa53b521d2f331a6b686db03be425495266a4263bbe",
+        "candidate_sha256": "f852d9032d1dd6d271f0bcaa3887142c163565a088ef891d1a6130d963fc534f",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原文「レモンサワー」（Lemon Sour）应译为“柠檬沙瓦”，误译为“柠檬苏打”。",
+            "expected_text": "柠檬沙瓦",
+            "observed_text": "柠檬苏打",
+            "region": "顶部说明文本"
+          },
+          {
+            "detail": "原文为倒置排列的「をプレイ！」，候选图误译且擅自改变了文字旋转朝向。",
+            "expected_text": "进行游玩！",
+            "observed_text": "也能获得！",
+            "region": "底部金色区域"
+          },
+          {
+            "detail": "原文为倒置排列的「手に入れよう！」，候选图曲解原意且擅自改变了文字旋转朝向。",
+            "expected_text": "收入囊中吧！/ 获得吧！",
+            "observed_text": "不要错过哦！",
+            "region": "底部蓝色条状区域"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "44bc58b1089f09ff22ce4e023a6582abe4e9c74ae78141551a22b0e7f394b48d": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "c39bd172b7d9dd8826c7603446ae27cdb66e2be42daf8a976f7b4a34d19ea3c6",
+        "candidate_sha256": "3cfd6f054217971e7f4f37de2249d5860b84e728f45eae6ee4282c17656f0ed9",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "事务所名称“765プロ”（765事务所/765Pro）被错误识别并翻译为“765万”。",
+            "expected_text": "765事务所 / 765Pro",
+            "observed_text": "765万",
+            "region": "右上角嘉宾信息栏"
+          },
+          {
+            "detail": "“ライブ報酬”（Live奖励/演出报酬）被错译为“演出信息”。",
+            "expected_text": "演出奖励 / Live报酬",
+            "observed_text": "演出信息",
+            "region": "右上角LIVE结算列表"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "edf7fb71d0121c1c25283e719cc1f046ef93e7ee17f423175dd9f388d414b597": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "5b43620bc983c6b24d21b2d3712075096654e5d33f481d411d4c5d400de3a121",
+        "candidate_sha256": "d4d7f8f4b137e16c60fcb6690631bfa0c020e1bf78669d12183f705339184a95",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": true,
+          "meaning_correct": false,
+          "text_correct": false,
+          "artwork_preserved": true,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "左上角弹窗对白",
+            "observed_text": "呐……我现在喜欢上一个人了，该怎么办才好呢～？父亲和他约好了要见面，多亏如此现在的关系已经很亲近了，所以我可以再去拜访他一下……。",
+            "expected_text": "我说，真的不能来扮演我的恋人吗～？只要陪我演戏到父亲放弃相亲就行了……。",
+            "detail": "对白含义与原文完全不符，属严重误译。"
+          },
+          {
+            "region": "左上角角色名字与标题",
+            "observed_text": "从制作人的咨询 / 可奈 / 这个孩子",
+            "expected_text": "来自偶像们的咨询 / 莉绪 / onomi（木实）",
+            "detail": "标题含义反转且角色人名错译。"
+          },
+          {
+            "region": "右上角与底部弹窗文本",
+            "observed_text": "我明白了哦。美莉莎小姐…… / 是这样啊。既然你自己……",
+            "expected_text": "对应原文日文对白",
+            "detail": "多处气泡文字存在擅自编造成分，偏离原意。"
+          }
+        ]
+      }
+    },
+    "76fa9335cb47d39773ec6d661f7fb52e31e4ab3058a7a809907f1579c6acb98e": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "75d19ed74dd1782b044c40d679193b7fe1f929c4f42f621dd27ac16bc9aedfee",
+        "candidate_sha256": "a9956774d8b13a7ff138f772c8240f8a13bf9a9512d8d2d98443207970027161",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "原图道具名称为“レモンサワー”（柠檬沙瓦），被误译为“柠檬糖杯”，且与后面的单位“560杯”重复。",
+            "expected_text": "柠檬沙瓦",
+            "observed_text": "柠檬糖杯",
+            "region": "右上角结算弹窗道具名"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "cd85452c03c774175ff741012a1682e7f9bcd334607743cc59edbe8611370fe0": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "a0f288f046c25d5982de9516f08deb4b69e628d00195d5552bac09d8fc07b787",
+        "candidate_sha256": "46a1c325b31a4ccf77c276103d1d4472f0ba6120eb54a9aaeb1a24e8c99e89e1",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原图为『…ト衣装引換券 1枚』，候选图误译并改写为『兑换对象 1件』，术语与单位均不准确。",
+            "expected_text": "活动服装兑换券 1张",
+            "observed_text": "兑换对象 1件",
+            "region": "下方弹窗右侧兑换消耗区域"
+          },
+          {
+            "detail": "左下角纵排文字语病且语义混乱，原图为『…を獲得しよう！』，候选图误写为重复赘余的文本。",
+            "expected_text": "获得……吧！",
+            "observed_text": "…装要兑换的服装吧！",
+            "region": "左下角蓝色纵排文字区域"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "0d60fde8a5ce2b19b51bd4d04395cc79f4e0fadf641de090dec5cd6ddce29913": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "edc28632e5f7ea9025d86edd1483e3d07ae4f5548bcd9e13454269aab22b4527",
+        "candidate_sha256": "e2c155e8163b98a643accc4caa9820d6a54eaa726c1c62f7665b31e0c217ba61",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原图卡名「月明かり、飲み干して」被严重误译为「彻夜、通宵」（原意为将月色饮尽/饮尽月光）。",
+            "expected_text": "「饮尽月光 百濑莉绪」或类似忠实直译",
+            "observed_text": "「彻夜、通宵」的百濑莉绪",
+            "region": "中部说明文字第一行"
+          },
+          {
+            "detail": "原图角色英文名「RIO MOMOSE」被错误替换并改写为「初夜、通宵」。",
+            "expected_text": "RIO MOMOSE（保留原英文标识）",
+            "observed_text": "初夜、通宵",
+            "region": "左上角SR卡牌右下角人物名下方"
+          },
+          {
+            "detail": "原图「衣装 アナザー」（Another）被严重误译为「分析家！」（Analyzer）。",
+            "expected_text": "新服装 异色 / 另一款式",
+            "observed_text": "新服装 分析家！",
+            "region": "底部横置角色卡左侧竖排红底文字"
+          }
+        ],
+        "verdict": "reject"
+      }
     }
   }
 }
