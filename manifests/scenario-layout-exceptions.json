@@ -338,6 +338,76 @@
       "max_lines": 3,
       "reason": "over_budget_needs_extra_lines",
       "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0257_story_07_jp.gtx.jsonl",
+      "item_key": "event_0257_story_07_1033_p",
+      "ja_sha256": "8e0a043e3b8ad3b66e7db8173a080f535c26981b9550187d44d766a7c5c3aeab",
+      "measured": {
+        "total_width": 126,
+        "widths": [
+          126
+        ],
+        "ja_lines": 2,
+        "zh_lines": 1,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/event_0265_story_04_jp.gtx.jsonl",
+      "item_key": "event_0265_story_04_1026_021mat",
+      "ja_sha256": "a638dbff2ef2229b06d3a031f238ce392fede6acdfc1eec607030b3d72d19131",
+      "measured": {
+        "total_width": 114,
+        "widths": [
+          52,
+          0,
+          62
+        ],
+        "ja_lines": 2,
+        "zh_lines": 3,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "exclude",
+      "reason": "paragraph_break_needs_manual_layout",
+      "zh_sha256": "0c4da0fca547ef4ff6c65cd1addd60d37cdd4d68f397052d03522ada8f277bb2",
+      "action": "译文含段落空行，重排会丢失段落结构；排版不改动，需人工确认后再纳入"
+    },
+    {
+      "path": "locales/story/event_0265_story_07_jp.gtx.jsonl",
+      "item_key": "event_0265_story_07_1022_p",
+      "ja_sha256": "024640a89814cd63c86658213e669da57739317826f681ce2f466fc81f865573",
+      "measured": {
+        "total_width": 114,
+        "widths": [
+          58,
+          34,
+          22
+        ],
+        "ja_lines": 2,
+        "zh_lines": 3,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
     }
   ]
 }
