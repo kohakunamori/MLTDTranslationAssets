@@ -91,6 +91,7 @@ jobs:
           python scripts/scenario_text_layout.py --category event-unit --strict
           python scripts/scenario_text_layout.py --category birth --strict
           python scripts/scenario_text_layout.py --category card --exceptions manifests/scenario-layout-exceptions.json --strict
+          python scripts/scenario_text_layout.py --category story --exceptions manifests/scenario-layout-exceptions.json --strict
           # This evidence check reads locales/, which the regression job omits.
           python -m unittest scripts.test_given_name_hint_authority
 

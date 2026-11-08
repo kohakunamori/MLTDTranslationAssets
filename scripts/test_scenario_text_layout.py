@@ -179,6 +179,16 @@ class ExceptionTests(unittest.TestCase):
         self.assertEqual(len(updated['zh'].split('\n')), 3)
         self.assertEqual(updated['zh'].replace('\n', ''), '甲' * 60)
 
+    def test_scoped_audit_ignores_other_category_entries(self):
+        root, _row = self._root('甲' * 20)
+        exc = {('locales/story/gone.jsonl', 'story_gone'): {
+            'path': 'locales/story/gone.jsonl', 'item_key': 'story_gone',
+            'zh_sha256': '0' * 64, 'reason': 'over_budget_beyond_2x54'}}
+        self.assertFalse(any('stale_exception' in record['issues']
+                             for record in audit(root, 'card', exc)))
+        self.assertTrue(any('stale_exception' in record['issues']
+                            for record in audit(root, None, exc)))
+
     def test_load_exceptions_validates_required_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'e.json'

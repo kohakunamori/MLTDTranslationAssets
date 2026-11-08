@@ -199,6 +199,12 @@ def load_exceptions(path: Path | None) -> dict[tuple[str, str], dict]:
     return result
 
 
+def in_category(relative: str, category: str) -> bool:
+    """True when a repo-relative locale path belongs to ``locales/<category>``."""
+    parts = relative.split('/')
+    return len(parts) >= 3 and parts[0] == 'locales' and parts[1] == category
+
+
 def audit(root: Path, category: str | None = None,
           exceptions: dict[tuple[str, str], dict] | None = None) -> list[dict]:
     records = []
@@ -233,6 +239,10 @@ def audit(root: Path, category: str | None = None,
                             'budget': policy.__dict__,
                             **({'excepted': entry['reason']} if entry else {})})
     for key, entry in exceptions.items():
+        if category and not in_category(key[0], category):
+            # A scoped audit only owns its own category; another category's
+            # entry is not stale merely because its files were not read here.
+            continue
         if key not in used:
             records.append({'path': key[0], 'line': 0, 'item_key': key[1],
                             'issues': ['stale_exception'], 'widths': [],
