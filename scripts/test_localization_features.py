@@ -37,7 +37,7 @@ def test_image_generation_is_enabled_for_dispatched_batches_only_by_policy():
     policy = json.loads((ROOT / 'configs/localization-pipeline.json').read_text())['images']
     assert (policy['model'], policy['requests_per_minute'], policy['concurrency']) == ('gpt-image-2.5', 2, 1)
     assert policy['api_protocol'] == 'images_edits' and policy['restoration_mode'] == 'whole_image'
-    assert policy['prompt_profile'] == 'preserve_layout' and policy['compliance_retries'] == 3
+    assert policy['prompt_profile'] == 'preserve_layout' and policy['compliance_retries'] == 2
     assert policy['visual_acceptance'] == {'enabled': True, 'model': 'gemini-3.8-flash-high', 'api_protocol': 'gemini_generate_content'}
 
 
@@ -137,3 +137,4 @@ def test_release_reuses_images_when_generation_is_paused():
     assert "localization_features.py" in policy["run"]
     assert '--github-output "$GITHUB_OUTPUT"' in policy["run"]
     assert 'if [ -f "$OVERLAY_MANIFEST" ]; then' in command
+

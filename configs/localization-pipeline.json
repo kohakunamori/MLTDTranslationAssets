@@ -16,7 +16,7 @@
     "requests_per_minute": 2,
     "concurrency": 1,
     "batch_bundles": 12,
-    "compliance_retries": 3,
+    "compliance_retries": 2,
     "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Runs on gpt-image-2.5 (images_edits) because the native imas-trans-image provider reports HTTP 429 RESOURCE_EXHAUSTED with a multi-day reset window. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
   }
 }

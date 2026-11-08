@@ -537,6 +537,29 @@ def test_package_records_replacement_of_a_nondeterministic_retry(tmp_path, monke
     assert (tmp_path / entry['output']).is_file()
 
 
+def test_changed_prompt_starts_a_fresh_retry_budget(tmp_path, monkeypatch):
+    import provider_config as provider
+    work, _, output, results = task_fixture(tmp_path, monkeypatch)
+    configure_api_fixture(tmp_path, monkeypatch)
+    images.write(tmp_path / 'configs/localization-pipeline.json', {'images': {
+        'model': 'gpt-image-2.5', 'api_protocol': 'images_edits', 'requests_per_minute': 2,
+        'concurrency': 1, 'compliance_retries': 2, 'restoration_mode': 'whole_image',
+        'prompt_profile': 'preserve_layout',
+        'visual_acceptance': {'enabled': True, 'model': 'gemini-3.8-flash-high',
+                              'api_protocol': 'gemini_generate_content'}}})
+    task = images.read(work / 'queue.json')['bundles'][0]['tasks'][0]
+    spent = dict(results['tasks'][task['sha256']], attempts=9,
+                 visual_review={'approved': False, 'binding': {'reference_sha256': 'f' * 64}})
+    images.write(work / 'results.json', {'tasks': {task['sha256']: spent}})
+    monkeypatch.setattr(images, 'review_generated', lambda *args, **kwargs: None)
+    monkeypatch.setattr(images, 'visually_approved', lambda *args: False)
+    calls = []
+    monkeypatch.setattr(provider, 'image_edit',
+                        lambda *args: (calls.append(True), (output.read_bytes(), {}))[1])
+    images.generate(work)
+    assert calls  # a new prompt is a new request even after the old budget was spent
+
+
 def test_cached_result_rejected_by_visual_acceptance_is_regenerated_not_reused(tmp_path, monkeypatch):
     import provider_config as provider
     work, _, output, results = task_fixture(tmp_path, monkeypatch)

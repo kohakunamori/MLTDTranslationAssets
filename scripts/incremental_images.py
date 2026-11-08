@@ -459,9 +459,13 @@ def generate(work, max_seconds=7200):
                 # A restored result is only kept when the visual gate is off,
                 # when it passes, or when this configuration's retry budget for
                 # that texture is already spent (a further identical retry can
-                # only bill for the same input again).
+                # only bill for the same input again). A changed prompt is a new
+                # request, not a redundant retry, so it starts a fresh budget.
                 if result.get('status') != 'generated' or not acceptance_on:
                     return True
+                bound = ((result.get('visual_review') or {}).get('binding') or {}).get('reference_sha256')
+                if bound and bound != hashlib.sha256(prompt.encode('utf-8')).hexdigest():
+                    return False
                 if visually_approved(work, task, result, prompt):
                     return True
                 return result.get('attempts', 1) >= 1 + policy.get('compliance_retries', 0)
