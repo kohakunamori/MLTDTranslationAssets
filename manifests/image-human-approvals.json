@@ -140,6 +140,308 @@
       ],
       "repacked_sha256": "495d39f1a0b2f9c3eab97625564d1ffebb3cf716a501fc492e9bc031abd4f3d0",
       "repacked_bytes": 3308395
+    },
+    {
+      "logical": "event_0454.unity3d",
+      "asset_version": "1078700",
+      "archive_sha256": "1f00ad71591a427ade3bd998cc4ade91b2722109b8903ef8a727c0ecaf66c91b",
+      "review_status": "user_approved_for_isolated_install_staging",
+      "approval": {
+        "kind": "explicit_user_approval",
+        "statement": "先把通过验收的发版吧；仅选择源图/候选图哈希匹配 pass 的贴图，排除人工已指出的问题。",
+        "input": "images/approved-inputs/f67ef6c4989cd0dde521b19112456b757b27b8f84cbf87d69b0965bb0d6b34ae.png",
+        "input_sha256": "f67ef6c4989cd0dde521b19112456b757b27b8f84cbf87d69b0965bb0d6b34ae",
+        "input_size": [
+          1024,
+          2764
+        ],
+        "automated_visual_review": true
+      },
+      "textures": [
+        {
+          "id": -1157348535056525326,
+          "name": "bg_x0",
+          "localized": "images/localized/ba3801fc25c4a42b7e68135f4a9caddd690ecf65fb5efe5fd4a8dc3657258417.png",
+          "sha256": "ba3801fc25c4a42b7e68135f4a9caddd690ecf65fb5efe5fd4a8dc3657258417",
+          "source_sha256": "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8",
+          "size": [
+            512,
+            512
+          ],
+          "review": {
+            "schema_version": 1,
+            "binding": {
+              "source_sha256": "9ab0033d18584779c691f79bf7b15dc4c8a5ebcee3fc1f1d0e31aa62f7293dc8",
+              "candidate_sha256": "ba3801fc25c4a42b7e68135f4a9caddd690ecf65fb5efe5fd4a8dc3657258417",
+              "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+              "model": "gemini-3.8-flash-high",
+              "mode": "gemini_generate_content",
+              "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+            },
+            "status": "reviewed",
+            "approved": true,
+            "assessment": {
+              "checks": {
+                "artwork_preserved": true,
+                "branding_preserved": true,
+                "layout_preserved": true,
+                "meaning_correct": true,
+                "no_overflow": true,
+                "text_correct": true,
+                "translation_complete": true
+              },
+              "issues": [],
+              "verdict": "pass"
+            }
+          },
+          "normalization": {
+            "mode": "whole_image",
+            "mask_applied": false,
+            "removed_edge_columns": [
+              0,
+              0
+            ],
+            "aspect_ratio_error": 0.0,
+            "source_size": [
+              512,
+              512
+            ],
+            "provider_size": [
+              1254,
+              1254
+            ],
+            "alpha_changed_pixels": 0,
+            "changed_pixels": 258257
+          }
+        },
+        {
+          "id": 3519122309219806348,
+          "name": "bg",
+          "localized": "images/localized/4defb6bcd963e7fddd7f52a06116e4eae39daa817cb564f9c66976296ff62f12.png",
+          "sha256": "4defb6bcd963e7fddd7f52a06116e4eae39daa817cb564f9c66976296ff62f12",
+          "source_sha256": "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb",
+          "size": [
+            1024,
+            1024
+          ],
+          "review": {
+            "schema_version": 1,
+            "binding": {
+              "source_sha256": "73c03f6c5650d3154b1ebf1bcd6ed25c59866844e01de2f50c57d9463d5994cb",
+              "candidate_sha256": "4defb6bcd963e7fddd7f52a06116e4eae39daa817cb564f9c66976296ff62f12",
+              "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+              "model": "gemini-3.8-flash-high",
+              "mode": "gemini_generate_content",
+              "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+            },
+            "status": "reviewed",
+            "approved": true,
+            "assessment": {
+              "checks": {
+                "artwork_preserved": true,
+                "branding_preserved": true,
+                "layout_preserved": true,
+                "meaning_correct": true,
+                "no_overflow": true,
+                "text_correct": true,
+                "translation_complete": true
+              },
+              "issues": [],
+              "verdict": "pass"
+            }
+          },
+          "normalization": {
+            "mode": "whole_image",
+            "mask_applied": false,
+            "removed_edge_columns": [
+              0,
+              0
+            ],
+            "aspect_ratio_error": 0.0,
+            "source_size": [
+              1024,
+              1024
+            ],
+            "provider_size": [
+              1254,
+              1254
+            ],
+            "alpha_changed_pixels": 0,
+            "changed_pixels": 1041499
+          }
+        },
+        {
+          "id": 3622919359584795673,
+          "name": "event_end_image",
+          "localized": "images/localized/6e4f94582c5b01c1f6590a87dd2fc15be8a2a5cbf115d64e4bbf0ff076c68476.png",
+          "sha256": "6e4f94582c5b01c1f6590a87dd2fc15be8a2a5cbf115d64e4bbf0ff076c68476",
+          "source_sha256": "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3",
+          "size": [
+            552,
+            204
+          ],
+          "review": {
+            "schema_version": 1,
+            "binding": {
+              "source_sha256": "4fbc5531d50c1e17fac55caea9dc3209e0981a69f40d5d0a4eaa8084f653ddd3",
+              "candidate_sha256": "6e4f94582c5b01c1f6590a87dd2fc15be8a2a5cbf115d64e4bbf0ff076c68476",
+              "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+              "model": "gemini-3.8-flash-high",
+              "mode": "gemini_generate_content",
+              "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+            },
+            "status": "reviewed",
+            "approved": true,
+            "assessment": {
+              "checks": {
+                "artwork_preserved": true,
+                "branding_preserved": true,
+                "layout_preserved": true,
+                "meaning_correct": true,
+                "no_overflow": true,
+                "text_correct": true,
+                "translation_complete": true
+              },
+              "issues": [],
+              "verdict": "pass"
+            }
+          },
+          "normalization": {
+            "mode": "whole_image",
+            "mask_applied": false,
+            "removed_edge_columns": [
+              0,
+              0
+            ],
+            "aspect_ratio_error": 0.001027045532352,
+            "source_size": [
+              552,
+              204
+            ],
+            "provider_size": [
+              2064,
+              762
+            ],
+            "alpha_changed_pixels": 0,
+            "changed_pixels": 112019
+          }
+        },
+        {
+          "id": 5591964299851930482,
+          "name": "bg_x2",
+          "localized": "images/localized/d18ec0d573b9801f849d911be3d0deaa31495bbee9a165173b8df0f6b705a385.png",
+          "sha256": "d18ec0d573b9801f849d911be3d0deaa31495bbee9a165173b8df0f6b705a385",
+          "source_sha256": "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48",
+          "size": [
+            512,
+            512
+          ],
+          "review": {
+            "schema_version": 1,
+            "binding": {
+              "source_sha256": "dbec6fcde03e3d9607c021f56e9dade0e2d0f2fac482a0eb9b309f99e2087e48",
+              "candidate_sha256": "d18ec0d573b9801f849d911be3d0deaa31495bbee9a165173b8df0f6b705a385",
+              "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+              "model": "gemini-3.8-flash-high",
+              "mode": "gemini_generate_content",
+              "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+            },
+            "status": "reviewed",
+            "approved": true,
+            "assessment": {
+              "checks": {
+                "artwork_preserved": true,
+                "branding_preserved": true,
+                "layout_preserved": true,
+                "meaning_correct": true,
+                "no_overflow": true,
+                "text_correct": true,
+                "translation_complete": true
+              },
+              "issues": [],
+              "verdict": "pass"
+            }
+          },
+          "normalization": {
+            "mode": "whole_image",
+            "mask_applied": false,
+            "removed_edge_columns": [
+              0,
+              0
+            ],
+            "aspect_ratio_error": 0.0,
+            "source_size": [
+              512,
+              512
+            ],
+            "provider_size": [
+              1254,
+              1254
+            ],
+            "alpha_changed_pixels": 0,
+            "changed_pixels": 237002
+          }
+        },
+        {
+          "id": 8752697510242094203,
+          "name": "bg_x1",
+          "localized": "images/localized/c3f1e0a9afe09c8f76bc3f3a883c93ca8e3c24562b91f2243534a52649e9b286.png",
+          "sha256": "c3f1e0a9afe09c8f76bc3f3a883c93ca8e3c24562b91f2243534a52649e9b286",
+          "source_sha256": "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5",
+          "size": [
+            512,
+            512
+          ],
+          "review": {
+            "schema_version": 1,
+            "binding": {
+              "source_sha256": "3e0e52540d633ceea7c21f313d1482c72a6d8c699332d9053445cc86b93f20d5",
+              "candidate_sha256": "c3f1e0a9afe09c8f76bc3f3a883c93ca8e3c24562b91f2243534a52649e9b286",
+              "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+              "model": "gemini-3.8-flash-high",
+              "mode": "gemini_generate_content",
+              "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+            },
+            "status": "reviewed",
+            "approved": true,
+            "assessment": {
+              "checks": {
+                "artwork_preserved": true,
+                "branding_preserved": true,
+                "layout_preserved": true,
+                "meaning_correct": true,
+                "no_overflow": true,
+                "text_correct": true,
+                "translation_complete": true
+              },
+              "issues": [],
+              "verdict": "pass"
+            }
+          },
+          "normalization": {
+            "mode": "whole_image",
+            "mask_applied": false,
+            "removed_edge_columns": [
+              0,
+              0
+            ],
+            "aspect_ratio_error": 0.0,
+            "source_size": [
+              512,
+              512
+            ],
+            "provider_size": [
+              1254,
+              1254
+            ],
+            "alpha_changed_pixels": 0,
+            "changed_pixels": 246866
+          }
+        }
+      ],
+      "partial_publication": true,
+      "unselected_textures": "Preserved from official source bundle; not translated or approved.",
+      "repacked_sha256": "d269d6086cf8c401d6bf7e17ba47701028f89946643743b4bd38decbbba08cb7"
     }
   ]
 }

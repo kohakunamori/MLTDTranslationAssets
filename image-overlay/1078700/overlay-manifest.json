@@ -2,15 +2,15 @@
   "schema_version": 1,
   "asset_version": "1078700",
   "client_manifest_name": "b895c76f3f3c390afbaf361effa5b6a7cf171aef.data",
-  "audit_sha256": "63fa8872fef4b55f6df8e41988926fc1def5207aba5189e164c82903de7f32b7",
+  "audit_sha256": "cbb9a79e3c966501eaa4c5bfe78292b79530f1159aeb9ef313ecaf65057520a2",
   "records": [
     {
-      "logical": "ex4c00959_thumb.unity3d",
-      "remote": "ca7f6b50aa02041e3de33f953e00ec4c9f5a7442.unity3d",
-      "original_sha256": "0c6117a32fadcfd50dcbe88a52aaefa87a1a9e34050be990ee5b379db7bde34c",
-      "translated_sha256": "385bd2939538d4acc286679e3210e284536c44b4d90e11ffbd5247184ed05c0a",
-      "original_bytes": 7073,
-      "translated_bytes": 27532
+      "logical": "event_0454.unity3d",
+      "remote": "1ee356b3d6a1631f6cb56c907f9a854bbe2d3438.unity3d",
+      "original_sha256": "1f00ad71591a427ade3bd998cc4ade91b2722109b8903ef8a727c0ecaf66c91b",
+      "translated_sha256": "d269d6086cf8c401d6bf7e17ba47701028f89946643743b4bd38decbbba08cb7",
+      "original_bytes": 753236,
+      "translated_bytes": 5681193
     }
   ]
 }
