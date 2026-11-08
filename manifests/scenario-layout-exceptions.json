@@ -722,6 +722,108 @@
       "max_lines": 6,
       "reason": "over_budget_needs_extra_lines",
       "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/main_befo_058_jp.gtx.jsonl",
+      "item_key": "main_befo_058_synopsis",
+      "ja_sha256": "c4ffb79176e3e518988099c0f06c1be7f8faad7634c8e6135897676ba3831f19",
+      "measured": {
+        "total_width": 204,
+        "widths": [
+          36,
+          38,
+          42,
+          50,
+          38
+        ],
+        "ja_lines": 5,
+        "zh_lines": 5,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/main_befo_070_jp.gtx.jsonl",
+      "item_key": "main_befo_070_synopsis",
+      "ja_sha256": "1539752d95db37910a8674ea3a10948a046b3320d690001bac5abfe75eab8ee0",
+      "measured": {
+        "total_width": 210,
+        "widths": [
+          36,
+          38,
+          36,
+          38,
+          42,
+          20
+        ],
+        "ja_lines": 5,
+        "zh_lines": 6,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/main_befo_083_jp.gtx.jsonl",
+      "item_key": "main_befo_083_synopsis",
+      "ja_sha256": "c20fb84e38be729464f0e88b8d013b503e2ea37300c2037af13b150366fb6c91",
+      "measured": {
+        "total_width": 211,
+        "widths": [
+          211
+        ],
+        "ja_lines": 5,
+        "zh_lines": 1,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
+    },
+    {
+      "path": "locales/story/main_befo_102_jp.gtx.jsonl",
+      "item_key": "main_befo_102_synopsis",
+      "ja_sha256": "e087d2eaba6149048db1b2ad85cd30615c17195eadc36111ad4fde7537e63bef",
+      "measured": {
+        "total_width": 214,
+        "widths": [
+          38,
+          40,
+          34,
+          38,
+          30,
+          34
+        ],
+        "ja_lines": 5,
+        "zh_lines": 6,
+        "budget": {
+          "target": 40,
+          "ceiling": 40,
+          "lines": 5
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 6,
+      "reason": "over_budget_needs_extra_lines",
+      "action": "仅本条放宽行数上限，其余 story 仍按源行数；只重排换行"
     }
   ]
 }
