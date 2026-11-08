@@ -53,6 +53,61 @@ def roi_rect(region:dict,size:tuple[int,int])->tuple[int,int,int,int]:
  if x<0 or y<0 or w<=0 or h<=0 or x+w>size[0] or y+h>size[1]:
   raise ValueError("ROI outside source texture")
  return (x,y,x+w,y+h)
+def compose_regions(source, regions, direction="horizontal"):
+    """Pure, reversible same-texture composition shared with incremental CI."""
+    if direction not in {"vertical", "horizontal"}:
+        raise ValueError("Invalid compose direction")
+    if not isinstance(regions, list) or len(regions) < 2:
+        raise ValueError("At least two same-texture regions required")
+    ordered = sorted(regions, key=lambda r: r.get("order", -1))
+    if [r.get("order") for r in ordered] != list(range(len(ordered))):
+        raise ValueError("Region order must be 0..N-1 with no duplicates")
+    rectangles, parts = [], []
+    for item in ordered:
+        rect = roi_rect(item, source.size)
+        for old in rectangles:
+            if not (rect[2] <= old[0] or rect[0] >= old[2]
+                    or rect[3] <= old[1] or rect[1] >= old[3]):
+                raise ValueError("Source region overlap")
+        rectangles.append(rect)
+        parts.append(transform(source.crop(rect), item.get("transform", "identity")))
+    if direction == "horizontal":
+        width, height = sum(p.width for p in parts), max(p.height for p in parts)
+    else:
+        width, height = max(p.width for p in parts), sum(p.height for p in parts)
+    if width * height > 16_777_216:
+        raise ValueError("Composite exceeds bounded image task size")
+    canvas = Image.new(source.mode, (width, height), source.getpixel((source.width-1, source.height-1)))
+    position, mapping = 0, []
+    for item, part in zip(ordered, parts):
+        x, y = (position, 0) if direction == "horizontal" else (0, position)
+        canvas.paste(part, (x, y))
+        mapping.append({"order": item["order"], "rect": item["rect"],
+                        "transform": item.get("transform", "identity"),
+                        "canvas_box": [x, y, x+part.width, y+part.height]})
+        position += part.width if direction == "horizontal" else part.height
+    return canvas, mapping
+
+
+def restore_regions(original, candidate, mapping):
+    """Invert an exact composition; preserve alpha and every non-ROI pixel."""
+    target = original.copy()
+    for region in mapping:
+        box = region["canvas_box"]
+        if not (0 <= box[0] < box[2] <= candidate.width
+                and 0 <= box[1] < box[3] <= candidate.height):
+            raise ValueError("Composite region outside candidate")
+        part = transform(candidate.crop(box), INVERSE[region["transform"]])
+        rect = roi_rect(region, original.size)
+        if part.size != (rect[2]-rect[0], rect[3]-rect[1]):
+            raise ValueError("Reverse-region geometry mismatch")
+        patch = part.convert(original.mode)
+        if "A" in original.getbands():
+            patch.putalpha(original.crop(rect).getchannel("A"))
+        target.paste(patch, rect[:2])
+    return target
+
+
 def prepare(task:dict,force:bool=False)->dict:
  tid=taskname(task["task_id"])
  row=manifest().get(task.get("texture_id"))
@@ -79,35 +134,8 @@ def prepare(task:dict,force:bool=False)->dict:
   source.load();size=source.size
   if source.mode not in {"RGB","RGBA"}:
    raise ValueError("Unsupported source texture mode; preserve native RGB/RGBA only")
-  parts=[];rectangles=[]
-  for item in sorted_regions:
-   region=roi_rect(item,size)
-   if item.get("transform","identity") not in TRANSFORMS:raise ValueError("Bad transform")
-   for prev in rectangles:
-    overlap=not(region[2]<=prev[0] or region[0]>=prev[2] or
-                region[3]<=prev[1] or region[1]>=prev[3])
-    if overlap:raise ValueError("Source region overlap")
-   rectangles.append(region)
-   section=transform(source.crop(region),item.get("transform","identity"))
-   parts.append(section)
-  if direction=="vertical":
-   # Sprite atlas cuts can contain a 510x366 top and a 366x140 bottom.
-   # The smaller region is left-aligned in the reconstructed canvas; padding
-   # is only visual context and is never pasted into the original texture.
-   width=max(p.width for p in parts);height=sum(p.height for p in parts)
-  else:
-   width=sum(p.width for p in parts);height=max(p.height for p in parts)
-  mode="RGBA" if "A" in source.getbands() else "RGB"
-  pad=source.getpixel((source.width-1,source.height-1))
-  canvas=Image.new(mode,(width,height),pad)
-  pos=0;bound=[]
-  for item,part,rect in zip(sorted_regions,parts,rectangles):
-   dx,dy=(0,pos) if direction=="vertical" else (pos,0)
-   canvas.paste(part,(dx,dy))
-   bound.append({"order":item["order"],"rect":item["rect"],
-                 "transform":item.get("transform","identity"),
-                 "canvas_box":[dx,dy,dx+part.width,dy+part.height]})
-   pos+=part.height if direction=="vertical" else part.width
+  canvas,bound=compose_regions(source,sorted_regions,direction)
+  width,height=canvas.size
   folder.mkdir(parents=True,exist_ok=True)
   composite=folder/"source-composite.png";tmp=composite.with_suffix(".png.writing")
   canvas.save(tmp,format="PNG");tmp.replace(composite)
@@ -148,20 +176,7 @@ def restore(tid:str,model_image:Path,force:bool=False,aspect_tolerance:float=0.0
   # resizing each region independently would introduce seams/offset errors.
   resized=generated.convert("RGBA" if "A" in original.getbands() else "RGB").resize(
    expect,Image.Resampling.LANCZOS)
-  target=original.copy()
-  for region in info["region_map"]:
-   cbox=tuple(region["canvas_box"])
-   part=resized.crop(cbox)
-   part=transform(part,INVERSE[region["transform"]])
-   rect=roi_rect(region,original.size)
-   if part.size!=(rect[2]-rect[0],rect[3]-rect[1]):
-    raise ValueError("Reverse-region geometry mismatch")
-   if "A" in original.getbands():
-    patch=part.convert("RGBA")
-    # Keep exact source alpha geometry, not GPT Image's invented transparency.
-    patch.putalpha(original.crop(rect).convert("RGBA").getchannel("A"))
-   else:patch=part.convert(original.mode)
-   target.paste(patch,rect[:2])
+  target=restore_regions(original,resized,info["region_map"])
   if target.size!=original.size:raise ValueError("Result dimensions differ from original")
   if "A" in original.getbands():
    if ImageChops.difference(original.getchannel("A"),target.getchannel("A")).getbbox():
