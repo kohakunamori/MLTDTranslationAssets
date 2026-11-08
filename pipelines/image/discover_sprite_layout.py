@@ -16,6 +16,46 @@ DEFAULT_DB=ROOT/"build/current-unity-assets.sqlite"
 def normalized(blob:bytes)->dict[str,Any]:
  if not blob:raise ValueError("Sprite normalized_json missing")
  return json.loads(zlib.decompress(blob).decode("utf-8"))
+def sprite_pair_layout(texture_name, texture_path_id, size, sprites):
+    """Recognize only the verified 512-square two-Sprite page atlas rule.
+
+    Sprite rectangles prove the atlas ROIs, not arbitrary page adjacency.
+    Rotation/order come from this explicit, versioned MLTD layout rule.
+    Unknown atlases are not guessed; malformed matching pairs fail closed.
+    """
+    wanted = {texture_name + "_00", texture_name + "_01"}
+    candidates = [(pid, data) for pid, data in sprites if data.get("m_Name") in wanted]
+    if not candidates:
+        return None
+    if len(candidates) != 2 or {d["m_Name"] for _, d in candidates} != wanted:
+        raise ValueError("Ambiguous or incomplete same-texture Sprite pair")
+    if list(size) != [512, 512]:
+        raise ValueError("Unsupported paired Sprite atlas dimensions")
+    matched = {}
+    for pid, data in candidates:
+        rd = data.get("m_RD", {})
+        ref = rd.get("texture", {})
+        if ref.get("m_FileID") != 0 or ref.get("m_PathID") != texture_path_id:
+            raise ValueError("Sprite pair references another texture")
+        rect = data.get("m_Rect")
+        if not isinstance(rect, dict) or rd.get("textureRect") != rect or rd.get("settingsRaw") != 64:
+            raise ValueError("Unsupported Sprite packing geometry")
+        vals = [rect.get(k) for k in ("x", "y", "width", "height")]
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or int(v) != v for v in vals):
+            raise ValueError("Non-integer Sprite ROI")
+        x, y, w, h = map(int, vals)
+        matched[data["m_Name"]] = {"sprite_path_id": pid, "unity_rect": rect,
+                                 "rect": [x, size[1]-y-h, w, h]}
+    main, side = matched[texture_name+"_00"], matched[texture_name+"_01"]
+    if main["rect"] != [1, 1, 510, 366] or side["rect"] != [1, 371, 366, 140]:
+        raise ValueError("Unsupported Sprite pair layout; do not guess rotation")
+    return {"algorithm": "mltd-sprite-page-510x366-ccw90-v1",
+            "metadata_authority": "unity_sprite_texture_rect", "sprites": matched,
+            "compose_direction": "horizontal",
+            "regions": [{"order": 0, "rect": main["rect"], "transform": "identity"},
+                        {"order": 1, "rect": side["rect"], "transform": "rotate_ccw90"}]}
+
+
 def discover(texture_id:str,task_id:str,db:Path=DEFAULT_DB,force:bool=False)->dict:
  rows=internal.manifest()
  if texture_id not in rows:raise ValueError("Unknown source Texture2D ID")

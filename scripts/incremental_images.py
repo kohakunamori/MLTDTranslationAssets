@@ -170,7 +170,10 @@ def prepare(work, limit, only=None):
         folder = work / 'tasks' / key
         folder.mkdir(parents=True, exist_ok=True)
         textures = []
-        for obj in UnityPy.load(str(archive)).objects:
+        objects = list(UnityPy.load(str(archive)).objects)
+        sprites = [(int(obj.path_id), obj.read_typetree()) for obj in objects if obj.type.name == 'Sprite']
+        from discover_sprite_layout import sprite_pair_layout
+        for obj in objects:
             if obj.type.name != 'Texture2D':
                 continue
             texture = obj.read()
@@ -182,6 +185,18 @@ def prepare(work, limit, only=None):
             textures.append({'id': int(obj.path_id), 'name': str(texture.m_Name),
                              'original': path.relative_to(work).as_posix(),
                              'source_sha256': sha(path), 'size': list(image.size)})
+            if not logical.startswith('ex4c') and re.fullmatch(r'info_\d+', str(texture.m_Name)):
+                try:
+                    composition = sprite_pair_layout(str(texture.m_Name), int(obj.path_id), image.size, sprites)
+                except ValueError as error:
+                    # A new atlas rule must not silently fall back to the square
+                    # texture: record why this pair was refused, and keep the
+                    # whole-texture path only as an explicit, auditable decision.
+                    textures[-1]['sprite_composition_rejected'] = str(error)
+                    print('SPRITE_LAYOUT_UNSUPPORTED', logical, texture.m_Name, str(error), flush=True)
+                    composition = None
+                if composition is not None:
+                    textures[-1]['sprite_composition'] = composition
         if not textures:
             document['bundles'].append({'logical': logical, 'identity': identity(record),
                 'archive': archive.relative_to(work).as_posix(), 'archive_sha256': archive_sha,
@@ -208,10 +223,19 @@ def prepare(work, limit, only=None):
                 layout.append({**texture, 'box': [0, offset, image.width, offset + image.height]})
                 offset += image.height
             source = folder / f'input-{number}.png'
+            composition = group[0].get('sprite_composition') if len(group) == 1 else None
+            if composition is not None:
+                from internal_texture_image25 import compose_regions
+                canvas, mapping = compose_regions(images[0], composition['regions'], composition['compose_direction'])
+                composition = {**composition, 'region_map': mapping,
+                               'source_sha256': group[0]['source_sha256'],
+                               'archive_sha256': archive_sha, 'texture_path_id': group[0]['id']}
             canvas.save(source)
             regions = text_regions(source)
             tasks.append({'input': source.relative_to(work).as_posix(), 'sha256': sha(source),
                           'regions': regions, 'layout': layout})
+            if composition is not None:
+                tasks[-1]['sprite_composition'] = composition
         document['bundles'].append({'logical': logical, 'identity': identity(record),
             'archive': archive.relative_to(work).as_posix(), 'archive_sha256': sha(archive), 'tasks': tasks})
         print('PREPARED', logical, len(tasks), 'edit_regions', sum(len(t['regions']) for t in tasks), flush=True)
@@ -619,6 +643,28 @@ def generate(work, max_seconds=7200):
     write(work / 'results.json', progress)
 
 
+def restore_task_texture(task, texture, original, source, localized, archive_sha256):
+    """Reverse a source-bound Sprite page or crop an ordinary comic layout."""
+    composition = task.get('sprite_composition')
+    if composition is None:
+        return localized.crop(texture['box'])
+    from internal_texture_image25 import compose_regions, restore_regions
+    if (len(task['layout']) != 1
+            or composition['algorithm'] != 'mltd-sprite-page-510x366-ccw90-v1'
+            or composition['source_sha256'] != texture['source_sha256']
+            or composition['texture_path_id'] != texture['id']
+            or composition['archive_sha256'] != archive_sha256):
+        raise ValueError('Sprite composition source binding changed')
+    expected, mapping = compose_regions(original, composition['regions'], composition['compose_direction'])
+    if (mapping != composition['region_map'] or source.size != expected.size
+            or source.tobytes() != expected.tobytes() or localized.size != expected.size):
+        raise ValueError('Sprite composition input or mapping changed')
+    restored = restore_regions(original, localized, mapping)
+    if restored.size != original.size or restored.getchannel('A').tobytes() != original.getchannel('A').tobytes():
+        raise ValueError('Sprite reconstruction changed texture size or alpha')
+    return restored
+
+
 def package(work):
     from image_text_regions import restore
     import image_visual_review as visual
@@ -704,13 +750,17 @@ def package(work):
                     'size': list(source.size), 'regions': task['regions'], 'audit': audit,
                     'provider': result['provider'], 'remaining_kana': kana_count,
                     'ocr_advisory_only': whole_image}
+                if task.get('sprite_composition'):
+                    record['text_maps'][task['sha256']]['sprite_composition'] = task['sprite_composition']
                 for texture in task['layout']:
                     original_png = work / texture['original']
                     if sha(original_png) != texture['source_sha256']:
                         raise ValueError('Source Texture2D changed')
                     target = work / 'restored' / bundle['archive_sha256'] / f"{texture['id']}.png"
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    localized.crop(texture['box']).save(target)
+                    restored = restore_task_texture(task, texture, Image.open(original_png).convert('RGBA'),
+                                                    source, localized, bundle['archive_sha256'])
+                    restored.save(target)
                     parts.append((task, texture, target, original_png))
             if parts and not any(m['audit']['changed_pixels'] for m in record['text_maps'].values()):
                 manual = True
