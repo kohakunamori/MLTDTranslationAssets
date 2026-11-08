@@ -87,9 +87,17 @@ jobs:
 
       - name: Run repository validation
         run: |
-          python scripts/validate_repo.py
+          python scripts/validate_repo.py --layout-report "$RUNNER_TEMP/scenario-layout-report.json"
+          python scripts/scenario_text_layout.py --category event-unit --strict
           # This evidence check reads locales/, which the regression job omits.
           python -m unittest scripts.test_given_name_hint_authority
+
+      - name: Upload candidate layout report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-scenario-layout
+          path: ${{ runner.temp }}/scenario-layout-report.json
 
   regression:
     name: Offline regression
@@ -139,6 +147,9 @@ jobs:
         # Keep this list in sync with asset-server/requirements.txt: the
         # regression suite imports requests.  Verified in a clean venv.
         run: uv pip install --system -r requirements-ci.txt
+
+      - name: Scenario layout targeted regression
+        run: python -m pytest scripts/test_scenario_text_layout.py -q -x --maxfail=3
 
       - name: Run the offline suites that gate publishing
         # Workflow contracts run below; actionlint also validates Actions syntax.
