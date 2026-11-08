@@ -1,0 +1,195 @@
+{
+  "schema": 2,
+  "note": "显式 item_key 白名单。reflow_extra_lines 绑定 ja 哈希（zh 换行会变），exclude 另绑 zh 哈希（译文修复即失效）。",
+  "entries": [
+    {
+      "path": "locales/card/card_blst_015siz0204_jp.gtx.jsonl",
+      "item_key": "card_blst_015siz0204_1000_p",
+      "ja_sha256": "2f5dbb6218383e5adbb5cfc09540efa9ebf5f8b466ba7e3c0e265ec343078360",
+      "measured": {
+        "total_width": 118,
+        "widths": [
+          41,
+          19,
+          0,
+          6,
+          0,
+          34,
+          18
+        ],
+        "ja_lines": 2,
+        "zh_lines": 7,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "exclude",
+      "reason": "data_defect_duplicate_translation",
+      "zh_sha256": "38541aa60c8ffd1a00eeee8961df12c07482b683e083063fd5e907863e072203",
+      "action": "译文含重复拼接/异源句子，排版不得改字词；需翻译修复后本白名单自动失效"
+    },
+    {
+      "path": "locales/card/card_episode_008tak0622_jp.gtx.jsonl",
+      "item_key": "card_episode_008tak0622_1003_008tak",
+      "ja_sha256": "6ef6ac859ccebae74586d953193d7df086d21f29215f3a38d119af86d30b3c37",
+      "measured": {
+        "total_width": 110,
+        "widths": [
+          22,
+          48,
+          0,
+          18,
+          22
+        ],
+        "ja_lines": 2,
+        "zh_lines": 5,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "exclude",
+      "reason": "data_defect_duplicate_translation",
+      "zh_sha256": "914fffa30c33885ac2cb08be56cafaf62e7218f7130934efb99304b0636096d4",
+      "action": "译文含重复拼接/异源句子，排版不得改字词；需翻译修复后本白名单自动失效"
+    },
+    {
+      "path": "locales/card/card_episode_041fuk0284_jp.gtx.jsonl",
+      "item_key": "card_episode_041fuk0284_1004_041fuk",
+      "ja_sha256": "8792bf000a88470a261f538b896ae688bd865857c99312ee0543857588cece71",
+      "measured": {
+        "total_width": 122,
+        "widths": [
+          38,
+          26,
+          0,
+          58
+        ],
+        "ja_lines": 2,
+        "zh_lines": 4,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "exclude",
+      "reason": "data_defect_duplicate_translation",
+      "zh_sha256": "a04bb8f31bef07327883328f7408c48bc14a513cfa80e2abbbdd9084e21d7b35",
+      "action": "译文含重复拼接/异源句子，排版不得改字词；需翻译修复后本白名单自动失效"
+    },
+    {
+      "path": "locales/card/card_blst_004yuk0144_jp.gtx.jsonl",
+      "item_key": "card_blst_004yuk0144_1010_004yuk",
+      "ja_sha256": "fcd8f9f0c4b3c69601524ee0a183e1fdb1d2b74014d82f66bf16028f0b25e5d5",
+      "measured": {
+        "total_width": 110,
+        "widths": [
+          110
+        ],
+        "ja_lines": 2,
+        "zh_lines": 1,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_third_line",
+      "action": "仅本条放宽到 3 行，其余 card 仍 2 行；只重排换行"
+    },
+    {
+      "path": "locales/card/card_blst_015siz0374_jp.gtx.jsonl",
+      "item_key": "card_blst_015siz0374_1005_015siz",
+      "ja_sha256": "50130161caaadec07430a5f57990c9d0fa00097fb756e08dd2919b156ebca768",
+      "measured": {
+        "total_width": 114,
+        "widths": [
+          114
+        ],
+        "ja_lines": 2,
+        "zh_lines": 1,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_third_line",
+      "action": "仅本条放宽到 3 行，其余 card 仍 2 行；只重排换行"
+    },
+    {
+      "path": "locales/card/card_episode_028ari0404_jp.gtx.jsonl",
+      "item_key": "card_episode_028ari0404_1022_p",
+      "ja_sha256": "d8d908a4b57d6632a75a44f54697aa6e46601e8da61c87433b6ee945257cf666",
+      "measured": {
+        "total_width": 110,
+        "widths": [
+          110
+        ],
+        "ja_lines": 2,
+        "zh_lines": 1,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_third_line",
+      "action": "仅本条放宽到 3 行，其余 card 仍 2 行；只重排换行"
+    },
+    {
+      "path": "locales/card/card_episode_041fuk0344_jp.gtx.jsonl",
+      "item_key": "card_episode_041fuk0344_1020_p",
+      "ja_sha256": "a01e12db16e9eecd6ce36c09340a91dbfa9755d94dc98edbf6de4616dee62dd5",
+      "measured": {
+        "total_width": 108,
+        "widths": [
+          108
+        ],
+        "ja_lines": 2,
+        "zh_lines": 1,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_third_line",
+      "action": "仅本条放宽到 3 行，其余 card 仍 2 行；只重排换行"
+    },
+    {
+      "path": "locales/card/card_episode_047sub0193_jp.gtx.jsonl",
+      "item_key": "card_episode_047sub0193_1018_p",
+      "ja_sha256": "86b922660558c690bd97c01010019cdfb0fe85185ccdc0fdd93baff83e2becef",
+      "measured": {
+        "total_width": 110,
+        "widths": [
+          110
+        ],
+        "ja_lines": 2,
+        "zh_lines": 1,
+        "budget": {
+          "target": 50,
+          "ceiling": 54,
+          "lines": 2
+        }
+      },
+      "mode": "reflow_extra_lines",
+      "max_lines": 3,
+      "reason": "over_budget_needs_third_line",
+      "action": "仅本条放宽到 3 行，其余 card 仍 2 行；只重排换行"
+    }
+  ]
+}

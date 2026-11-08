@@ -2,8 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from scripts.scenario_text_layout import (Policy, apply_category, atoms, blocking, lint,
-                                          policy_for, reflow, width)
+from scripts.scenario_text_layout import (Policy, apply_category, atoms, audit, blocking, lint,
+                                          load_exceptions, policy_for, reflow, width)
+from pipelines.core.hashing import sha256_text
 
 
 class LayoutTests(unittest.TestCase):
@@ -110,6 +111,80 @@ class ApplyTests(unittest.TestCase):
         rows = [json.loads(s) for s in path.read_text(encoding='utf-8').split('\n') if s.strip()]
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['zh'].replace('\n', ''), text)
+
+
+class ExceptionTests(unittest.TestCase):
+    def _root(self, zh):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / 'locales' / 'card').mkdir(parents=True)
+        row = {'item_key': 'card_x_1', 'bundle': 'card_x', 'ja': '甲\n乙', 'zh': zh,
+               'status': 'accepted', 'source_sha256': 'x'}
+        (root / 'locales' / 'card' / 'c.jsonl').write_text(
+            json.dumps(row, ensure_ascii=False) + '\n', encoding='utf-8')
+        return root, row
+
+    def _entry(self, row, digest):
+        return {('locales/card/c.jsonl', row['item_key']): {
+            'path': 'locales/card/c.jsonl', 'item_key': row['item_key'],
+            'zh_sha256': digest, 'reason': 'over_budget_beyond_2x54'}}
+
+    def test_exception_removes_blocking_but_stays_visible(self):
+        root, row = self._root('甲' * 60)
+        exc = self._entry(row, sha256_text(row['zh']))
+        records = audit(root, 'card', exc)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]['issues'], [])
+        self.assertIn('excepted', records[0])
+        self.assertFalse(blocking(records[0]['issues']))
+
+    def test_stale_exception_is_blocking(self):
+        root, row = self._root('甲' * 60)
+        records = audit(root, 'card', self._entry(row, '0' * 64))
+        self.assertIn('stale_exception', records[0]['issues'])
+        self.assertTrue(blocking(records[0]['issues']))
+
+    def test_unused_exception_is_reported(self):
+        root, row = self._root('甲' * 20)
+        exc = {('locales/card/gone.jsonl', 'card_gone'): {
+            'path': 'locales/card/gone.jsonl', 'item_key': 'card_gone',
+            'zh_sha256': '0' * 64, 'reason': 'over_budget_beyond_2x54'}}
+        records = audit(root, 'card', exc)
+        self.assertTrue(any('stale_exception' in record['issues'] for record in records))
+
+    def test_apply_leaves_excepted_row_untouched(self):
+        root, row = self._root('甲' * 60)
+        path = root / 'locales' / 'card' / 'c.jsonl'
+        before = path.read_text(encoding='utf-8')
+        result = apply_category(root, 'card', self._entry(row, sha256_text(row['zh'])))
+        self.assertEqual(result['written'], 0)
+        self.assertEqual(result['excepted'], 1)
+        self.assertEqual(path.read_text(encoding='utf-8'), before)
+
+    def test_extra_lines_override_reflows_to_three_lines(self):
+        root, row = self._root('甲' * 60)
+        entry = {('locales/card/c.jsonl', row['item_key']): {
+            'path': 'locales/card/c.jsonl', 'item_key': row['item_key'],
+            'ja_sha256': sha256_text(row['ja']), 'mode': 'reflow_extra_lines',
+            'max_lines': 3, 'reason': 'over_budget_needs_third_line'}}
+        before = audit(root, 'card', entry)
+        self.assertTrue([r for r in before if blocking(r['issues'])])
+        result = apply_category(root, 'card', entry)
+        self.assertEqual(result['written'], 1)
+        self.assertEqual(result['reflowed'], 1)
+        after = audit(root, 'card', entry)
+        self.assertFalse([r for r in after if blocking(r['issues'])])
+        updated = json.loads((root / 'locales' / 'card' / 'c.jsonl').read_text(encoding='utf-8'))
+        self.assertEqual(len(updated['zh'].split('\n')), 3)
+        self.assertEqual(updated['zh'].replace('\n', ''), '甲' * 60)
+
+    def test_load_exceptions_validates_required_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'e.json'
+            path.write_text('[{"path": "a", "item_key": "b"}]', encoding='utf-8')
+            with self.assertRaises(ValueError):
+                load_exceptions(path)
 
 
 if __name__ == '__main__': unittest.main()

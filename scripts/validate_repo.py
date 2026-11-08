@@ -33,7 +33,11 @@ from pipelines.core.hashing import sha256_text  # noqa: E402
 from pipelines.text.translation_tokens import (  # noqa: E402
     validate_translation_tokens,
 )
-from scripts.scenario_text_layout import audit as audit_candidate_layout, blocking  # noqa: E402
+from scripts.scenario_text_layout import (
+    audit as audit_candidate_layout,
+    blocking,
+    load_exceptions,
+)  # noqa: E402
 
 RESERVED_DELIMITERS = ("|", "^")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -365,6 +369,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--layout-report', type=Path)
     parser.add_argument('--layout-strict', action='store_true')
+    parser.add_argument('--layout-exceptions', type=Path)
     args = parser.parse_args()
     print(f"Validating repository at: {ROOT}")
     locales_counts = validate_locales(ROOT)
@@ -373,7 +378,7 @@ def main() -> int:
     validate_manifests(ROOT)
 
     # Candidate-only: 50/54 EAW units are estimates, not verified font metrics.
-    layout = audit_candidate_layout(ROOT)
+    layout = audit_candidate_layout(ROOT, None, load_exceptions(args.layout_exceptions))
     if args.layout_report:
         args.layout_report.parent.mkdir(parents=True, exist_ok=True)
         args.layout_report.write_text(json.dumps(layout, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
