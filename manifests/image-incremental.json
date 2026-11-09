@@ -6266,7 +6266,7 @@
             "localized_sha256": "a38eb8a275ee82dbc229d3b2fd769a7126286b370a4f0a7ba1ebf17470c93c4f",
             "match": {
               "mean_absolute_rgb_error": 12.776491447642886,
-              "rgb_correlation": 0.9616254379278534,
+              "rgb_correlation": 0.9616254379278528,
               "runner_up_error": 67.68658740091782,
               "algorithm": "full-texture-lanczos-v1"
             }
@@ -6277,7 +6277,7 @@
       "derivation": {
         "kind": "approved-parent-thumbnail",
         "parent": "ex4c00959.unity3d",
-        "dependency": "2a3171e4332fcd0820c99b5b9bea98801da2c00f8be76b8771f6c372c14d7ece",
+        "dependency": "d19c76b9c7f53d70fd3817680eb6d98709bcaf81945817426c57c68142b4db48",
         "parent_archive_sha256": "8fe7fcd98716928340a295cc16e513ecce6f432c217585b9dc755956dfac1972",
         "model_called": false
       }
