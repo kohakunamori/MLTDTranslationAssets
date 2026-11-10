@@ -4,12 +4,12 @@
     "ex4c00968.unity3d": {
       "identity": [
         "307a245582cfa3937c23eac22fd43778ed759173",
-        "79904b0c66d309ec771def14eef824f75ccf26f4.unity3d",
+        "e85c53f10db311fa6af0d7df210f0e6f3846b82e.unity3d",
         354939
       ],
       "archive_sha256": "b4e84b197c705d597ada2987d938c004b96370f9d4875a2f2979698c7d36a6f9",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [
         {
           "id": -3113216890991078634,
@@ -4062,12 +4062,12 @@
     "ex4c00967.unity3d": {
       "identity": [
         "65f38e1f349292461339b3e444d2892f14331231",
-        "8d0c7c2099e6e71d70d042e7467b43b82236b3c7.unity3d",
+        "b9b3de7801171468b58132c455cb7a2ce3d91a7e.unity3d",
         355261
       ],
       "archive_sha256": "cf92fbbaa48c1004c59938d01cfc3c4a123bb477f9ffd85583d61ff9944163ff",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [
         {
           "id": -7464440346175550728,
@@ -6248,11 +6248,11 @@
     "ex4c00959_thumb.unity3d": {
       "identity": [
         "54224368571d00be8f48437fb712a024f2b6089e",
-        "fd71393bfc9eb4a8f7302a8de808ab928239d4cd.unity3d",
+        "105d37c221f414aa3bda68272d855d0b4aa6ceaf.unity3d",
         7073
       ],
       "archive_sha256": "0c6117a32fadcfd50dcbe88a52aaefa87a1a9e34050be990ee5b379db7bde34c",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "status": "translated",
       "textures": [
         {
@@ -6266,7 +6266,7 @@
             "localized_sha256": "a38eb8a275ee82dbc229d3b2fd769a7126286b370a4f0a7ba1ebf17470c93c4f",
             "match": {
               "mean_absolute_rgb_error": 12.776491447642886,
-              "rgb_correlation": 0.9616254379278528,
+              "rgb_correlation": 0.9616254379278534,
               "runner_up_error": 67.68658740091782,
               "algorithm": "full-texture-lanczos-v1"
             }
@@ -6277,7 +6277,7 @@
       "derivation": {
         "kind": "approved-parent-thumbnail",
         "parent": "ex4c00959.unity3d",
-        "dependency": "d19c76b9c7f53d70fd3817680eb6d98709bcaf81945817426c57c68142b4db48",
+        "dependency": "8b65d30c5871da7a463100c990820287df8fb05ec25d8c42a2f076d948b165f4",
         "parent_archive_sha256": "8fe7fcd98716928340a295cc16e513ecce6f432c217585b9dc755956dfac1972",
         "model_called": false
       }
@@ -6285,12 +6285,12 @@
     "ex4c00974.unity3d": {
       "identity": [
         "3134f38bf5f4e78906110572b7729ef5fc850dff",
-        "88aee0709315b64ae1c88d4a092d299557f81bb7.unity3d",
+        "9e0229a7e8f2584eca6743f6f5f5e32f7082fe52.unity3d",
         314232
       ],
       "archive_sha256": "a7ad91e6a4004b14634c298946645080890205949077f2d8cdf488914129070b",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6357,12 +6357,12 @@
     "ex4c00973.unity3d": {
       "identity": [
         "ec17dd10fe1a578f2870a7f8b7833059d41d8af1",
-        "0eee92d91ff31f6c949601b4c8e15c71593dde08.unity3d",
+        "0b292f9e182b9855c26424580e7c570009456869.unity3d",
         351203
       ],
       "archive_sha256": "8ddf7ce7610bf2f28d83c56d36af79c7608bb1b421290f16ab8f384d8a7099bf",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6405,12 +6405,12 @@
     "ex4c00972.unity3d": {
       "identity": [
         "e274654f427e8080a91790239e4d44b04d28a426",
-        "4f6d9283c46256a90f8d7cd993012555e4f017c1.unity3d",
+        "0c2e4b150bf9d7f774ec0223ce869d406586d6a7.unity3d",
         321678
       ],
       "archive_sha256": "00b6eeb96a1508f9262b388cdd641a7ec7954c2fee2d31e6b9122319c70de6a9",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6483,12 +6483,12 @@
     "ex4c00971.unity3d": {
       "identity": [
         "9f62ee59c0ff1ad92a73f51db48ce17793321ca0",
-        "6294e84ba390536c74761bb9ee2d23380a93ed3f.unity3d",
+        "3375166bb56d19023355c82b1aa3e1f46c24d177.unity3d",
         335176
       ],
       "archive_sha256": "fbf2e13a0ad49ef944e6c93b519aaf804746d04a47f8a44a560362739d8f95c8",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6549,12 +6549,12 @@
     "ex4c00970.unity3d": {
       "identity": [
         "2b78dea3a26254a8886c291a519a868e6e27c349",
-        "43fd96a82627967d2940667d73342578329a921e.unity3d",
+        "ce37ebd9a7f7740c0c08791b37e125cbc81e33cc.unity3d",
         363615
       ],
       "archive_sha256": "a8ce2c258281cb2bd8540ceca9feb216a5f1cdd8e82c9e7bd1181a81915ed3f8",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6609,12 +6609,12 @@
     "ex4c00969.unity3d": {
       "identity": [
         "0e7e5511e6686628af2ecb336e99aacf7ef0992e",
-        "195c6098f5e0c85b0e7ba14ae507dfcdd23a8dac.unity3d",
+        "c3bc123a641c74a10089526904b83d52e09860fb.unity3d",
         309457
       ],
       "archive_sha256": "e342fade17d7460e4c642e761757c4b92b51fc963d985c9a83b2ffa92e62eed3",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6657,12 +6657,12 @@
     "ex4c00966.unity3d": {
       "identity": [
         "78e582a5494c73ad92b2d7942f4d5d01f29c61b3",
-        "20065e69c419c221bace3a6c1b9cb765e7ad9a96.unity3d",
+        "ca4c763e75620f4bc169d7a53b84895c2a7abf81.unity3d",
         318271
       ],
       "archive_sha256": "cb81320426734ac6a1db6e9a89561cf7baa777a9cf75c29157676f16eab36da4",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6723,12 +6723,12 @@
     "ex4c00965.unity3d": {
       "identity": [
         "fc3e346925e6e3359edd98186b1b3f9eaab4ee73",
-        "c7ec565359a46b02bdf38adac8927522683c834f.unity3d",
+        "a6da7430dc18f58fdb2f9aa13dc4ba6f9b594a9c.unity3d",
         323214
       ],
       "archive_sha256": "1094aaca486a5d4125dbf956963c49bf2ee641adaced74bd8a175f740b956d4d",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
@@ -6741,12 +6741,12 @@
     "ex4c00964.unity3d": {
       "identity": [
         "8f77d1cd14025a3b1407d426b21ad876f1142c8b",
-        "b9139d91df120031910e2f7f15f6eba972449918.unity3d",
+        "59064ab6c1ea0926bb3629bea924adf080f33ab0.unity3d",
         338981
       ],
       "archive_sha256": "42329d9cb74149f3fa3a5812b6d1d94c447d321ec75b7ddcc8884a6402a70fff",
       "status": "manual_review",
-      "asset_version": "1078750",
+      "asset_version": "1078790",
       "textures": [],
       "text_maps": {},
       "review_reason": "visual_acceptance_not_passed",
