@@ -6277,7 +6277,7 @@
       "derivation": {
         "kind": "approved-parent-thumbnail",
         "parent": "ex4c00959.unity3d",
-        "dependency": "8b65d30c5871da7a463100c990820287df8fb05ec25d8c42a2f076d948b165f4",
+        "dependency": "03894687c12f7e0bc7d59aa8b950736ea26e89fce0e1ab34cb69c4004996e024",
         "parent_archive_sha256": "8fe7fcd98716928340a295cc16e513ecce6f432c217585b9dc755956dfac1972",
         "model_called": false
       }
