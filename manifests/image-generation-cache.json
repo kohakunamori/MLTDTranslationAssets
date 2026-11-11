@@ -925,10 +925,10 @@
       "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
       "effective_model": "imas-trans-image",
       "mode": "gemini_generate_content",
-      "output": "images/candidates/9d26cc5291c7087b1eb7eedd42fb3aeeeb5bf2180f0ade69f3ccd30ba41f61de.png",
+      "output": "images/candidates/93b6796e5aa167065b17b5a3834347174662c9f15af28edd7efd90c972660f50.png",
       "result": {
         "status": "generated",
-        "sha256": "9d26cc5291c7087b1eb7eedd42fb3aeeeb5bf2180f0ade69f3ccd30ba41f61de",
+        "sha256": "93b6796e5aa167065b17b5a3834347174662c9f15af28edd7efd90c972660f50",
         "provider": {
           "requested_image_model": "imas-trans-image",
           "endpoint": "/v1beta/models/:generateContent",
@@ -946,16 +946,22 @@
           "padding_removed": true,
           "aspect_ratio_fallback": false
         }
+      },
+      "supersedes": {
+        "sha256": "9d26cc5291c7087b1eb7eedd42fb3aeeeb5bf2180f0ade69f3ccd30ba41f61de",
+        "effective_model": "imas-trans-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b"
       }
     },
     "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed": {
-      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
       "effective_model": "imas-trans-image",
       "mode": "gemini_generate_content",
-      "output": "images/candidates/9b51183a5e78fedcdbc0db02cf910bfb50ce12ba3b3ac0f9278a1848112e26f1.png",
+      "output": "images/candidates/b35e09dfed4f8f95aec3875a7740172bf53426e78144e49165c98250397bdcfb.png",
       "result": {
         "status": "generated",
-        "sha256": "9b51183a5e78fedcdbc0db02cf910bfb50ce12ba3b3ac0f9278a1848112e26f1",
+        "sha256": "b35e09dfed4f8f95aec3875a7740172bf53426e78144e49165c98250397bdcfb",
         "provider": {
           "requested_image_model": "imas-trans-image",
           "endpoint": "/v1beta/models/:generateContent",
@@ -973,6 +979,12 @@
           "padding_removed": true,
           "aspect_ratio_fallback": false
         }
+      },
+      "supersedes": {
+        "sha256": "9b51183a5e78fedcdbc0db02cf910bfb50ce12ba3b3ac0f9278a1848112e26f1",
+        "effective_model": "imas-trans-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b"
       }
     },
     "a4686f71518846892da2dd9f1c8391345304e06c3e5362fd53793883d2836f3e": {

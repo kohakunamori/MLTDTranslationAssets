@@ -6815,7 +6815,7 @@
           "schema_version": 1,
           "binding": {
             "source_sha256": "69bb6266d41e0b3aaee58479fa296112e7af29698dd0d885c08ceac1a23fc4ec",
-            "candidate_sha256": "f768549aea594071fe9f506e5f310649ca91183e921f508cc16d0a833684aef5",
+            "candidate_sha256": "35fdfc5001eaad339170cacaf4f40f2af7add49fc7c7162aebb2cc08867b1903",
             "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
@@ -6824,54 +6824,24 @@
           "status": "reviewed",
           "approved": false,
           "assessment": {
-            "verdict": "reject",
             "checks": {
-              "translation_complete": false,
-              "meaning_correct": false,
-              "text_correct": false,
-              "artwork_preserved": false,
-              "layout_preserved": true,
+              "artwork_preserved": true,
               "branding_preserved": true,
-              "no_overflow": true
+              "layout_preserved": false,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
             },
             "issues": [
               {
-                "region": "第一格人物名牌（右、左）及底部登场人物栏",
-                "observed_text": "野々原 茜 / ジュリア / 登場人物",
-                "expected_text": "野野原 茜 / 茱莉亚（或朱莉安） / 登场人物",
-                "detail": "角色姓名中的日文片假名「ジュリア」及日文叠字符号「野々原」未汉化，「登場人物」仍保留日文汉字「場」。"
-              },
-              {
-                "region": "第二格小字与拟声词",
-                "observed_text": "やめろーっ！ / ペシ ペシ / 看，是兔耳呀哦？",
-                "expected_text": "全部汉化且语句自然（如：快住手！ / 啪啪 / 看，是兔耳哦？）",
-                "detail": "左侧手写字「やめろーっ！」和蓝色拟声词「ペシ ペシ」完全漏译；右侧红字「呀哦？」语气词重复别扭。"
-              },
-              {
-                "region": "第三格左侧气泡、红字及拟声词",
-                "observed_text": "宇宙崩壊は困るから 今日は褒めるの やめとくな / あな おそろし… / じゃっ",
-                "expected_text": "宇宙崩溃的话会很麻烦，今天就不夸你了 / 真是可怕… / 唰（对应汉化）",
-                "detail": "第三格左侧整段气泡对白、中间红字旁白以及左下角拟声词全部保留日文原文，未进行翻译。"
-              },
-              {
-                "region": "第四格左侧气泡",
-                "observed_text": "知道了 わかった！",
-                "expected_text": "知道了 知道了！",
-                "detail": "左侧气泡仅翻译了第一行，第二行仍残留日文原文「わかった！」。"
-              },
-              {
-                "region": "第四格右下角背景",
-                "observed_text": "哼哼...",
-                "expected_text": "无文字",
-                "detail": "日文原图第四格右下角没有任何文字或拟声词，候选图凭空添加了橙色「哼哼...」字样，破坏了原画面。"
-              },
-              {
-                "region": "底部版权信息",
-                "observed_text": "©窪阿俊之 © BANDAI NAMCO Entertainment Inc.",
-                "expected_text": "©窪岡俊之 © BANDAI NAMCO Entertainment Inc.",
-                "detail": "版权信息中的「窪岡俊之」被误改写为错字「窪阿俊之」。"
+                "detail": "整张漫画大量对白、旁白及登场人物姓名未汉化，残留原生日文。",
+                "expected_text": "全部对白及说明文字完整汉化",
+                "observed_text": "いいと思うぞ / もっと真面目に… / 茜ちゃんの可愛いへの… / ウソウソ！… 等大量日文残留",
+                "region": "全图多处文字气泡及登场人物栏"
               }
-            ]
+            ],
+            "verdict": "reject"
           }
         }
       }
@@ -6893,16 +6863,39 @@
           "schema_version": 1,
           "binding": {
             "source_sha256": "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed",
-            "candidate_sha256": "4da2c7e15b421841efe1bb625b2ba04e06112f1dc93a2cfcc1985c223d69c813",
+            "candidate_sha256": "0e313b07c06b9d98e17adecb481f0be26f471854199ef97a68511a4cfe5abdc5",
             "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
             "model": "gemini-3.8-flash-high",
             "mode": "gemini_generate_content",
             "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
           },
-          "status": "failed",
+          "status": "reviewed",
           "approved": false,
-          "error": {
-            "type": "ValueError"
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": false,
+              "no_overflow": true,
+              "text_correct": false,
+              "translation_complete": false
+            },
+            "issues": [
+              {
+                "detail": "原图标题为“ピックアップステップガシャ”，候选图误添加了无关前缀“汉化:”，不符合原图内容。",
+                "expected_text": "精选阶梯招募 / PICK UP阶梯招募",
+                "observed_text": "汉化: PICK UP STEP升阶抽...",
+                "region": "顶部主标题区域"
+              },
+              {
+                "detail": "右上角缎带上的日文“2回目”未进行汉化处理。",
+                "expected_text": "第2次 / 第2轮",
+                "observed_text": "2回目",
+                "region": "右上角蓝色角标缎带"
+              }
+            ],
+            "verdict": "reject"
           }
         }
       }

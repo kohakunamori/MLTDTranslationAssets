@@ -2322,6 +2322,78 @@
           }
         ]
       }
+    },
+    "c8127197e37e699c9c855f02025834a100a6b87a3188dca60ab96f3cc28ec7b4": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "69bb6266d41e0b3aaee58479fa296112e7af29698dd0d885c08ceac1a23fc4ec",
+        "candidate_sha256": "35fdfc5001eaad339170cacaf4f40f2af7add49fc7c7162aebb2cc08867b1903",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "整张漫画大量对白、旁白及登场人物姓名未汉化，残留原生日文。",
+            "expected_text": "全部对白及说明文字完整汉化",
+            "observed_text": "いいと思うぞ / もっと真面目に… / 茜ちゃんの可愛いへの… / ウソウソ！… 等大量日文残留",
+            "region": "全图多处文字气泡及登场人物栏"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "49a30128360f41c59bec505bdefe90348e5a3524992b4afaf8e13d52708c2368": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed",
+        "candidate_sha256": "0e313b07c06b9d98e17adecb481f0be26f471854199ef97a68511a4cfe5abdc5",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "原图标题为“ピックアップステップガシャ”，候选图误添加了无关前缀“汉化:”，不符合原图内容。",
+            "expected_text": "精选阶梯招募 / PICK UP阶梯招募",
+            "observed_text": "汉化: PICK UP STEP升阶抽...",
+            "region": "顶部主标题区域"
+          },
+          {
+            "detail": "右上角缎带上的日文“2回目”未进行汉化处理。",
+            "expected_text": "第2次 / 第2轮",
+            "observed_text": "2回目",
+            "region": "右上角蓝色角标缎带"
+          }
+        ],
+        "verdict": "reject"
+      }
     }
   }
 }
