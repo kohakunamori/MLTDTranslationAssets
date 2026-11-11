@@ -13,7 +13,7 @@
     "event_ui": "event_\\d+(?:_\\d+){0,2}\\.unity3d",
     "login_bonus": "loginbonus_panel_\\d+_\\d+\\.unity3d",
     "mycard_event_logo": "mycard_logo_event_\\d+\\.unity3d",
-    "gasha": "gasha\\d+\\.unity3d",
+    "gasha": "(?:gasha\\d+|event_\\d+_gasha)\\.unity3d",
     "item_icons": "(?:item_\\d+|item_ex_thumb_\\d+)\\.unity3d",
     "blog": "blog\\d+\\.unity3d",
     "event_talk_preview": "event_talk_thumb_\\d+\\.unity3d"

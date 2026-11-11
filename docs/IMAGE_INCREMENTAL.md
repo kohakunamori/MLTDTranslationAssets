@@ -5,9 +5,9 @@
 （`scripts/incremental_images.py` 的 `ALLOWED_IMAGE_MODELS`）：
 `gemini-3.1-flash-image`、`gpt-image-2.5`，以及原生 Gemini 生成协议的
 `imas-trans-image`（`gemini_generate_content`）。非白名单组合直接拒绝，不静默换模型。
-当前 `configs/localization-pipeline.json` 使用 `gpt-image-2.5`（`images_edits`）；
-2026-11-07 因 `imas-trans-image` 原生协议报 HTTP 429 配额耗尽而切换，切回时同步
-`model` 与 `api_protocol` 两个字段。视觉验收模型为
+当前 `configs/localization-pipeline.json` 使用 `imas-trans-image`（`gemini_generate_content`）；
+2026-11-11 已有探针 `image-model-smoke` 运行 `43006753449` 成功后切回原生协议。
+切换后端须同步 `model` 与 `api_protocol` 两个字段。视觉验收模型为
 `gemini-3.8-flash-high`，走原生 Gemini `generateContent`。
 `stage=images` 支持 `bundles` 输入，用逗号分隔精确的 bundle 逻辑名只处理指定包
 （如活动 0454 的 9 个图包）；留空才走常规批次策略。
@@ -15,7 +15,7 @@
 该模板专用于 MLTD 批量资源汉化，保留漫画、教程、横幅、贴图等各自版式；不包含指定图片的译文或角色名。
 游戏 LOGO、系列品牌和游戏名称标识整体保护，包括其中的日文，不得汉化、重拼或重绘。
 普通漫画标题和活动文案仍需汉化，不能把所有艺术字都当成游戏 LOGO。
-目前先做有界测试，自动批量生成仍暂停，既有图片发布开启。生成和验收串行，每次启动至少间隔 30 秒。
+当前开启显式派发的有界图片批次，既有图片发布开启。生成和验收串行，每次启动至少间隔 30 秒。
 翻译器现统一为图片输入、图片输出接口，支持 LLM 和外部命令；见 [可替换翻译模块](IMAGE_TRANSLATOR.md)。
 结果规范尺寸时只允许去掉原图没有的整列黑边，剩余比例误差须在 1% 内，再缩放到原图尺寸并保留源 Alpha。
 不使用 OCR 掩膜把原文贴回去，不静默更换模型。

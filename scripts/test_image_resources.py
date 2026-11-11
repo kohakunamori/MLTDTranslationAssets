@@ -16,7 +16,7 @@ import incremental_images as images
 @pytest.mark.parametrize('name,family', [
     ('achievement_999.unity3d', 'achievement'), ('event_0451.unity3d', 'event_ui'),
     ('loginbonus_panel_282_1.unity3d', 'login_bonus'), ('mycard_logo_event_0448.unity3d', 'mycard_event_logo'),
-    ('gasha99998.unity3d', 'gasha'), ('item_9992.unity3d', 'item_icons'),
+    ('gasha99998.unity3d', 'gasha'), ('event_0455_gasha.unity3d', 'gasha'), ('item_9992.unity3d', 'item_icons'),
     ('blog60002.unity3d', 'blog'), ('event_talk_thumb_1806.unity3d', 'event_talk_preview'),
     ('blog60002_thumb.unity3d', 'blog_thumbnail'), ('titlebg_01105_thumb.unity3d', 'titlebg_thumbnail'),
 ])

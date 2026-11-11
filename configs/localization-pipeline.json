@@ -4,8 +4,8 @@
     "generation_enabled": true,
     "translator": {"kind": "llm"},
     "publication_enabled": true,
-    "model": "gpt-image-2.5",
-    "api_protocol": "images_edits",
+    "model": "imas-trans-image",
+    "api_protocol": "gemini_generate_content",
     "prompt_profile": "preserve_layout",
     "restoration_mode": "whole_image",
     "visual_acceptance": {
@@ -17,6 +17,6 @@
     "concurrency": 1,
     "batch_bundles": 12,
     "compliance_retries": 2,
-    "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Runs on gpt-image-2.5 (images_edits) because the native imas-trans-image provider reports HTTP 429 RESOURCE_EXHAUSTED with a multi-day reset window. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
+    "disabled_reason": "Enabled by explicit user request on 2026-11-07 for event-scoped image batches dispatched with stage=images. Switched back to imas-trans-image (gemini_generate_content) on 2026-11-11 after image-model-smoke run 43006753449 succeeded. Generation runs only in a dispatched batch; whole-image visual acceptance and Japanese-residue checks still gate publication."
   }
 }
