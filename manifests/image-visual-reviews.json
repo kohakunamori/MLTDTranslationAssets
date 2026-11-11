@@ -2107,6 +2107,221 @@
         ],
         "verdict": "reject"
       }
+    },
+    "28274f32e54783239c0d587f8fa7176763dc452fae15873ab48da8f8def1a33b": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "69bb6266d41e0b3aaee58479fa296112e7af29698dd0d885c08ceac1a23fc4ec",
+        "candidate_sha256": "f768549aea594071fe9f506e5f310649ca91183e921f508cc16d0a833684aef5",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": false,
+          "meaning_correct": false,
+          "text_correct": false,
+          "artwork_preserved": false,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "第一格人物名牌（右、左）及底部登场人物栏",
+            "observed_text": "野々原 茜 / ジュリア / 登場人物",
+            "expected_text": "野野原 茜 / 茱莉亚（或朱莉安） / 登场人物",
+            "detail": "角色姓名中的日文片假名「ジュリア」及日文叠字符号「野々原」未汉化，「登場人物」仍保留日文汉字「場」。"
+          },
+          {
+            "region": "第二格小字与拟声词",
+            "observed_text": "やめろーっ！ / ペシ ペシ / 看，是兔耳呀哦？",
+            "expected_text": "全部汉化且语句自然（如：快住手！ / 啪啪 / 看，是兔耳哦？）",
+            "detail": "左侧手写字「やめろーっ！」和蓝色拟声词「ペシ ペシ」完全漏译；右侧红字「呀哦？」语气词重复别扭。"
+          },
+          {
+            "region": "第三格左侧气泡、红字及拟声词",
+            "observed_text": "宇宙崩壊は困るから 今日は褒めるの やめとくな / あな おそろし… / じゃっ",
+            "expected_text": "宇宙崩溃的话会很麻烦，今天就不夸你了 / 真是可怕… / 唰（对应汉化）",
+            "detail": "第三格左侧整段气泡对白、中间红字旁白以及左下角拟声词全部保留日文原文，未进行翻译。"
+          },
+          {
+            "region": "第四格左侧气泡",
+            "observed_text": "知道了 わかった！",
+            "expected_text": "知道了 知道了！",
+            "detail": "左侧气泡仅翻译了第一行，第二行仍残留日文原文「わかった！」。"
+          },
+          {
+            "region": "第四格右下角背景",
+            "observed_text": "哼哼...",
+            "expected_text": "无文字",
+            "detail": "日文原图第四格右下角没有任何文字或拟声词，候选图凭空添加了橙色「哼哼...」字样，破坏了原画面。"
+          },
+          {
+            "region": "底部版权信息",
+            "observed_text": "©窪阿俊之 © BANDAI NAMCO Entertainment Inc.",
+            "expected_text": "©窪岡俊之 © BANDAI NAMCO Entertainment Inc.",
+            "detail": "版权信息中的「窪岡俊之」被误改写为错字「窪阿俊之」。"
+          }
+        ]
+      }
+    },
+    "9896e60b0aab415f05322081bfad8cc105ba4d541bbb7b50f8a653c0e20e4931": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed",
+        "candidate_sha256": "4da2c7e15b421841efe1bb625b2ba04e06112f1dc93a2cfcc1985c223d69c813",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "failed",
+      "approved": false,
+      "error": {
+        "type": "ValueError"
+      }
+    },
+    "62fb46877c28bcb0460b1a749a8046afd4df64a6acb00d1a45eb8c7892d6e8eb": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "a4686f71518846892da2dd9f1c8391345304e06c3e5362fd53793883d2836f3e",
+        "candidate_sha256": "5e2f80d6de0854d5b55a6882d3e24128569eb61ae7c881be26cf4bc46ccff19f",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": true,
+          "translation_complete": true
+        },
+        "issues": [],
+        "verdict": "pass"
+      }
+    },
+    "94e94fc0e35932f6ede9fa5a4fd2096bb282b82f5585885e518fef70c44ac878": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "287c0e7747cef7f2c643e6976ab3ef77bc7c77f1a1107d4aa3c61d26ff9de890",
+        "candidate_sha256": "f0a3847aac0d5f203f6c6a8ce11d18593b9342219b1aef0441d341ccb987ab87",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": true,
+          "meaning_correct": false,
+          "text_correct": true,
+          "artwork_preserved": false,
+          "layout_preserved": false,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "左侧栏",
+            "observed_text": "1. 收集「活动道具」！游玩活动歌曲、LIVE或工作，即可获得。本次活动道具是：『星光音符』。及新增角色立绘；3. 完成「活动任务」！达成每日、期间及个人Pt任务，可领取丰厚奖励！",
+            "expected_text": "无文字及无新增人物立绘（保持原图背景）",
+            "detail": "日文原图左侧栏没有任何文字和人物立绘，候选图凭空捏造了大量活动教程文案并添加了原图不存在的角色立绘。"
+          },
+          {
+            "region": "中央栏",
+            "observed_text": "『白金星光系列』活动教程",
+            "expected_text": "无文字（保持原图背景）",
+            "detail": "日文原图中央栏没有任何文字，候选图凭空添加了标题文字。"
+          },
+          {
+            "region": "右侧栏上方",
+            "observed_text": "2. 挑战「活动歌曲」！使用活动道具『星光音符』，即可挑战专属高难度LIVE。获得大量活动Pt!；※本期衣装对应：蒸汽朋克主题道具",
+            "expected_text": "无文字、无说明框，且保留原图上方及下方的灰色留白区域",
+            "detail": "日文原图右侧栏上方无任何文字和说明框，候选图凭空添加了教程文案、气泡框并改绘填补了原图的灰色区域。"
+          },
+          {
+            "region": "右侧栏下方",
+            "observed_text": "4. 获得「豪华奖励」！除了大量道具、货币、称号外，还有活动限定衣装及卡牌！",
+            "expected_text": "无文字，且保留原图上下的灰色区域",
+            "detail": "日文原图右侧栏下方无任何文字，候选图凭空添加了教程文案并改绘填补了原图底部灰色区域。"
+          }
+        ]
+      }
+    },
+    "2e799b1b13f3384fdf348f67cb1e1ddc04925cffc195befcbcb79782b22bdf48": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5",
+        "candidate_sha256": "a79b6fe0745150b104c40ff993cc82f5b10fa610dccb5497bffba7915d5a5560",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": true,
+      "assessment": {
+        "verdict": "pass",
+        "checks": {
+          "translation_complete": true,
+          "meaning_correct": true,
+          "text_correct": true,
+          "artwork_preserved": true,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": []
+      }
+    },
+    "b9453cc68cac6975b62c669ef32f2c8de4814580403dd303ecd622ed7a476d5f": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "a9dd60276dd59d5dd5cec2bf92f926dd3fc609bfc5379167416b52e66a581002",
+        "candidate_sha256": "b3d4fd531c68ec1533d0a83fd50cac6bce88e2617fb05609aaf8ae5ef70c74a3",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": true,
+          "meaning_correct": true,
+          "text_correct": false,
+          "artwork_preserved": false,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "左上角文案右侧奖励图标（PST石与SR券图标）",
+            "observed_text": "蓝色石头底部的英文与金色票券上的「TICKET」「SR」糊化变形为不可辨认的笔画",
+            "expected_text": "保留原图清晰的「PST」「TICKET」「SR」英文标识及道具细节",
+            "detail": "左上角「在金币转蛋中获得卡片和豪华报酬！」右侧的三个奖励道具图标被连带重绘，导致「PST」「TICKET」「SR」英文标识严重失真乱码，花束等道具图像细节也出现糊化。"
+          }
+        ]
+      }
     }
   }
 }

@@ -1,9 +1,9 @@
 {
   "kind": "independent-reviewed-image-unity-repack-audit",
   "report_audited": "work/image-batch/injection-report.json",
-  "report_audited_sha256": "e4f9cb592fdb8dfe3b77df01860a53552e7a1bee969cb40bcf6fd4269f899985",
+  "report_audited_sha256": "05aef336a0c8ba89afa3822a56c123101e7d24f05c37deb59085e33aa9870423",
   "install_manifest": "work/image-batch/install.jsonl",
-  "install_manifest_sha256": "95ef2cad19a6677e15e4a4f3cb77d57e414fc25900a596546268e1b8c339f26a",
+  "install_manifest_sha256": "2f2bb2545113ab89e718294e72e11d90ce613974e14a27f63a7f717dfdeba3a2",
   "manifest_bundles": 1,
   "audited_bundles": 1,
   "passed_bundles": 1,

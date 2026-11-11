@@ -6797,6 +6797,352 @@
           }
         }
       }
+    },
+    "ex4c00455.unity3d": {
+      "identity": [
+        "5aa44bd5cbd554a49fd608104fd5903d2ae7d6f8",
+        "3350f98fb6221c71dee2bdd203594344628e9fe3.unity3d",
+        322889
+      ],
+      "archive_sha256": "9f336759ef4c3771fecade02471091da96e2a4793081779f0f303e57f6abe42a",
+      "status": "manual_review",
+      "asset_version": "1078790",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "69bb6266d41e0b3aaee58479fa296112e7af29698dd0d885c08ceac1a23fc4ec": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "69bb6266d41e0b3aaee58479fa296112e7af29698dd0d885c08ceac1a23fc4ec",
+            "candidate_sha256": "f768549aea594071fe9f506e5f310649ca91183e921f508cc16d0a833684aef5",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "verdict": "reject",
+            "checks": {
+              "translation_complete": false,
+              "meaning_correct": false,
+              "text_correct": false,
+              "artwork_preserved": false,
+              "layout_preserved": true,
+              "branding_preserved": true,
+              "no_overflow": true
+            },
+            "issues": [
+              {
+                "region": "第一格人物名牌（右、左）及底部登场人物栏",
+                "observed_text": "野々原 茜 / ジュリア / 登場人物",
+                "expected_text": "野野原 茜 / 茱莉亚（或朱莉安） / 登场人物",
+                "detail": "角色姓名中的日文片假名「ジュリア」及日文叠字符号「野々原」未汉化，「登場人物」仍保留日文汉字「場」。"
+              },
+              {
+                "region": "第二格小字与拟声词",
+                "observed_text": "やめろーっ！ / ペシ ペシ / 看，是兔耳呀哦？",
+                "expected_text": "全部汉化且语句自然（如：快住手！ / 啪啪 / 看，是兔耳哦？）",
+                "detail": "左侧手写字「やめろーっ！」和蓝色拟声词「ペシ ペシ」完全漏译；右侧红字「呀哦？」语气词重复别扭。"
+              },
+              {
+                "region": "第三格左侧气泡、红字及拟声词",
+                "observed_text": "宇宙崩壊は困るから 今日は褒めるの やめとくな / あな おそろし… / じゃっ",
+                "expected_text": "宇宙崩溃的话会很麻烦，今天就不夸你了 / 真是可怕… / 唰（对应汉化）",
+                "detail": "第三格左侧整段气泡对白、中间红字旁白以及左下角拟声词全部保留日文原文，未进行翻译。"
+              },
+              {
+                "region": "第四格左侧气泡",
+                "observed_text": "知道了 わかった！",
+                "expected_text": "知道了 知道了！",
+                "detail": "左侧气泡仅翻译了第一行，第二行仍残留日文原文「わかった！」。"
+              },
+              {
+                "region": "第四格右下角背景",
+                "observed_text": "哼哼...",
+                "expected_text": "无文字",
+                "detail": "日文原图第四格右下角没有任何文字或拟声词，候选图凭空添加了橙色「哼哼...」字样，破坏了原画面。"
+              },
+              {
+                "region": "底部版权信息",
+                "observed_text": "©窪阿俊之 © BANDAI NAMCO Entertainment Inc.",
+                "expected_text": "©窪岡俊之 © BANDAI NAMCO Entertainment Inc.",
+                "detail": "版权信息中的「窪岡俊之」被误改写为错字「窪阿俊之」。"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "gasha90455.unity3d": {
+      "identity": [
+        "3c7925c1bfdf9143521166a2cceea03f9a768d28",
+        "cd5fe675c082acbe40b3de78ab293ac639d426f1.unity3d",
+        618642
+      ],
+      "archive_sha256": "f1b4b07958240d851730abf73cf8ea0e4a9cac5854bebc570ca28e9bf53551e9",
+      "status": "manual_review",
+      "asset_version": "1078790",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed",
+            "candidate_sha256": "4da2c7e15b421841efe1bb625b2ba04e06112f1dc93a2cfcc1985c223d69c813",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "failed",
+          "approved": false,
+          "error": {
+            "type": "ValueError"
+          }
+        }
+      }
+    },
+    "gasha70455.unity3d": {
+      "identity": [
+        "4e1443b24f5e5539f44e19833d07b47ea12984e9",
+        "7b865d63be5c853fd271ed063197360a663fba5f.unity3d",
+        633492
+      ],
+      "archive_sha256": "6f7adcb30c59b5af94b9203ee3a215a0df25ecf91160fdae35efeb49ee2eea10",
+      "status": "manual_review",
+      "asset_version": "1078790",
+      "textures": [],
+      "text_maps": {},
+      "review_reason": "visual_acceptance_not_passed",
+      "visual_reviews": {
+        "a4686f71518846892da2dd9f1c8391345304e06c3e5362fd53793883d2836f3e": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "a4686f71518846892da2dd9f1c8391345304e06c3e5362fd53793883d2836f3e",
+            "candidate_sha256": "5e2f80d6de0854d5b55a6882d3e24128569eb61ae7c881be26cf4bc46ccff19f",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": true,
+          "assessment": {
+            "checks": {
+              "artwork_preserved": true,
+              "branding_preserved": true,
+              "layout_preserved": true,
+              "meaning_correct": true,
+              "no_overflow": true,
+              "text_correct": true,
+              "translation_complete": true
+            },
+            "issues": [],
+            "verdict": "pass"
+          }
+        },
+        "287c0e7747cef7f2c643e6976ab3ef77bc7c77f1a1107d4aa3c61d26ff9de890": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "287c0e7747cef7f2c643e6976ab3ef77bc7c77f1a1107d4aa3c61d26ff9de890",
+            "candidate_sha256": "f0a3847aac0d5f203f6c6a8ce11d18593b9342219b1aef0441d341ccb987ab87",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": false,
+          "assessment": {
+            "verdict": "reject",
+            "checks": {
+              "translation_complete": true,
+              "meaning_correct": false,
+              "text_correct": true,
+              "artwork_preserved": false,
+              "layout_preserved": false,
+              "branding_preserved": true,
+              "no_overflow": true
+            },
+            "issues": [
+              {
+                "region": "左侧栏",
+                "observed_text": "1. 收集「活动道具」！游玩活动歌曲、LIVE或工作，即可获得。本次活动道具是：『星光音符』。及新增角色立绘；3. 完成「活动任务」！达成每日、期间及个人Pt任务，可领取丰厚奖励！",
+                "expected_text": "无文字及无新增人物立绘（保持原图背景）",
+                "detail": "日文原图左侧栏没有任何文字和人物立绘，候选图凭空捏造了大量活动教程文案并添加了原图不存在的角色立绘。"
+              },
+              {
+                "region": "中央栏",
+                "observed_text": "『白金星光系列』活动教程",
+                "expected_text": "无文字（保持原图背景）",
+                "detail": "日文原图中央栏没有任何文字，候选图凭空添加了标题文字。"
+              },
+              {
+                "region": "右侧栏上方",
+                "observed_text": "2. 挑战「活动歌曲」！使用活动道具『星光音符』，即可挑战专属高难度LIVE。获得大量活动Pt!；※本期衣装对应：蒸汽朋克主题道具",
+                "expected_text": "无文字、无说明框，且保留原图上方及下方的灰色留白区域",
+                "detail": "日文原图右侧栏上方无任何文字和说明框，候选图凭空添加了教程文案、气泡框并改绘填补了原图的灰色区域。"
+              },
+              {
+                "region": "右侧栏下方",
+                "observed_text": "4. 获得「豪华奖励」！除了大量道具、货币、称号外，还有活动限定衣装及卡牌！",
+                "expected_text": "无文字，且保留原图上下的灰色区域",
+                "detail": "日文原图右侧栏下方无任何文字，候选图凭空添加了教程文案并改绘填补了原图底部灰色区域。"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "item_60455.unity3d": {
+      "identity": [
+        "78ecb21bb7508b8543b38ed3f9860c758adc4b54",
+        "1237f25fd38331c684e020b1b22b27ee34468ada.unity3d",
+        8608
+      ],
+      "archive_sha256": "4d3088a407a8570e1b79a444faebfda5ad4ee0cfa8b0d0e4b13141b41fc7f9a4",
+      "status": "ocr_no_text",
+      "asset_version": "1078790",
+      "textures": [],
+      "text_maps": {},
+      "visual_reviews": {}
+    },
+    "blog0455.unity3d": {
+      "identity": [
+        "c5b5383b15e3f20c1ada3ffc0ca177626936abaf",
+        "fb36cd699b581d509789916ce47dd78abcb1f0a4.unity3d",
+        57031
+      ],
+      "archive_sha256": "03bb48c227c594d187ea7f4d0b066ffdb3feefc912dcea743a6dde917b9c5e3a",
+      "status": "translated",
+      "asset_version": "1078790",
+      "textures": [
+        {
+          "id": -8440961459291322199,
+          "localized": "images/localized/a79b6fe0745150b104c40ff993cc82f5b10fa610dccb5497bffba7915d5a5560.png",
+          "sha256": "a79b6fe0745150b104c40ff993cc82f5b10fa610dccb5497bffba7915d5a5560",
+          "source_sha256": "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5",
+          "text_map": "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5",
+          "composite_box": [
+            0,
+            0,
+            480,
+            270
+          ]
+        }
+      ],
+      "text_maps": {
+        "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5": {
+          "input_sha256": "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5",
+          "size": [
+            480,
+            270
+          ],
+          "regions": [
+            {
+              "box": [
+                52,
+                6,
+                135,
+                97
+              ],
+              "source_text": "っ",
+              "confidence": 36.816025
+            },
+            {
+              "box": [
+                423,
+                197,
+                446,
+                224
+              ],
+              "source_text": "ー",
+              "confidence": 89.952682
+            },
+            {
+              "box": [
+                461,
+                203,
+                480,
+                214
+              ],
+              "source_text": "ム",
+              "confidence": 89.296898
+            }
+          ],
+          "audit": {
+            "mode": "whole_image",
+            "mask_applied": false,
+            "removed_edge_columns": [
+              0,
+              0
+            ],
+            "aspect_ratio_error": 0.0,
+            "source_size": [
+              480,
+              270
+            ],
+            "provider_size": [
+              480,
+              270
+            ],
+            "alpha_changed_pixels": 0,
+            "changed_pixels": 128600
+          },
+          "provider": {
+            "requested_image_model": "imas-trans-image",
+            "endpoint": "/v1beta/models/:generateContent",
+            "mode": "gemini_generate_content",
+            "aspect_ratio": "16:9",
+            "input_size": [
+              480,
+              270
+            ],
+            "provider_output_size": [
+              1376,
+              768
+            ],
+            "aspect_ratio_error": 0.0078125,
+            "padding_removed": true,
+            "aspect_ratio_fallback": false
+          },
+          "remaining_kana": 0,
+          "ocr_advisory_only": true
+        }
+      },
+      "visual_reviews": {
+        "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5": {
+          "schema_version": 1,
+          "binding": {
+            "source_sha256": "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5",
+            "candidate_sha256": "a79b6fe0745150b104c40ff993cc82f5b10fa610dccb5497bffba7915d5a5560",
+            "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+            "model": "gemini-3.8-flash-high",
+            "mode": "gemini_generate_content",
+            "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+          },
+          "status": "reviewed",
+          "approved": true,
+          "assessment": {
+            "verdict": "pass",
+            "checks": {
+              "translation_complete": true,
+              "meaning_correct": true,
+              "text_correct": true,
+              "artwork_preserved": true,
+              "layout_preserved": true,
+              "branding_preserved": true,
+              "no_overflow": true
+            },
+            "issues": []
+          }
+        }
+      }
     }
   }
 }

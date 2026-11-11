@@ -920,6 +920,168 @@
           "output_format": "png"
         }
       }
+    },
+    "69bb6266d41e0b3aaee58479fa296112e7af29698dd0d885c08ceac1a23fc4ec": {
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/9d26cc5291c7087b1eb7eedd42fb3aeeeb5bf2180f0ade69f3ccd30ba41f61de.png",
+      "result": {
+        "status": "generated",
+        "sha256": "9d26cc5291c7087b1eb7eedd42fb3aeeeb5bf2180f0ade69f3ccd30ba41f61de",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "87d7421459f81dea516988132b417e2f0e64c807bf7da13be2b47974401c30ed": {
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/9b51183a5e78fedcdbc0db02cf910bfb50ce12ba3b3ac0f9278a1848112e26f1.png",
+      "result": {
+        "status": "generated",
+        "sha256": "9b51183a5e78fedcdbc0db02cf910bfb50ce12ba3b3ac0f9278a1848112e26f1",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            1024,
+            1024
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "a4686f71518846892da2dd9f1c8391345304e06c3e5362fd53793883d2836f3e": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/3d2895c9cb385af8021e5ebbc7238fb447ea1edc438bbbf52c5fc29faee7067e.png",
+      "result": {
+        "status": "generated",
+        "sha256": "3d2895c9cb385af8021e5ebbc7238fb447ea1edc438bbbf52c5fc29faee7067e",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            1024,
+            1024
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "287c0e7747cef7f2c643e6976ab3ef77bc7c77f1a1107d4aa3c61d26ff9de890": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/f00f1c8097822b842077af8295e4b0e3b1595dad8a2f8b303dca501625a74ef9.png",
+      "result": {
+        "status": "generated",
+        "sha256": "f00f1c8097822b842077af8295e4b0e3b1595dad8a2f8b303dca501625a74ef9",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            512,
+            512
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "2d16f9981be162fd66766497f911d19afecbee0f2c794f7ee521593c4ba798c5": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/e884b31e4dd4d532f3eb39cbf5aaba11ada3c5a12e3c9a511c68aab10918d8de.png",
+      "result": {
+        "status": "generated",
+        "sha256": "e884b31e4dd4d532f3eb39cbf5aaba11ada3c5a12e3c9a511c68aab10918d8de",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "16:9",
+          "input_size": [
+            480,
+            270
+          ],
+          "provider_output_size": [
+            1376,
+            768
+          ],
+          "aspect_ratio_error": 0.0078125,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "a9dd60276dd59d5dd5cec2bf92f926dd3fc609bfc5379167416b52e66a581002": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/6445fac8e97492f98ff73125c37458c70767821811300f17c76dee8f1d767eda.png",
+      "result": {
+        "status": "generated",
+        "sha256": "6445fac8e97492f98ff73125c37458c70767821811300f17c76dee8f1d767eda",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:1",
+          "input_size": [
+            1024,
+            1024
+          ],
+          "provider_output_size": [
+            1024,
+            1024
+          ],
+          "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
     }
   }
 }
