@@ -1,0 +1,26 @@
+name: Probe image backend (temporary)
+'on':
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Native image model to probe
+        default: imas-trans-image
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r pipelines/image/requirements-injection.txt msgpack pycryptodome requests UnityPy
+      - name: One bounded provider call, experiment only
+        env:
+          MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
+        run: python -u scripts/test_image_model.py --output work/probe --model "${{ inputs.model }}" --guided --strict-preservation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-result
+          path: work/probe
