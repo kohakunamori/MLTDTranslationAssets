@@ -2394,6 +2394,327 @@
         ],
         "verdict": "reject"
       }
+    },
+    "303b81df198039473e566a3be4de4bafbd84bac6c8beba9b150adf2ceebbf215": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "cd04b03c9243b305ad4d2ebeb0cdac91b1f7a6f2099d97def42dca858eabab6c",
+        "candidate_sha256": "4c57ee4587ed5c60734e8f666a9fd7cdd7aafc75d8876ee049a0306346c88b60",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "第一行文字重复出现“今早”，导致句子变为“今早 今早没下雨吗？”，存在重复错别字。",
+            "expected_text": "今早没下雨吗？",
+            "observed_text": "今早 今早没下雨吗？",
+            "region": "第1格右上妈妈气泡"
+          },
+          {
+            "detail": "原文「お友達に？」承接上句孩子说「入れてもらったー」（蹭了别人的伞），妈妈询问的是“是（蹭了）朋友的吗？”，中文误译为“被好朋友蹭了？”，主客体逻辑颠倒、语义错误。",
+            "expected_text": "朋友的吗？ / 是好朋友吗？",
+            "observed_text": "被好朋友蹭了？",
+            "region": "第1格左下妈妈气泡"
+          },
+          {
+            "detail": "曲名「グッデイ・サンシャイン！」（Good Day Sunshine!）属于受规范的专有名词，应按原文直译或保留英文原名，不得擅自改编创作为意象完全不同的“祝你天天, 天天晴!”。",
+            "expected_text": "Good Day Sunshine! / 美好一天·阳光！",
+            "observed_text": "祝你天天, 天天晴!",
+            "region": "第4格电视画面曲名"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "bda4258142e5095f552b2e9eb6b91c15bf9ca60ce0b69fc794b1ca945ce3881e": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "b1200d7f482e224ab10d7fac0bf62bebb83c4215582e8b32733654df099d2062",
+        "candidate_sha256": "f49c46a27a45f9cc4826677f3a1ebcba6a12d40b50fb053a4bb7260ee3f4d022",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": false,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "绝大部分对话、旁白未翻译，仍保留日文原文，且部分气泡存在中日文重叠乱码与残留。",
+            "expected_text": "全部对白与说明完整汉化为简体中文",
+            "observed_text": "第1至4格大量残留日文对白（如第2格、第4格完全未汉化，第1格与第3格中日文混杂重叠）",
+            "region": "全图对白气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "f87f05601514d1f10c8bdd81f7cc3fa16afde334452350560f3bb4a8bcc981b3": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "522bac4867a1bed27cff9451d7ff34a5366abf81a4de31b09f1833c089c6c7a6",
+        "candidate_sha256": "ca97fb5093c1daf191c71010e5074e0f8153fc9212f2dfa9e9fd8c6dd64dbb44",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "对白中有大量日文未汉化残留，如‘サイコー’、‘靴底にもハートがあるの！’、‘ハイッ’及第三格整句对白等。",
+            "expected_text": "完整汉化所有对白与拟声词",
+            "observed_text": "サイコー、靴底にもハートがあるの！、わかった！じゃあ いっくよ〜！！等",
+            "region": "第1至第4格对白气泡"
+          },
+          {
+            "detail": "第四格添加了原图不存在的多余文本串行与排版错乱。",
+            "expected_text": "对应原图对白排版",
+            "observed_text": "跑起来也是 跑起来也是 跑起来也是…！",
+            "region": "第4格背景文字"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "9b12d68a79c720aa96dd3aac4a33520852e78a9a9f986f7ba0e62561210fb313": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "09cd752a23696ad7dc913257ce806eba2f97f5191e3c24b2adb74dfcc4df6813",
+        "candidate_sha256": "cec28a805d29fb6977a68868b8bdded9c5736ae20b072bd375ea4997fd91e04f",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "角色百濑莉绪的姓名牌误标为德川茉莉",
+            "expected_text": "百濑 莉绪",
+            "observed_text": "德川茉莉",
+            "region": "第1格角色标签"
+          },
+          {
+            "detail": "对白中包含未翻译的日文原文",
+            "expected_text": "啪啪—！这是进献的棉花糖…！",
+            "observed_text": "啪啪~恩！こちら献上品的 这是进献的棉花糖…！",
+            "region": "第2格右上气泡"
+          },
+          {
+            "detail": "对白中残留大段未翻译日文",
+            "expected_text": "现在的茉莉可是邪恶辛迪加呢？",
+            "observed_text": "现在的茉莉可是ワルのシンジケートなのですよ？",
+            "region": "第2格左侧气泡"
+          },
+          {
+            "detail": "对白未完全汉化，残留日文词句",
+            "expected_text": "比起软绵绵的棉花糖，更喜欢闪闪发亮的宝石呢！所以那个大家一起吃就好啦…！",
+            "observed_text": "比起软绵绵的棉花ユマロよりも...皆で一起吃",
+            "region": "第3格气泡"
+          },
+          {
+            "detail": "右上小字与感叹词完全残留日文未汉化",
+            "expected_text": "哦哦—！！好帅！",
+            "observed_text": "おおー!! カッコいい！",
+            "region": "第4格右上"
+          },
+          {
+            "detail": "贵音旁白细小字未翻译",
+            "expected_text": "深感佩服",
+            "observed_text": "感服いたしました",
+            "region": "第4格左中细字"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "299bedba2b562053375bc92ffce9cb092743fc0069c4fe422bb2277dbef135d9": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "b157ea64d6eaded3f33d67d3fb9ec05321a3bd6cab61bbd9bc6aeca88602e79b",
+        "candidate_sha256": "58e06cecc71d2a9ff0aef8fc6a6abf6a6153d0e33cc460db36349e01f6cc60b5",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "verdict": "reject",
+        "checks": {
+          "translation_complete": false,
+          "meaning_correct": false,
+          "text_correct": false,
+          "artwork_preserved": true,
+          "layout_preserved": true,
+          "branding_preserved": true,
+          "no_overflow": true
+        },
+        "issues": [
+          {
+            "region": "第1格左侧气泡",
+            "observed_text": "…え？ ちょっと アイドルに 似てる？",
+            "expected_text": "……哎？ 感觉有点 像偶像？",
+            "detail": "该气泡内台词完全遗漏汉化，保留了原日文。"
+          },
+          {
+            "region": "第3格右上气泡",
+            "observed_text": "通过大家将应援 私たちに 応援を届けて くれることで",
+            "expected_text": "大家向我们 传递支持与应援",
+            "detail": "气泡内后半句日文完全未翻译，出现中日文混杂。"
+          },
+          {
+            "region": "第3格左下气泡上方振假名",
+            "observed_text": "アイドル",
+            "expected_text": "偶像",
+            "detail": "振假名未翻译为简体中文。"
+          },
+          {
+            "region": "第4格左下角拟声词",
+            "observed_text": "にひひっ",
+            "expected_text": "嘿嘿/嘻嘻",
+            "detail": "角色的标志性笑声拟声词未汉化。"
+          }
+        ]
+      }
+    },
+    "4410424c8420499df2075c14bedafc061abb25622749bbc19dd0f540937b9838": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "3a969e2a6d10b892a59dd639214755e8cde76f432aff6acc0ffdb0e938fd807c",
+        "candidate_sha256": "7ba8e22eaa9540d85f147e0d064e8fc01dba550359fc13adf59e4d4202f2094b",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": false,
+          "branding_preserved": true,
+          "layout_preserved": false,
+          "meaning_correct": false,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": true
+        },
+        "issues": [
+          {
+            "detail": "角色姓名标识位置被擅自移动至右下侧裙摆旁，原位置排版被改变。",
+            "expected_text": "在角色头部左侧保持原有位置与排版",
+            "observed_text": "移至右下方裙摆处「宫尾 美也」",
+            "region": "第1格角色旁"
+          },
+          {
+            "detail": "原文「立っていて」意为站在舞台上，译文遗漏动作动词误作「在了一个」。",
+            "expected_text": "站在了巨大的舞台上",
+            "observed_text": "我在了一个巨大的舞台上",
+            "region": "第3格右上气泡"
+          },
+          {
+            "detail": "词语重复叠加，用词不当。",
+            "expected_text": "敬请期待 / 请期待",
+            "observed_text": "请敬请期待",
+            "region": "第4格左下气泡"
+          }
+        ],
+        "verdict": "reject"
+      }
+    },
+    "2d9bc95ceacd841671ad6b96e8d91ccf22cd6d3a22c391dc9340b640d9f2d24a": {
+      "schema_version": 1,
+      "binding": {
+        "source_sha256": "e935d5b29a3600b156748ccf660f8495a4cc091b6a26cd364dcac63569cb4e20",
+        "candidate_sha256": "a20a94443c91b103d96c9790a9c9f3bce96dc8417bc8d4346d0d8bd0b8544a2d",
+        "reference_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+        "model": "gemini-3.8-flash-high",
+        "mode": "gemini_generate_content",
+        "review_prompt_sha256": "9bc00a2f6e3b45b5f6a55ee931a0dadb23499ea11c68831b48ea5ef03b55fe79"
+      },
+      "status": "reviewed",
+      "approved": false,
+      "assessment": {
+        "checks": {
+          "artwork_preserved": true,
+          "branding_preserved": true,
+          "layout_preserved": true,
+          "meaning_correct": true,
+          "no_overflow": true,
+          "text_correct": false,
+          "translation_complete": false
+        },
+        "issues": [
+          {
+            "detail": "角色名下方的英文罗马字标签被改写为乱码拟似英文，未保持原样。",
+            "expected_text": "IKU NAKATANI / AYUMU MAIHAMA / YURIKO NANAO / ANNA MOCHIZUKI",
+            "observed_text": "Iku Norovate / Anurai Masesnus / Ninpait Coerpo / Annes Muchaeta",
+            "region": "第1格人物英文标签"
+          },
+          {
+            "detail": "右上角手写假名「でも」未作汉化翻译，残留原版日文。",
+            "expected_text": "可是 / 不过",
+            "observed_text": "でも",
+            "region": "第2格右上角手写字"
+          },
+          {
+            "detail": "握拳手势旁的拟态词「ぐっ」未作汉化，残留原版假名。",
+            "expected_text": "紧握 / 握拳（或拟声词汉化）",
+            "observed_text": "ぐっ",
+            "region": "第2格右下角手旁效果字"
+          }
+        ],
+        "verdict": "reject"
+      }
     }
   }
 }

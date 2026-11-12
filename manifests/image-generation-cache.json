@@ -66,18 +66,15 @@
       }
     },
     "cd04b03c9243b305ad4d2ebeb0cdac91b1f7a6f2099d97def42dca858eabab6c": {
-      "logical": "ex4c00963.unity3d",
-      "archive_sha256": "67b8125c1b03c64b126c32a00cd71ff3f21547cad539a3d88d79ee78315dea1e",
-      "asset_version": "1077750",
-      "prompt_sha256": "90f8e9caf10cac41ee55b738c7515a4072e49fa211942e5c1a15e4ca37f89699",
-      "effective_model": "gemini-3.1-flash-image",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
       "mode": "gemini_generate_content",
-      "review_status": "unapproved",
+      "output": "images/candidates/9c62591bf7cc40978b3b199f267765d62b986388fa4c16c953dc552458a340a0.png",
       "result": {
         "status": "generated",
-        "sha256": "48acf8cf277e88799191f2719a83e73794a6a19db01a8a7668d0de706bc4d682",
+        "sha256": "9c62591bf7cc40978b3b199f267765d62b986388fa4c16c953dc552458a340a0",
         "provider": {
-          "requested_image_model": "gemini-3.1-flash-image",
+          "requested_image_model": "imas-trans-image",
           "endpoint": "/v1beta/models/:generateContent",
           "mode": "gemini_generate_content",
           "aspect_ratio": "1:4",
@@ -90,25 +87,27 @@
             4128
           ],
           "aspect_ratio_error": 0.007751937984496138,
-          "padding_removed": true
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
         }
       },
-      "output": "images/candidates/48acf8cf277e88799191f2719a83e73794a6a19db01a8a7668d0de706bc4d682.png",
-      "output_kind": "raw_model_candidate"
+      "supersedes": {
+        "sha256": "48acf8cf277e88799191f2719a83e73794a6a19db01a8a7668d0de706bc4d682",
+        "effective_model": "gemini-3.1-flash-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "90f8e9caf10cac41ee55b738c7515a4072e49fa211942e5c1a15e4ca37f89699"
+      }
     },
     "b1200d7f482e224ab10d7fac0bf62bebb83c4215582e8b32733654df099d2062": {
-      "logical": "ex4c00962.unity3d",
-      "archive_sha256": "e6e68fa9d1b81db3ad8b5538ddb5fd41b900e0e9d8cce756eb63d7a63263b922",
-      "asset_version": "1077750",
-      "prompt_sha256": "c0c37c366990f1ce76dd16ad294e9511ddeafc15e88f8670587ea0b24219c1d0",
-      "effective_model": "gemini-3.1-flash-image",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
       "mode": "gemini_generate_content",
-      "review_status": "unapproved",
+      "output": "images/candidates/5c4f7f74b5c7c1532aee1360123b5984de3492eb465590d602730630456ce00b.png",
       "result": {
         "status": "generated",
-        "sha256": "8dc27d4841c146a34331c99cae6c090485f38e96d14c3f788156e6adcb73333b",
+        "sha256": "5c4f7f74b5c7c1532aee1360123b5984de3492eb465590d602730630456ce00b",
         "provider": {
-          "requested_image_model": "gemini-3.1-flash-image",
+          "requested_image_model": "imas-trans-image",
           "endpoint": "/v1beta/models/:generateContent",
           "mode": "gemini_generate_content",
           "aspect_ratio": "1:4",
@@ -121,25 +120,27 @@
             4128
           ],
           "aspect_ratio_error": 0.007751937984496138,
-          "padding_removed": true
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
         }
       },
-      "output": "images/candidates/8dc27d4841c146a34331c99cae6c090485f38e96d14c3f788156e6adcb73333b.png",
-      "output_kind": "raw_model_candidate"
+      "supersedes": {
+        "sha256": "8dc27d4841c146a34331c99cae6c090485f38e96d14c3f788156e6adcb73333b",
+        "effective_model": "gemini-3.1-flash-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "c0c37c366990f1ce76dd16ad294e9511ddeafc15e88f8670587ea0b24219c1d0"
+      }
     },
     "522bac4867a1bed27cff9451d7ff34a5366abf81a4de31b09f1833c089c6c7a6": {
-      "logical": "ex4c00961.unity3d",
-      "archive_sha256": "08b6459e4763463cf2a51b2f2bdb41e12c4d6b7c1c070a2a8f68a499b1462646",
-      "asset_version": "1077750",
-      "prompt_sha256": "d5fbbe97634916a75b46359b87c6da56dc95808a2e1fe73576b4ff13b46a17df",
-      "effective_model": "gemini-3.1-flash-image",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
       "mode": "gemini_generate_content",
-      "review_status": "unapproved",
+      "output": "images/candidates/c00b7e41760ec9503d859b7abcd12a49afc90eb0955abeccb5ea30c7d1ad9f9f.png",
       "result": {
         "status": "generated",
-        "sha256": "470c6557428d4bd69ec221df6926cee489c57c8d6f664901875d678186e76782",
+        "sha256": "c00b7e41760ec9503d859b7abcd12a49afc90eb0955abeccb5ea30c7d1ad9f9f",
         "provider": {
-          "requested_image_model": "gemini-3.1-flash-image",
+          "requested_image_model": "imas-trans-image",
           "endpoint": "/v1beta/models/:generateContent",
           "mode": "gemini_generate_content",
           "aspect_ratio": "1:4",
@@ -152,25 +153,27 @@
             4128
           ],
           "aspect_ratio_error": 0.007751937984496138,
-          "padding_removed": true
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
         }
       },
-      "output": "images/candidates/470c6557428d4bd69ec221df6926cee489c57c8d6f664901875d678186e76782.png",
-      "output_kind": "raw_model_candidate"
+      "supersedes": {
+        "sha256": "470c6557428d4bd69ec221df6926cee489c57c8d6f664901875d678186e76782",
+        "effective_model": "gemini-3.1-flash-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "d5fbbe97634916a75b46359b87c6da56dc95808a2e1fe73576b4ff13b46a17df"
+      }
     },
     "09cd752a23696ad7dc913257ce806eba2f97f5191e3c24b2adb74dfcc4df6813": {
-      "logical": "ex4c00960.unity3d",
-      "archive_sha256": "06582e2ea7099a5d6963248c61219463a021423799902207eb77b5f2abe113df",
-      "asset_version": "1077750",
-      "prompt_sha256": "2dadb7cced760190b8bb99962095f2abd59b3afd263904653361e2110652bb96",
-      "effective_model": "gemini-3.1-flash-image",
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
       "mode": "gemini_generate_content",
-      "review_status": "unapproved",
+      "output": "images/candidates/2b3468093108b550e7ad51bfbf5d0bf70dd084eb05d5518213f64d87c99df7c2.png",
       "result": {
         "status": "generated",
-        "sha256": "ebd8fbbdf4d63c3af9566413cfa3d1dbb151eb598790b896810a99700cb729f3",
+        "sha256": "2b3468093108b550e7ad51bfbf5d0bf70dd084eb05d5518213f64d87c99df7c2",
         "provider": {
-          "requested_image_model": "gemini-3.1-flash-image",
+          "requested_image_model": "imas-trans-image",
           "endpoint": "/v1beta/models/:generateContent",
           "mode": "gemini_generate_content",
           "aspect_ratio": "1:4",
@@ -183,11 +186,16 @@
             4128
           ],
           "aspect_ratio_error": 0.007751937984496138,
-          "padding_removed": true
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
         }
       },
-      "output": "images/candidates/ebd8fbbdf4d63c3af9566413cfa3d1dbb151eb598790b896810a99700cb729f3.png",
-      "output_kind": "raw_model_candidate"
+      "supersedes": {
+        "sha256": "ebd8fbbdf4d63c3af9566413cfa3d1dbb151eb598790b896810a99700cb729f3",
+        "effective_model": "gemini-3.1-flash-image",
+        "mode": "gemini_generate_content",
+        "prompt_sha256": "2dadb7cced760190b8bb99962095f2abd59b3afd263904653361e2110652bb96"
+      }
     },
     "004f62cc6fb9203e7715ce98a790d253d811752f46a605327504bbd51f923cb0": {
       "logical": "ex4c00959.unity3d",
@@ -1090,6 +1098,87 @@
             1024
           ],
           "aspect_ratio_error": 0.0,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "b157ea64d6eaded3f33d67d3fb9ec05321a3bd6cab61bbd9bc6aeca88602e79b": {
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/62ba0f73ea1587dcffde20659ab1f70c1c9c18098e3246389b2fa86c0dca1b7e.png",
+      "result": {
+        "status": "generated",
+        "sha256": "62ba0f73ea1587dcffde20659ab1f70c1c9c18098e3246389b2fa86c0dca1b7e",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "3a969e2a6d10b892a59dd639214755e8cde76f432aff6acc0ffdb0e938fd807c": {
+      "prompt_sha256": "3eb3a58b30f45a7b39336fa8299b56edc9c3797a298d54eb4a572deca38f3a3b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/d1f53dca648aa4a31cd1ce2a72686036d0451a747f1255ee8dd63bb9c85dc850.png",
+      "result": {
+        "status": "generated",
+        "sha256": "d1f53dca648aa4a31cd1ce2a72686036d0451a747f1255ee8dd63bb9c85dc850",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
+          "padding_removed": true,
+          "aspect_ratio_fallback": false
+        }
+      }
+    },
+    "e935d5b29a3600b156748ccf660f8495a4cc091b6a26cd364dcac63569cb4e20": {
+      "prompt_sha256": "fcc9584b0d9c4fd7b38523a7d87b62e15dfc2f0aef096645cf95efaacbbdf89b",
+      "effective_model": "imas-trans-image",
+      "mode": "gemini_generate_content",
+      "output": "images/candidates/3370b63d989cd3c6f055af53a4de7f3bdf776415fb8f21a0d212f160e4cdc15f.png",
+      "result": {
+        "status": "generated",
+        "sha256": "3370b63d989cd3c6f055af53a4de7f3bdf776415fb8f21a0d212f160e4cdc15f",
+        "provider": {
+          "requested_image_model": "imas-trans-image",
+          "endpoint": "/v1beta/models/:generateContent",
+          "mode": "gemini_generate_content",
+          "aspect_ratio": "1:4",
+          "input_size": [
+            640,
+            2560
+          ],
+          "provider_output_size": [
+            1024,
+            4128
+          ],
+          "aspect_ratio_error": 0.007751937984496138,
           "padding_removed": true,
           "aspect_ratio_fallback": false
         }
