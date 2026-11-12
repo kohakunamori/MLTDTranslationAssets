@@ -18,12 +18,16 @@ The translation workflow owns three stages:
 
 The image policy has two independent switches in
 `configs/localization-pipeline.json` (schema 2): `generation_enabled=false` and
-`publication_enabled=true`. Generation is temporarily paused for sample and prompt review.
-The generator is `gpt-image-2.5` over OpenAI image edits; the independent visual
+`publication_enabled=true`. Image generation was switched off by explicit user
+request on 2026-11-12: it only ran inside dispatched batches and its provider
+quota is exhausted (HTTP 429), so every translation run that reached the images
+job failed. Text translation, existing source
+files, reviewed PNGs, progress and overlays are preserved, and the packaging
+path keeps publishing already-published bundles.
+The generator is `imas-trans-image` over native Gemini `generateContent`; the independent visual
 reviewer is `gemini-3.8-flash-high` over native Gemini. The preferred prompt
 preserves the original lettering layout. Both stay serial at RPM 2, with a
-source-bound, fail-closed visual gate and no OCR restoration mask. Existing source
-files, reviewed PNGs, progress and overlays are preserved.
+source-bound, fail-closed visual gate and no OCR restoration mask.
 
 The generated builder always uses `--reuse-published-images` when publication is enabled,
 then merges a new audited overlay if one exists.

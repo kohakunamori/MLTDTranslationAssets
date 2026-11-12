@@ -18,7 +18,7 @@ flowchart LR
   Resize --> Repack
 ```
 
-当前 `configs/localization-pipeline.json` 保持 `generation_enabled=false`；注册新类型和更换实现都不会自动打开图片生成。
+当前 `configs/localization-pipeline.json` 保持 `generation_enabled=false`（用户 2026-11-12 明确要求停用图片汉化；此前只在 dispatch 批次里运行，且图片 provider 配额耗尽 HTTP 429，导致翻译流水线到图片 job 即红）；注册新类型和更换实现都不会自动打开图片生成。
 `publication_enabled=true` 继续发布已有成果。单图 CLI 是显式调用，不受自动 CI 开关限制；本文示例不会自动执行。
 
 ## 单图调用

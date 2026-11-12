@@ -31,14 +31,32 @@ def condition(expression, values):
     return eval(compile(tree, "workflow condition", "eval"), {"__builtins__": {}})
 
 
-def test_image_generation_is_enabled_for_dispatched_batches_only_by_policy():
-    assert features.inspect(ROOT)["images_generation_enabled"] is True
+def test_image_generation_is_paused_by_policy_while_publication_stays_on():
+    assert features.inspect(ROOT)["images_generation_enabled"] is False
     assert features.inspect(ROOT)["images_publication_enabled"] is True
     policy = json.loads((ROOT / 'configs/localization-pipeline.json').read_text())['images']
     assert (policy['model'], policy['requests_per_minute'], policy['concurrency']) == ('imas-trans-image', 2, 1)
     assert policy['api_protocol'] == 'gemini_generate_content' and policy['restoration_mode'] == 'whole_image'
     assert policy['prompt_profile'] == 'preserve_layout' and policy['compliance_retries'] == 2
     assert policy['visual_acceptance'] == {'enabled': True, 'model': 'gemini-3.8-flash-high', 'api_protocol': 'gemini_generate_content'}
+
+
+def test_repo_policy_skips_the_images_job_without_reaching_a_provider():
+    image_job = workflow("llm-translate-assets.yml")["jobs"]["images"]
+    enabled = str(features.inspect(ROOT)["images_generation_enabled"]).lower()
+    assert condition(image_job["if"], {
+        "needs.draft.result": "success",
+        "needs.draft.outputs.images_generation_enabled": enabled,
+    }) is False
+    # The packaging job still runs when generation is paused, so existing
+    # translated/published text and image bundles keep being released.
+    package = workflow("llm-translate-assets.yml")["jobs"]["package"]
+    assert condition(package["if"], {
+        "needs.draft.result": "success",
+        "needs.draft.outputs.images_generation_enabled": enabled,
+        "needs.images.result": "skipped",
+        "needs.images.outputs.ready": "",
+    }) is True
 
 
 def test_missing_policy_defaults_to_disabled(tmp_path):
