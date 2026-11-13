@@ -28,6 +28,7 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest import mock
 
 import httpx
 
@@ -777,6 +778,68 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
         self.assertIn("Re-translate SOURCE alone", feedback)
         self.assertIn("private-use", feedback)
         self.assertIn("numeric literals", feedback)
+
+    def test_provider_tos_error_banner_is_rejected_by_qa(self) -> None:
+        source = "通信に失敗しました\r\n\r\nタイトルに戻ります"
+        tos_banner = (
+            "⚠ This service has been disabled in this account for violation of "
+            "Terms of Service. Please submit an appeal to continue using this product."
+        )
+        qa = self.evaluate(source, tos_banner)
+        self.assertEqual(qa["qa_verdict"], "REJECT")
+        codes = {issue["code"] for issue in qa["issues"]}
+        self.assertIn("provider_error_text", codes)
+
+        row = {
+            "source": source,
+            "source_sha256": sha256_text(source),
+            "task_hint": "UI",
+        }
+        candidate, error = validate_candidate(row, tos_banner, [], [], self.glossary)
+        self.assertIsNone(candidate)
+        self.assertIn("blocking_qa:provider_error_text", error)
+
+    def test_http_200_provider_error_banner_retries_as_request_error_and_recovers(self) -> None:
+        source = "連続お仕事を実行できませんでした\r\nタイトルに戻ります"
+        tos_banner = (
+            "⚠ This service has been disabled in this account for violation of "
+            "Terms of Service. Please submit an appeal to continue using this product."
+        )
+        clean = "未能执行连续工作\r\n将返回标题界面"
+
+        with mock.patch("asyncio.sleep", return_value=None):
+            candidate, error, stats, requests = self._translate_with_scripted_replies(
+                source,
+                [tos_banner, clean],
+            )
+
+        self.assertEqual(error, "")
+        self.assertIsNotNone(candidate)
+        self.assertEqual(candidate["translation"], clean)
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(stats["test"]["request_errors"], 1)
+        self.assertEqual(stats["test"]["qa_retries"], 0)
+        self.assertEqual(stats["test"]["accepted"], 1)
+
+    def test_http_200_provider_error_banner_never_accepts_on_repeated_failure(self) -> None:
+        source = "連続お仕事を実行できませんでした\r\nタイトルに戻ります"
+        tos_banner = (
+            "⚠ This service has been disabled in this account for violation of "
+            "Terms of Service. Please submit an appeal to continue using this product."
+        )
+
+        with mock.patch("asyncio.sleep", return_value=None):
+            candidate, error, stats, requests = self._translate_with_scripted_replies(
+                source,
+                [tos_banner, tos_banner],
+            )
+
+        self.assertIsNone(candidate)
+        self.assertIn("APIRequestError", error)
+        self.assertIn("upstream provider error", error)
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(stats["test"]["request_errors"], 2)
+        self.assertEqual(stats["test"]["accepted"], 0)
 
 
 if __name__ == "__main__":

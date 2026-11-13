@@ -24,7 +24,12 @@ from pipelines.core.hashing import sha256_bytes, sha256_text
 from pipelines.core.jsonl import read_jsonl
 from pipelines.text.authoritative_term_matching import find_term_matches
 from pipelines.text.translation_tokens import validate_translation
-from pipelines.text.mltd_translation_quality import NUMBER_RE, evaluate_row, load_glossary
+from pipelines.text.mltd_translation_quality import (
+    NUMBER_RE,
+    detect_provider_error_text,
+    evaluate_row,
+    load_glossary,
+)
 from pipelines.text.mltd_translation_prompt import compile_prompt_bundle, snapshot_status
 from pipelines.text.mltd_natural_prompt import contextual_prompt
 from pipelines.text.mltd_given_name_hints import (
@@ -1258,6 +1263,12 @@ async def request_translation(
         text = extract_chat_text(doc)
         usage = normalize_response_usage(
             doc.get("usage", {}) if isinstance(doc, dict) else {}
+        )
+    if detect_provider_error_text(text):
+        raise APIRequestError(
+            503,
+            "",
+            f"upstream provider error in HTTP 200 body: {text[:300]}",
         )
     return text, {
         "reported_model": str(doc.get("model", "")) if isinstance(doc, dict) else "",

@@ -66,6 +66,7 @@ BASIC_BLOCKING_QA_CODES = {
     "queue_source_missing",
     "source_identity_mismatch",
     "empty_translation",
+    "provider_error_text",
     "protected_token_mismatch",
     "introduced_unsupported_unicode",
     "introduced_pipeline_marker",

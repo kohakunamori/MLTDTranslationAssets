@@ -129,6 +129,31 @@ META_PATTERNS = (
     "译者注", "翻译注", "原文意思", "这里的意思", "可能是：", "可能是:", "translation:", "translator note"
 )
 
+# Upstream proxy gateways occasionally return HTTP 200 chat/response payloads
+# whose message text is a suspended-account, ToS, quota, or AI-refusal notice.
+PROVIDER_ERROR_RE = re.compile(
+    r"this service has been disabled"
+    r"|violation of terms of service"
+    r"|submit an appeal to continue"
+    r"|account has been (?:disabled|suspended|banned|terminated)"
+    r"|account is (?:disabled|suspended)"
+    r"|exceeded your current quota"
+    r"|insufficient[_ ]quota"
+    r"|\b(?:too many requests|rate limit exceeded|service unavailable|bad gateway)\b"
+    r"|\b(?:upstream error|model is currently overloaded)\b"
+    r"|i'?m sorry,?\s+(?:but\s+)?i can(?:not|'t)\s+(?:assist|help|translate|comply|fulfill)"
+    r"|\bas an ai(?:\s+(?:language\s+)?model)?\b",
+    re.IGNORECASE,
+)
+
+
+def detect_provider_error_text(text: str) -> str | None:
+    """Return the matched upstream provider error/refusal snippet, if any."""
+    if not text:
+        return None
+    match = PROVIDER_ERROR_RE.search(text)
+    return match.group(0) if match else None
+
 
 def source_id(text: str) -> str:
     return sha256_text(text)
@@ -322,8 +347,12 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
 
     if not translation.strip():
         issues.append(_issue("empty_translation", "reject"))
-    elif translation == source:
-        issues.append(_issue("unchanged_translation", "review"))
+    else:
+        if translation == source:
+            issues.append(_issue("unchanged_translation", "review"))
+        provider_error = detect_provider_error_text(translation)
+        if provider_error and provider_error.lower() not in source.lower():
+            issues.append(_issue("provider_error_text", "reject", provider_error))
 
     # Unassigned (Cn), surrogate (Cs) and private-use (Co) codepoints are not
     # reviewable translated text when SOURCE does not carry them; private use is
