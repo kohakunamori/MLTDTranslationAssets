@@ -41021,8 +41021,8 @@
         },
         "event_0450_story_01_jp.gtx": {
           "pending": 0,
-          "total": 36,
-          "translated": 36,
+          "total": 37,
+          "translated": 37,
           "untranslated": 0
         },
         "event_0450_story_02_jp.gtx": {
@@ -41033,8 +41033,8 @@
         },
         "event_0450_story_03_jp.gtx": {
           "pending": 0,
-          "total": 45,
-          "translated": 45,
+          "total": 48,
+          "translated": 48,
           "untranslated": 0
         },
         "event_0450_story_04_jp.gtx": {
@@ -41093,8 +41093,8 @@
         },
         "event_0452_story_07_jp.gtx": {
           "pending": 0,
-          "total": 34,
-          "translated": 34,
+          "total": 35,
+          "translated": 35,
           "untranslated": 0
         },
         "event_0452_story_intro_jp.gtx": {
@@ -49237,8 +49237,8 @@
       "pending": 1,
       "reused": 0,
       "suggested": 0,
-      "total": 96550,
-      "translated": 96549,
+      "total": 96555,
+      "translated": 96554,
       "unit": "句",
       "untranslated": 0
     },
@@ -53027,8 +53027,8 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 2,
-          "total": 10150,
-          "translated": 10148,
+          "total": 10158,
+          "translated": 10156,
           "untranslated": 0
         }
       },
@@ -53041,8 +53041,8 @@
       "pending": 2,
       "reused": 0,
       "suggested": 0,
-      "total": 10150,
-      "translated": 10148,
+      "total": 10158,
+      "translated": 10156,
       "unit": "句",
       "untranslated": 0
     },
@@ -54695,14 +54695,14 @@
       "bundles": {
         "IGP_jp.gtx": {
           "pending": 0,
-          "total": 4607,
-          "translated": 4607,
+          "total": 4947,
+          "translated": 4947,
           "untranslated": 0
         },
         "MD_jp.gtx": {
           "pending": 18,
-          "total": 118452,
-          "translated": 118434,
+          "total": 118491,
+          "translated": 118473,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -77629,8 +77629,8 @@
       "pending": 18,
       "reused": 0,
       "suggested": 0,
-      "total": 186296,
-      "translated": 186278,
+      "total": 186675,
+      "translated": 186657,
       "unit": "句",
       "untranslated": 0
     },
@@ -77639,8 +77639,8 @@
       "bundles": {
         "CM_jp.gtx": {
           "pending": 69,
-          "total": 26565,
-          "translated": 26496,
+          "total": 26701,
+          "translated": 26632,
           "untranslated": 0
         }
       },
@@ -77653,8 +77653,8 @@
       "pending": 69,
       "reused": 0,
       "suggested": 0,
-      "total": 26565,
-      "translated": 26496,
+      "total": 26701,
+      "translated": 26632,
       "unit": "句",
       "untranslated": 0
     }
@@ -77677,43 +77677,43 @@
     {
       "id": "dialogue",
       "pending": 71,
-      "total": 37734,
-      "translated": 37663,
+      "total": 37878,
+      "translated": 37807,
       "untranslated": 0
     },
     {
       "id": "story",
       "pending": 1,
-      "total": 105532,
-      "translated": 105531,
+      "total": 105537,
+      "translated": 105536,
       "untranslated": 0
     },
     {
       "id": "system",
       "pending": 18,
-      "total": 186296,
-      "translated": 186278,
+      "total": 186675,
+      "translated": 186657,
       "untranslated": 0
     }
   ],
-  "generated_at": "2026-11-10T15:02:18.871889+00:00",
+  "generated_at": "2026-11-13T04:01:58.651707+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1078790",
-    "assets_commit": "607339500c4f812f482eb1cb37aa7973982736c7",
-    "release_id": "assets-1078790",
+    "asset_version": "1078815",
+    "assets_commit": "cb6a920683af552d7cc80c974d060f8674429346",
+    "release_id": "assets-1078815",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "20e7f03c6e2cdd6673dad7ed50f2ea4c73637ed8d9cd2a9448784adde7c348d1",
+    "source_manifest_sha256": "f7c3437ca5f07d6bc540738472266f682e2e91e21b4d2e86c7d211dd34b50510",
     "status": "published",
-    "updated_at": "2026-11-11T00:00:00+09:00"
+    "updated_at": "2026-11-13T13:00:02+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "607339500c4f812f482eb1cb37aa7973982736c7",
+    "commit": "cb6a920683af552d7cc80c974d060f8674429346",
     "generated_entry_count": 13632,
-    "generated_manifest_sha256": "20e7f03c6e2cdd6673dad7ed50f2ea4c73637ed8d9cd2a9448784adde7c348d1",
+    "generated_manifest_sha256": "f7c3437ca5f07d6bc540738472266f682e2e91e21b4d2e86c7d211dd34b50510",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "109ab4ef366be85562db701c9ebb4b5a9b9b65f42f34af69b95faafb4696b61f",
+    "source_catalogue_sha256": "8f2fa6468af2849d957fd13c21616307044255792f70ecec0ac1a9868a4f5105",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77722,8 +77722,8 @@
     "pending": 95,
     "reused": 0,
     "suggested": 0,
-    "total": 421422,
-    "translated": 421327,
+    "total": 421950,
+    "translated": 421855,
     "untranslated": 0
   }
 }
