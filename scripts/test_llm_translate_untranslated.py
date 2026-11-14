@@ -655,5 +655,135 @@ class LyricReuseTests(LlmLyricsScopeTests):
                 self._reuse(root, scope="locales")
 
 
+class ZhCnSurfaceAndResidueEnforcementTests(unittest.TestCase):
+    """Ensure draft application, repo validation, and residue scanner share zh-CN gates."""
+
+    def test_validate_draft_rejects_tw_calques_and_foreign_residue(self):
+        for kind in ("locales", "lyrics"):
+            with self.assertRaises(ValueError):
+                tool.validate_draft(kind, "エミリーさん", "艾蜜莉小姐")
+            with self.assertRaises(ValueError):
+                tool.validate_draft(kind, "テスト", "内容[::]泄漏")
+            with self.assertRaises(ValueError):
+                tool.validate_draft(kind, "テスト", "气泡🫧")
+            with self.assertRaises(ValueError):
+                tool.validate_draft(kind, "テスト", "生僻字𫠐")
+
+    def test_validate_repo_rejects_accepted_surface_quality_violations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for d in ("story", "card", "dialogue", "birth", "master"):
+                (root / "locales" / d).mkdir(parents=True)
+            row = {
+                "bundle": "test_jp",
+                "unit": "",
+                "item_key": "line_1",
+                "ja": "ガシャを引く",
+                "zh": "去抽转蛋",
+                "status": "accepted",
+                "translation_stage": "llm_translated",
+                "source_sha256": tool.sha256_text("ガシャを引く"),
+                "asset_version": "00001000",
+                "client_version": None,
+                "source_client_version": "6.0.000",
+                "updated_at": "2026-01-01T00:00:00Z",
+            }
+            (root / "locales" / "story" / "test_jp.gtx.jsonl").write_text(
+                json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+            with self.assertRaises(SystemExit):
+                validate_repo.validate_locales(root)
+
+            songs = root / "lyrics" / "songs"
+            songs.mkdir(parents=True)
+            lyric = {
+                "bundle": "scrobj_x.unity3d",
+                "index": 1,
+                "tick": 960,
+                "abs_time": 1.0,
+                "source_sha256": tool.sha256_text("テスト"),
+                "ja": "テスト",
+                "zh": "测试🫧",
+                "status": "accepted",
+                "translation_stage": "llm_translated",
+                "updated_at": "2026-01-01T00:00:00Z",
+            }
+            (songs / "scrobj_x.unity3d.jsonl").write_text(
+                json.dumps(lyric, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+            with self.assertRaises(SystemExit):
+                validate_repo.validate_lyrics(root)
+
+    def test_japanese_residue_catches_partial_clauses_but_skips_quotes_and_titles(self):
+        from scripts.japanese_residue import repair_reason
+
+        bad = {
+            "status": "accepted",
+            "item_key": "talk_1",
+            "ja": "みんなで成功させよう！",
+            "zh": "大家一起成功させよう！",
+        }
+        self.assertEqual(repair_reason(bad), "partial Japanese clause")
+
+        newline_residue = {
+            "status": "accepted",
+            "item_key": "talk_2",
+            "ja": "自覚ないのね～\n知ってるけど",
+            "zh": "你还真是毫无自觉呢～\n知ってるけど",
+        }
+        self.assertEqual(repair_reason(newline_residue), "partial Japanese clause")
+
+        pronoun_residue = {
+            "status": "accepted",
+            "item_key": "talk_3",
+            "ja": "わたくしにもできるでしょうか",
+            "zh": "连わたくし也能做到吗",
+        }
+        self.assertEqual(repair_reason(pronoun_residue), "partial Japanese clause")
+
+        hybrid_residue = {
+            "status": "accepted",
+            "item_key": "talk_4",
+            "ja": "クララが来る",
+            "zh": "要是クラ拉来了",
+        }
+        self.assertEqual(repair_reason(hybrid_residue), "truncated katakana hybrid")
+
+        quoted = {
+            "status": "accepted",
+            "item_key": "talk_1",
+            "ja": "「成功させよう」って曲",
+            "zh": "名为「成功させよう」的曲子",
+        }
+        self.assertIsNone(repair_reason(quoted))
+
+        display = {
+            "status": "accepted",
+            "item_key": "song_title_1",
+            "ja": "みんなで成功させよう！",
+            "zh": "大家一起成功させよう！",
+        }
+        self.assertIsNone(repair_reason(display))
+
+    def test_apply_auto_reflows_overlong_scenario_lines(self):
+        long_zh = "这是一段超过了单行二十七个全角字符宽度限制需要自动折行的剧情对白台词。"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            story_dir = root / "locales" / "story"
+            story_dir.mkdir(parents=True)
+            path = story_dir / "main_01_jp.gtx.jsonl"
+            src = "これは一行目のセリフです。\n二行目も続きます。"
+            _write(path, [_row(src, item_key="main_01_1000_001har", zh="", status="untranslated", version="1077800")])
+            draft = root / "draft.jsonl"
+            _write(draft, [{"source": src, "source_sha256": tool.sha256_text(src), "translation": long_zh}])
+            args = type("Args", (), {"draft": draft, "scope": "locales"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.apply(args), 0)
+            saved = _read(path)[0]
+            self.assertEqual(saved["status"], "pending")
+            self.assertEqual(saved["zh"].replace("\n", ""), long_zh)
+            self.assertGreaterEqual(saved["zh"].count("\n"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

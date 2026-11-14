@@ -1372,6 +1372,159 @@ async def warm_cache_for_model(
     }
 
 
+_MARKER_CORRECTION = (
+    "Remove only the private-use/internal marker characters, invisible "
+    "format/space-control characters (zero-width space, byte-order mark, "
+    "no-break space, and right-to-left mark), and other unexpected "
+    "characters that do not occur in SOURCE. A private-use character "
+    "that SOURCE itself contains is legitimate content and must be kept, "
+    "as must all protected tokens and visible Arabic numeric literals."
+)
+_PIPELINE_MARKER_CORRECTION = (
+    "Keep pipeline marker literals that SOURCE itself contains. Remove "
+    "pipeline markers that are not present in SOURCE. Preserve protected "
+    "tokens in their original count and order, do not carry internal "
+    "marker indices into the final translation, and keep visible Arabic "
+    "numeric literals exactly."
+)
+
+_TARGETED_QA_GUIDANCE: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("protected_token_mismatch", "structure:protected"),
+        "Preserve every protected placeholder token (__MLTD_TOKEN_NNN__, __MLTD_TERM_NNN__, "
+        "__MLTD_NUMBER_NNN__, {$P$}, {0}, <color=...>, etc.) in exact spelling, count, and order.",
+    ),
+    (
+        ("numeric_literal_mismatch",),
+        "Preserve all visible Arabic and full-width numeric literals from SOURCE in exact value and order.",
+    ),
+    (
+        ("introduced_traditional_chinese",),
+        "Output strictly Mainland Simplified Chinese characters only. Convert every Traditional "
+        "Chinese or Japanese shinjitai/kyujitai character not in SOURCE to standard Simplified Chinese.",
+    ),
+    (
+        (
+            "non_mainland_forbidden_term",
+            "forbidden_term_present",
+            "non_mainland_login_calque",
+            "non_mainland_history_calque",
+        ),
+        "Use Mainland Simplified Chinese terminology (扭蛋 not 转蛋, 推送 not 推播, 此消息/该信息 not "
+        "此讯息, 登录 not 登入, 记录 not 履历, 艾米莉 not 艾蜜莉, 博客 not 部落格, 弹窗 not 弹跳视窗, "
+        "文件夹 not 资料夹, 应用程序 not 应用程式, 缓存数据 not 快取资料) and avoid forbidden wording.",
+    ),
+    (
+        ("non_authoritative_idol_name",),
+        "Use authoritative Mainland Simplified Chinese idol/album/system names: 白石䌷 (䌷 U+4337, never 白石紬/白石䋾/纺/纺织), "
+        "艾米莉·斯图亚特 (middle dot · U+00B7, never 艾蜜莉/司徒亚特/‧/・/space), 篠宫可怜 (篠 U+7BE0, never 筿/筱), "
+        "松田亚利沙 (never 有栖/阿莉莎/亚丽莎/亚利纱), 三浦梓 (accept 三浦 梓 only if source is spaced; never あず沙/あず莎/秋月/静香/瑞希; keep CV 田所あずさ as 田所あずさ/田所梓), "
+        "德川茉莉 (accept 德川 茉莉 only if source is spaced; never 小毬/玛茜/松莉/小祭 or untranslated まつり; keep place name まつり湯 as まつり汤), "
+        "马场木实 (accept 马场 木实 only if source is spaced; never 木乃美/这乃/木下/这个位美/这位小美/这美), "
+        "高槻弥生 (never やよ伊), ROCO (ロコ), 个人精选 for ソロコレ (never ソROCOレ/ROCO), "
+        "风格水滴 for スタイルドロップ (大师风格水滴 for マスタースタイルドロップ), and NetSwipes for ネトスワ / ネットスワイプス.",
+    ),
+    (
+        ("malformed_ranking_phrase",),
+        "Format ranking ranges concisely as e.g. 最高分排行榜第5001～10000名; never write 第最高分/第活动排行榜.",
+    ),
+    (
+        (
+            "japanese_honorific_residual",
+            "honorific_chan_jiang_calque",
+            "duplicated_player_honorific",
+        ),
+        "Translate Japanese honorifics naturally into Mainland Chinese; do not leave raw ちゃん/くん/さん/さま, "
+        "do not write 酱 for ちゃん, and do not duplicate honorifics already inside protected player tokens.",
+    ),
+    (
+        ("japanese_grammar_residual", "sentence_final_de_shuo_calque"),
+        "Express Japanese sentence endings naturally in fluent Chinese without leftover kana tails or literal 的说.",
+    ),
+    (
+        ("truncated_katakana_hybrid",),
+        "Never fuse sliced Katakana syllables onto Chinese transliterations or nouns (write e.g. 朱尼奥尔 not ジュ尼奥尔, "
+        "克拉拉 not クラ拉, 茱莉亚诺 not 茱莉亚ーノ, 艾托瓦尔·布里扬 not エト瓦勒・布里扬特); render the whole term cleanly.",
+    ),
+    (
+        ("untranslated_japanese_fragment",),
+        "Translate all ordinary Japanese pronouns, adverbs, and clauses (such as わたくし, ぜんぜん, 知ってるけど, 故意に, 憧れ) "
+        "into natural Simplified Chinese without leaving kana embedded in Chinese text.",
+    ),
+    (
+        ("preferred_term_missing",),
+        "Include the required authoritative GLOSSARY target terms for SOURCE with exact spelling.",
+    ),
+    (
+        ("translator_meta_text",),
+        "Return ONLY the final translation text with no notes, draft prefixes (such as 变成： or 原文意思), "
+        "tags, commentary, or thought markup.",
+    ),
+    (
+        ("bad_meaning_semantics_missing",),
+        "Translate 悪い意味 explicitly as negative/bad meaning (e.g. 并无恶意 / 不是不好的意思 / 坏的意思); "
+        "never invert it into praise or flatten it to neutral 没有别的意思.",
+    ),
+    (
+        ("motorbike_mistranslated_as_bicycle",),
+        "Translate standalone バイク as 摩托车/机车, never 自行车/单车 (bicycle compounds like マウンテンバイク/ロードバイク "
+        "already remain 山地/公路自行车).",
+    ),
+    (
+        ("play_generalized_to_performance",),
+        "Translate standalone theatrical 劇 specifically as 话剧/戏剧/这出剧/剧目, not merely generic 演出.",
+    ),
+)
+
+
+def _build_qa_retry_feedback(qa_error: str) -> str:
+    """Build actionable retry guidance tailored to the exact deterministic QA failure(s)."""
+    if qa_error == "empty_translation":
+        return (
+            "The previous response used its completion budget without "
+            "returning final text. Return the final translation immediately "
+            "and keep internal reasoning minimal."
+        )
+    if "possible_context_spill" in qa_error:
+        feedback = (
+            "The draft is unexpectedly long for this lyric slot and may have imported neighboring text. "
+            "Re-translate SOURCE alone. Keep deictic or unfinished wording without spelling out PREVIOUS/NEXT. "
+            "Do not copy neighboring-slot content into the answer."
+        )
+        if "introduced_unsupported_unicode" in qa_error:
+            feedback += " " + _MARKER_CORRECTION
+        if is_pipeline_marker_feedback(qa_error):
+            feedback += " " + _PIPELINE_MARKER_CORRECTION
+        return feedback
+    if is_pipeline_marker_feedback(qa_error):
+        feedback = (
+            f"Previous output failed deterministic QA ({qa_error}). "
+            "Re-translate the same SOURCE only and change nothing else. "
+            + _PIPELINE_MARKER_CORRECTION
+        )
+        if "introduced_unsupported_unicode" in qa_error:
+            feedback += " " + _MARKER_CORRECTION
+        return feedback
+    if "introduced_unsupported_unicode" in qa_error:
+        return (
+            f"Previous output failed deterministic QA ({qa_error}). "
+            "Re-translate the same SOURCE only and change nothing else. "
+            + _MARKER_CORRECTION
+        )
+
+    parts = [hint for codes, hint in _TARGETED_QA_GUIDANCE if any(c in qa_error for c in codes)]
+    if parts:
+        return (
+            f"Previous output failed deterministic QA ({qa_error}). "
+            "Re-translate SOURCE fixing every issue: " + " ".join(parts)
+        )
+    return (
+        f"Previous output failed deterministic QA ({qa_error}). "
+        "Re-translate the same SOURCE and preserve all visible Arabic "
+        "numeric literals exactly."
+    )
+
+
 def validate_candidate(
     source_row: dict[str, Any],
     raw_text: str,
@@ -1551,64 +1704,7 @@ async def translate_with_model(
             last_error = qa_error
             stats[cfg.id]["qa_retries"] += 1
             stats[cfg.id][task_prefix + "qa_retries"] += 1
-            # Narrow correction for residue leakage; shared so that a lyric row
-            # failing the length check and this code at once still asks for the
-            # introduced markers to be dropped instead of retrying unconstrained.
-            # SOURCE itself may legitimately carry private-use sentinels, so the
-            # removal scope names the SOURCE-absence condition and the preservation
-            # of source-present private use instead of leaving both implicit. The
-            # explicit format list keeps invisible residue corrections actionable.
-            marker_correction = (
-                "Remove only the private-use/internal marker characters, invisible "
-                "format/space-control characters (zero-width space, byte-order mark, "
-                "no-break space, and right-to-left mark), and other unexpected "
-                "characters that do not occur in SOURCE. A private-use character "
-                "that SOURCE itself contains is legitimate content and must be kept, "
-                "as must all protected tokens and visible Arabic numeric literals."
-            )
-            pipeline_marker_correction = (
-                "Keep pipeline marker literals that SOURCE itself contains. Remove "
-                "pipeline markers that are not present in SOURCE. Preserve protected "
-                "tokens in their original count and order, do not carry internal "
-                "marker indices into the final translation, and keep visible Arabic "
-                "numeric literals exactly."
-            )
-            if qa_error == "empty_translation":
-                feedback = (
-                    "The previous response used its completion budget without "
-                    "returning final text. Return the final translation immediately "
-                    "and keep internal reasoning minimal."
-                )
-            elif "possible_context_spill" in qa_error:
-                feedback = (
-                    "The draft is unexpectedly long for this lyric slot and may have imported neighboring text. "
-                    "Re-translate SOURCE alone. Keep deictic or unfinished wording without spelling out PREVIOUS/NEXT. "
-                    "Do not copy neighboring-slot content into the answer."
-                )
-                if "introduced_unsupported_unicode" in qa_error:
-                    feedback += " " + marker_correction
-                if is_pipeline_marker_feedback(qa_error):
-                    feedback += " " + pipeline_marker_correction
-            elif is_pipeline_marker_feedback(qa_error):
-                feedback = (
-                    f"Previous output failed deterministic QA ({qa_error}). "
-                    "Re-translate the same SOURCE only and change nothing else. "
-                    + pipeline_marker_correction
-                )
-                if "introduced_unsupported_unicode" in qa_error:
-                    feedback += " " + marker_correction
-            elif "introduced_unsupported_unicode" in qa_error:
-                feedback = (
-                    f"Previous output failed deterministic QA ({qa_error}). "
-                    "Re-translate the same SOURCE only and change nothing else. "
-                    + marker_correction
-                )
-            else:
-                feedback = (
-                    f"Previous output failed deterministic QA ({qa_error}). "
-                    "Re-translate the same SOURCE and preserve all visible Arabic "
-                    "numeric literals exactly."
-                )
+            feedback = _build_qa_retry_feedback(qa_error)
         except RequestAbortedBeforeSend:
             return None, "quota_exhausted:model_disabled_before_request"
         except Exception as exc:

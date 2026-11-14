@@ -392,6 +392,7 @@ jobs:
               --batch-mode single \
               --glossary glossary/authoritative-terms.json \
               --authoritative-terms glossary/authoritative-terms.json \
+              --given-name-hints glossary/given-name-hints.json \
               --character-evidence .llm-character-evidence.json \
               --prompt-source compiled \
               --system-prompt .llm-system-prompt.md \
@@ -436,7 +437,7 @@ jobs:
           fi
           python scripts/llm_translate_untranslated.py apply --draft .llm-draft.jsonl --scope all | tee .llm-apply.json
           echo "updated=$(python -c 'import json; print(json.load(open(".llm-apply.json"))["updated"])')" >> "$GITHUB_OUTPUT"
-          python scripts/validate_repo.py
+          python scripts/validate_repo.py --layout-exceptions manifests/scenario-layout-exceptions.json --layout-strict
 
           # Publish what just validated, before anything else can fail.  These
           # rows are still `pending`, so no release reads them until the
@@ -471,7 +472,7 @@ jobs:
           python scripts/llm_translate_untranslated.py publish --scope lyrics | tee .llm-publish-lyrics.json
           # Promotion turns on the accepted-row protected-token gate, so the
           # repository must be revalidated between promotion and the commit.
-          python scripts/validate_repo.py
+          python scripts/validate_repo.py --layout-exceptions manifests/scenario-layout-exceptions.json --layout-strict
 
       - name: Refresh translation backlog report
         id: backlog

@@ -82,6 +82,16 @@ BASIC_BLOCKING_QA_CODES = {
     "translator_meta_text",
     "preferred_term_missing",
     "forbidden_term_present",
+    "non_mainland_forbidden_term",
+    "non_authoritative_idol_name",
+    "malformed_ranking_phrase",
+    "non_mainland_login_calque",
+    "non_mainland_history_calque",
+    "truncated_katakana_hybrid",
+    "untranslated_japanese_fragment",
+    "bad_meaning_semantics_missing",
+    "motorbike_mistranslated_as_bicycle",
+    "play_generalized_to_performance",
 }
 
 

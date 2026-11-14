@@ -16,6 +16,7 @@ MAIL_KEY = re.compile(
     r"^mail_(?P<speaker>\d{3}[a-z]{3})_(?P<mail_id>\d+)_(?P<surface>text|title|reply[1-3])$",
     re.I,
 )
+BLOG_KEY = re.compile(r"^blog_(?P<stem>.+)_(?P<surface>title|text)$", re.I)
 MAX_CONTEXTS = 3
 
 
@@ -48,11 +49,19 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *
         file_rows = read_jsonl(path)
         category = "LIVE_LYRICS" if kind == "lyrics" else path.relative_to(root / "locales").parts[0]
         groups: dict[tuple, list[tuple[int, dict]]] = defaultdict(list)
+        mail_bodies: dict[tuple[str, str], dict] = {}
+        blog_bodies: dict[str, dict] = {}
         for row in file_rows:
             key = str(row.get("item_key", ""))
             speech = SPEECH_KEY.fullmatch(key)
             mail = MAIL_KEY.fullmatch(key)
+            blog = BLOG_KEY.fullmatch(key)
             command = COMMAND_KEY.fullmatch(key) if category == "event-unit" else None
+            if category == "master":
+                if mail and mail["surface"].lower() == "text":
+                    mail_bodies[(mail["speaker"].lower(), mail["mail_id"])] = row
+                elif blog and blog["surface"].lower() == "text":
+                    blog_bodies[blog["stem"]] = row
             sid = str(row.get("source_sha256", ""))
             if sid in wanted:
                 if sid != sha256_text(str(row.get("ja", ""))):
@@ -90,6 +99,42 @@ def enrich_queue(root: Path, queue: list[dict], paths: list[tuple[Path, str]], *
                 groups[(*group, speech["scene"])].append((int(speech["order"]), row))
             elif command:
                 groups[group].append((int(command[1]), row))
+        if category == "master" and (mail_bodies or blog_bodies):
+            for row in file_rows:
+                sid = str(row.get("source_sha256", ""))
+                if sid not in wanted:
+                    continue
+                state = states[sid]
+                if len(state["contexts"]) >= MAX_CONTEXTS:
+                    continue
+                key = str(row.get("item_key", ""))
+                mail = MAIL_KEY.fullmatch(key)
+                blog = BLOG_KEY.fullmatch(key)
+                parent = None
+                logical = row.get("bundle", "")
+                parent_speaker = None
+                if mail and mail["surface"].lower() != "text":
+                    parent = mail_bodies.get((mail["speaker"].lower(), mail["mail_id"]))
+                    logical = f"mail:{mail['speaker'].lower()}:{mail['mail_id']}"
+                    parent_speaker = mail["speaker"].lower()
+                elif blog and blog["surface"].lower() == "title":
+                    parent = blog_bodies.get(blog["stem"])
+                    logical = f"blog:{blog['stem']}"
+                if parent is None:
+                    continue
+                parent_source = str(parent.get("ja", ""))
+                if parent.get("source_sha256") != sha256_text(parent_source):
+                    raise ValueError(f"invalid neighboring source identity: {path}")
+                own_source = str(row.get("ja", ""))
+                body_ctx = {"relative": -1, "source": parent_source}
+                if parent_speaker:
+                    body_ctx["speaker_code"] = parent_speaker
+                own_ctx = {"relative": 0, "source": own_source}
+                window = [body_ctx, own_ctx]
+                signature = (logical, tuple((p["relative"], p["source"], p.get("speaker_code")) for p in window))
+                if signature not in state["seen"]:
+                    state["seen"].add(signature)
+                    state["contexts"].append({"logical": logical, "context": window})
         for group_rows in groups.values():
             ordered = sorted(group_rows, key=lambda pair: pair[0])
             for index, (order, row) in enumerate(ordered):

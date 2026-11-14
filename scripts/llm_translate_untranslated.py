@@ -38,9 +38,12 @@ if str(_REPO_ROOT) not in sys.path:
 
 from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
 from pipelines.text.mltd_lyric_rules import is_english_bypass, join_lyric_lines, validate_lyric_tokens
+from pipelines.text.mltd_translation_quality import validate_zhcn_surface_quality
 from pipelines.core.hashing import sha256_text
+from pipelines.text.translation_tokens import protected_tokens
 from scripts.japanese_residue import repair_reason
 from pipelines.text.asset_translation_context import enrich_queue
+from scripts import scenario_text_layout
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,6 +69,34 @@ def validate_draft(kind: str, source: str, translation: str) -> None:
         validate_lyric_tokens(source, translation)
     else:
         validate_translation(source, translation)
+    validate_zhcn_surface_quality(source, translation)
+
+
+def _maybe_reflow_candidate(path: Path, row: dict[str, Any], source_text: str, candidate: str) -> str:
+    """Auto-reflow newly translated scenario/dialogue text when layout rules clearly repair wrapping."""
+    try:
+        category = path.relative_to(ROOT / "locales").parts[0]
+    except ValueError:
+        return candidate
+    policy = scenario_text_layout.policy_for(category, row)
+    if policy is None or not candidate:
+        return candidate
+    source_lines = source_text.count("\n") + 1
+    issues = scenario_text_layout.lint(candidate, policy, source_lines)
+    if not scenario_text_layout.blocking(issues):
+        return candidate
+    try:
+        reflowed = scenario_text_layout.reflow(candidate, policy, source_lines)
+        if (
+            reflowed.replace("\n", "") != candidate.replace("\n", "")
+            or protected_tokens(reflowed) != protected_tokens(candidate)
+            or scenario_text_layout.blocking(scenario_text_layout.lint(reflowed, policy, source_lines))
+        ):
+            return candidate
+        validate_draft("locales", source_text, reflowed)
+        return reflowed
+    except ValueError:
+        return candidate
 
 
 def scope_of(args: argparse.Namespace) -> str:
@@ -248,6 +279,8 @@ def apply(args: argparse.Namespace) -> int:
                         })
                         lines.append(line)
                         continue
+                if kind == "locales":
+                    candidate = _maybe_reflow_candidate(path, row, source_text, candidate)
                 row["zh"] = candidate
                 row["status"] = "pending"
                 row["translation_stage"] = "llm_translated"
@@ -518,7 +551,7 @@ def _publish_locales(args: argparse.Namespace) -> int:
                 raise SystemExit(f"source identity mismatch at {path}: refusing to publish {sid}")
             if "|" in translation or "^" in translation:
                 raise SystemExit(f"LLM output contains reserved delimiter for {sid}")
-            validate_translation(source, translation)
+            validate_draft("locales", source, translation)
             row["status"] = "accepted"
             accepted[_identity(row)] = _translation_token(translation)
             # Deliberately not rewritten to human_translated: the release must

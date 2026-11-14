@@ -841,6 +841,226 @@ class TranslationUnicodeQualityTests(unittest.TestCase):
         self.assertEqual(stats["test"]["request_errors"], 2)
         self.assertEqual(stats["test"]["accepted"], 0)
 
+    def test_targeted_retry_feedback_addresses_non_numeric_qa_failures(self) -> None:
+        with mock.patch("asyncio.sleep", return_value=None):
+            candidate, error, stats, requests = self._translate_with_scripted_replies(
+                "白石紬とガシャ",
+                ["白石紬和转蛋", "白石䌷和扭蛋"],
+            )
+        self.assertEqual(error, "")
+        self.assertIsNotNone(candidate)
+        self.assertEqual(candidate["translation"], "白石䌷和扭蛋")
+        correction = retry_correction(requests[1]["messages"][-1]["content"])
+        self.assertIn("白石䌷", correction)
+        self.assertIn("扭蛋", correction)
+        self.assertIn("non_mainland_forbidden_term", correction)
+
+
+class ZhCnSurfaceQualityTests(unittest.TestCase):
+    """Deterministic checks for traditional map coverage, blocked scripts, Ext-B, and TW terms."""
+
+    def test_traditional_char_map_loads_full_table(self) -> None:
+        from pipelines.text import mltd_translation_quality as tq
+
+        self.assertTrue(tq.TRADITIONAL_CHAR_MAP_PATH.is_file())
+        self.assertEqual(tq.TRADITIONAL_CHAR_MAP_PATH.name, "traditional-to-simplified-char-map.json")
+        self.assertGreaterEqual(len(tq.TRADITIONAL_OUTPUT_CHARS), 2400)
+
+    def test_introduced_traditional_chars_exceptions_and_catches(self) -> None:
+        from pipelines.text.mltd_translation_quality import introduced_traditional_chars
+
+        # Real Traditional bugs must be caught even next to 著名/著作 prefixes
+        self.assertIn("著", introduced_traditional_chars("議論中", "讨论著"))
+        self.assertIn("著", introduced_traditional_chars("セレブな感じ", "散发著名流气息"))
+        self.assertIn("著", introduced_traditional_chars("メモを取るのに夢中", "顾著作笔记"))
+        self.assertIn("過", introduced_traditional_chars("ガラス越しに", "透過玻璃"))
+        self.assertIn("賽", introduced_traditional_chars("レース", "大奖賽"))
+        # Legitimate Simplified compounds and authoritative idol name must pass
+        self.assertEqual(introduced_traditional_chars("有名な作家", "著名作家"), {})
+        self.assertEqual(introduced_traditional_chars("顕著な差", "显著差异"), {})
+        self.assertEqual(introduced_traditional_chars("著作権", "著作权"), {})
+        self.assertEqual(introduced_traditional_chars("可憐さん", "篠宫可怜"), {})
+
+    def test_evaluate_row_and_surface_validator_block_scripts_extb_and_calques(self) -> None:
+        from pipelines.text.mltd_translation_quality import (
+            evaluate_row,
+            validate_zhcn_surface_quality,
+        )
+
+        # Valid shared symbol/kaomoji cases from source must still pass
+        validate_zhcn_surface_quality("٩(òωó)۶", "٩(òωó)۶")
+        validate_zhcn_surface_quality("α波が出てる", "散发出了α波")
+        validate_zhcn_surface_quality("アイドルの白石紬さん", "偶像白石䌷小姐")
+        validate_zhcn_surface_quality("エミリーとガシャ", "艾米莉和扭蛋")
+
+        bad_samples = [
+            ("٩(òωó)۶", "٩(๑òωó๑)۶"),
+            ("テスト", "测试ข้อความ"),
+            ("テスト", "测试മലയാളം"),
+            ("テスト", "测试ա"),
+            ("テスト", "测试ગુ"),
+            ("テスト", "测试ಕ"),
+            ("テスト", "测试ა"),
+            ("テスト", "测试א"),
+            ("テスト", "真的吗؟"),
+            ("テスト", "思考[::]回答"),
+            ("テスト", "思考🫧结束"),
+            ("テスト", "思考💭结束"),
+            ("カンパチ", "红𫠐"),
+            ("エミリー", "艾蜜莉"),
+            ("エミリー　スチュアート", "艾米莉・斯图亚特"),
+            ("エミリー　スチュアート", "艾米莉 斯图亚特"),
+            ("白石紬", "白石紬小姐"),
+            ("白石紬", "白石䋾"),
+            ("徳川まつり", "德川小祭"),
+            ("馬場このみ", "这位小美小姐"),
+            ("スタイルドロップ獲得", "获得风格掉落物"),
+            ("マスタースタイルドロップ", "大师造型水滴"),
+            ("ネトスワで話題", "在网滑上引发热议"),
+            ("ガシャを引く", "去抽转蛋吧"),
+            ("プッシュ通知", "开启推播通知"),
+            ("このメッセージ", "删除此讯息"),
+            ("イベントランキング", "第活动排行榜第1名"),
+            ("テスト", "adrayelejson?"),
+            ("ブログ更新", "部落格更新"),
+            ("ポップアップ表示", "显示弹跳视窗"),
+            ("フォルダ分け", "分好资料夹"),
+            ("アプリを起動", "启动应用程式"),
+            ("キャッシュデータ", "快取资料"),
+            ("ログインボーナス", "登入奖励"),
+            ("獲得履歴", "获得履历"),
+            ("全力でお届けするのです！", "まつり会竭尽全力！"),
+            ("悪い意味じゃなくて", "没有别的意思"),
+            ("バイクで来た", "骑自行车来的"),
+            ("劇は盛り上がってます", "演出很热闹"),
+        ]
+        for ja, zh in bad_samples:
+            with self.assertRaises(ValueError, msg=f"expected rejection for {(ja, zh)!r}"):
+                validate_zhcn_surface_quality(ja, zh)
+
+        # Resume-style 履歴書 may legitimately mention 履历表 without triggering UI 履歴 calque check
+        validate_zhcn_surface_quality("履歴書を書く", "填写履历表")
+
+        row_check = evaluate_row({"source": "カンパチ"}, {"translation": "红𫠐"}, {"entries": {}})
+        self.assertEqual(row_check["qa_verdict"], "REJECT")
+        self.assertEqual(row_check["issues"][0]["code"], "introduced_unsupported_unicode")
+
+        # In-flight QA (evaluate_row + validate_candidate) rejects the exact lexicon rules too
+        for ja, zh, code in (
+            ("エミリー", "艾蜜莉", "non_mainland_forbidden_term"),
+            ("エミリー　スチュアート", "艾米莉‧司徒亚特", "non_authoritative_idol_name"),
+            ("エミリー　スチュアート", "艾米莉・斯图亚特", "non_authoritative_idol_name"),
+            ("エミリー　スチュアート", "艾米莉 斯图亚特", "non_authoritative_idol_name"),
+            ("白石紬", "白石紬小姐", "non_authoritative_idol_name"),
+            ("白石紬", "白石䋾", "non_authoritative_idol_name"),
+            ("つむぎちゃん", "阿纺酱", "non_authoritative_idol_name"),
+            ("紬と一緒", "和纺织一起", "non_authoritative_idol_name"),
+            ("篠宮可憐", "筿宫可怜", "non_authoritative_idol_name"),
+            ("ソロコレの発売", "ソROCOレ发售", "non_authoritative_idol_name"),
+            ("ソロコレの発売", "ROCO发售", "non_authoritative_idol_name"),
+            ("松田亜利沙", "松田有栖", "non_authoritative_idol_name"),
+            ("松田亜利沙", "松田阿莉莎", "non_authoritative_idol_name"),
+            ("松田亜利沙", "松田亚利纱", "non_authoritative_idol_name"),
+            ("三浦あずさ", "三浦秋月", "non_authoritative_idol_name"),
+            ("三浦あずさ", "三浦静香", "non_authoritative_idol_name"),
+            ("徳川まつり", "德川小毬", "non_authoritative_idol_name"),
+            ("徳川まつり", "德川玛茜", "non_authoritative_idol_name"),
+            ("徳川まつり", "德川小祭", "non_authoritative_idol_name"),
+            ("馬場このみ", "马场木乃美", "non_authoritative_idol_name"),
+            ("馬場このみ", "马场木下", "non_authoritative_idol_name"),
+            ("馬場このみ", "这位小美", "non_authoritative_idol_name"),
+            ("高槻やよい", "高槻やよ伊", "non_authoritative_idol_name"),
+            ("スタイルドロップ獲得", "获得风格掉落物", "non_authoritative_idol_name"),
+            ("マスタースタイルドロップ", "大师造型水滴", "non_authoritative_idol_name"),
+            ("ネトスワで話題", "在网滑上引发热议", "non_authoritative_idol_name"),
+            ("ネットスワイプス", "网络滑动", "non_authoritative_idol_name"),
+            ("ログイン", "登入", "non_mainland_login_calque"),
+            ("獲得履歴", "获得履历", "non_mainland_history_calque"),
+            ("イベントランキング", "第活动排行榜第1名", "malformed_ranking_phrase"),
+            ("テスト", "测试\n\n变成：\n\n测试", "translator_meta_text"),
+            ("あずさの写真", "あず莎的照片", "non_authoritative_idol_name"),
+            ("ジュニオールだ", "是ジュ尼奥尔？", "truncated_katakana_hybrid"),
+            ("クララが手当", "要是クラ拉来照料", "truncated_katakana_hybrid"),
+            ("ジュリアーノに聞いた", "问了茱莉亚ーノ", "truncated_katakana_hybrid"),
+            ("クルリウタ プラチナマスター", "クル里乌塔 白金大师", "truncated_katakana_hybrid"),
+            ("バンギャっぽい", "有邦ギャ风格", "truncated_katakana_hybrid"),
+            ("わたくしのこと", "关于わたくし的事", "untranslated_japanese_fragment"),
+            ("自覚ないのね～\n知ってるけど", "你还真是毫无自觉呢～\n知ってるけど", "untranslated_japanese_fragment"),
+            ("わざと隙を見せる", "故意に露出破绽", "untranslated_japanese_fragment"),
+            ("全力でお届けするのです！", "まつり会竭尽全力把笑容传达到的！", "non_authoritative_idol_name"),
+            ("はいっ、まつりさん！", "好的，まつり小姐！", "non_authoritative_idol_name"),
+            ("悪い意味じゃないんだけど……", "我其实是在称赞你……", "bad_meaning_semantics_missing"),
+            ("悪い意味じゃなくて、頼りにしてるの", "没有别的意思，只是很信赖你", "bad_meaning_semantics_missing"),
+            ("バイクで来たんだ", "是骑自行车来的", "motorbike_mistranslated_as_bicycle"),
+            ("自転車じゃなくバイクを使うだろ", "不是自行车而是单车吧", "motorbike_mistranslated_as_bicycle"),
+            ("劇はすっごく盛り上がってます", "演出变得特别热闹", "play_generalized_to_performance"),
+        ):
+            sid = sha256_text(ja)
+            candidate, error = validate_candidate(
+                {"source": ja, "source_sha256": sid, "task_hint": "UI"},
+                zh,
+                [],
+                [],
+                {"entries": {}},
+            )
+            self.assertIsNone(candidate, (ja, zh))
+            self.assertIn(code, error, (ja, zh))
+
+        # Legitimate co-occurrences and proper names must remain accepted.
+        for ja, zh in (
+            ("田所あずささんと三浦あずさ", "田所あずさ与三浦梓"),
+            ("三浦あずさと最上静香と秋月律子", "三浦梓、最上静香与秋月律子"),
+            ("三浦 あずさ", "三浦 梓"),
+            ("徳川 まつり", "德川 茉莉"),
+            ("馬場 このみ", "马场 木实"),
+            ("馬場このみと木下ひなた", "马场木实与木下日向"),
+            ("このみさんとこの景色", "木实和这美景"),
+            ("まつり湯へようこそ", "欢迎光临まつり汤"),
+            ("ロコのソロコレ発売", "ROCO的个人精选发售"),
+            ("エミリー　スチュアート", "艾米莉·斯图亚特"),
+            ("篠宮可憐と白石紬", "篠宫可怜与白石䌷"),
+            ("紬を紡ぐ伝統", "纺织丝绸的传统"),
+            ("マスタースタイルドロップを獲得", "获得大师风格水滴"),
+            ("ネトスワで話題", "在NetSwipes上引发热议"),
+            ("スタローコラボカフェ", "スタロー联动咖啡"),
+            ("ミリシタカウントダウン2025", "ミリシタ倒计时2025"),
+            ("恋の音色ライン", "《恋の音色ライ\nン》"),
+            ("「わたくし」の秘密", "关于「わたくし」的秘密"),
+            ("悪い意味合いじゃないです", "并不是坏事"),
+            ("悪い意味じゃなくて", "不是说不好，只是觉得很自然"),
+            ("悪い意味で捉えないで", "希望你别往坏处想"),
+            ("マウンテンバイクが好き", "我喜欢山地自行车"),
+            ("「スイム」「バイク」「ラン」の競技", "“游泳”“自行车”“跑步”三项竞技"),
+            ("自転車じゃなくてバイクだよ", "不是自行车而是摩托车"),
+            ("劇はすっごく盛り上がってます", "这出剧变得特别热闹"),
+        ):
+            validate_zhcn_surface_quality(ja, zh)
+            sid = sha256_text(ja)
+            candidate, error = validate_candidate(
+                {"source": ja, "source_sha256": sid, "task_hint": "UI"},
+                zh,
+                [],
+                [],
+                {"entries": {}},
+            )
+            self.assertIsNotNone(candidate, f"unexpected rejection for {(ja, zh)!r}: {error}")
+
+    def test_qa_retry_feedback_covers_new_idol_and_meta_guidance(self) -> None:
+        from pipelines.text.translate_mltd_api_pool import _build_qa_retry_feedback
+
+        idol_feedback = _build_qa_retry_feedback("non_authoritative_idol_name")
+        self.assertIn("松田亚利沙", idol_feedback)
+        self.assertIn("个人精选", idol_feedback)
+        meta_feedback = _build_qa_retry_feedback("translator_meta_text")
+        self.assertIn("变成：", meta_feedback)
+        trunc_feedback = _build_qa_retry_feedback("truncated_katakana_hybrid")
+        self.assertIn("ジュ尼奥尔", trunc_feedback)
+        frag_feedback = _build_qa_retry_feedback("untranslated_japanese_fragment")
+        self.assertIn("わたくし", frag_feedback)
+        self.assertIn("没有别的意思", _build_qa_retry_feedback("bad_meaning_semantics_missing"))
+        self.assertIn("摩托车", _build_qa_retry_feedback("motorbike_mistranslated_as_bicycle"))
+        self.assertIn("演出", _build_qa_retry_feedback("play_generalized_to_performance"))
+
 
 if __name__ == "__main__":
     unittest.main()

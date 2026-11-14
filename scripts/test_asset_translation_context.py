@@ -163,6 +163,30 @@ class ProductionContextTests(unittest.TestCase):
         self.assertIn("SPEAKER=p", reply_prompt)
         self.assertNotIn("SPEAKER=035hin", reply_prompt)
 
+    def test_mail_and_blog_titles_pair_with_matching_body_without_guessing_branches(self):
+        self.write("locales/master/MB_jp.gtx.jsonl", [
+            row("今日はお祭りに行きました！", "mail_035hin_3000_text"),
+            row("お祭り", "mail_035hin_3000_title", status="untranslated"),
+            row("楽しそうだね！", "mail_035hin_3000_reply1", status="untranslated"),
+            row("また別の日のメールです。", "mail_035hin_3100_text", status="untranslated"),
+            row("舞台の裏話をお届けします。", "blog_main_001_text"),
+            row("舞台の裏話", "blog_main_001_title", status="untranslated"),
+        ])
+        queued = {item["key"]: item for item in self.collect()}
+        self.assertEqual(
+            queued["mail_035hin_3000_title"]["context_examples"][0]["context"][0]["source"],
+            "今日はお祭りに行きました！",
+        )
+        self.assertEqual(
+            queued["mail_035hin_3000_reply1"]["context_examples"][0]["context"][0]["source"],
+            "今日はお祭りに行きました！",
+        )
+        self.assertEqual(queued["mail_035hin_3100_text"]["context_examples"], [])
+        self.assertEqual(
+            queued["blog_main_001_title"]["context_examples"][0]["context"][0]["source"],
+            "舞台の裏話をお届けします。",
+        )
+
     def test_same_source_mixed_usage_suppresses_name_hint_in_both_orders(self):
         hints = load_given_name_hints(HINTS_PATH)
         konomi = next(entry for entry in hints.entries if entry.source_form == "このみ")

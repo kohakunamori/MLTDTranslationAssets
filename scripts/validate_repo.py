@@ -29,6 +29,7 @@ if str(ROOT) not in sys.path:
 # translation pipeline can apply exactly the rule that will judge its output;
 # this validator must never be the first place a draft is rejected.
 from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
+from pipelines.text.mltd_translation_quality import validate_zhcn_surface_quality  # noqa: E402
 from pipelines.core.hashing import sha256_text  # noqa: E402
 from pipelines.text.translation_tokens import (  # noqa: E402
     validate_translation_tokens,
@@ -198,9 +199,10 @@ def validate_locales(root: Path) -> dict[str, int]:
                     if status == "accepted":
                         try:
                             validate_translation_tokens(ja, zh)
+                            validate_zhcn_surface_quality(ja, zh)
                         except ValueError as exc:
                             print(
-                                f"ERROR: {jf}:{line_idx} protected-token validation failed: {exc}",
+                                f"ERROR: {jf}:{line_idx} accepted row validation failed: {exc}",
                                 file=sys.stderr,
                             )
                             sys.exit(1)
@@ -308,6 +310,8 @@ def validate_lyrics(root: Path) -> dict[str, int]:
                 if translated:
                     try:
                         validate_lyric_tokens(str(row["ja"]), translated)
+                        if status == "accepted":
+                            validate_zhcn_surface_quality(str(row["ja"]), translated)
                     except ValueError as exc:
                         print(f"ERROR: {path}:{line_no} {exc}", file=sys.stderr)
                         sys.exit(1)

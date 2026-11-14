@@ -101,6 +101,240 @@
         "igp_jp.gtx:ld_idol_firstname_18 ja=エレナ zh=艾琳娜 (accepted legacy)",
         "glossary/idols.json id=18 and authoritative-terms.json 島原エレナ -> 岛原艾琳娜"
       ]
+    },
+    {
+      "source_form": "ひなた",
+      "target": "日向",
+      "idol_id": 35,
+      "typed_record_key": "ld_idol_firstname_35",
+      "canonical_source": "木下ひなた",
+      "canonical_target": "木下日向",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_35 ja=ひなた zh=日向 (accepted legacy)",
+        "glossary/idols.json id=35 and authoritative-terms.json 木下ひなた -> 木下日向"
+      ]
+    },
+    {
+      "source_form": "紬",
+      "target": "䌷",
+      "idol_id": 51,
+      "typed_record_key": "ld_idol_firstname_51",
+      "canonical_source": "白石紬",
+      "canonical_target": "白石䌷",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "glossary/idols.json id=51 and authoritative-terms.json 白石紬 -> 白石䌷",
+        "pipelines/text/mltd_translation_quality.py canonical spelling (U+4337 䌷)"
+      ]
+    },
+    {
+      "source_form": "亜利沙",
+      "target": "亚利沙",
+      "idol_id": 28,
+      "typed_record_key": "ld_idol_firstname_28",
+      "canonical_source": "松田亜利沙",
+      "canonical_target": "松田亚利沙",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_28 ja=亜利沙 zh=亚利沙 (accepted legacy)",
+        "glossary/idols.json id=28 and authoritative-terms.json 松田亜利沙 -> 松田亚利沙"
+      ]
+    },
+    {
+      "source_form": "雪歩",
+      "target": "雪步",
+      "idol_id": 4,
+      "typed_record_key": "ld_idol_firstname_4",
+      "canonical_source": "萩原雪歩",
+      "canonical_target": "萩原雪步",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_4 ja=雪歩 zh=雪步 (accepted legacy)",
+        "glossary/idols.json id=4 and authoritative-terms.json 萩原雪歩 -> 萩原雪步"
+      ]
+    },
+    {
+      "source_form": "伊織",
+      "target": "伊织",
+      "idol_id": 7,
+      "typed_record_key": "ld_idol_firstname_7",
+      "canonical_source": "水瀬伊織",
+      "canonical_target": "水濑伊织",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_7 ja=伊織 zh=伊织 (accepted legacy)",
+        "glossary/idols.json id=7 and authoritative-terms.json 水瀬伊織 -> 水濑伊织"
+      ]
+    },
+    {
+      "source_form": "貴音",
+      "target": "贵音",
+      "idol_id": 8,
+      "typed_record_key": "ld_idol_firstname_8",
+      "canonical_source": "四条貴音",
+      "canonical_target": "四条贵音",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_8 ja=貴音 zh=贵音 (accepted legacy)",
+        "glossary/idols.json id=8 and authoritative-terms.json 四条貴音 -> 四条贵音"
+      ]
+    },
+    {
+      "source_form": "亜美",
+      "target": "亚美",
+      "idol_id": 11,
+      "typed_record_key": "ld_idol_firstname_11",
+      "canonical_source": "双海亜美",
+      "canonical_target": "双海亚美",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_11 ja=亜美 zh=亚美 (accepted legacy)",
+        "glossary/idols.json id=11 and authoritative-terms.json 双海亜美 -> 双海亚美"
+      ]
+    },
+    {
+      "source_form": "響",
+      "target": "响",
+      "idol_id": 13,
+      "typed_record_key": "ld_idol_firstname_13",
+      "canonical_source": "我那覇響",
+      "canonical_target": "我那霸响",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_13 ja=響 zh=响 (accepted legacy)",
+        "glossary/idols.json id=13 and authoritative-terms.json 我那覇響 -> 我那霸响"
+      ]
+    },
+    {
+      "source_form": "琴葉",
+      "target": "琴叶",
+      "idol_id": 17,
+      "typed_record_key": "ld_idol_firstname_17",
+      "canonical_source": "田中琴葉",
+      "canonical_target": "田中琴叶",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_17 ja=琴葉 zh=琴叶 (accepted legacy)",
+        "glossary/idols.json id=17 and authoritative-terms.json 田中琴葉 -> 田中琴叶"
+      ]
+    },
+    {
+      "source_form": "恵美",
+      "target": "惠美",
+      "idol_id": 20,
+      "typed_record_key": "ld_idol_firstname_20",
+      "canonical_source": "所恵美",
+      "canonical_target": "所惠美",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_20 ja=恵美 zh=惠美 (accepted legacy)",
+        "glossary/idols.json id=20 and authoritative-terms.json 所恵美 -> 所惠美"
+      ]
+    },
+    {
+      "source_form": "紗代子",
+      "target": "纱代子",
+      "idol_id": 27,
+      "typed_record_key": "ld_idol_firstname_27",
+      "canonical_source": "高山紗代子",
+      "canonical_target": "高山纱代子",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_27 ja=紗代子 zh=纱代子 (accepted legacy)",
+        "glossary/idols.json id=27 and authoritative-terms.json 高山紗代子 -> 高山纱代子"
+      ]
+    },
+    {
+      "source_form": "千鶴",
+      "target": "千鹤",
+      "idol_id": 38,
+      "typed_record_key": "ld_idol_firstname_38",
+      "canonical_source": "二階堂千鶴",
+      "canonical_target": "二阶堂千鹤",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_38 ja=千鶴 zh=千鹤 (accepted legacy)",
+        "glossary/idols.json id=38 and authoritative-terms.json 二階堂千鶴 -> 二阶堂千鹤"
+      ]
+    },
+    {
+      "source_form": "環",
+      "target": "环",
+      "idol_id": 40,
+      "typed_record_key": "ld_idol_firstname_40",
+      "canonical_source": "大神環",
+      "canonical_target": "大神环",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_40 ja=環 zh=环 (accepted legacy)",
+        "glossary/idols.json id=40 and authoritative-terms.json 大神環 -> 大神环"
+      ]
+    },
+    {
+      "source_form": "風花",
+      "target": "风花",
+      "idol_id": 41,
+      "typed_record_key": "ld_idol_firstname_41",
+      "canonical_source": "豊川風花",
+      "canonical_target": "丰川风花",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_41 ja=風花 zh=风花 (accepted legacy)",
+        "glossary/idols.json id=41 and authoritative-terms.json 豊川風花 -> 丰川风花"
+      ]
+    },
+    {
+      "source_form": "可憐",
+      "target": "可怜",
+      "idol_id": 45,
+      "typed_record_key": "ld_idol_firstname_45",
+      "canonical_source": "篠宮可憐",
+      "canonical_target": "篠宫可怜",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_45 ja=可憐 zh=可怜 (accepted legacy)",
+        "glossary/idols.json id=45 and authoritative-terms.json 篠宮可憐 -> 篠宫可怜"
+      ]
+    },
+    {
+      "source_form": "莉緒",
+      "target": "莉绪",
+      "idol_id": 46,
+      "typed_record_key": "ld_idol_firstname_46",
+      "canonical_source": "百瀬莉緒",
+      "canonical_target": "百濑莉绪",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_46 ja=莉緒 zh=莉绪 (accepted legacy)",
+        "glossary/idols.json id=46 and authoritative-terms.json 百瀬莉緒 -> 百濑莉绪"
+      ]
+    },
+    {
+      "source_form": "麗花",
+      "target": "丽花",
+      "idol_id": 48,
+      "typed_record_key": "ld_idol_firstname_48",
+      "canonical_source": "北上麗花",
+      "canonical_target": "北上丽花",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_48 ja=麗花 zh=丽花 (accepted legacy)",
+        "glossary/idols.json id=48 and authoritative-terms.json 北上麗花 -> 北上丽花"
+      ]
+    },
+    {
+      "source_form": "歌織",
+      "target": "歌织",
+      "idol_id": 52,
+      "typed_record_key": "ld_idol_firstname_52",
+      "canonical_source": "桜守歌織",
+      "canonical_target": "樱守歌织",
+      "review_basis": "project_evidence+agent_review_not_human_reviewed",
+      "evidence": [
+        "MD_jp.gtx:ld_idol_firstname_52 ja=歌織 zh=歌织 (accepted legacy)",
+        "glossary/idols.json id=52 and authoritative-terms.json 桜守歌織 -> 樱守歌织"
+      ]
     }
   ]
 }
