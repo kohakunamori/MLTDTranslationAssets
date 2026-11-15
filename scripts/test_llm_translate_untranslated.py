@@ -299,6 +299,41 @@ class LlmLyricsScopeTests(unittest.TestCase):
             self.assertEqual(rows[0]["translation_stage"], "llm_translated")
             self.assertEqual(rows[1]["zh"], "", "the English bypass line is untouched")
 
+    def test_collect_and_apply_repair_copied_japanese_lyric_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            songs = self._lyric_root(root)
+            song = songs / "scrobj_x.unity3d.jsonl"
+            copied_src = "君だけに見せられる輝きを抱きしめて歩いていこう"
+            self._song(song, [
+                self._lyric_row("scrobj_x.unity3d", 10, copied_src, zh=copied_src, status="accepted"),
+                self._lyric_row("scrobj_x.unity3d", 11, "Always Forever", zh="", status="untranslated"),
+            ])
+            out = root / "queue.jsonl"
+            collect_args = type("Args", (), {"output": out, "asset_version": "", "scope": "lyrics"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.collect(collect_args), 0)
+            queued = _read(out)
+            self.assertEqual(len(queued), 1)
+            self.assertEqual(queued[0]["source"], copied_src)
+            self.assertEqual(queued[0]["repair_reason"], "copied Japanese sentence")
+
+            draft = root / "draft.jsonl"
+            draft.write_text(
+                json.dumps({
+                    "source": copied_src,
+                    "source_sha256": tool.sha256_text(copied_src),
+                    "translation": "怀抱着唯有你能见证的光芒继续前行",
+                }) + "\n",
+                encoding="utf-8",
+            )
+            apply_args = type("Args", (), {"draft": draft, "scope": "lyrics"})()
+            with patch.object(tool, "ROOT", root):
+                self.assertEqual(tool.apply(apply_args), 0)
+            rows = _read(song)
+            self.assertEqual(rows[0]["zh"], "怀抱着唯有你能见证的光芒继续前行")
+            self.assertEqual(rows[0]["status"], "pending")
+
     def test_publish_promotes_lyric_rows(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -783,6 +818,44 @@ class ZhCnSurfaceAndResidueEnforcementTests(unittest.TestCase):
             self.assertEqual(saved["status"], "pending")
             self.assertEqual(saved["zh"].replace("\n", ""), long_zh)
             self.assertGreaterEqual(saved["zh"].count("\n"), 1)
+
+    def test_collect_emits_layout_category_only_for_bounded_locale_categories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for rel, item_key, src in [
+                ("locales/story/main_01.gtx.jsonl", "main_01_1000_001har", "セリフテスト"),
+                ("locales/story/main_01.gtx.jsonl", "main_01_ch_title", "第一章"),
+                ("locales/event-unit/ev_01.gtx.jsonl", "ev_01_001har", "イベントセリフ"),
+                ("locales/master/item.gtx.jsonl", "ld_item_name_1", "マスター項目"),
+            ]:
+                path = root / rel
+                path.parent.mkdir(parents=True, exist_ok=True)
+                rows = _read(path) if path.exists() else []
+                rows.append(_row(src, item_key=item_key))
+                _write(path, rows)
+            songs = root / "lyrics" / "songs"
+            songs.mkdir(parents=True)
+            song_row = {
+                "bundle": "scrobj_x.unity3d", "index": 41, "tick": 960, "abs_time": 1.0,
+                "source_sha256": tool.sha256_text("歌詞のテスト"),
+                "ja": "歌詞のテスト", "zh": "",
+                "status": "untranslated", "translation_stage": "untranslated",
+                "updated_at": "2026-01-01T00:00:00Z",
+            }
+            _write(songs / "scrobj_x.unity3d.jsonl", [song_row])
+            out = root / "queue.jsonl"
+            for scope in ("locales", "lyrics"):
+                args = type("Args", (), {"output": out, "asset_version": "", "scope": scope})()
+                with patch.object(tool, "ROOT", root):
+                    self.assertEqual(tool.collect(args), 0)
+                by_key = {row["key"]: row for row in _read(out)}
+                if scope == "locales":
+                    self.assertEqual(by_key["main_01_1000_001har"].get("layout_category"), "story")
+                    self.assertEqual(by_key["ev_01_001har"].get("layout_category"), "event-unit")
+                    self.assertNotIn("layout_category", by_key["main_01_ch_title"])
+                    self.assertNotIn("layout_category", by_key["ld_item_name_1"])
+                else:
+                    self.assertNotIn("layout_category", by_key["41"])
 
 
 if __name__ == "__main__":

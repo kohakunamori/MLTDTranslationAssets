@@ -7,149 +7,34 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import replace
 import json
 import os
 from pathlib import Path
-import re
 import sys
-import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from pipelines.text.translation_tokens import protected_tokens  # noqa: E402
 from pipelines.core.hashing import sha256_text  # noqa: E402
-
-TOKEN = re.compile(r'\{[^{}\n]+\}|%[-+0 #]*\d*(?:\.\d+)?[a-zA-Z]|<[^<>\n]+>|\\[nrt]|\\\d{2}\\|__MLTD_[A-Za-z0-9_]+__|[A-Za-z0-9]+(?:[.\-][A-Za-z0-9]+)*')
-NO_START = set('，。、；：？！!?;:,.）》」』】〕〉…')
-NO_END = set('（《「『【〔〈(')
-PUNCT = set('，。、；：？！!?;:,')
-NON_BLOCKING = {'over_target', 'line_count_mismatch'}
-
-
-def blocking(issues: list[str]) -> list[str]:
-    """Candidate findings that are not yet safe to publish."""
-    return [issue for issue in issues if issue not in NON_BLOCKING]
-
-
-@dataclass(frozen=True)
-class Policy:
-    target: int = 50
-    ceiling: int = 54
-    lines: int = 2
-    name_units: int = 20  # conservative candidate reservation; not verified max
-
-
-def policy_for(category: str, row: dict) -> Policy | None:
-    if category not in {'story', 'card', 'birth', 'dialogue', 'event-unit'}:
-        return None
-    key = str(row.get('item_key', ''))
-    if key.endswith('_title'):
-        return None
-    source_lines = str(row.get('ja', '')).count('\n') + 1
-    if 'synopsis' in key:
-        return Policy(40, 40, 5)
-    if '_chat' in str(row.get('bundle', '')):
-        return Policy(34, 34, 3)
-    if category in {'card', 'event-unit'}:
-        return Policy()
-    return Policy(lines=max(2, min(5, source_lines)))
-
-
-def atoms(text: str) -> list[str]:
-    result = []
-    i = 0
-    while i < len(text):
-        match = TOKEN.match(text, i)
-        if match:
-            result.append(match.group()); i = match.end()
-        elif unicodedata.combining(text[i]) and result:
-            result[-1] += text[i]; i += 1
-        else:
-            result.append(text[i]); i += 1
-    return result
-
-
-def width(text: str, policy: Policy = Policy()) -> int:
-    total = 0
-    for atom in atoms(text):
-        if atom.startswith('{') or atom.startswith('%') or atom.startswith('__MLTD_'):
-            total += policy.name_units
-        elif atom.startswith('<') or atom.startswith('\\'):
-            # Unknown markup/control semantics: conservative, never zero width.
-            total += sum(2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in atom)
-        else:
-            total += sum(0 if unicodedata.combining(c) else 2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in atom)
-    return total
-
-
-def lint(text: str, policy: Policy, source_lines: int | None = None) -> list[str]:
-    issues = []
-    lines = text.split('\n')
-    if source_lines is not None and len(lines) != min(policy.lines, max(1, source_lines)):
-        issues.append('line_count_mismatch')
-    if len(lines) > policy.lines: issues.append('line_count')
-    if any(width(line, policy) > policy.ceiling for line in lines): issues.append('over_ceiling')
-    elif any(width(line, policy) > policy.target for line in lines): issues.append('over_target')
-    if any(not line for line in lines): issues.append('empty_line')
-    if any(line and line[0] in NO_START for line in lines[1:]): issues.append('kinsoku_start')
-    if any(line and line[-1] in NO_END for line in lines[:-1]): issues.append('kinsoku_end')
-    if '\r' in text: issues.append('carriage_return')
-    return issues
-
-
-def reflow(text: str, policy: Policy, preferred_lines: int | None = None) -> str:
-    """DP over indivisible atoms; refuse infeasible candidates instead of truncating."""
-    if '\r' in text: raise ValueError('carriage return requires manual review')
-    flat = text.replace('\n', '')
-    aa = atoms(flat)
-    if not aa: raise ValueError('empty text')
-    # Unknown control tags may change rendering; do not move them automatically.
-    if any(a.startswith('<') or a.startswith('\\') for a in aa):
-        raise ValueError('unknown control or markup semantics')
-    prefix = [0]
-    for a in aa: prefix.append(prefix[-1] + width(a, policy))
-    n = len(aa)
-    original_breaks = set()
-    offset = 0
-    for line in text.split('\n')[:-1]:
-        offset += len(line); original_breaks.add(offset)
-    chars = [0]
-    for a in aa: chars.append(chars[-1] + len(a))
-    best = None
-    for count in range(1, policy.lines + 1):
-        dp = {(0, 0): (0.0, [])}
-        ideal = prefix[-1] / count
-        for line_no in range(1, count + 1):
-            for end in range(1, n + 1):
-                if end < n and (aa[end][0] in NO_START or aa[end - 1][-1] in NO_END): continue
-                for start in range(end - 1, -1, -1):
-                    if start == end: continue
-                    units = prefix[end] - prefix[start]
-                    if units > policy.ceiling: break
-                    previous = dp.get((line_no - 1, start))
-                    if previous is None: continue
-                    penalty = (units - ideal) ** 2 + max(0, units - policy.target) ** 2 * 100
-                    if end < n:
-                        penalty += 0 if chars[end] in original_breaks else 3 if aa[end - 1][-1] in PUNCT else 30
-                    candidate = (previous[0] + penalty, previous[1] + [end])
-                    old = dp.get((line_no, end))
-                    if old is None or candidate[0] < old[0]: dp[line_no, end] = candidate
-        candidate = dp.get((count, n))
-        if candidate:
-            preferred = len(text.split('\n')) if preferred_lines is None else preferred_lines
-            preferred = min(policy.lines, max(1, preferred))
-            score = candidate[0] + count * 10 + (0 if count == preferred else 500)
-            if best is None or score < best[0]: best = (score, candidate[1])
-    if best is None: raise ValueError('no token-safe layout within candidate budget')
-    lines = []; start = 0
-    for end in best[1]: lines.append(''.join(aa[start:end])); start = end
-    result = '\n'.join(lines)
-    if result.replace('\n', '') != flat: raise AssertionError('reflow changed characters')
-    if any(issue not in NON_BLOCKING for issue in lint(result, policy, preferred_lines)):
-        raise ValueError('candidate failed post-layout lint')
-    return result
+from pipelines.text.scenario_text_layout import (  # noqa: E402
+    NON_BLOCKING,
+    NO_END,
+    NO_START,
+    PUNCT,
+    Policy,
+    TOKEN,
+    atoms,
+    blocking,
+    infer_layout_category,
+    lint,
+    policy_for,
+    reflow,
+    resolve_row_policy,
+    try_reflow_candidate,
+    width,
+)
+from pipelines.text.translation_tokens import protected_tokens  # noqa: E402
 
 
 def resolve(category: str, row: dict, entry: dict | None) -> tuple[Policy | None, str]:

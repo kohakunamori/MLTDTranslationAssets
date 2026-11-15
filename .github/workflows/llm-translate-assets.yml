@@ -422,6 +422,23 @@ jobs:
             --github-output "$GITHUB_OUTPUT" \
             "${summary_args[@]}"
 
+      - name: Review high-risk LLM drafts
+        id: review
+        if: steps.collect.outputs.queue_size != '0' && (success() || steps.translate.outcome == 'failure')
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/review_llm_drafts.py \
+            --queue .llm-queue.jsonl \
+            --draft .llm-draft.jsonl \
+            --review-output .llm-review.jsonl \
+            --rejected-output .llm-review-rejected.jsonl \
+            --summary .llm-review-summary.json \
+            --config "$MLTD_LLM_CONFIG_PATH" \
+            --glossary glossary/authoritative-terms.json \
+            --speaker-evidence .llm-character-evidence.json
+
       - name: Apply LLM translations
         # Explicitly not gated on the tolerated translate failure above; still
         # skipped when an earlier step really failed, so a broken workspace is
@@ -534,6 +551,9 @@ jobs:
             .llm-event-units.json
             .llm-apply.json
             .llm-remaining.jsonl
+            .llm-review.jsonl
+            .llm-review-summary.json
+            .llm-review-rejected.jsonl
             .llm-coverage.json
             manifests/localization-coverage.json
 

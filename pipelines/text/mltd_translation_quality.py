@@ -131,7 +131,7 @@ JP_GRAMMAR_RESIDUAL_RE = re.compile(
 # Narrow zh-CN style blocker for the common ACG calque "的说" when it is used
 # as a sentence-final particle.  Do not match normal words such as "这样的说法".
 ZH_SENTENCE_FINAL_DE_SHUO_RE = re.compile(
-    r"的说(?=(?:[！!。…～〜♪☆？?，,]|\\\d+\\|\s*$))"
+    r"的说(?=(?:[！!。…～〜♪☆？?，,—]|\\\d+\\|\s*$))"
 )
 META_PATTERNS = (
     "译者注",
@@ -217,8 +217,11 @@ def index_unique(rows: list[dict], label: str) -> dict[str, dict]:
     return out
 
 
+_FULLWIDTH_DIGITS_TRANS = str.maketrans("０１２３４５６７８９", "0123456789")
+
+
 def visible_numbers(text: str) -> Counter[str]:
-    value = PROTECTED_TOKEN_RE.sub("", text)
+    value = PROTECTED_TOKEN_RE.sub("", text).translate(_FULLWIDTH_DIGITS_TRANS)
     value = re.sub(r"(\d+(?:\.\d+)?)(?:パーセント|％)", lambda m: m.group(1) + "%", value)
     return Counter(NUMBER_RE.findall(value))
 
@@ -382,7 +385,20 @@ _ZHS_FORBIDDEN_TERMS = (
     "艾蜜莉", "转蛋", "轉蛋", "推播", "此讯息", "此訊息",
     "部落格", "弹跳视窗", "彈跳視窗", "资料夹", "資料夾",
     "应用程式", "應用程式", "快取资料", "快取資料",
+    "日圆", "精采", "身分", "优格", "集点卡",
+    "网路", "软体", "硬体", "萤幕", "滑鼠",
+    "简讯", "伺服器", "记忆体", "解析度", "档案夹", "资料库",
+    "萤光", "图示", "视窗", "选单", "列印", "影印机",
+    "游标", "自订要素", "机率", "连线失败", "连线错误", "排行榜机能",
+    "搥", "拚命", "打拚", "拚尽", "要拚", "拚了",
+    "於剧", "关於", "不同於",
+    "姊姊", "大姊", "好姊妹", "三姊妹", "兩姊妹", "两姊妹",
+    "迎春花蕾所見之夢", "追逐夢想", "{0}天日間",
 )
+_ZHS_ALWAYS_FORBIDDEN_TW_TERMS = (
+    "感謝祭", "感謝", "全員",
+)
+_ZHS_TW_BORROW_RE = re.compile(r"藉(?:着|著|此|助|口|机|以|这|工作|写真)")
 _ZHS_BROKEN_RANK_RE = re.compile(r"第(?:最高分|活动|社交厅|粉丝数?)排行榜")
 _SOLO_CORRECTION_RE = re.compile(r"ソロコレ(?:クション)?")
 _TADOKORO_AZUSA_RE = re.compile(r"田所\s*あずさ")
@@ -395,9 +411,63 @@ _KATAKANA_COMPOUND_TAILS = (
 )
 _KATAKANA_IGNORE_TOKENS = frozenset({"ー", "ノ", "ノシ", "ッ"})
 _QUOTED_TEXT_RE = re.compile(r"「[^」\n]*」|『[^』\n]*』|《[^》\n]*》|“[^”\n]*”")
+_SHINJITAI_CREDIT_STRIP_RE = re.compile(
+    r"[（(](?:CV|ＣＶ|声优)[^）)\n]*[）)]"
+    r"|^[\s\u3000]*(?:作词|作曲|编曲|演唱)(?:[·・、/／](?:作词|作曲|编曲|演唱))*[：:].*$"
+    r"|^\d+\s*[.．].*$",
+    re.MULTILINE,
+)
+_SHINJITAI_PROSE_STRIP_RE = re.compile(
+    r"#[^\s\n]+"
+    r"|世駆志威|亞蛇流帝|我威琉弩|カラオケの鉄人|絵羽模様|伝ゎっ|暁の砲弾|暁クロエ"
+)
+_SHINJITAI_TO_SIMPLIFIED: dict[str, str] = {
+    "紬": "䌷",
+    "恵": "惠",
+    "歩": "步",
+    "浜": "滨",
+    "桜": "樱",
+    "駆": "驱",
+    "姫": "姬",
+    "気": "气",
+    "瀬": "濑",
+    "竜": "龙",
+    "覇": "霸",
+    "響": "响",
+    "辺": "边",
+    "緑": "绿",
+    "穂": "穗",
+    "黒": "黑",
+    "亜": "亚",
+    "鉄": "铁",
+    "絵": "绘",
+    "徳": "德",
+    "環": "环",
+    "髙": "高",
+    "於": "于",
+    "姉": "姐",
+    "姊": "姐",
+}
+_TRADITIONAL_IDOL_NAME_TOKENS: tuple[tuple[str, str], ...] = (
+    ("紗代子", "纱代子"),
+    ("莉緒", "莉绪"),
+    ("麗花", "丽花"),
+    ("貴音", "贵音"),
+    ("詩花", "诗花"),
+    ("奈緒", "奈绪"),
+    ("琴葉", "琴叶"),
+    ("千鶴", "千鹤"),
+    ("徳川", "德川"),
+    ("馬場", "马场"),
+    ("大神環", "大神环"),
+    ("髙橋", "高桥"),
+    ("髙桥", "高桥"),
+)
 _UNTRANSLATED_JAPANESE_FRAGMENT_RE = re.compile(
     r"わたくし|ぜんぜん[ぁ-ゖ一-龯]|知ってるけど|分かってない|"
-    r"故意に[一-龯]|憧れ[一-龯]|かしみや|ぴょーん|必ゅ|さ玛|っ斯"
+    r"故意に[一-龯]|憧れ[一-龯]|本当に[一-龯ぁ-ゖ]|"
+    r"[一-龯ァ-ヺぁ-ゖ]{2,}(?:ましょうか|しませんか)|"
+    r"かしみや|ぴょーん|必ゅ|さ玛|っ斯"
 )
 
 
@@ -439,25 +509,63 @@ def _surface_lexicon_issues(source: str, translation: str) -> list[tuple[str, st
     if not translation or translation == source:
         return []
     found: list[tuple[str, str, str]] = []
+    compact = translation.replace("\n", "")
 
     def _add_idol_issue(message: str, detail: str) -> None:
         found.append(("non_authoritative_idol_name", f"non-authoritative idol name: {message}", detail))
 
+    if "、】【" in translation and "、】【" not in source:
+        found.append(("malformed_markup", "malformed trailing brackets 、】【", "、】【"))
+    if re.search(r"<color=[^>]*></color>", translation) and not re.search(r"<color=[^>]*></color>", source):
+        found.append(("malformed_markup", "empty <color=...></color> tag in translation", "empty_color_tag"))
+    if re.sub(r"\\\d+\\|\\[nrt]|\\_", "", translation).count("\\") > re.sub(r"\\\d+\\|\\[nrt]|\\_", "", source).count("\\"):
+        found.append(("malformed_markup", "stray or unclosed backslash outside \\NN\\ emoticon code", "stray_backslash"))
+    if source.rstrip().endswith("\nなお") and translation.rstrip().split("\n")[-1].strip() in {
+        "另外", "另外，", "啊，等等", "然后", "还有", "顺带一提",
+    }:
+        found.append((
+            "non_authoritative_nao_signature",
+            "Nao sign-off なお mistranslated as conjunction instead of 奈绪",
+            "なお -> 奈绪",
+        ))
+    if "765プロ" in source and "765プロデューサー" not in source:
+        for bad_pro in (
+            "765制作人", "765专业", "765职业", "765制作公司", "765制造所", "765制作所",
+            "765事务部", "765位制作人", "765名专业", "765位专业", "第765位",
+            "765名职业", "765位职业", "765プ", "765PROCO", "765制作人ROCO", "765艺剧场",
+        ):
+            if bad_pro in compact and bad_pro not in source:
+                found.append(("non_authoritative_studio_name", f"{bad_pro} for 765プロ (use 765事务所)", "765プロ -> 765事务所"))
+                break
+    if "961プロ" in source and "961プロデューサー" not in source:
+        for bad_pro in ("961制作人", "961专业", "961职业", "961位制作人", "961名专业", "961制作公司"):
+            if bad_pro in compact and bad_pro not in source:
+                found.append(("non_authoritative_studio_name", f"{bad_pro} for 961プロ (use 961事务所)", "961プロ -> 961事务所"))
+                break
+    for trad_name, canonical_name in _TRADITIONAL_IDOL_NAME_TOKENS:
+        if trad_name in compact:
+            _add_idol_issue(f"{trad_name} (use {canonical_name})", f"{trad_name} -> {canonical_name}")
     for term in _ZHS_FORBIDDEN_TERMS:
-        if term in translation and term not in source:
+        if (term in translation or term in compact) and term not in source:
             found.append((
                 "non_mainland_forbidden_term",
                 f"non-mainland forbidden term: {term}",
                 f"forbidden_term={term}",
             ))
-    if "白石紬" in translation:
+    if _ZHS_TW_BORROW_RE.search(translation) and not _ZHS_TW_BORROW_RE.search(source):
+        found.append((
+            "non_mainland_forbidden_term",
+            "non-mainland zh-TW borrowing graph 藉* (use 借*)",
+            "forbidden_term=藉*",
+        ))
+    if "白石紬" in compact:
         _add_idol_issue("白石紬 (use 白石䌷)", "白石紬 -> 白石䌷")
-    elif "白石䋾" in translation:
+    elif "白石䋾" in compact:
         _add_idol_issue("白石䋾 (use 白石䌷)", "白石䋾 -> 白石䌷")
-    if "筿" in translation and "筿" not in source:
+    if "筿" in compact and "筿" not in source:
         _add_idol_issue("筿 (use 篠宫可怜)", "筿 -> 篠")
-    if ("司徒亚特" in translation and "司徒亚特" not in source) or any(
-        bad in translation
+    if ("司徒亚特" in compact and "司徒亚特" not in source) or any(
+        bad in compact
         for bad in (
             "艾米莉‧斯图亚特",
             "艾米莉・斯图亚特",
@@ -466,6 +574,11 @@ def _surface_lexicon_issues(source: str, translation: str) -> list[tuple[str, st
         )
     ):
         _add_idol_issue("expected 艾米莉·斯图亚特 (with middle dot ·)", "艾米莉·斯图亚特")
+    if "エミリー" in source:
+        for bad_em in ("エミリー", "艾米丽", "爱米莉", "爱米丽", "爱蜜莉", "艾蜜莉", "爱丽米莉"):
+            if bad_em in compact and bad_em not in source:
+                _add_idol_issue(f"{bad_em} (use 艾米莉)", "エミリー -> 艾米莉")
+                break
     if "やよ伊" in translation and "やよ伊" not in source:
         _add_idol_issue("やよ伊 (use 高槻弥生)", "やよ伊 -> 高槻弥生")
     for bad_roco in ("ソROCOレ", "ROCOレ", "索ROCO", "单ROCO", "ROCO集"):
@@ -487,24 +600,79 @@ def _surface_lexicon_issues(source: str, translation: str) -> list[tuple[str, st
         ):
             if ("纺织" in translation or "紡織" in translation or ("纺" in translation and "纺" not in source)):
                 _add_idol_issue("纺/纺织 for 紬 (use 䌷 U+4337)", "纺 -> 䌷")
-    if any(k in source for k in ("亜利沙", "ありさ", "アリサ")):
-        if "亜利沙" in translation or ("有栖" in translation and "有栖" not in source) or any(
-            bad in translation and bad not in source for bad in ("阿莉莎", "亚丽莎", "亚利纱")
+    for src_term, canonical in (
+        ("閃光☆HANABI団", "闪光☆HANABI团"),
+        ("期間限定オートライブPASS", "限时自动演出通行证"),
+        ("Angelステップ", "Angel舞步"),
+        ("Fairyステップ", "Fairy舞步"),
+        ("Princessステップ", "Princess舞步"),
+        ("Angelハーモニー", "Angel和声"),
+        ("Angelテクニック", "Angel技巧"),
+    ):
+        if src_term in source and canonical not in re.sub(r"\s+", "", translation):
+            found.append(
+                (
+                    "non_authoritative_domain_term",
+                    f"expected {canonical} for {src_term}",
+                    f"{src_term} -> {canonical}",
+                )
+            )
+    if (
+        "期間限定オートライブPASS" in source
+        and "オートライブPASS" not in source.replace("期間限定オートライブPASS", "")
+        and "自动演出PASS" in translation
+    ):
+        found.append(
+            (
+                "non_authoritative_domain_term",
+                "自动演出PASS for 期間限定オートライブPASS (use 限时自动演出通行证)",
+                "期間限定オートライブPASS -> 限时自动演出通行证",
+            )
+        )
+    for src_term, bad_terms, canonical in (
+        ("期間限定オートライブPASS", ("限时自动演出PASS", "自动直播", "自动实况"), "限时自动演出通行证"),
+        ("ミリコレ", ("百万音乐", "百万收集"), "百万收藏"),
+        ("楽天イーグルス", ("乐天老鹰", "乐天鹰"), "乐天金鹰"),
+    ):
+        if src_term in source:
+            for bad in bad_terms:
+                if bad in translation and bad not in source:
+                    found.append(
+                        (
+                            "non_authoritative_domain_term",
+                            f"{bad} for {src_term} (use {canonical})",
+                            f"{src_term} -> {canonical}",
+                        )
+                    )
+                    break
+    if any(k in source for k in ("亜利沙", "ありさ", "アリサ", "ありりーん")):
+        if (
+            "亜利沙" in compact
+            or ("有栖" in compact and "有栖" not in source)
+            or ("有纱" in compact and "紗" not in source)
+            or any(
+                bad in compact and bad not in source
+                for bad in (
+                    "阿莉莎", "亚丽莎", "亚利纱", "亚里沙", "阿利莎", "阿利沙",
+                    "有利沙", "有里纱", "有里沙", "有理沙", "有里莎", "有利纱",
+                    "亚莉莎", "爱丽莎", "有莉莎", "啊莉莎", "有希莎",
+                )
+            )
         ):
             _add_idol_issue("expected 松田亚利沙 / 亚利沙", "松田亜利沙 -> 松田亚利沙")
     if "あずさ" in _TADOKORO_AZUSA_RE.sub("", source):
         azusa_spaced_ok = any(k in source for k in ("三浦\u3000あずさ", "三浦 あずさ")) and "三浦 梓" in translation
         if (
-            any(bad in translation and bad not in source for bad in ("あず沙", "あず莎"))
+            any(bad in compact and bad not in source for bad in ("あず沙", "あず莎"))
             or (
                 any(k in source for k in ("三浦あずさ", "三浦\u3000あずさ", "三浦 あずさ"))
-                and "三浦" in translation
-                and "三浦梓" not in translation
+                and "三浦" in compact
+                and "三浦梓" not in compact
                 and not azusa_spaced_ok
             )
-            or ("秋月" in translation and not any(k in source for k in ("秋月", "律子", "りつこ", "リツコ")))
-            or ("静香" in translation and not any(k in source for k in ("静香", "最上", "しずか", "シズカ")))
-            or ("瑞希" in translation and not any(k in source for k in ("瑞希", "真壁", "みずき", "ミズキ")))
+            or ("秋月" in compact and not any(k in source for k in ("秋月", "律子", "りつこ", "リツコ")))
+            or ("静香" in compact and not any(k in source for k in ("静香", "最上", "しずか", "シズカ")))
+            or ("瑞希" in compact and not any(k in source for k in ("瑞希", "真壁", "みずき", "ミズキ")))
         ):
             _add_idol_issue("expected 三浦梓 / 梓", "三浦あずさ -> 三浦梓")
     if "まつり" in translation.replace("まつり湯", "").replace("まつり汤", ""):
@@ -512,33 +680,120 @@ def _surface_lexicon_issues(source: str, translation: str) -> list[tuple[str, st
     elif "まつり" in source.replace("まつり湯", ""):
         matsuri_spaced_ok = any(k in source for k in ("徳川\u3000まつり", "徳川 まつり")) and "德川 茉莉" in translation
         if (
-            any(bad in translation and bad not in source for bad in ("小毬", "玛茜", "小松莉", "松莉", "まつ莉"))
-            or (re.search(r"小祭(?![典坛祀])", translation) is not None and "小祭" not in source)
+            any(
+                bad in compact and bad not in source
+                for bad in (
+                    "小毬", "玛茜", "小松莉", "松莉", "まつ莉",
+                    "马茨莉", "玛茨莉", "玛祖丽", "玛特莉", "玛茨琳",
+                    "祭典公主", "祭公主", "祭姬", "小松姬", "小松代", "小松丽",
+                    "祭莉", "祭里", "真莉莉", "小真理", "真祭", "茉莉莉",
+                )
+            )
+            or (re.search(r"小祭(?![典坛祀])", compact) is not None and "小祭" not in source)
             or (
                 any(k in source for k in ("徳川まつり", "徳川\u3000まつり", "徳川 まつり", "徳川茉莉"))
-                and "德川" in translation
-                and "德川茉莉" not in translation
+                and "德川" in compact
+                and "德川茉莉" not in compact
                 and not matsuri_spaced_ok
             )
         ):
             _add_idol_issue("expected 德川茉莉 / 茉莉", "徳川まつり -> 德川茉莉")
-    if "このみ" in source:
+    if "このみ" in source or "コノミ" in source:
         konomi_spaced_ok = any(k in source for k in ("馬場\u3000このみ", "馬場 このみ")) and "马场 木实" in translation
         if (
             any(
-                bad in translation and bad not in source
-                for bad in ("木乃美", "这乃", "この美", "这个み", "马场木乃", "这个位美", "这位小美", "这位木实")
+                bad in compact and bad not in source
+                for bad in (
+                    "木乃美", "这乃", "この美", "这个み", "马场木乃", "这个位美", "这位小美", "这位木实",
+                    "马场好美", "马场此美", "歌奈美", "歌乃美", "可奈美", "可可美", "木野实",
+                    "木之美", "此乃美", "此木乃", "可妮米", "柯诺美", "科诺美", "小野美",
+                    "小此木", "这奈美", "这由美", "这个实", "木实实",
+                )
             )
-            or re.search(r"(?:这位|马场|阿)这美|(?<![这那])这美(?:小姐|前辈|桑|酱)", translation) is not None
-            or ("木下" in translation and not any(k in source for k in ("木下", "ひなた", "ヒナタ")))
+            or ("好姐姐" in compact and not any(x in source for x in ("いいお姉", "素敵なお姉", "優しいお姉")))
+            or re.search(
+                r"(?:这位|马场|阿)这美|(?<![这那])这美(?:小姐|前辈|桑|酱)|这个美(?![好丽艳妙景貌食德观感])",
+                compact,
+            )
+            is not None
+            or ("木下" in compact and not any(k in source for k in ("木下", "ひなた", "ヒナタ")))
+            or (
+                re.search(r"馬場[\s\u3000]*このみ|(?<![こそあど])このみ(?:さん|ちゃん|先生|お?姉|様|さま|っち|ん(?!な))", source) is not None
+                and "木实" not in compact
+            )
             or (
                 any(k in source for k in ("馬場このみ", "馬場\u3000このみ", "馬場 このみ"))
-                and "马场" in translation
-                and "马场木实" not in translation
+                and "马场" in compact
+                and "马场木实" not in compact
                 and not konomi_spaced_ok
             )
         ):
             _add_idol_issue("expected 马场木实 / 木实", "馬場このみ -> 马场木实")
+    if any(k in source for k in ("のり子", "のりさん", "のりっぺ", "のーりーこ")):
+        noriko_bads = [
+            "福田纪子", "福田典子", "福田则子", "德莉亚音", "德利子", "德莉子",
+            "乃莉子", "诺丽子", "诺里子", "乃里子", "诺莉姐", "诺里姐", "诺里",
+            "诺莉", "海苔子", "法理子", "阿诺子", "法子子", "のり子",
+        ]
+        if "ノリコ" not in source:
+            noriko_bads.extend(["诺莉可", "诺莉子"])
+        if not any(x in source for x in ("紀子", "典子", "則子")):
+            noriko_bads.extend(["纪子", "典子", "则子"])
+        for bad_nor in noriko_bads:
+            if bad_nor in compact and bad_nor not in source:
+                _add_idol_issue(f"{bad_nor} (use 福田法子 / 法子)", "福田のり子 -> 福田法子")
+                break
+    if "エレナ" in source:
+        for bad_el in (
+            "艾蕾娜", "艾莲娜", "埃莱娜", "爱莲娜", "艾丽娜", "艾雷娜",
+            "绘莲娜", "艾莉娜", "艾伦娜", "埃琳娜", "埃列娜", "爱丽娜",
+            "小埃莱娜", "エレナ",
+        ):
+            if bad_el in compact and bad_el not in source:
+                _add_idol_issue(f"{bad_el} (use 岛原艾琳娜 / 艾琳娜)", "島原エレナ -> 岛原艾琳娜")
+                break
+        if "伊利亚" in compact and "イリヤ" not in source:
+            _add_idol_issue("伊利亚 (use 艾琳娜)", "島原エレナ -> 岛原艾琳娜")
+    if "ジュリア" in source and "ジュリアン" not in source:
+        for bad_ju in ("ジュリア", "朱莉娅", "朱莉亚"):
+            if bad_ju in compact and bad_ju not in source:
+                _add_idol_issue(f"{bad_ju} (use 茱莉亚)", "ジュリア -> 茱莉亚")
+                break
+    if "昴" in source:
+        if any(bad in compact and bad not in source for bad in ("永吉昂", "小昂", "阿昂")) or (
+            "昂" in compact
+            and not any(w in compact for w in ("昂首", "昂扬", "高昂", "激昂", "低昂"))
+            and re.search(r"(?<![高激低轩气])昂(?![首扬然藏贵])", compact) is not None
+        ):
+            _add_idol_issue("昂 (use 永吉昴 / 昴)", "永吉昴 -> 永吉昴")
+    if (
+        "杏奈" in source
+        or ("アンナ" in source and not any(x in source for x in ("ドクター", "バニーポリス", "博士")) and "Dr." not in translation)
+    ) and "安娜" in compact and "安娜" not in source:
+        _add_idol_issue("安娜 (use 望月杏奈 / 杏奈)", "望月杏奈 -> 望月杏奈")
+    if "ひなた" in source.replace("ひなたぼっこ", "").replace("ひなたまつり", ""):
+        for bad_hi in ("木下阳向", "木下雏田", "小雏田", "ひなた"):
+            if bad_hi in compact and bad_hi not in source:
+                _add_idol_issue(f"{bad_hi} (use 木下日向 / 日向)", "木下ひなた -> 木下日向")
+                break
+    if "歌織" in source and any(b in compact for b in ("樱守可织", "樱守香织")):
+        _add_idol_issue("expected 樱守歌织", "桜守歌織 -> 樱守歌织")
+    if "志保" in source and any(b in compact for b in ("北泽诗穗", "北泽诗织")):
+        _add_idol_issue("expected 北泽志保", "北沢志保 -> 北泽志保")
+    if "アオノリ" in source:
+        for bad_ao in ("阿奥诺里", "奥诺里", "阿欧诺里", "阿乌诺利", "アオノリ"):
+            if bad_ao in compact and bad_ao not in source:
+                _add_idol_issue(f"{bad_ao} (use 青海苔)", "アオノリ -> 青海苔")
+                break
+    if "ミラソニ" in source:
+        for bad_ms in ("ミラソニ", "蜜拉索尼", "MiraSoni"):
+            if bad_ms in compact and bad_ms not in source:
+                _add_idol_issue(f"{bad_ms} (use 米拉索尼)", "ミラソニ -> 米拉索尼")
+                break
+    for bad_cv in ("高桥ミナミ", "髙桥ミナミ", "髙橋ミナミ"):
+        if bad_cv in compact:
+            _add_idol_issue(f"{bad_cv} (use 高桥未奈美)", "髙橋ミナミ -> 高桥未奈美")
+            break
     if "スタイルドロップ" in source:
         for bad_drop in (
             "大师造型水滴",
@@ -607,6 +862,44 @@ def _surface_lexicon_issues(source: str, translation: str) -> list[tuple[str, st
             f"untranslated Japanese fragment: {fragment}",
             f"fragment={fragment}",
         ))
+    de_shuo = ZH_SENTENCE_FINAL_DE_SHUO_RE.search(translation)
+    if de_shuo:
+        found.append((
+            "sentence_final_de_shuo_calque",
+            "sentence-final ACG calque '的说' is forbidden in zh-CN output",
+            "residual=的说",
+        ))
+    no_credits = _SHINJITAI_CREDIT_STRIP_RE.sub("", PROTECTED_TOKEN_RE.sub("", translation))
+    prose_clean = _SHINJITAI_PROSE_STRIP_RE.sub("", _QUOTED_TEXT_RE.sub("", no_credits))
+    for tw_term in _ZHS_ALWAYS_FORBIDDEN_TW_TERMS:
+        if tw_term in prose_clean or any(
+            tw_term in quoted and quoted not in source
+            for quoted in _QUOTED_TEXT_RE.findall(no_credits)
+        ):
+            found.append((
+                "non_mainland_forbidden_term",
+                f"non-mainland forbidden term: {tw_term}",
+                f"forbidden_term={tw_term}",
+            ))
+            break
+    if "紬" in prose_clean or any(
+        "紬" in quoted and quoted not in source
+        for quoted in _QUOTED_TEXT_RE.findall(no_credits)
+    ):
+        found.append((
+            "unconverted_japanese_kanji",
+            "unconverted Japanese kanji 紬 (use 䌷)",
+            "紬 -> 䌷",
+        ))
+    else:
+        for jp_kanji, simplified in _SHINJITAI_TO_SIMPLIFIED.items():
+            if jp_kanji != "紬" and jp_kanji in prose_clean:
+                found.append((
+                    "unconverted_japanese_kanji",
+                    f"unconverted Japanese kanji {jp_kanji} (use {simplified})",
+                    f"{jp_kanji} -> {simplified}",
+                ))
+                break
     return found
 
 
@@ -866,7 +1159,7 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
     # {$P$}先生 after zh-CN normalization.  Keep exceptions reviewable rather
     # than hard-rejecting them, but never let an unexplained dropped honorific
     # auto-pass deterministic QA.
-    if PLAYER_HONORIFIC in source and PLAYER_HONORIFIC_ZH not in translation:
+    if PLAYER_HONORIFIC in source and not re.search(r"\{\$P\$\}\s*先生", translation):
         issues.append(_issue(
             "player_honorific_convention_missing",
             "review",
@@ -974,6 +1267,7 @@ def evaluate_row(queue_row: dict, candidate: dict, glossary: dict) -> dict:
     kana_text = translation
     for token in allow:
         kana_text = kana_text.replace(token, "")
+    kana_text = kana_text.replace("・", "")
     if KANA_RE.search(kana_text):
         issues.append(_issue("japanese_kana_residual", "review"))
 

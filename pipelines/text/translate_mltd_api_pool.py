@@ -37,6 +37,13 @@ from pipelines.text.mltd_given_name_hints import (
     load_default_given_name_hints,
     render_given_name_hints,
 )
+from pipelines.text.classify_translation_risk import classify_row
+from pipelines.text.build_character_voice_evidence import load_character_evidence
+from pipelines.text.mltd_character_profiles import (
+    load_character_profiles,
+    select_character_profile,
+)
+from pipelines.text.scenario_text_layout import try_reflow_candidate
 from pipelines.text.mltd_lyric_rules import join_lyric_lines, validate_lyric_tokens
 from pipelines.text.translate_gtx_queue import (
     ACCEPTED_STATUS,
@@ -835,32 +842,118 @@ def effective_reasoning_params(cfg: ModelConfig, params: dict[str, Any]) -> dict
     return result
 
 
+_REASONING_LEVELS = ("minimal", "low", "medium", "high", "xhigh", "max")
+
+
+def _row_risk(row: dict[str, Any]) -> dict[str, Any]:
+    existing = row.get("risk")
+    if isinstance(existing, dict) and existing.get("risk_level"):
+        return existing
+    source = str(row.get("source", ""))
+    if not source:
+        return {}
+    try:
+        return classify_row({**row, "source_sha256": sha256_text(source)})
+    except Exception:
+        return {}
+
+
+def _raise_reasoning_floor(
+    params: dict[str, Any],
+    default_effort: str,
+    target_floor: str,
+    min_max_tokens: int,
+) -> None:
+    effort = str(params.get("reasoning_effort", default_effort) or "").strip().lower()
+    target_idx = _REASONING_LEVELS.index(target_floor)
+    current_idx = (
+        _REASONING_LEVELS.index(effort) if effort in _REASONING_LEVELS else -1
+    )
+    if effort in {"", "none"} or current_idx < target_idx:
+        params["reasoning_effort"] = target_floor
+        try:
+            current_max = int(params.get("max_tokens", 0) or 0)
+        except (TypeError, ValueError):
+            current_max = 0
+        params["max_tokens"] = max(current_max, min_max_tokens)
+
+
 def task_request_params_for_row(
     cfg: ModelConfig,
     row: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
-    """Resolve task parameters with narrow context-sensitive quality boosts.
+    """Resolve task parameters with context- and risk-sensitive quality boosts.
 
     Most TITLE rows are cheap labels and should keep the preset's no-reasoning
-    route.  Chapter/event titles with actual PREVIOUS/NEXT evidence are a
-    different class: short Japanese ellipsis/contrast is often impossible to
-    disambiguate from the source string alone.  Give only those rows low
-    reasoning and a little more completion headroom instead of globally making
-    all titles expensive.
+    route.  Chapter/event titles with actual PREVIOUS/NEXT evidence, as well as
+    rows classified as high/critical translation risk, get higher reasoning
+    effort and completion headroom without making routine low-risk rows
+    expensive.
     """
     task = classify_task(row)
     params = dict(cfg.request_params_by_task.get(task, {}))
     if task == "TITLE":
         previous, following = nearest_context(row)
-        effort = str(params.get("reasoning_effort", cfg.reasoning_effort) or "").strip().lower()
-        if (previous or following) and effort in {"", "none"}:
-            params["reasoning_effort"] = "low"
-            try:
-                current_max = int(params.get("max_tokens", 0) or 0)
-            except (TypeError, ValueError):
-                current_max = 0
-            params["max_tokens"] = max(current_max, 512)
+        if previous or following:
+            _raise_reasoning_floor(params, cfg.reasoning_effort, "low", 512)
+    risk_level = str(_row_risk(row).get("risk_level", "low") or "low").strip().lower()
+    if risk_level == "critical":
+        _raise_reasoning_floor(params, cfg.reasoning_effort, "high", 1024)
+    elif risk_level == "high":
+        _raise_reasoning_floor(params, cfg.reasoning_effort, "medium", 1024)
     return task, effective_reasoning_params(cfg, params)
+
+
+_SAFE_VOICE_EVIDENCE_KEYS = (
+    "speech_style",
+    "first_person",
+    "honorific_style",
+    "tone_notes",
+    "voice_notes",
+    "catchphrases",
+    "division",
+    "type",
+    "role",
+)
+_PROFILE_STRIP_KEYS = {"status", "updated_at", "provenance", "source_sha256", "speaker_code"}
+
+
+def _speaker_voice_context(
+    row: dict[str, Any],
+    task: str,
+    surface: str,
+    character_profiles: dict[str, dict] | None,
+    speaker_evidence: dict[str, dict] | None,
+) -> str:
+    codes, _ = speaker_info(row)
+    if (
+        len(codes) != 1
+        or surface == "MAIL_REPLY"
+        or not (task == "DIALOGUE" or surface == "MAIL_TITLE")
+    ):
+        return ""
+    code = codes[0]
+    usage = row.get("usage_profile", {})
+    usage_dict = usage if isinstance(usage, dict) else {"speaker_codes": [code]}
+    if character_profiles:
+        profile = select_character_profile(usage_dict, character_profiles)
+        if isinstance(profile, dict) and profile:
+            compact = {
+                k: v for k, v in profile.items()
+                if k not in _PROFILE_STRIP_KEYS and v not in ("", None, [], {})
+            }
+            if compact:
+                return "SPEAKER_PROFILE=" + json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
+    if speaker_evidence:
+        entry = speaker_evidence.get(code) or speaker_evidence.get(code.lower())
+        if isinstance(entry, dict) and entry:
+            safe_meta = {
+                k: entry[k] for k in _SAFE_VOICE_EVIDENCE_KEYS
+                if entry.get(k) not in ("", None, [], {})
+            }
+            if safe_meta:
+                return "SPEAKER_VOICE_HINT=" + json.dumps(safe_meta, ensure_ascii=False, separators=(",", ":"))
+    return ""
 
 
 def build_legacy_user_prompt(
@@ -869,6 +962,8 @@ def build_legacy_user_prompt(
     feedback: str = "",
     *,
     given_name_hints: GivenNameHints | None = None,
+    character_profiles: dict[str, dict] | None = None,
+    speaker_evidence: dict[str, dict] | None = None,
 ) -> str:
     task = classify_task(row)
     codes, _ = speaker_info(row)
@@ -882,8 +977,22 @@ def build_legacy_user_prompt(
         # associations on some rows.  Send only stable speaker codes here; the
         # canonical System Prompt owns code -> identity for known speakers.
         lines.append("SPEAKER=" + ", ".join(codes))
+        voice_line = _speaker_voice_context(
+            row, task, surface, character_profiles, speaker_evidence
+        )
+        if voice_line:
+            lines.append(voice_line)
     elif task == "SHARED":
         lines.append("SPEAKER=MULTIPLE")
+    risk = _row_risk(row)
+    risk_level = str(risk.get("risk_level", "") or "").strip().lower()
+    risk_reasons = risk.get("risk_reasons") if isinstance(risk, dict) else None
+    if risk_level in {"high", "critical"} and isinstance(risk_reasons, list) and risk_reasons:
+        lines.append(
+            f"TRANSLATION_RISK={risk_level} ("
+            + ", ".join(str(x) for x in risk_reasons[:5])
+            + ")"
+        )
     usage = row.get("usage_profile", {})
     if isinstance(usage, dict) and task == "SHARED":
         categories = usage.get("categories", [])
@@ -961,10 +1070,17 @@ def build_user_prompt(
     *,
     style: str = "natural",
     given_name_hints: GivenNameHints | None = None,
+    character_profiles: dict[str, dict] | None = None,
+    speaker_evidence: dict[str, dict] | None = None,
 ) -> str:
     if style == "legacy":
         return build_legacy_user_prompt(
-            row, masked_source, feedback, given_name_hints=given_name_hints
+            row,
+            masked_source,
+            feedback,
+            given_name_hints=given_name_hints,
+            character_profiles=character_profiles,
+            speaker_evidence=speaker_evidence,
         )
     if style != "natural":
         raise ValueError("unknown user prompt style")
@@ -977,6 +1093,8 @@ def build_user_prompt(
             prompt_source,
             prompt_feedback,
             given_name_hints=given_name_hints,
+            character_profiles=character_profiles,
+            speaker_evidence=speaker_evidence,
         )
 
     return contextual_prompt(
@@ -1417,12 +1535,38 @@ _TARGETED_QA_GUIDANCE: tuple[tuple[tuple[str, ...], str], ...] = (
     (
         ("non_authoritative_idol_name",),
         "Use authoritative Mainland Simplified Chinese idol/album/system names: 白石䌷 (䌷 U+4337, never 白石紬/白石䋾/纺/纺织), "
-        "艾米莉·斯图亚特 (middle dot · U+00B7, never 艾蜜莉/司徒亚特/‧/・/space), 篠宫可怜 (篠 U+7BE0, never 筿/筱), "
-        "松田亚利沙 (never 有栖/阿莉莎/亚丽莎/亚利纱), 三浦梓 (accept 三浦 梓 only if source is spaced; never あず沙/あず莎/秋月/静香/瑞希; keep CV 田所あずさ as 田所あずさ/田所梓), "
-        "德川茉莉 (accept 德川 茉莉 only if source is spaced; never 小毬/玛茜/松莉/小祭 or untranslated まつり; keep place name まつり湯 as まつり汤), "
-        "马场木实 (accept 马场 木实 only if source is spaced; never 木乃美/这乃/木下/这个位美/这位小美/这美), "
+        "艾米莉·斯图亚特 (middle dot · U+00B7, never 艾蜜莉/艾米丽/爱蜜莉/司徒亚特/‧/・/space), 篠宫可怜 (篠 U+7BE0, never 筿/筱), "
+        "松田亚利沙 (never 有栖/阿莉莎/亚丽莎/亚利纱/亚里沙/有纱/有里纱), 三浦梓 (accept 三浦 梓 only if source is spaced; never あず沙/あず莎/秋月/静香/瑞希; keep CV 田所あずさ as 田所あずさ/田所梓), "
+        "德川茉莉 (accept 德川 茉莉 only if source is spaced; never 小毬/玛茜/松莉/小祭/马茨莉/玛茨莉 or untranslated まつり; keep place name まつり湯 as まつり汤), "
+        "马场木实 (accept 马场 木实 only if source is spaced; never 木乃美/这乃/木下/这个位美/这位小美/这美/这个美/好姐姐/木实实), "
+        "福田法子 (never 诺里/诺里子/诺莉/诺莉子/典子/纪子/则子/德莉亚音/德利子/德莉子/乃莉子/海苔子/阿诺子/法子子; keep fictional anime role ノリコ as 诺莉可 only if SOURCE has katakana ノリコ), "
+        "岛原艾琳娜 (never 伊利亚/艾蕾娜/艾莲娜/埃莱娜/爱莲娜/艾丽娜), 茱莉亚 (never 朱莉娅/朱莉亚), 永吉昴 (昴 U+6634, never 永吉昂/昂), "
+        "大神环 (never 大神環), 木下日向 (never 木下阳向/木下雏田), 高桥未奈美 (for 髙橋ミナミ/高橋ミナミ), 青海苔 (robot dog アオノリ), 米拉索尼 (ミラソニ), "
         "高槻弥生 (never やよ伊), ROCO (ロコ), 个人精选 for ソロコレ (never ソROCOレ/ROCO), "
         "风格水滴 for スタイルドロップ (大师风格水滴 for マスタースタイルドロップ), and NetSwipes for ネトスワ / ネットスワイプス.",
+    ),
+    (
+        ("non_authoritative_studio_name",),
+        "Translate 765プロ as 765事务所 and 961プロ as 961事务所 (and 765プロのプロデューサー as 765事务所的制作人); "
+        "プロ stands for production studio/agency, NEVER 制作人/专业/职业/制作公司/制作所.",
+    ),
+    (
+        ("non_authoritative_nao_signature",),
+        "When 横山奈绪 (037nao) ends a mail/blog message with standalone なお on the final line, translate it as her signature 奈绪, NOT as a conjunction like 另外/还有/顺带一提.",
+    ),
+    (
+        ("malformed_markup",),
+        "Preserve color/emoticon markup cleanly: never emit empty <color=...></color>, stray brackets like 、】【, or drop the closing backslash on \\NN\\ emoticon codes.",
+    ),
+    (
+        ("unconverted_japanese_kanji",),
+        "Convert all Japanese Shinjitai/Kyujitai kanji in Chinese prose to Mainland Simplified Chinese (e.g. 徳->德, 環->环, 髙->高, 於->于, 姉/姊->姐, 紗->纱, 緒->绪, 麗->丽, 貴->贵, 詩->诗, 葉->叶, 鶴->鹤, 紬->䌷).",
+    ),
+    (
+        ("non_authoritative_domain_term",),
+        "Use canonical MLTD domain/unit/event/skill names: 闪光☆HANABI团 (never 闪光☆烟花团/闪光HANABI团), "
+        "限时自动演出通行证 for 期間限定オートライブPASS (never 自动直播/自动实况), 百万收藏 for ミリコレ (never 百万音乐/百万收集), "
+        "乐天金鹰 for 楽天イーグルス (never 乐天老鹰/乐天鹰), and Angel舞步 / Fairy舞步 / Princess舞步 / Angel和声 / Angel技巧.",
     ),
     (
         ("malformed_ranking_phrase",),
@@ -1512,6 +1656,17 @@ def _build_qa_retry_feedback(qa_error: str) -> str:
             + _MARKER_CORRECTION
         )
 
+    if qa_error.startswith("layout:"):
+        codes = qa_error.split(":", 1)[1]
+        return (
+            f"Previous output exceeded the box layout budget ({codes}). "
+            "Rephrase the translation slightly more concisely without dropping meaning so every "
+            "line fits cleanly within the line-width (~25 fullwidth Chinese chars) and line-count "
+            "limit, with no empty lines, no carriage returns, no mid-name/honorific splits "
+            "(keep {$P$}先生 / {$P$}制作人 and multi-character idol names intact on one line), "
+            "and no line-starting punctuation (，。！？：；、…”》】)."
+        )
+
     parts = [hint for codes, hint in _TARGETED_QA_GUIDANCE if any(c in qa_error for c in codes)]
     if parts:
         return (
@@ -1532,6 +1687,7 @@ def validate_candidate(
     term_targets: list[str],
     glossary: dict,
     numeric_targets: list[str] | None = None,
+    layout_category: str | None = None,
 ) -> tuple[dict[str, Any] | None, str]:
     source = str(source_row.get("source", ""))
     if not raw_text:
@@ -1547,6 +1703,24 @@ def validate_candidate(
             validate_translation(source, translated)
     except Exception as exc:
         return None, f"structure:{exc}"
+    effective_layout_category = (
+        layout_category
+        if layout_category is not None
+        else (str(source_row.get("layout_category") or "").strip() or None)
+    )
+    blocking_layout: list[str] = []
+    if classify_task(source_row) != "ASSETS_LYRICS" and effective_layout_category:
+        reflowed, blocking_layout = try_reflow_candidate(
+            effective_layout_category,
+            source_row,
+            translated,
+        )
+        if not blocking_layout and reflowed != translated:
+            try:
+                validate_translation(source, reflowed)
+                translated = reflowed
+            except Exception as exc:
+                return None, f"structure:{exc}"
     candidate = {
         "source_sha256": str(source_row.get("source_sha256", "")),
         "source": source,
@@ -1564,6 +1738,8 @@ def validate_candidate(
         return None, "blocking_qa:" + ",".join(
             str(x.get("code", "")) for x in blocking
         )
+    if blocking_layout:
+        return None, "layout:" + ",".join(blocking_layout)
     if issues:
         candidate["qa"] = qa
         candidate["qa_nonblocking"] = True
@@ -1581,6 +1757,8 @@ async def translate_with_model(
     stats: dict[str, dict[str, float]],
     request_guard: Callable[[], bool] | None = None,
     given_name_hints: GivenNameHints | None = None,
+    character_profiles: dict[str, dict] | None = None,
+    speaker_evidence: dict[str, dict] | None = None,
 ) -> tuple[dict[str, Any] | None, str]:
     source = str(row.get("source", ""))
     sid = str(row.get("source_sha256", ""))
@@ -1610,6 +1788,8 @@ async def translate_with_model(
     )
     token_masked_source, tokens = mask_tokens(term_masked_source)
     masked_source, numeric_targets = mask_numeric_literals(token_masked_source)
+    risk = _row_risk(row)
+    risk_level = str(risk.get("risk_level", "low") or "low").strip().lower()
     task, task_request_params = task_request_params_for_row(cfg, row)
     feedback = ""
     last_error = ""
@@ -1634,6 +1814,8 @@ async def translate_with_model(
                     masked_source,
                     feedback,
                     given_name_hints=given_name_hints,
+                    character_profiles=character_profiles,
+                    speaker_evidence=speaker_evidence,
                 ),
                 attempt_request_params,
                 rate_limiter,
@@ -1689,6 +1871,12 @@ async def translate_with_model(
                     "model": cfg.model,
                     "reported_model": meta.get("reported_model", ""),
                     "task": task,
+                    "risk_level": risk_level,
+                    **(
+                        {"risk_reasons": risk.get("risk_reasons", [])}
+                        if isinstance(risk, dict) and risk.get("risk_reasons")
+                        else {}
+                    ),
                     "reasoning_effort": successful_request_params.get(
                         "reasoning_effort", cfg.reasoning_effort
                     ),
@@ -1789,6 +1977,8 @@ async def worker(
     disabled_model_ids: set[str],
     model_stats: dict[str, dict[str, float]],
     given_name_hints: GivenNameHints | None = None,
+    character_profiles: dict[str, dict] | None = None,
+    speaker_evidence: dict[str, dict] | None = None,
 ) -> None:
     while True:
         item = await work_queue.get()
@@ -1827,6 +2017,8 @@ async def worker(
             model_stats,
             lambda: cfg.id not in disabled_model_ids,
             given_name_hints,
+            character_profiles,
+            speaker_evidence,
         )
         if result is not None:
             await result_queue.put(("accepted", result))
@@ -1931,6 +2123,8 @@ def preview_pending(
     count: int,
     authoritative_terms: dict[str, str],
     given_name_hints: GivenNameHints | None = None,
+    character_profiles: dict[str, dict] | None = None,
+    speaker_evidence: dict[str, dict] | None = None,
 ) -> list[dict[str, Any]]:
     result = []
     with input_path.open("r", encoding="utf-8-sig") as handle:
@@ -1950,6 +2144,7 @@ def preview_pending(
                 {
                     "source_sha256": sid,
                     "task": classify_task(row),
+                    "risk_level": _row_risk(row).get("risk_level", "low"),
                     "deterministic_exact_term": (
                         authoritative_terms.get(source)
                         if source in authoritative_terms
@@ -1960,6 +2155,8 @@ def preview_pending(
                         row,
                         masked,
                         given_name_hints=given_name_hints,
+                        character_profiles=character_profiles,
+                        speaker_evidence=speaker_evidence,
                     ),
                 }
             )
@@ -2032,6 +2229,18 @@ async def async_main(args: argparse.Namespace) -> int:
         getattr(args, "given_name_hints", "glossary/given-name-hints.json")
     )
     given_name_hints = load_default_given_name_hints(given_name_hints_path)
+    character_evidence_arg = getattr(args, "character_evidence", None)
+    speaker_evidence = load_character_evidence(
+        Path(character_evidence_arg)
+        if character_evidence_arg and Path(character_evidence_arg).is_file()
+        else None
+    )
+    character_profiles_arg = getattr(args, "character_profiles", None)
+    character_profiles = load_character_profiles(
+        Path(character_profiles_arg)
+        if character_profiles_arg and Path(character_profiles_arg).is_file()
+        else None
+    )
     authoritative_terms_sha256 = (
         sha256_bytes(args.authoritative_terms.read_bytes())
         if args.authoritative_terms.is_file()
@@ -2052,6 +2261,8 @@ async def async_main(args: argparse.Namespace) -> int:
         "given_name_hints": str(given_name_hints_path),
         "given_name_hints_sha256": given_name_hints.sha256,
         "given_name_hint_count": len(given_name_hints.entries),
+        "speaker_evidence_rows_loaded": len(speaker_evidence),
+        "approved_character_profiles_loaded": len(character_profiles),
         "models": [
             {
                 "id": cfg.id,
@@ -2086,6 +2297,8 @@ async def async_main(args: argparse.Namespace) -> int:
                         args.preview_items,
                         authoritative_terms,
                         given_name_hints,
+                        character_profiles,
+                        speaker_evidence,
                     )
                 },
                 ensure_ascii=False,
@@ -2173,6 +2386,7 @@ async def async_main(args: argparse.Namespace) -> int:
                 cfg, clients[cfg.id], rate_limiters[cfg.id], work_queue,
                 result_queue, system_prompt, glossary, authoritative_terms,
                 all_model_ids, disabled_model_ids, model_stats, given_name_hints,
+                character_profiles, speaker_evidence,
             )
         )
         for cfg in models
@@ -2366,7 +2580,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--character-evidence",
         type=Path,
         default=Path("build/localization-90200/character-voice-evidence.json"),
-        help="speaker identity source used by the compiled System Prompt",
+        help="speaker identity and optional safe voice cues used by the prompt",
+    )
+    ap.add_argument(
+        "--character-profiles",
+        type=Path,
+        default=None,
+        help="reviewed zh-CN character profile JSONL for speaker-consistent dialogue translation",
     )
     ap.add_argument(
         "--glossary",

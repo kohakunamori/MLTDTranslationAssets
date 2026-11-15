@@ -84,6 +84,7 @@ BASIC_BLOCKING_QA_CODES = {
     "forbidden_term_present",
     "non_mainland_forbidden_term",
     "non_authoritative_idol_name",
+    "non_authoritative_domain_term",
     "malformed_ranking_phrase",
     "non_mainland_login_calque",
     "non_mainland_history_calque",
@@ -92,6 +93,10 @@ BASIC_BLOCKING_QA_CODES = {
     "bad_meaning_semantics_missing",
     "motorbike_mistranslated_as_bicycle",
     "play_generalized_to_performance",
+    "unconverted_japanese_kanji",
+    "non_authoritative_studio_name",
+    "non_authoritative_nao_signature",
+    "malformed_markup",
 }
 
 

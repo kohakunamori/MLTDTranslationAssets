@@ -40,10 +40,9 @@ from pipelines.text.mltd_localize_gtx import jsonl_lines, validate_translation
 from pipelines.text.mltd_lyric_rules import is_english_bypass, join_lyric_lines, validate_lyric_tokens
 from pipelines.text.mltd_translation_quality import validate_zhcn_surface_quality
 from pipelines.core.hashing import sha256_text
-from pipelines.text.translation_tokens import protected_tokens
 from scripts.japanese_residue import repair_reason
 from pipelines.text.asset_translation_context import enrich_queue
-from scripts import scenario_text_layout
+from pipelines.text import scenario_text_layout
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,21 +77,11 @@ def _maybe_reflow_candidate(path: Path, row: dict[str, Any], source_text: str, c
         category = path.relative_to(ROOT / "locales").parts[0]
     except ValueError:
         return candidate
-    policy = scenario_text_layout.policy_for(category, row)
-    if policy is None or not candidate:
-        return candidate
-    source_lines = source_text.count("\n") + 1
-    issues = scenario_text_layout.lint(candidate, policy, source_lines)
-    if not scenario_text_layout.blocking(issues):
+    inferred = scenario_text_layout.infer_layout_category(category, row)
+    reflowed, remaining = scenario_text_layout.try_reflow_candidate(inferred, row, candidate)
+    if remaining or reflowed == candidate:
         return candidate
     try:
-        reflowed = scenario_text_layout.reflow(candidate, policy, source_lines)
-        if (
-            reflowed.replace("\n", "") != candidate.replace("\n", "")
-            or protected_tokens(reflowed) != protected_tokens(candidate)
-            or scenario_text_layout.blocking(scenario_text_layout.lint(reflowed, policy, source_lines))
-        ):
-            return candidate
         validate_draft("locales", source_text, reflowed)
         return reflowed
     except ValueError:
@@ -145,6 +134,14 @@ def rows(root: Path, scope: str = "locales"):
                 yield path, line_no, value, kind
 
 
+def _row_repair_reason(row: dict[str, Any], kind: str) -> str | None:
+    if kind == "lyrics" and is_english_bypass(str(row.get("ja", ""))):
+        return None
+    if kind in ("locales", "lyrics"):
+        return repair_reason(row)
+    return None
+
+
 def collect(args: argparse.Namespace) -> int:
     scope = scope_of(args)
     wanted_version = str(args.asset_version or "").strip()
@@ -153,7 +150,7 @@ def collect(args: argparse.Namespace) -> int:
     queue: list[dict[str, Any]] = []
     seen: set[str] = set()
     for path, line_no, row, kind in queue_rows(ROOT, scope):
-        repair = repair_reason(row) if kind == "locales" else None
+        repair = _row_repair_reason(row, kind)
         if not repair and (row.get("status") != "untranslated" or str(row.get("zh", ""))):
             continue
         source = str(row.get("ja", ""))
@@ -170,7 +167,7 @@ def collect(args: argparse.Namespace) -> int:
         if sid in seen:
             continue
         seen.add(sid)
-        queue.append({
+        queued: dict[str, Any] = {
             "source": source,
             "source_sha256": sid,
             "bundle": row.get("bundle", ""),
@@ -181,7 +178,16 @@ def collect(args: argparse.Namespace) -> int:
             "translation": "",
             "status": "pending",
             "repair_reason": repair,
-        })
+        }
+        if kind == "locales":
+            try:
+                layout_category = path.relative_to(ROOT / "locales").parts[0]
+            except ValueError:
+                layout_category = ""
+            layout_category = scenario_text_layout.infer_layout_category(layout_category, row)
+            if layout_category and scenario_text_layout.policy_for(layout_category, row) is not None:
+                queued["layout_category"] = layout_category
+        queue.append(queued)
     enrich_queue(ROOT, queue, scope_paths(ROOT, scope))
     with output.open("w", encoding="utf-8", newline="\n") as stream:
         for queued in queue:
@@ -195,7 +201,7 @@ def collect(args: argparse.Namespace) -> int:
 def queue_rows(root: Path, scope: str):
     """Repair confirmed published defects before draining new source backlog."""
     for candidate in rows(root, scope):
-        if candidate[3] == "locales" and repair_reason(candidate[2]):
+        if _row_repair_reason(candidate[2], candidate[3]):
             yield candidate
     for candidate in rows(root, scope):
         if candidate[2].get("status") == "untranslated":
@@ -251,7 +257,7 @@ def apply(args: argparse.Namespace) -> int:
             row: dict[str, Any] = json.loads(line)
             sid = str(row.get("source_sha256", ""))
             translation = translations.get(sid)
-            repair = repair_reason(row) if kind == "locales" else None
+            repair = _row_repair_reason(row, kind)
             if (row.get("status") == "untranslated" or repair) and translation is not None:
                 source_text = str(row.get("ja", ""))
                 if sha256_text(source_text) != sid:
@@ -268,7 +274,7 @@ def apply(args: argparse.Namespace) -> int:
                 if source_text:
                     try:
                         validate_draft(kind, source_text, candidate)
-                        if kind == "locales" and repair_reason(dict(row, status="accepted", zh=candidate)):
+                        if _row_repair_reason(dict(row, status="accepted", zh=candidate), kind):
                             raise ValueError("draft still contains copied Japanese")
                     except ValueError as exc:
                         rejected.append({

@@ -9,6 +9,7 @@ on:
       - 'locales/**'
       - 'lyrics/**'
       - 'images/**'
+      - 'glossary/**'
       - 'manifests/**'
       - 'pipelines/**'
       - 'scripts/**'
@@ -24,6 +25,7 @@ on:
       - 'locales/**'
       - 'lyrics/**'
       - 'images/**'
+      - 'glossary/**'
       - 'manifests/**'
       - 'pipelines/**'
       - 'scripts/**'
@@ -176,6 +178,7 @@ jobs:
         run: |
           python -m pytest -q -n "$PYTEST_WORKERS" --dist worksteal \
             scripts/test_llm_translate_untranslated.py \
+            scripts/test_review_llm_drafts.py \
             scripts/test_asset_translation_context.py \
             scripts/test_translation_model_capabilities.py \
             scripts/test_authoritative_term_review_queue.py \

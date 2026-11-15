@@ -11,10 +11,9 @@ import httpx
 
 from pipelines.core.hashing import sha256_text
 from pipelines.text.translate_mltd_api_pool import (
-    ModelConfig, load_model_config, request_translation,
-    task_request_params_for_row, translate_with_model,
-    validate_candidate,
-    build_parser,
+    ModelConfig, _build_qa_retry_feedback, build_parser, build_user_prompt,
+    load_model_config, request_translation, task_request_params_for_row,
+    translate_with_model, validate_candidate,
 )
 from pipelines.text.mltd_translation_quality import evaluate_row, load_glossary
 
@@ -150,6 +149,170 @@ class CapabilityTests(unittest.TestCase):
         args = build_parser().parse_args(["--config", "local-config.json"])
         self.assertEqual(args.glossary, Path("glossary/authoritative-terms.json"))
         self.assertEqual(args.authoritative_terms, Path("glossary/authoritative-terms.json"))
+
+    def test_layout_budget_auto_reflow_and_retry_recovery(self):
+        source = "{$P$}さん、今日の打ち合わせを確認してください。"
+        row = {
+            "source": source,
+            "source_sha256": sha256_text(source),
+            "task_hint": "DIALOGUE",
+            "layout_category": "story",
+        }
+        # Exceeds single-line 54-unit ceiling, yet fits cleanly in 2 lines once reflowed.
+        raw_reflowable = "__MLTD_TOKEN_000__先生，请先确认今天下午这场排练的流程细节吧。"
+        candidate, error = validate_candidate(row, raw_reflowable, ["{$P$}"], [], {})
+        self.assertFalse(error)
+        self.assertIsNotNone(candidate)
+        self.assertEqual(candidate["translation"].count("\n"), 1)
+        self.assertIn("{$P$}先生", candidate["translation"].replace("\n", ""))
+
+        # Exceeds 2-line story capacity (108 width units): must fail layout QA with actionable feedback.
+        too_long = "这段译文实在太长了即使拆成两行也肯定会超出对话框两行合计上限导致客户端发生溢出与截断现象必须精简一下表述才行。"
+        rejected, err = validate_candidate(
+            {"source": "確認してください。", "source_sha256": sha256_text("確認してください。"), "task_hint": "DIALOGUE", "layout_category": "story"},
+            too_long,
+            [],
+            [],
+            {},
+        )
+        self.assertIsNone(rejected)
+        self.assertTrue(err.startswith("layout:"))
+        self.assertIn("box layout budget", _build_qa_retry_feedback(err))
+
+        requests = []
+
+        def handle(request):
+            body = json.loads(request.content)
+            requests.append(body)
+            text = too_long if len(requests) == 1 else "请确认一下，这次演出排练的流程。"
+            return httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
+
+        async def run():
+            story_row = {
+                "source": "確認してください。",
+                "source_sha256": sha256_text("確認してください。"),
+                "task_hint": "DIALOGUE",
+                "layout_category": "story",
+            }
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+                result, retry_err = await translate_with_model(
+                    client, replace(config(), retries=2), None, "SYSTEM",
+                    story_row, {}, {}, defaultdict(lambda: defaultdict(float)),
+                )
+                self.assertFalse(retry_err)
+                self.assertEqual(result["translation"], "请确认一下，这次演出排练的流程。")
+
+        asyncio.run(run())
+        self.assertEqual(len(requests), 2)
+        self.assertIn("box layout budget", requests[1]["messages"][-1]["content"])
+
+    def test_risk_tier_escalates_reasoning_and_emits_prompt_warnings(self):
+        cfg = config(request_params_by_task={
+            "DIALOGUE": {"reasoning_effort": "low"},
+            "TITLE": {"reasoning_effort": "none"},
+        })
+        ordinary = replace(cfg, min_reasoning_effort="")
+        low_title = {"task_hint": "TITLE", "source": "設定"}
+        self.assertEqual(task_request_params_for_row(ordinary, low_title)[1]["reasoning_effort"], "none")
+        self.assertEqual(task_request_params_for_row(cfg, low_title)[1]["reasoning_effort"], "none")
+
+        high_title = {
+            "task_hint": "TITLE",
+            "source": "あの日の約束を忘れない",
+            "layout_category": "story",
+            "usage_profile": {
+                "categories": ["event", "main"],
+                "multi_category": True,
+                "requires_cross_context_consistency": True,
+            },
+        }
+        _, high_params = task_request_params_for_row(ordinary, high_title)
+        self.assertEqual(high_params["reasoning_effort"], "medium")
+        self.assertGreaterEqual(high_params["max_tokens"], 1024)
+        self.assertEqual(task_request_params_for_row(cfg, high_title)[1]["reasoning_effort"], "high")
+
+        critical_row = {
+            "task_hint": "DIALOGUE",
+            "source": "準備はいい？",
+            "usage_profile": {
+                "categories": ["main"],
+                "speaker_codes": ["har", "chi"],
+                "multi_speaker": True,
+            },
+        }
+        _, critical_params = task_request_params_for_row(ordinary, critical_row)
+        self.assertEqual(critical_params["reasoning_effort"], "high")
+        self.assertGreaterEqual(critical_params["max_tokens"], 1024)
+
+        prompt_high = build_user_prompt(high_title, high_title["source"])
+        self.assertIn("TRANSLATION_RISK=high", prompt_high)
+        self.assertIn("OUTPUT_LAYOUT:", prompt_high)
+
+        prompt_low = build_user_prompt(low_title, low_title["source"])
+        self.assertNotIn("TRANSLATION_RISK=", prompt_low)
+
+    def test_speaker_profile_and_voice_hint_are_scoped_to_single_speaker_dialogue_or_mail_title(self):
+        profiles = {
+            "har": {
+                "speaker_code": "har",
+                "canonical_name_zh": "天海春香",
+                "speech_style": "元气坦率",
+                "status": "accepted",
+            }
+        }
+        evidence = {
+            "har": {"speech_style": "备用提示不应覆盖已审资料"},
+            "chi": {"speech_style": "冷静克制", "ja_samples": ["secret"]},
+        }
+        har_dialogue = {
+            "task_hint": "DIALOGUE",
+            "source": "今日も頑張ろうね！",
+            "usage_profile": {"speaker_codes": ["har"]},
+        }
+        har_prompt = build_user_prompt(
+            har_dialogue, har_dialogue["source"],
+            character_profiles=profiles, speaker_evidence=evidence,
+        )
+        self.assertIn("SPEAKER_PROFILE=", har_prompt)
+        self.assertIn("天海春香", har_prompt)
+        self.assertNotIn('"status"', har_prompt)
+        self.assertNotIn("SPEAKER_VOICE_HINT=", har_prompt)
+
+        chi_dialogue = {
+            "task_hint": "DIALOGUE",
+            "source": "次へ進みましょう。",
+            "usage_profile": {"speaker_codes": ["chi"]},
+        }
+        chi_prompt = build_user_prompt(
+            chi_dialogue, chi_dialogue["source"],
+            character_profiles=profiles, speaker_evidence=evidence,
+        )
+        self.assertIn("SPEAKER_VOICE_HINT=", chi_prompt)
+        self.assertIn("冷静克制", chi_prompt)
+        self.assertNotIn("ja_samples", chi_prompt)
+
+        mail_title = {
+            "task_hint": "TITLE",
+            "surface_hint": "MAIL_TITLE",
+            "source": "お疲れ様です",
+            "usage_profile": {"speaker_codes": ["har"]},
+        }
+        self.assertIn("SPEAKER_PROFILE=", build_user_prompt(
+            mail_title, mail_title["source"], character_profiles=profiles,
+        ))
+
+        mail_reply = {
+            "task_hint": "DIALOGUE",
+            "surface_hint": "MAIL_REPLY",
+            "source": "ありがとう！",
+            "usage_profile": {"speaker_codes": ["har"]},
+        }
+        reply_prompt = build_user_prompt(
+            mail_reply, mail_reply["source"],
+            character_profiles=profiles, speaker_evidence=evidence,
+        )
+        self.assertNotIn("SPEAKER_PROFILE=", reply_prompt)
+        self.assertNotIn("SPEAKER_VOICE_HINT=", reply_prompt)
 
 
 if __name__ == "__main__":

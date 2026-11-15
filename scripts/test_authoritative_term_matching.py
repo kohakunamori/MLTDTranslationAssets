@@ -241,7 +241,7 @@ class FullNameWhitespaceVariantTests(unittest.TestCase):
         counts = self.glossary["counts"]
         self.assertEqual(counts["fullname_source_variants"], 52)
         self.assertEqual(counts["entries"], len(entries))
-        self.assertEqual(counts["entries"], 142)
+        self.assertEqual(counts["entries"], 165)
         self.assertEqual(
             len({spec["source_variant_of"] for spec in derived.values()}),
             50,
@@ -552,7 +552,7 @@ class AuthoritativeTermsGeneratorTests(unittest.TestCase):
             generated = json.loads(output_path.read_text(encoding="utf-8"))
 
         self.assertEqual(generated, glossary)
-        self.assertEqual(generated["counts"]["entries"], 142)
+        self.assertEqual(generated["counts"]["entries"], 165)
         self.assertEqual(
             generated["counts"]["fullname_source_variants"],
             52,

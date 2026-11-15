@@ -2,8 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from scripts.scenario_text_layout import (Policy, apply_category, atoms, audit, blocking, lint,
-                                          load_exceptions, policy_for, reflow, width)
+from scripts.scenario_text_layout import (Policy, apply_category, atoms, audit, blocking,
+                                          infer_layout_category, lint, load_exceptions,
+                                          policy_for, reflow, resolve_row_policy, width)
 from pipelines.core.hashing import sha256_text
 
 
@@ -46,6 +47,16 @@ class LayoutTests(unittest.TestCase):
 
     def test_unknown_category_excluded(self):
         self.assertIsNone(policy_for('master', {'ja': '甲\n乙'}))
+        self.assertEqual(resolve_row_policy('master', {'ja': '甲\n乙'}), (None, 2))
+        self.assertEqual(infer_layout_category('master', {'bundle': 'card_episode_001'}), 'card')
+        self.assertEqual(infer_layout_category('master', {'bundle': 'birth_001'}), 'birth')
+        self.assertEqual(infer_layout_category('master', {'bundle': 'event_unit_talk_001'}), 'event-unit')
+        self.assertEqual(infer_layout_category('master', {'bundle': 'event_001_story'}), 'story')
+        master_card_policy, lines = resolve_row_policy(
+            'master', {'bundle': 'card_episode_001', 'ja': '甲\n乙\n丙'}
+        )
+        self.assertEqual(master_card_policy, Policy())
+        self.assertEqual(lines, 3)
 
     def test_source_exception_preserved(self):
         self.assertEqual(policy_for('story', {'ja': '甲\n乙\n丙'}).lines, 3)

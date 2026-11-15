@@ -76,6 +76,33 @@ class LyricLineBreakPolicyTests(unittest.TestCase):
         self.assertIn("不要因为说话者身份自行添加", NATURAL_POLICY)
         self.assertIn("特殊术语在相邻句中随意换名", NATURAL_POLICY)
 
+    def test_prompts_cover_canonical_studio_idol_tw_and_layout_rules(self):
+        for prompt_name, prompt_text in (("BASE", BASE), ("NATURAL_POLICY", NATURAL_POLICY)):
+            for token in (
+                "765事务所",
+                "961事务所",
+                "福田法子",
+                "永吉昴",
+                "马场木实",
+                "感谢",
+                "全员",
+                "拼命",
+                "关于",
+                "姐姐",
+                "借着",
+                "高桥",
+            ):
+                with self.subTest(prompt=prompt_name, token=token):
+                    self.assertIn(token, prompt_text)
+        self.assertIn("なお", BASE)
+        self.assertIn("奈绪", BASE)
+        self.assertIn("なお", NATURAL_POLICY)
+        self.assertIn("奈绪", NATURAL_POLICY)
+        self.assertIn("{$P$}先生", BASE)
+        self.assertIn("{$P$}先生", NATURAL_POLICY)
+        self.assertIn("keep {$P$}先生, {$P$}制作人, and short personal names on one line", BASE)
+        self.assertIn("不把 `{$P$}先生`／`{$P$}制作人` 或任何人名/称呼从中间折行拆散", NATURAL_POLICY)
+
 
 class CompiledGlossaryMappingTests(unittest.TestCase):
     """The real compiler must carry authoritative ``target`` glossary rules.

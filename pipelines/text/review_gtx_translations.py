@@ -29,7 +29,7 @@ from pipelines.text.build_character_voice_evidence import (
     select_official_style_samples,
 )
 from pipelines.text.translate_gtx_queue import strip_json_fence
-from pipelines.text.classify_translation_risk import load_risk_index
+from pipelines.text.classify_translation_risk import classify_row, load_risk_index
 from pipelines.text.mltd_character_profiles import load_character_profiles, select_character_profile
 
 SCORE_NAMES = (
@@ -243,75 +243,107 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
-def main() -> int:
-    args = build_parser().parse_args()
-    if args.batch_size <= 0:
-        raise SystemExit("--batch-size must be > 0")
-    if args.provider == "command" and not args.command:
-        raise SystemExit("--provider command requires --command")
-    if args.provider == "openai-compatible" and (not args.endpoint or not args.model):
-        raise SystemExit("--provider openai-compatible requires --endpoint and --model")
+def compute_missing_risk(
+    queue: dict[str, dict],
+    candidates: dict[str, dict],
+    risk_index: dict[str, dict] | None = None,
+) -> dict[str, dict]:
+    """Return risk classifications for candidates, classifying missing rows on demand."""
+    out = dict(risk_index or {})
+    for sid in candidates:
+        if sid not in out and sid in queue:
+            out[sid] = classify_row(queue[sid])
+    return out
 
-    queue = index_unique(read_jsonl(args.queue), "queue")
-    candidates = index_unique(read_jsonl(args.candidates), "candidates")
-    missing_queue = sorted(set(candidates) - set(queue))
-    if missing_queue:
-        raise ValueError(
-            "candidate rows are not source-bound to the current queue; "
-            f"count={len(missing_queue)} first={missing_queue[0]}"
-        )
-    glossary = load_glossary(args.glossary)
-    style = args.style_guide.read_text(encoding="utf-8") if args.style_guide else ""
-    risk_index = load_risk_index(args.risk)
-    selected_risk_levels = set(args.risk_level or [])
-    if selected_risk_levels and not risk_index:
-        raise SystemExit("--risk-level requires --risk")
-    missing_risk = sorted(set(candidates) - set(risk_index)) if risk_index else []
-    if missing_risk:
-        raise ValueError(f"risk index missing {len(missing_risk)} candidate rows; first={missing_risk[0]}")
-    speaker_evidence = load_character_evidence(args.speaker_evidence)
-    character_profiles = load_character_profiles(args.character_profiles)
-    if args.max_style_samples < 0:
-        raise SystemExit("--max-style-samples must be >= 0")
-    completed = load_completed(args.output)
+
+def review_rows(
+    queue: dict[str, dict],
+    candidates: dict[str, dict],
+    *,
+    glossary: dict,
+    style_guide: str = "",
+    speaker_evidence: dict[str, dict] | None = None,
+    character_profiles: dict[str, dict] | None = None,
+    risk_index: dict[str, dict] | None = None,
+    selected_risk_levels: set[str] | None = None,
+    max_style_samples: int = 2,
+    provider: str,
+    command: str | None = None,
+    endpoint: str | None = None,
+    model: str = "",
+    api_key: str = "",
+    reviewer_id: str = "",
+    output: Path,
+    batch_size: int = 16,
+    max_items: int = 0,
+    timeout: float = 120.0,
+    retries: int = 3,
+    retry_delay: float = 2.0,
+) -> tuple[dict, list[dict]]:
+    """Run independent QA review on selected translation candidates and return (summary, errors)."""
+    if batch_size <= 0:
+        raise ValueError("batch_size must be > 0")
+    if max_style_samples < 0:
+        raise ValueError("max_style_samples must be >= 0")
+    if provider == "command" and not command:
+        raise ValueError("provider command requires command")
+    if provider == "openai-compatible" and (not endpoint or not model):
+        raise ValueError("provider openai-compatible requires endpoint and model")
+
+    resolved_speaker_evidence = speaker_evidence or {}
+    resolved_profiles = character_profiles or {}
+    resolved_risk = risk_index or {}
+    selected_levels = set(selected_risk_levels or ())
+    completed = load_completed(output)
     all_items = build_review_items(
         queue,
         candidates,
         glossary,
-        speaker_evidence,
-        args.max_style_samples,
-        risk_index,
-        character_profiles,
+        resolved_speaker_evidence,
+        max_style_samples,
+        resolved_risk,
+        resolved_profiles,
     )
     pending = [
         item for item in all_items
         if item["id"] not in completed
         and (
-            not selected_risk_levels
-            or str(item.get("risk", {}).get("risk_level", "")) in selected_risk_levels
+            not selected_levels
+            or str(item.get("risk", {}).get("risk_level", "")) in selected_levels
         )
     ]
-    if args.max_items:
-        pending = pending[:args.max_items]
-    api_key = os.environ.get(args.api_key_env, "") if args.api_key_env else ""
-    counts = {"candidates": len(candidates), "reviewable": len(all_items), "already_completed": len(completed), "selected_pending": len(pending), "reviewed": 0, "failed_batches": 0}
+    if max_items:
+        pending = pending[:max_items]
+    effective_reviewer_id = reviewer_id or f"{provider}:{model or command}"
+    counts = {
+        "candidates": len(candidates),
+        "reviewable": len(all_items),
+        "already_completed": len(completed),
+        "selected_pending": len(pending),
+        "reviewed": 0,
+        "failed_batches": 0,
+    }
     errors: list[dict] = []
 
-    for offset in range(0, len(pending), args.batch_size):
-        batch = pending[offset:offset + args.batch_size]
+    for offset in range(0, len(pending), batch_size):
+        batch = pending[offset:offset + batch_size]
         # Long SHA-256 IDs are frequently mistyped by review models. For the
         # OpenAI-compatible backend, bind short batch-local IDs in code and
         # keep the source SHA solely as the persisted review identity.
-        if args.provider == "openai-compatible":
+        if provider == "openai-compatible":
             request_batch = [{**item, "id": f"R{index}"} for index, item in enumerate(batch)]
         else:
             request_batch = batch
         response = None
         last_error: Exception | None = None
         expected = {item["id"] for item in request_batch}
-        for attempt in range(max(1, args.retries)):
+        for attempt in range(max(1, retries)):
             try:
-                response = command_review(args.command, request_batch, args.timeout, style) if args.provider == "command" else openai_review(args.endpoint, args.model, api_key, request_batch, args.timeout, style)
+                response = (
+                    command_review(command or "", request_batch, timeout, style_guide)
+                    if provider == "command"
+                    else openai_review(endpoint or "", model, api_key, request_batch, timeout, style_guide)
+                )
                 if set(response) != expected:
                     raise ValueError(
                         "response id set mismatch: "
@@ -322,8 +354,8 @@ def main() -> int:
             except Exception as exc:
                 response = None
                 last_error = exc
-                if attempt + 1 < max(1, args.retries):
-                    time.sleep(args.retry_delay * (attempt + 1))
+                if attempt + 1 < max(1, retries):
+                    time.sleep(retry_delay * (attempt + 1))
         if response is None:
             counts["failed_batches"] += 1
             errors.append({"offset": offset, "size": len(batch), "error": str(last_error)})
@@ -341,27 +373,85 @@ def main() -> int:
                 "scores": review["scores"],
                 "blocking_errors": review["blocking_errors"],
                 "notes": review["notes"],
-                "reviewer_provenance": f"review:{args.provider}",
-                "reviewer_model": args.model or args.command,
-                "reviewer_id": args.reviewer_id or f"{args.provider}:{args.model or args.command}",
+                "reviewer_provenance": f"review:{provider}",
+                "reviewer_model": model or (command or ""),
+                "reviewer_id": effective_reviewer_id,
             })
-        append_rows(args.output, rows)
+        append_rows(output, rows)
         counts["reviewed"] += len(rows)
 
     result = {
         "schema_version": 1,
-        "provider": args.provider,
-        "model": args.model,
-        "risk_rows_loaded": len(risk_index),
-        "selected_risk_levels": sorted(selected_risk_levels),
-        "reviewer_id": args.reviewer_id or f"{args.provider}:{args.model or args.command}",
-        "speaker_evidence_rows_loaded": len(speaker_evidence),
-        "approved_character_profiles_loaded": len(character_profiles),
+        "provider": provider,
+        "model": model,
+        "risk_rows_loaded": len(resolved_risk),
+        "selected_risk_levels": sorted(selected_levels),
+        "reviewer_id": effective_reviewer_id,
+        "speaker_evidence_rows_loaded": len(resolved_speaker_evidence),
+        "approved_character_profiles_loaded": len(resolved_profiles),
         **counts,
-        "total_output_rows": len(load_completed(args.output)),
+        "total_output_rows": len(load_completed(output)),
         "complete_for_selected_range": counts["failed_batches"] == 0 and counts["reviewed"] == len(pending),
         "errors_first": errors[:20],
     }
+    return result, errors
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    if args.batch_size <= 0:
+        raise SystemExit("--batch-size must be > 0")
+    if args.provider == "command" and not args.command:
+        raise SystemExit("--provider command requires --command")
+    if args.provider == "openai-compatible" and (not args.endpoint or not args.model):
+        raise SystemExit("--provider openai-compatible requires --endpoint and --model")
+    if args.max_style_samples < 0:
+        raise SystemExit("--max-style-samples must be >= 0")
+
+    queue = index_unique(read_jsonl(args.queue), "queue")
+    candidates = index_unique(read_jsonl(args.candidates), "candidates")
+    missing_queue = sorted(set(candidates) - set(queue))
+    if missing_queue:
+        raise ValueError(
+            "candidate rows are not source-bound to the current queue; "
+            f"count={len(missing_queue)} first={missing_queue[0]}"
+        )
+    glossary = load_glossary(args.glossary)
+    style = args.style_guide.read_text(encoding="utf-8") if args.style_guide else ""
+    risk_index = load_risk_index(args.risk)
+    selected_risk_levels = set(args.risk_level or [])
+    if args.risk:
+        missing_risk = sorted(set(candidates) - set(risk_index))
+        if missing_risk:
+            raise ValueError(f"risk index missing {len(missing_risk)} candidate rows; first={missing_risk[0]}")
+    elif selected_risk_levels:
+        risk_index = compute_missing_risk(queue, candidates)
+    speaker_evidence = load_character_evidence(args.speaker_evidence)
+    character_profiles = load_character_profiles(args.character_profiles)
+    api_key = os.environ.get(args.api_key_env, "") if args.api_key_env else ""
+    result, errors = review_rows(
+        queue,
+        candidates,
+        glossary=glossary,
+        style_guide=style,
+        speaker_evidence=speaker_evidence,
+        character_profiles=character_profiles,
+        risk_index=risk_index,
+        selected_risk_levels=selected_risk_levels,
+        max_style_samples=args.max_style_samples,
+        provider=args.provider,
+        command=args.command,
+        endpoint=args.endpoint,
+        model=args.model,
+        api_key=api_key,
+        reviewer_id=args.reviewer_id,
+        output=args.output,
+        batch_size=args.batch_size,
+        max_items=args.max_items,
+        timeout=args.timeout,
+        retries=args.retries,
+        retry_delay=args.retry_delay,
+    )
     if args.summary:
         args.summary.parent.mkdir(parents=True, exist_ok=True)
         args.summary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

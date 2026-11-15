@@ -162,6 +162,13 @@ class SparseCheckoutTests(unittest.TestCase):
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
         self.assertIn("scripts/test_translation_unicode_quality.py", run)
 
+    def test_glossary_changes_trigger_validation_and_draft_review_is_gated(self):
+        for event in ("push", "pull_request"):
+            paths = self.workflow[True][event]["paths"]
+            self.assertIn("glossary/**", paths)
+        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
+        self.assertIn("scripts/test_review_llm_drafts.py", run)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -113,6 +113,121 @@ CURATED = {
         "category": "system_term",
         "evidence": "information_preservation_rule",
     },
+    "期間限定オートライブPASS": {
+        "target": "限时自动演出通行证",
+        "category": "system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "ミリコレ！～MILLIONLIVE COLLECTION～": {
+        "target": "百万收藏！～MILLIONLIVE COLLECTION～",
+        "category": "brand_title",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "閃光☆HANABI団": {
+        "target": "闪光☆HANABI团",
+        "category": "brand_title",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "銭湯HANABI団": {
+        "target": "钱汤HANABI团",
+        "category": "brand_title",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "楽天イーグルス": {
+        "target": "乐天金鹰",
+        "category": "brand_title",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "モルフォ・パレシア": {
+        "target": "闪蝶·幻宫",
+        "category": "costume_system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "クロリス・パレシア": {
+        "target": "克洛里斯·幻宫",
+        "category": "costume_system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "ルミエール・パピヨン": {
+        "target": "光辉彩蝶",
+        "category": "costume_system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "ヌーベル・トリコロール": {
+        "target": "崭崭新三色",
+        "category": "costume_system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "インフィニット・スカイ": {
+        "target": "无限天空",
+        "category": "costume_system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "マイオンリースタイリッシュ": {
+        "target": "我的专属时尚",
+        "category": "costume_system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "アイグラ！！": {
+        "target": "偶像写真！！",
+        "category": "brand_title",
+        "evidence": "current_project_consistency_rule",
+    },
+    "りるきゃん": {
+        "target": "莉露甜心",
+        "category": "brand_title",
+        "evidence": "current_project_consistency_rule",
+    },
+    "Angelステップ": {
+        "target": "Angel舞步",
+        "category": "system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "Fairyステップ": {
+        "target": "Fairy舞步",
+        "category": "system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "Princessステップ": {
+        "target": "Princess舞步",
+        "category": "system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "Angelハーモニー": {
+        "target": "Angel和声",
+        "category": "system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "Angelテクニック": {
+        "target": "Angel技巧",
+        "category": "system_term",
+        "evidence": "official_zhcn_consistent_substring",
+    },
+    "スパークドリンク": {
+        "target": "充电饮料",
+        "category": "system_term",
+        "evidence": "current_project_consistency_rule",
+    },
+    "ライブチケット": {
+        "target": "演唱会券",
+        "category": "system_term",
+        "evidence": "current_project_consistency_rule",
+    },
+    "マスターレッスン": {
+        "target": "明星课程",
+        "category": "system_term",
+        "evidence": "current_project_consistency_rule",
+    },
+    "ユニット編成": {
+        "target": "组合编成",
+        "category": "system_term",
+        "evidence": "current_project_consistency_rule",
+    },
+    "ラウンジ名": {
+        "target": "社交厅名称",
+        "category": "system_term",
+        "evidence": "current_project_consistency_rule",
+    },
 }
 
 # Current unresolved production rows contain 3rd-9th anniversary strings in

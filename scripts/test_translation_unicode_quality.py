@@ -933,10 +933,24 @@ class ZhCnSurfaceQualityTests(unittest.TestCase):
             ("悪い意味じゃなくて", "没有别的意思"),
             ("バイクで来た", "骑自行车来的"),
             ("劇は盛り上がってます", "演出很热闹"),
+            ("松田亜利沙", "松田有纱"),
+            ("馬場このみ", "马场这个美"),
+            ("コノミさん", "这个美小姐"),
+            ("閃光☆HANABI団", "闪光☆花团"),
+            ("Angelステップ", "Angel步骤"),
+            ("期間限定オートライブPASS", "限时自动直播PASS"),
+            ("ミリコレ", "百万音乐"),
+            ("楽天イーグルス", "乐天老鹰"),
         ]
         for ja, zh in bad_samples:
             with self.assertRaises(ValueError, msg=f"expected rejection for {(ja, zh)!r}"):
                 validate_zhcn_surface_quality(ja, zh)
+
+        # Positive controls for regex lookahead and domain terms
+        validate_zhcn_surface_quality("馬場このみの美しさ", "马场木实这个美貌")
+        validate_zhcn_surface_quality("このみさんのこの美しい絵", "木实小姐的这幅美丽的画")
+        validate_zhcn_surface_quality("閃光☆HANABI団", "闪光☆HANABI\n团")
+        validate_zhcn_surface_quality("Angelステップ", "Angel舞步")
 
         # Resume-style 履歴書 may legitimately mention 履历表 without triggering UI 履歴 calque check
         validate_zhcn_surface_quality("履歴書を書く", "填写履历表")
@@ -994,6 +1008,11 @@ class ZhCnSurfaceQualityTests(unittest.TestCase):
             ("バイクで来たんだ", "是骑自行车来的", "motorbike_mistranslated_as_bicycle"),
             ("自転車じゃなくバイクを使うだろ", "不是自行车而是单车吧", "motorbike_mistranslated_as_bicycle"),
             ("劇はすっごく盛り上がってます", "演出变得特别热闹", "play_generalized_to_performance"),
+            ("松田亜利沙", "松田有纱", "non_authoritative_idol_name"),
+            ("馬場このみ", "马场这个美", "non_authoritative_idol_name"),
+            ("閃光☆HANABI団", "闪光☆花团", "non_authoritative_domain_term"),
+            ("Angelステップ", "Angel步骤", "non_authoritative_domain_term"),
+            ("期間限定オートライブPASS", "限时自动直播PASS", "non_authoritative_domain_term"),
         ):
             sid = sha256_text(ja)
             candidate, error = validate_candidate(
@@ -1050,7 +1069,13 @@ class ZhCnSurfaceQualityTests(unittest.TestCase):
 
         idol_feedback = _build_qa_retry_feedback("non_authoritative_idol_name")
         self.assertIn("松田亚利沙", idol_feedback)
+        self.assertIn("有纱", idol_feedback)
+        self.assertIn("这个美", idol_feedback)
         self.assertIn("个人精选", idol_feedback)
+        domain_feedback = _build_qa_retry_feedback("non_authoritative_domain_term")
+        self.assertIn("闪光☆HANABI团", domain_feedback)
+        self.assertIn("限时自动演出通行证", domain_feedback)
+        self.assertIn("乐天金鹰", domain_feedback)
         meta_feedback = _build_qa_retry_feedback("translator_meta_text")
         self.assertIn("变成：", meta_feedback)
         trunc_feedback = _build_qa_retry_feedback("truncated_katakana_hybrid")
@@ -1060,6 +1085,166 @@ class ZhCnSurfaceQualityTests(unittest.TestCase):
         self.assertIn("没有别的意思", _build_qa_retry_feedback("bad_meaning_semantics_missing"))
         self.assertIn("摩托车", _build_qa_retry_feedback("motorbike_mistranslated_as_bicycle"))
         self.assertIn("演出", _build_qa_retry_feedback("play_generalized_to_performance"))
+
+    def test_hardened_shinjitai_tw_deshuo_pass_honorific_and_middledot(self) -> None:
+        from pipelines.text.mltd_translation_quality import (
+            evaluate_row,
+            validate_zhcn_surface_quality,
+            visible_numbers,
+        )
+
+        # New TW/HK forbidden terms
+        for ja, bad_zh in (
+            ("メールを確認してください", "请确认简讯"),
+            ("画面をご覧ください", "请查看萤幕"),
+            ("サーバーに接続中", "正在连接伺服器"),
+            ("2000円", "2000日圆"),
+        ):
+            with self.assertRaises(ValueError):
+                validate_zhcn_surface_quality(ja, bad_zh)
+
+        # Unconverted Japanese Shinjitai in prose must fail, while CV/song credits & ateji stay allowed
+        with self.assertRaises(ValueError):
+            validate_zhcn_surface_quality("桜守さん", "桜守小姐")
+        with self.assertRaises(ValueError):
+            validate_zhcn_surface_quality("「こんつむ～」", "「你好，紬～」")
+        validate_zhcn_surface_quality("豊川風花(CV：末柄里恵)", "丰川风花（CV：末柄里恵）")
+        validate_zhcn_surface_quality("最上静香\n\n作曲・編曲：黒須克彦", "最上静香\n\n作曲·编曲：黒須克彦")
+        validate_zhcn_surface_quality("『姫セレブ』", "『姫セレブ』组合")
+
+        # Sentence-final 的说 (including before em-dash —) and PASS UI rule
+        with self.assertRaises(ValueError):
+            validate_zhcn_surface_quality("そうですよ――", "是这样的说——")
+        with self.assertRaises(ValueError):
+            validate_zhcn_surface_quality("期間限定オートライブPASS", "自动演出PASS")
+        with self.assertRaises(ValueError):
+            validate_zhcn_surface_quality("期間限定オートライブPASS", "限时自动演出PASS")
+        validate_zhcn_surface_quality("期間限定オートライブPASS", "限时自动演出通行证")
+        validate_zhcn_surface_quality(
+            "期間限定オートライブPASSとオートライブPASS",
+            "限时自动演出通行证与自动演出PASS",
+        )
+        for bad_zh in ("点击贴图图示", "出现视窗", "操作选单", "列印制册", "移动游标", "自订要素", "出现机率", "连线失败", "排行榜机能", "挥舞萤光棒"):
+            with self.assertRaises(ValueError):
+                validate_zhcn_surface_quality("テストテスト", bad_zh)
+        validate_zhcn_surface_quality("茜がまた勝手にグッズ発注してた", "茜又擅自订购周边了")
+
+        # Fullwidth digit normalization in visible_numbers
+        self.assertEqual(visible_numbers("種類が４つ"), visible_numbers("共有4种"))
+
+        # evaluate_row tolerates space before 先生 and middle-dot U+30FB without kana warning
+        glossary = {"entries": {}, "kana_allowlist": []}
+        res = evaluate_row(
+            {"source": "{$P$}さん、ALL PERFECT・極！", "source_sha256": ""},
+            {"source": "{$P$}さん、ALL PERFECT・極！", "translation": "{$P$} 先生，ALL PERFECT・极！"},
+            glossary,
+        )
+        codes = {issue["code"] for issue in res["issues"]}
+        self.assertNotIn("player_honorific_convention_missing", codes)
+        self.assertNotIn("japanese_kana_residual", codes)
+
+
+class HardenedQualityAndLayoutRegressionTests(unittest.TestCase):
+    """Pin hardened TW/Shinjitai/idol/studio/markup gates, QA blocking, retry hints, and layout reflow."""
+
+    def test_validate_zhcn_surface_quality_blocks_hardened_regressions_and_allows_valid_contexts(self):
+        from pipelines.text.mltd_translation_quality import validate_zhcn_surface_quality
+
+        bad_cases = (
+            ("ありがとう", "感謝你"),
+            ("みんな全員集合", "大家全員集合"),
+            ("これにより", "藉着这次机会"),
+            ("劇中では", "於剧中登场"),
+            ("頑張ろう", "一起拚命吧"),
+            ("お姉ちゃん", "大姊"),
+            ("佐竹紗代子！", "高山紗代子！"),
+            ("徳川まつりです", "徳川茉莉"),
+            ("大神環です", "大神環"),
+            ("髙橋ミナミ", "髙橋未奈美"),
+            ("髙橋ミナミ", "高桥ミナミ"),
+            ("エミリー", "艾米丽"),
+            ("松田亜利沙", "亚里\n沙"),
+            ("徳川まつり", "小\n祭"),
+            ("馬場このみ", "这位\n这美小姐"),
+            ("福田のり子", "福田纪子"),
+            ("福田のり子", "诺\n莉子"),
+            ("島原エレナ", "岛原艾蕾\n娜"),
+            ("ジュリア", "朱莉亚"),
+            ("永吉昴", "永吉\n昂"),
+            ("望月杏奈", "望月安娜"),
+            ("木下ひなた", "木下雏田"),
+            ("桜守歌織", "樱守香织"),
+            ("北沢志保", "北泽诗穗"),
+            ("アオノリだよ", "阿奥\n诺里哦"),
+            ("ミラソニ", "蜜拉索尼"),
+            ("765プロのみんな", "765制\n作人的大家"),
+            ("961プロのアイドル", "961专业的偶像"),
+            ("よろしくね！\nなお", "请多关照哦！\n另外"),
+            ("テスト", "测试<color=#ff0000></color>"),
+            ("テスト", "测试、】【"),
+            ("テスト\\01\\", "测试\\01"),
+            ("テスト", "测试\\"),
+        )
+        for source, bad_zh in bad_cases:
+            with self.subTest(source=source, bad_zh=bad_zh), self.assertRaises(ValueError):
+                validate_zhcn_surface_quality(source, bad_zh)
+
+        good_cases = (
+            ("福田のり子とのり子さん", "福田法子与法子小姐"),
+            ("作中のノリコ", "作品中的诺莉可"),
+            ("ドクター・アンナ", "Dr. Anna"),
+            ("アンナ博士の実験", "安娜博士的实验"),
+            ("ジュリアンと呼ぶわ", "叫你朱利安吧"),
+            ("アオノリとミラソニ", "青海苔与米拉索尼"),
+            ("765プロと765プロデューサー", "765事务所与765制作人"),
+            ("よろしくね！\nなお", "请多关照哦！\n奈绪"),
+            ("このみかんとひなたぼっこ", "这个橘子与晒太阳"),
+            ("まつり湯へようこそ", "欢迎来到まつり汤"),
+            ("テスト\\01\\", "测试\\01\\"),
+        )
+        for source, good_zh in good_cases:
+            with self.subTest(source=source, good_zh=good_zh):
+                validate_zhcn_surface_quality(source, good_zh)
+
+    def test_blocking_qa_codes_and_targeted_retry_guidance(self):
+        from pipelines.text.translate_gtx_queue import BASIC_BLOCKING_QA_CODES
+        from pipelines.text.translate_mltd_api_pool import _build_qa_retry_feedback
+
+        for code in (
+            "unconverted_japanese_kanji",
+            "non_authoritative_studio_name",
+            "non_authoritative_nao_signature",
+            "malformed_markup",
+        ):
+            self.assertIn(code, BASIC_BLOCKING_QA_CODES)
+            feedback = _build_qa_retry_feedback(f"{code}: example")
+            self.assertIn(code, feedback)
+            self.assertIn("Re-translate SOURCE", feedback)
+
+        layout_feedback = _build_qa_retry_feedback("layout:token_honorific_split")
+        self.assertIn("token_honorific_split", layout_feedback)
+        self.assertIn("{$P$}先生", layout_feedback)
+        self.assertIn("mid-name/honorific splits", layout_feedback)
+
+    def test_scenario_text_layout_detects_token_honorific_split_and_keeps_names_together(self):
+        from pipelines.text import scenario_text_layout as layout
+
+        pol = layout.Policy(target=50, ceiling=54, lines=2, name_units=20)
+        self.assertIn("token_honorific_split", layout.lint("{$P$}\n先生，早安", pol))
+        self.assertIn("token_honorific_split", layout.lint("{$P$}先\n生，早安", pol))
+        self.assertIn("token_honorific_split", layout.lint("{$P$}制\n作人早安", pol))
+        self.assertEqual([], layout.lint("{$P$}先生，\n早安", pol))
+
+        # Tight width where naive midpoint would split 艾琳娜 across the line break
+        tight = layout.Policy(target=24, ceiling=28, lines=2, name_units=20)
+        wrapped = layout.reflow("请各位务必要多多支持艾琳娜与木实哦！", tight)
+        self.assertIn("艾琳娜", wrapped.replace("\r", ""))
+        for line in wrapped.splitlines():
+            self.assertFalse(line.endswith("艾") or line.endswith("艾琳"))
+            self.assertFalse(line.endswith("木"))
+
+        wrapped_honorific = layout.reflow("{$P$}先生今天也请多多指教哦！", tight)
+        self.assertIn("{$P$}先生", wrapped_honorific)
 
 
 if __name__ == "__main__":
