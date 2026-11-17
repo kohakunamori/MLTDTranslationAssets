@@ -18,33 +18,11 @@
     }
   },
   "locales": {
-    "accepted": 421950,
-    "accepted_with_kana_candidates": 3306,
-    "untranslated": 1009
+    "accepted": 422958,
+    "accepted_with_kana_candidates": 3311,
+    "untranslated": 1
   },
-  "repair_candidates": [
-    {
-      "file": "locales/master/official-1077720-untranslated.jsonl",
-      "line": 766,
-      "item_key": "event_0448_story_02_1012_toukatumaneja",
-      "source_sha256": "21ab5c55a73d1a5f44f7d8c2bc93044dab99dacb39925ad24d8e388169f61371",
-      "reason": "partial Japanese clause"
-    },
-    {
-      "file": "locales/story/event_0231_story_01_jp.gtx.jsonl",
-      "line": 18,
-      "item_key": "event_0231_story_01_1015_043nor",
-      "source_sha256": "2bf45e5962bccabeb155f5a68b91db90a2333155eaf640e4ffbbdff45cb5dd7e",
-      "reason": "partial Japanese clause"
-    },
-    {
-      "file": "locales/story/event_0435_story_02_jp.gtx.jsonl",
-      "line": 4,
-      "item_key": "event_0435_story_02_1001_esumitui",
-      "source_sha256": "edcb2867f8d15bf7530f7c797b1bec7735f44af5ed6b5d6de105ad78abf19ce1",
-      "reason": "partial Japanese clause"
-    }
-  ],
+  "repair_candidates": [],
   "images": {
     "mode": "coverage_detection_only",
     "generation_enabled": false,
