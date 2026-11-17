@@ -54,9 +54,16 @@ class ValidateLyricsTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             tool.validate_lyrics(self._root([broken]))
 
-    def test_pending_stage_must_identify_machine_translation(self):
+    def test_pending_stage_accepts_human_or_machine_and_refuses_untranslated(self):
+        human = row("scrobj_x.unity3d", 1, "あ", zh="甲", status="pending")
+        human["translation_stage"] = "human_translated"
+        llm = row("scrobj_x.unity3d", 2, "い", zh="乙", status="pending")
+        llm["translation_stage"] = "llm_translated"
+        counts = tool.validate_lyrics(self._root([human, llm]))
+        self.assertEqual(counts["pending"], 2)
+
         broken = row("scrobj_x.unity3d", 1, "あ", zh="甲", status="pending")
-        broken["translation_stage"] = "human_translated"
+        broken["translation_stage"] = "untranslated"
         with self.assertRaises(SystemExit):
             tool.validate_lyrics(self._root([broken]))
 
