@@ -8,8 +8,8 @@
     "character_name_min_majority_ratio": 0.8
   },
   "counts": {
-    "entries": 165,
-    "curated": 61,
+    "entries": 175,
+    "curated": 71,
     "evidence_backed_character_names": 26,
     "idol_names": 26,
     "owner_ruled_character_names": 3,
@@ -321,6 +321,56 @@
     "9thあにばーさりー": {
       "target": "9周年纪念",
       "category": "anniversary_phrase",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "真田湊": {
+      "target": "真田凑",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "笹森藍": {
+      "target": "笹森蓝",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "凛々加": {
+      "target": "凛凛加",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "凛音亞": {
+      "target": "凛音亚",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "慧深璃亞": {
+      "target": "慧深璃亚",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "逢路蘭": {
+      "target": "逢路兰",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "深淵海": {
+      "target": "深渊海",
+      "category": "character_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "大和撫子": {
+      "target": "大和抚子",
+      "category": "idiom",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "月兎隊": {
+      "target": "月兔队",
+      "category": "unit_name",
+      "evidence": "project_zhcn_style_rule"
+    },
+    "陰界戦戯": {
+      "target": "阴界战戏",
+      "category": "event_term",
       "evidence": "project_zhcn_style_rule"
     },
     "天海春香": {

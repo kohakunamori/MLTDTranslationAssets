@@ -252,6 +252,25 @@ for _ordinal, _number in {
         }
 
 
+for _source_term, (_target_term, _category) in {
+    "真田湊": ("真田凑", "character_name"),
+    "笹森藍": ("笹森蓝", "character_name"),
+    "凛々加": ("凛凛加", "character_name"),
+    "凛音亞": ("凛音亚", "character_name"),
+    "慧深璃亞": ("慧深璃亚", "character_name"),
+    "逢路蘭": ("逢路兰", "character_name"),
+    "深淵海": ("深渊海", "character_name"),
+    "大和撫子": ("大和抚子", "idiom"),
+    "月兎隊": ("月兔队", "unit_name"),
+    "陰界戦戯": ("阴界战戏", "event_term"),
+}.items():
+    CURATED[_source_term] = {
+        "target": _target_term,
+        "category": _category,
+        "evidence": "project_zhcn_style_rule",
+    }
+
+
 _OWNER_RULED_IDOL_NAMES = {
     # Owner ruling 2026-09-26.  Each row differs from the mechanical OpenCC t2s form
     # of the same official Traditional name, so the reason is recorded verbatim.

@@ -43,7 +43,7 @@ TRADITIONAL_CHAR_MAP_PATH = (
     REPO / "pipelines/text/configs/traditional-to-simplified-char-map.json"
 )
 FALLBACK_TRADITIONAL_OUTPUT_CHARS = set(
-    "妳製觀藝體這為會來說對沒裡還時學應與發萬張聲點門間從將讓見過麼麗實該閉腦現給難當國們歡聽獎續緊認謝種樣個開關頭書話寫讀轉選氣亞達場樂"
+    "妳製觀藝體這為會來說對沒裡還時學應與發萬張聲點門間從將讓見過麼麗實該閉腦現給難當國們歡聽獎續緊認謝種樣個開關頭書話寫讀轉選氣亞達場樂牠祂搧麽礡"
 )
 
 
@@ -394,6 +394,11 @@ _ZHS_FORBIDDEN_TERMS = (
     "於剧", "关於", "不同於",
     "姊姊", "大姊", "好姊妹", "三姊妹", "兩姊妹", "两姊妹",
     "迎春花蕾所見之夢", "追逐夢想", "{0}天日間",
+    "点选", "點選", "脚踏车", "腳踏車", "计程车", "計程車", "高丽菜", "高麗菜",
+    "义大利", "義大利", "霜淇淋", "原子笔", "原子筆", "麦克笔", "麥克筆",
+    "百汇", "百匯", "凤梨", "鳳梨", "起司",
+    "种稙", "你佷", "渡假", "直接了当", "磅礡",
+    "草苺", "战戯", "戦戯", "通販节目", "仕掛け人大人", "裏读み", "祂",
 )
 _ZHS_ALWAYS_FORBIDDEN_TW_TERMS = (
     "感謝祭", "感謝", "全員",
@@ -462,12 +467,29 @@ _TRADITIONAL_IDOL_NAME_TOKENS: tuple[tuple[str, str], ...] = (
     ("大神環", "大神环"),
     ("髙橋", "高桥"),
     ("髙桥", "高桥"),
+    ("二階堂", "二阶堂"),
+    ("宮尾", "宫尾"),
+    ("天空橋", "天空桥"),
+    ("伊織", "伊织"),
+    ("野々原", "野野原"),
+    ("菜緒", "菜绪"),
+    ("颯太", "飒太"),
+    ("凛音亞", "凛音亚"),
+    ("慧深璃亞", "慧深璃亚"),
+    ("逢路蘭", "逢路兰"),
+    ("深淵海", "深渊海"),
+    ("笹森藍", "笹森蓝"),
+    ("真田湊", "真田凑"),
+    ("凛々加", "凛凛加"),
+    ("神宮寺", "神宫寺"),
+    ("白石 䌷", "白石䌷"),
 )
 _UNTRANSLATED_JAPANESE_FRAGMENT_RE = re.compile(
     r"わたくし|ぜんぜん[ぁ-ゖ一-龯]|知ってるけど|分かってない|"
     r"故意に[一-龯]|憧れ[一-龯]|本当に[一-龯ぁ-ゖ]|"
     r"[一-龯ァ-ヺぁ-ゖ]{2,}(?:ましょうか|しませんか)|"
-    r"かしみや|ぴょーん|必ゅ|さ玛|っ斯"
+    r"かしみや|ぴょーん|必ゅ|さ玛|っ斯|"
+    r"（りりか）|裏読み|裏读み"
 )
 
 
@@ -527,6 +549,54 @@ def _surface_lexicon_issues(source: str, translation: str) -> list[tuple[str, st
             "non_authoritative_nao_signature",
             "Nao sign-off なお mistranslated as conjunction instead of 奈绪",
             "なお -> 奈绪",
+        ))
+    for bad_kanji, canonical_kanji in (
+        ("大和撫子", "大和抚子"),
+        ("陰界戦戯", "阴界战戏"),
+        ("六学窓", "六学窗"),
+        ("月兎", "月兔"),
+        ("詰将棋", "诘将棋"),
+    ):
+        if bad_kanji in compact:
+            found.append((
+                "non_mainland_forbidden_term",
+                f"unconverted Japanese kanji {bad_kanji!r} (use {canonical_kanji!r})",
+                f"{bad_kanji} -> {canonical_kanji}",
+            ))
+    if (
+        re.search(r"動画|ムービー|ビデオ", source)
+        and "映画" not in source
+        and "フィルム" not in source
+        and re.search(r"影片(?!场)", compact)
+    ):
+        found.append((
+            "non_mainland_forbidden_term",
+            "zh-TW lexicon '影片' for video (use '视频')",
+            "影片 -> 视频",
+        ))
+    if "うどん" in source and "乌龙面" in compact:
+        found.append((
+            "non_mainland_forbidden_term",
+            "zh-TW lexicon '乌龙面' for うどん (use '乌冬面')",
+            "乌龙面 -> 乌冬面",
+        ))
+    if re.search(r"プロジェクト|企画", source) and "专案" in compact:
+        found.append((
+            "non_mainland_forbidden_term",
+            "zh-TW lexicon '专案' for プロジェクト/企画 (use '企划')",
+            "专案 -> 企划",
+        ))
+    if "バス" in source and "公车" in compact:
+        found.append((
+            "non_mainland_forbidden_term",
+            "zh-TW lexicon '公车' for bus (use '公交车')",
+            "公车 -> 公交车",
+        ))
+    if "推し" in source and "推し" in re.sub(r'[《「『“"][^》」』”"]*[》」』”"]', "", compact):
+        found.append((
+            "untranslated_japanese_fragment",
+            "untranslated '推し' in zh-CN prose (use '自推'/'我推')",
+            "推し -> 自推",
         ))
     if "765プロ" in source and "765プロデューサー" not in source:
         for bad_pro in (

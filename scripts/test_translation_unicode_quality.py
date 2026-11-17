@@ -1184,6 +1184,32 @@ class HardenedQualityAndLayoutRegressionTests(unittest.TestCase):
             ("テスト", "测试、】【"),
             ("テスト\\01\\", "测试\\01"),
             ("テスト", "测试\\"),
+            # Wave-2 Mainland zh-CN lexical & unsimplified kanji/kana regressions
+            ("可愛い子だね", "很可爱的小动物，牠好乖"),
+            ("神様にお願い", "向祂祈祷吧"),
+            ("あおいでみよう", "帮忙搧风一下"),
+            ("何かあるのかな", "这是什麽呀"),
+            ("迫力のバトル", "气势磅礡的对决"),
+            ("タップしてね", "请点选这里"),
+            ("自転車で行こう", "骑脚踏车去吧"),
+            ("タクシーを呼ぶ", "叫计程车"),
+            ("動画を再生", "播放影片"),
+            ("うどんを食べる", "吃乌龙面"),
+            ("新プロジェクト", "新专案启动"),
+            ("パフェを食べたい", "想吃百汇"),
+            ("チーズケーキ", "起司蛋糕"),
+            ("バスが来ない", "公车还没来"),
+            ("二階堂さん", "二階堂小姐"),
+            ("宮尾美也です", "我是宮尾美也"),
+            ("天空橋さん", "天空橋小姐"),
+            ("水瀬伊織さん", "水濑伊織"),
+            ("野々原さん", "野々原小姐"),
+            ("真田湊です", "我是真田湊"),
+            ("笹森藍の舞台", "笹森藍的舞台"),
+            ("凛々加（りりか）です", "我是凛々加（りりか）"),
+            ("白石 紬", "白石 䌷"),
+            ("推しについて", "关于推し的事"),
+            ("仕掛け人さま", "谢谢仕掛け人大人"),
         )
         for source, bad_zh in bad_cases:
             with self.subTest(source=source, bad_zh=bad_zh), self.assertRaises(ValueError):
@@ -1201,6 +1227,10 @@ class HardenedQualityAndLayoutRegressionTests(unittest.TestCase):
             ("このみかんとひなたぼっこ", "这个橘子与晒太阳"),
             ("まつり湯へようこそ", "欢迎来到まつり汤"),
             ("テスト\\01\\", "测试\\01\\"),
+            # Wave-2 allowed Mainland & movie contexts
+            ("映画を観る", "看这部电影影片"),
+            ("映画の現場", "电影摄影片场"),
+            ("推しってほんと", "《推しってほんと》真不错"),
         )
         for source, good_zh in good_cases:
             with self.subTest(source=source, good_zh=good_zh):

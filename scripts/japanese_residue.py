@@ -37,6 +37,13 @@ def repair_reason(row: dict) -> str | None:
     unquoted = QUOTED_TEXT.sub("", zh)
     if source != zh and PARTIAL_CLAUSE.search(unquoted):
         return "partial Japanese clause"
+    unquoted_prose = re.sub(r"《[^》]*》", "", unquoted)
+    if (
+        ("推し" in source and "推し" in unquoted_prose)
+        or ("仕掛け人さま" in source and "仕掛け人" in unquoted_prose)
+        or ("漢字" not in source and any(m.group(0) in source for m in re.finditer(r"（[ぁ-ゖ]{2,}）", unquoted_prose)))
+    ):
+        return "partial Japanese clause"
     if source != zh and find_truncated_katakana_hybrid(source, unquoted):
         return "truncated katakana hybrid"
     for sentence in re.split(r"[\r\n。！？!?]", source):

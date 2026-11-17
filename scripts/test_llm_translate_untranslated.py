@@ -800,6 +800,38 @@ class ZhCnSurfaceAndResidueEnforcementTests(unittest.TestCase):
         }
         self.assertIsNone(repair_reason(display))
 
+        oshi_leak = {
+            "status": "accepted",
+            "item_key": "talk_5",
+            "ja": "推しの輝き！",
+            "zh": "推し的光辉！",
+        }
+        self.assertEqual(repair_reason(oshi_leak), "partial Japanese clause")
+
+        shikake_leak = {
+            "status": "accepted",
+            "item_key": "talk_6",
+            "ja": "仕掛け人さまにいただいた",
+            "zh": "仕掛け人大人送的",
+        }
+        self.assertEqual(repair_reason(shikake_leak), "partial Japanese clause")
+
+        furigana_leak = {
+            "status": "accepted",
+            "item_key": "talk_7",
+            "ja": "凛々加（りりか）です",
+            "zh": "我是凛凛加（りりか）",
+        }
+        self.assertEqual(repair_reason(furigana_leak), "partial Japanese clause")
+
+        quoted_oshi_song = {
+            "status": "accepted",
+            "item_key": "ld_mission_name_920613",
+            "ja": "イベント楽曲『推しってほんと』を1回成功させよう",
+            "zh": "成功完成1次活动歌曲《推しってほんと》吧",
+        }
+        self.assertIsNone(repair_reason(quoted_oshi_song))
+
     def test_apply_auto_reflows_overlong_scenario_lines(self):
         long_zh = "这是一段超过了单行二十七个全角字符宽度限制需要自动折行的剧情对白台词。"
         with tempfile.TemporaryDirectory() as tmp:
