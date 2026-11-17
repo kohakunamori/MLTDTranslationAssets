@@ -200,12 +200,15 @@ def collect(args: argparse.Namespace) -> int:
 
 def queue_rows(root: Path, scope: str):
     """Repair confirmed published defects before draining new source backlog."""
+    repairs = []
+    untranslated = []
     for candidate in rows(root, scope):
         if _row_repair_reason(candidate[2], candidate[3]):
-            yield candidate
-    for candidate in rows(root, scope):
-        if candidate[2].get("status") == "untranslated":
-            yield candidate
+            repairs.append(candidate)
+        elif candidate[2].get("status") == "untranslated":
+            untranslated.append(candidate)
+    yield from repairs
+    yield from untranslated
 
 
 def apply(args: argparse.Namespace) -> int:

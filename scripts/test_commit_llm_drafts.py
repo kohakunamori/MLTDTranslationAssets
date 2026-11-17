@@ -113,6 +113,35 @@ class TranslationCommitTests(unittest.TestCase):
                         apply_run.index("python scripts/commit_llm_drafts.py"),
                         "the rows must validate before they are committed")
 
+    def test_ignores_coverage_when_only_generated_source_commit_changed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _repository(tmp)
+            cov = root / "manifests" / "localization-coverage.json"
+            cov.write_text(json.dumps({
+                "locales": {"accepted": 1},
+                "images": {"generated_source_commit": "1" * 40, "families": {}},
+            }), encoding="utf-8")
+            _git(root, "add", "manifests/localization-coverage.json")
+            _git(root, "commit", "-m", "add coverage")
+            _git(root, "push", "origin", "HEAD:main")
+            before_logs = _git(root, "log", "--oneline").stdout.count("\n")
+
+            cov.write_text(json.dumps({
+                "locales": {"accepted": 2},
+                "images": {"generated_source_commit": "2" * 40, "families": {}},
+            }), encoding="utf-8")
+            committer._restore_coverage_if_source_commit_only(root)
+            self.assertIn('"accepted": 2', cov.read_text(encoding="utf-8"))
+
+            cov.write_text(json.dumps({
+                "locales": {"accepted": 1},
+                "images": {"generated_source_commit": "2" * 40, "families": {}},
+            }), encoding="utf-8")
+            self.assertEqual(committer.publish(root), 0)
+            self.assertEqual(_git(root, "log", "--oneline").stdout.count("\n"), before_logs)
+            restored = json.loads(cov.read_text(encoding="utf-8"))
+            self.assertEqual(restored["images"]["generated_source_commit"], "1" * 40)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -321,7 +321,7 @@ def introduced_blocked_script_codepoints(source: str, translation: str) -> list[
     seen: set[int] = set()
     for char in script_scan_text(translation):
         code = ord(char)
-        if char in source_chars or code in seen:
+        if code < 128 or 0x3040 <= code <= 0x30FF or 0x4E00 <= code <= 0x9FFF or char in source_chars or code in seen:
             continue
         name = unicodedata.name(char, "")
         for script in INTRODUCED_BLOCKED_SCRIPTS:
@@ -352,7 +352,8 @@ def introduced_invisible_format_codepoints(source: str, translation: str) -> lis
 def _introduced_unsupported_unicode_detail(source: str, translation: str) -> str:
     """Describe unsupported non-BMP/unassigned/format/blocked-script chars introduced vs SOURCE."""
     unsupported = sorted({ord(char) for char in translation
-                          if char not in source
+                          if not (ord(char) < 128 or 0x3040 <= ord(char) <= 0x30FF or 0x4E00 <= ord(char) <= 0x9FFF)
+                          and char not in source
                           and (unicodedata.category(char) in {"Cn", "Cs", "Co"}
                                or ord(char) >= 0x20000)})
     unsupported_format = introduced_invisible_format_codepoints(source, translation)
@@ -376,7 +377,9 @@ def _introduced_unsupported_unicode_detail(source: str, translation: str) -> str
 
 
 def _introduced_cyrillic_codepoints(source: str, translation: str) -> list[int]:
-    return sorted({ord(char) for char in translation if char not in source
+    return sorted({ord(char) for char in translation
+                   if not (ord(char) < 0x0400 or 0x3000 <= ord(char) <= 0x9FFF or 0xFF00 <= ord(char) <= 0xFFEF)
+                   and char not in source
                    and unicodedata.category(char).startswith("L")
                    and unicodedata.name(char, "").startswith("CYRILLIC")})
 

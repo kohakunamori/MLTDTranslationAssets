@@ -39,6 +39,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -89,12 +92,7 @@ jobs:
 
       - name: Run repository validation
         run: |
-          python scripts/validate_repo.py --layout-report "$RUNNER_TEMP/scenario-layout-report.json" --layout-exceptions manifests/scenario-layout-exceptions.json
-          python scripts/scenario_text_layout.py --category event-unit --strict
-          python scripts/scenario_text_layout.py --category birth --strict
-          python scripts/scenario_text_layout.py --category card --exceptions manifests/scenario-layout-exceptions.json --strict
-          python scripts/scenario_text_layout.py --category story --exceptions manifests/scenario-layout-exceptions.json --strict
-          python scripts/scenario_text_layout.py --category dialogue --exceptions manifests/scenario-layout-exceptions.json --strict
+          python scripts/validate_repo.py --layout-report "$RUNNER_TEMP/scenario-layout-report.json" --layout-exceptions manifests/scenario-layout-exceptions.json --layout-strict
           # This evidence check reads locales/, which the regression job omits.
           python -m unittest scripts.test_given_name_hint_authority
 

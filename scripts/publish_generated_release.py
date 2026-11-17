@@ -19,7 +19,7 @@ from pathlib import Path
 from should_build_release import DERIVED_OUTPUTS, RELEASE_INPUT_FILES, RELEASE_INPUT_TREES
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_PATHS = ("generated", "locales", "manifests/portal-resource-manifest.json")
+OUTPUT_PATHS = ("generated", "locales", "lyrics", "manifests/portal-resource-manifest.json")
 INPUT_PATHS = RELEASE_INPUT_TREES + RELEASE_INPUT_FILES + tuple(
     f":(exclude){path}" for path in DERIVED_OUTPUTS
 )
@@ -68,15 +68,18 @@ def publish(root: Path = ROOT, *, force: bool = False, attempts: int = 3) -> dic
         raise RuntimeError("Refusing to publish with pre-existing staged changes")
     # Enumerate metadata explicitly. Negative pathspecs naming ignored payload
     # directories make git add fail on a real restored R2 checkout.
-    output_paths = OUTPUT_PATHS
+    output_paths = tuple(p for p in OUTPUT_PATHS if p != "lyrics" or (root / p).exists())
     if (root / 'generated/r2-storage.json').exists():
         metadata = {path for path in git(root, 'ls-files', '--', 'generated').stdout.splitlines()
                     if re.fullmatch(r'generated/[0-9]+/(manifest\.json|checksums\.txt)', path)}
         metadata.update(path.relative_to(root).as_posix()
                         for name in ('manifest.json', 'checksums.txt')
                         for path in (root / 'generated').glob('*/' + name) if path.parent.name.isdigit())
-        output_paths = (*sorted(metadata), 'generated/r2-storage.json',
-                        'locales', 'manifests/portal-resource-manifest.json')
+        output_paths = (
+            *sorted(metadata), 'generated/r2-storage.json', 'locales',
+            *(('lyrics',) if (root / 'lyrics').exists() else ()),
+            'manifests/portal-resource-manifest.json',
+        )
     # Use an isolated index: the caller's checkout and index are never rewritten,
     # and unrelated local edits/untracked files cannot enter the release commit.
     with tempfile.TemporaryDirectory(prefix="assets-publish-") as directory:

@@ -161,8 +161,8 @@ def validate_locales(root: Path) -> dict[str, int]:
                         if status == "untranslated" and stage != "untranslated":
                             print(f"ERROR: {jf}:{line_idx} untranslated row must have translation_stage=untranslated", file=sys.stderr)
                             sys.exit(1)
-                        if status == "pending" and stage != "llm_translated":
-                            print(f"ERROR: {jf}:{line_idx} pending row must have translation_stage=llm_translated", file=sys.stderr)
+                        if status == "pending" and stage not in ("llm_translated", "human_translated"):
+                            print(f"ERROR: {jf}:{line_idx} pending row must have translation_stage in ['human_translated', 'llm_translated']", file=sys.stderr)
                             sys.exit(1)
                         # An accepted row must declare where the text came from.
                         # Machine output is admitted but never relabelled as
@@ -275,8 +275,8 @@ def validate_lyrics(root: Path) -> dict[str, int]:
                     if status == "untranslated" and stage != "untranslated":
                         print(f"ERROR: {path}:{line_no} untranslated row must have translation_stage=untranslated", file=sys.stderr)
                         sys.exit(1)
-                    if status == "pending" and stage != "llm_translated":
-                        print(f"ERROR: {path}:{line_no} pending row must have translation_stage=llm_translated", file=sys.stderr)
+                    if status == "pending" and stage not in ("llm_translated", "human_translated"):
+                        print(f"ERROR: {path}:{line_no} pending row must have translation_stage in ['human_translated', 'llm_translated']", file=sys.stderr)
                         sys.exit(1)
                     if status == "accepted" and stage not in ACCEPTED_STAGES:
                         print(

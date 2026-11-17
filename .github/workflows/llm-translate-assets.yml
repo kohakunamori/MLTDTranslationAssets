@@ -53,6 +53,7 @@ concurrency:
 env:
   PYTHONUNBUFFERED: '1'
   PYTHONPATH: ${{ github.workspace }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   prepare:
@@ -70,6 +71,12 @@ jobs:
         with:
           ref: ${{ inputs.source_commit }}
           fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/images/
+            !/image-overlay/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -83,9 +90,14 @@ jobs:
             --github-output "$GITHUB_OUTPUT" --report .localization-features.json
           echo 'Image generation is independent of publication of existing image translations.'
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - name: Install translation dependencies
         shell: bash
-        run: python -m pip install --disable-pip-version-check httpx msgpack UnityPy Pillow pycryptodome
+        run: uv pip install --system httpx msgpack UnityPy Pillow pycryptodome
 
       - name: Detect latest official asset version
         env:
@@ -256,9 +268,14 @@ jobs:
             --github-output "$GITHUB_OUTPUT" --report .localization-features.json
           echo 'Image generation is independent of publication of existing image translations.'
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - name: Install translation dependencies
         shell: bash
-        run: python -m pip install --disable-pip-version-check httpx msgpack UnityPy Pillow pycryptodome
+        run: uv pip install --system httpx msgpack UnityPy Pillow pycryptodome
 
       - name: Materialize provider configuration from secrets
         shell: bash
@@ -489,7 +506,11 @@ jobs:
           python scripts/llm_translate_untranslated.py publish --scope lyrics | tee .llm-publish-lyrics.json
           # Promotion turns on the accepted-row protected-token gate, so the
           # repository must be revalidated between promotion and the commit.
-          python scripts/validate_repo.py --layout-exceptions manifests/scenario-layout-exceptions.json --layout-strict
+          if [ -n "$(git status --porcelain -- locales lyrics manifests/asset-version.json manifests/official-bundle-index.json)" ]; then
+            python scripts/validate_repo.py --layout-exceptions manifests/scenario-layout-exceptions.json --layout-strict
+          else
+            echo 'No locale, lyric, or source manifest changes to revalidate.'
+          fi
 
       - name: Refresh translation backlog report
         id: backlog

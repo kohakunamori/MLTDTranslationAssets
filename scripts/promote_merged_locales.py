@@ -28,6 +28,7 @@ from typing import Any
 # Promotion and validation share one token contract without importing a CLI
 # module (which would also pull in the full repository validator).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipelines.text.mltd_lyric_rules import validate_lyric_tokens  # noqa: E402
 from pipelines.text.translation_tokens import validate_translation_tokens  # noqa: E402
 
 
@@ -78,11 +79,15 @@ def parse_rows(text: str, label: str) -> dict[tuple[str, str, str], dict[str, An
 
 
 def changed_locale_files(root: Path, before: str, after: str) -> list[str]:
-    output = git("diff", "--name-only", "--diff-filter=AM", before, after, "--", "locales", cwd=root)
+    output = git("diff", "--name-only", "--diff-filter=AM", before, after, "--", "locales", "lyrics", cwd=root)
     return sorted(
         path.strip()
         for path in output.splitlines()
-        if path.strip().startswith("locales/") and path.strip().endswith(".jsonl")
+        if (
+            path.strip().startswith("locales/")
+            or path.strip().startswith("lyrics/songs/")
+        )
+        and path.strip().endswith(".jsonl")
     )
 
 
@@ -101,7 +106,7 @@ def _promotable(row: dict[str, Any], *, allow_machine: bool) -> bool:
     return True
 
 
-def _tokens_agree(row: dict[str, Any]) -> bool:
+def _tokens_agree(row: dict[str, Any], *, is_lyric: bool = False) -> bool:
     """Whether `validate_repo.py` would accept this row's translation.
 
     Promotion is publication: a row whose translation drops a protected token
@@ -109,7 +114,10 @@ def _tokens_agree(row: dict[str, Any]) -> bool:
     stay pending for a human instead of being swept into the build.
     """
     try:
-        validate_translation_tokens(str(row.get("ja", "")), str(row.get("zh", "")))
+        if is_lyric:
+            validate_lyric_tokens(str(row.get("ja", "")), str(row.get("zh", "")))
+        else:
+            validate_translation_tokens(str(row.get("ja", "")), str(row.get("zh", "")))
     except ValueError:
         return False
     return True
@@ -176,7 +184,8 @@ def promote_file(
             continue
         if not _promotable(row, allow_machine=allow_machine):
             continue
-        if not _tokens_agree(row):
+        is_lyric = relative.startswith("lyrics/")
+        if not _tokens_agree(row, is_lyric=is_lyric):
             skipped_tokens += 1
             continue
         declared = str(row.get("source_sha256", "")).lower()
@@ -227,7 +236,7 @@ def sweep(
     """
     files = sorted(
         path.relative_to(root).as_posix()
-        for path in (root / "locales").rglob("*.jsonl")
+        for path in [*((root / "locales").rglob("*.jsonl")), *((root / "lyrics" / "songs").glob("*.jsonl"))]
         if path.is_file()
     )
     results = {
@@ -238,7 +247,8 @@ def sweep(
     }
     machine_pending = token_pending = 0
     for relative in files:
-        for line in (root / relative).read_text(encoding="utf-8").splitlines():
+        is_lyric = relative.startswith("lyrics/")
+        for line in (root / relative).read_text(encoding="utf-8").split("\n"):
             if not line.strip():
                 continue
             row = json.loads(line)
@@ -248,7 +258,7 @@ def sweep(
                 continue
             if not _promotable(row, allow_machine=allow_machine):
                 machine_pending += 1
-            elif not _tokens_agree(row):
+            elif not _tokens_agree(row, is_lyric=is_lyric):
                 token_pending += 1
     return {
         "files": [path for path, (count, _) in results.items() if count],

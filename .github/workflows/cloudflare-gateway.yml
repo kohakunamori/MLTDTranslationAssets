@@ -6,6 +6,9 @@ name: Reusable - deploy and verify R2 gateway
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 concurrency:
   group: cloudflare-gateway
   cancel-in-progress: false

@@ -94,11 +94,32 @@ def commit_messages(root: Path = ROOT) -> tuple[str, str | None]:
     return f"ci(assets): apply LLM translations for asset {version}", None
 
 
+def _restore_coverage_if_source_commit_only(root: Path) -> None:
+    cov_rel = "manifests/localization-coverage.json"
+    cov_path = root / cov_rel
+    if not cov_path.is_file():
+        return
+    head_blob = _git(root, "show", f"HEAD:{cov_rel}")
+    if head_blob.returncode != 0:
+        return
+    try:
+        before = json.loads(head_blob.stdout)
+        after = json.loads(cov_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    for doc in (before, after):
+        if isinstance(doc, dict) and isinstance(doc.get("images"), dict):
+            doc["images"].pop("generated_source_commit", None)
+    if before == after:
+        _git(root, "checkout", "--", cov_rel)
+
+
 def publish(root: Path = ROOT, *, dry_run: bool = False) -> int:
     paths = stage_paths(root)
     if not paths:
         print("No translation paths exist; nothing to publish.")
         return 0
+    _restore_coverage_if_source_commit_only(root)
     status = _git(root, "status", "--porcelain", "--", *paths)
     if not status.stdout.strip():
         print("No changes to publish.")

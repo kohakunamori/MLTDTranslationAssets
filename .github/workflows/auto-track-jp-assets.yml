@@ -65,6 +65,9 @@ permissions:
   actions: write
   issues: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 concurrency:
   # Reusable stage writers have their own independent locks.
   group: assets-production-${{ github.event_name == 'push' && 'release' || inputs.stage || 'watch' }}

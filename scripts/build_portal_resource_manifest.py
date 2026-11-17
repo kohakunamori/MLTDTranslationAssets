@@ -77,13 +77,14 @@ def category_id(bundle: str, item_key: str = "") -> str:
 
 
 def git_commit(root: Path) -> str | None:
-    value = os.environ.get("GITHUB_SHA", "").strip()
-    if value:
-        return value
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+        if commit:
+            return commit
     except (OSError, subprocess.CalledProcessError):
-        return None
+        pass
+    value = os.environ.get("GITHUB_SHA", "").strip()
+    return value or None
 
 
 def status_bucket(row: dict) -> str:
@@ -143,13 +144,14 @@ def main() -> int:
 
     generated = json.loads(generated_path.read_text(encoding="utf-8"))
     generated_hash = sha256_file(generated_path)
+    commit = git_commit(root)
     release = {
         "asset_version": asset_version,
         "release_id": f"assets-{asset_version}",
         "server_schema_version": "v1",
         "status": "published",
         "source_manifest_sha256": generated_hash,
-        "assets_commit": git_commit(root),
+        "assets_commit": commit,
         "updated_at": asset_doc.get("remote_updated_at") or asset_doc.get("last_synced_at"),
     }
     output = {
@@ -164,7 +166,7 @@ def main() -> int:
         "source": {
             "summary": "github-assets-repository",
             "repository": "kohakunamori/MLTDTranslationAssets",
-            "commit": git_commit(root),
+            "commit": commit,
             "source_catalogue_sha256": source_hash.hexdigest(),
             "generated_manifest_sha256": generated_hash,
             "generated_entry_count": int(generated.get("entry_count") or len(generated.get("entries") or [])),

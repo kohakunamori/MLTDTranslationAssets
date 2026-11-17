@@ -202,6 +202,115 @@ class SweepTests(unittest.TestCase):
             self.assertEqual(rows["draft"]["status"], "accepted")
             self.assertEqual(rows["draft"]["translation_stage"], "human_translated")
 
+    def test_pending_human_translated_rows_validate_in_locales_and_lyrics(self):
+        import validate_repo
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for cat in validate_repo.CATEGORIES:
+                (root / "locales" / cat).mkdir(parents=True, exist_ok=True)
+            (root / "lyrics" / "songs").mkdir(parents=True)
+            (root / "manifests").mkdir(parents=True)
+            loc_source = "日文台词"
+            lyric_source = "<size=24>歌うよ</size>"
+            loc_row = {
+                "asset_version": "1077500",
+                "client_version": None,
+                "source_client_version": "9.0.200",
+                "bundle": "story.gtx",
+                "item_key": "line1",
+                "source_sha256": hashlib.sha256(loc_source.encode()).hexdigest(),
+                "ja": loc_source,
+                "zh": "中文台词",
+                "status": "pending",
+                "translation_stage": "human_translated",
+                "updated_at": "2026-09-30T00:00:00Z",
+            }
+            lyric_row = {
+                "bundle": "sample",
+                "index": 0,
+                "tick": 100,
+                "abs_time": 1.0,
+                "source_sha256": hashlib.sha256(lyric_source.encode()).hexdigest(),
+                "ja": lyric_source,
+                "zh": "<size=24>唱起来</size>",
+                "status": "pending",
+                "translation_stage": "human_translated",
+                "updated_at": "2026-09-30T00:00:00Z",
+            }
+            (root / "locales" / "story" / "story.jsonl").write_text(
+                json.dumps(loc_row, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+            (root / "lyrics" / "songs" / "sample.jsonl").write_text(
+                json.dumps(lyric_row, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+            self.assertEqual(validate_repo.validate_locales(root)["pending"], 1)
+            self.assertEqual(validate_repo.validate_lyrics(root)["pending"], 1)
+
+    def test_sweep_promotes_lyrics_rows_with_human_and_machine_gates(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            lyrics_path = root / "lyrics" / "songs" / "song01.jsonl"
+            lyrics_path.parent.mkdir(parents=True)
+            ok_src = "<size=20>星が光る</size>"
+            bad_src = "<size=20>月が出る</size>"
+            draft_src = "空を飛ぶ"
+            rows = [
+                {
+                    "bundle": "song01",
+                    "index": 0,
+                    "tick": 10,
+                    "abs_time": 0.5,
+                    "source_sha256": hashlib.sha256(ok_src.encode()).hexdigest(),
+                    "ja": ok_src,
+                    "zh": "<size=20>繁星闪耀</size>",
+                    "status": "pending",
+                    "translation_stage": "human_translated",
+                    "updated_at": "2026-09-30T00:00:00Z",
+                },
+                {
+                    "bundle": "song01",
+                    "index": 1,
+                    "tick": 20,
+                    "abs_time": 1.0,
+                    "source_sha256": hashlib.sha256(bad_src.encode()).hexdigest(),
+                    "ja": bad_src,
+                    "zh": "月亮升起",
+                    "status": "pending",
+                    "translation_stage": "human_translated",
+                    "updated_at": "2026-09-30T00:00:00Z",
+                },
+                {
+                    "bundle": "song01",
+                    "index": 2,
+                    "tick": 30,
+                    "abs_time": 1.5,
+                    "source_sha256": hashlib.sha256(draft_src.encode()).hexdigest(),
+                    "ja": draft_src,
+                    "zh": "翱翔天空",
+                    "status": "pending",
+                    "translation_stage": "llm_translated",
+                    "updated_at": "2026-09-30T00:00:00Z",
+                },
+            ]
+            lyrics_path.write_text(
+                "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
+                encoding="utf-8",
+            )
+            result = promote.sweep(root)
+            self.assertEqual(result["promoted"], 1)
+            self.assertEqual(result["protected_token_mismatch_left_pending"], 1)
+            self.assertEqual(result["machine_drafts_left_pending"], 1)
+            stored = [json.loads(line) for line in lyrics_path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(stored[0]["status"], "accepted")
+            self.assertEqual(stored[1]["status"], "pending")
+            self.assertEqual(stored[2]["status"], "pending")
+
+            result_all = promote.sweep(root, allow_machine=True)
+            self.assertEqual(result_all["promoted"], 1)
+            stored2 = [json.loads(line) for line in lyrics_path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(stored2[2]["status"], "accepted")
+
 
 if __name__ == "__main__":
     unittest.main()
