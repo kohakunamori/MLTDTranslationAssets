@@ -10527,6 +10527,12 @@
           "translated": 20,
           "untranslated": 0
         },
+        "card_blst_008tak0674_jp.gtx": {
+          "pending": 0,
+          "total": 24,
+          "translated": 24,
+          "untranslated": 0
+        },
         "card_blst_009rit0064_jp.gtx": {
           "pending": 0,
           "total": 23,
@@ -10834,6 +10840,12 @@
           "untranslated": 0
         },
         "card_blst_012mam0544_jp.gtx": {
+          "pending": 0,
+          "total": 22,
+          "translated": 22,
+          "untranslated": 0
+        },
+        "card_blst_012mam0594_jp.gtx": {
           "pending": 0,
           "total": 22,
           "translated": 22,
@@ -14245,8 +14257,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 15711,
-      "translated": 15711,
+      "total": 15757,
+      "translated": 15757,
       "unit": "句",
       "untranslated": 0
     },
@@ -16299,6 +16311,12 @@
           "translated": 16,
           "untranslated": 0
         },
+        "card_episode_008tak0674_jp.gtx": {
+          "pending": 0,
+          "total": 24,
+          "translated": 24,
+          "untranslated": 0
+        },
         "card_episode_009rit0011_jp.gtx": {
           "pending": 0,
           "total": 6,
@@ -17245,6 +17263,12 @@
           "pending": 0,
           "total": 19,
           "translated": 19,
+          "untranslated": 0
+        },
+        "card_episode_012mam0594_jp.gtx": {
+          "pending": 0,
+          "total": 25,
+          "translated": 25,
           "untranslated": 0
         },
         "card_episode_013hib0011_jp.gtx": {
@@ -21201,6 +21225,12 @@
           "translated": 21,
           "untranslated": 0
         },
+        "card_episode_026yur0762_jp.gtx": {
+          "pending": 0,
+          "total": 9,
+          "translated": 9,
+          "untranslated": 0
+        },
         "card_episode_027say0011_jp.gtx": {
           "pending": 0,
           "total": 5,
@@ -23697,6 +23727,12 @@
           "translated": 24,
           "untranslated": 0
         },
+        "card_episode_035hin0643_jp.gtx": {
+          "pending": 0,
+          "total": 18,
+          "translated": 18,
+          "untranslated": 0
+        },
         "card_episode_036kan0011_jp.gtx": {
           "pending": 0,
           "total": 6,
@@ -24235,6 +24271,12 @@
           "pending": 0,
           "total": 21,
           "translated": 21,
+          "untranslated": 0
+        },
+        "card_episode_037nao0673_jp.gtx": {
+          "pending": 0,
+          "total": 18,
+          "translated": 18,
           "untranslated": 0
         },
         "card_episode_038chz0011_jp.gtx": {
@@ -27177,6 +27219,12 @@
           "translated": 19,
           "untranslated": 0
         },
+        "card_episode_048rei0693_jp.gtx": {
+          "pending": 0,
+          "total": 20,
+          "translated": 20,
+          "untranslated": 0
+        },
         "card_episode_049mom0011_jp.gtx": {
           "pending": 0,
           "total": 7,
@@ -27741,6 +27789,12 @@
           "translated": 20,
           "untranslated": 0
         },
+        "card_episode_050jul0693_jp.gtx": {
+          "pending": 0,
+          "total": 34,
+          "translated": 34,
+          "untranslated": 0
+        },
         "card_episode_051tmg0011_jp.gtx": {
           "pending": 0,
           "total": 10,
@@ -28255,8 +28309,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 43713,
-      "translated": 43713,
+      "total": 43861,
+      "translated": 43861,
       "unit": "句",
       "untranslated": 0
     },
@@ -28265,8 +28319,8 @@
       "bundles": {
         "CD_jp.gtx": {
           "pending": 0,
-          "total": 25631,
-          "translated": 25631,
+          "total": 25691,
+          "translated": 25691,
           "untranslated": 0
         }
       },
@@ -28279,8 +28333,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 25631,
-      "translated": 25631,
+      "total": 25691,
+      "translated": 25691,
       "unit": "句",
       "untranslated": 0
     },
@@ -29462,6 +29516,12 @@
           "total": 4,
           "translated": 4,
           "untranslated": 0
+        },
+        "event_0456_story_chat_jp.gtx": {
+          "pending": 0,
+          "total": 4,
+          "translated": 4,
+          "untranslated": 0
         }
       },
       "description": "制作人与偶像活动手机联络",
@@ -29473,8 +29533,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 853,
-      "translated": 853,
+      "total": 857,
+      "translated": 857,
       "unit": "句",
       "untranslated": 0
     },
@@ -41139,6 +41199,54 @@
           "translated": 33,
           "untranslated": 0
         },
+        "event_0456_story_01_jp.gtx": {
+          "pending": 0,
+          "total": 42,
+          "translated": 42,
+          "untranslated": 0
+        },
+        "event_0456_story_02_jp.gtx": {
+          "pending": 0,
+          "total": 42,
+          "translated": 42,
+          "untranslated": 0
+        },
+        "event_0456_story_03_jp.gtx": {
+          "pending": 0,
+          "total": 46,
+          "translated": 46,
+          "untranslated": 0
+        },
+        "event_0456_story_04_jp.gtx": {
+          "pending": 0,
+          "total": 63,
+          "translated": 63,
+          "untranslated": 0
+        },
+        "event_0456_story_05_jp.gtx": {
+          "pending": 0,
+          "total": 58,
+          "translated": 58,
+          "untranslated": 0
+        },
+        "event_0456_story_06_jp.gtx": {
+          "pending": 0,
+          "total": 45,
+          "translated": 45,
+          "untranslated": 0
+        },
+        "event_0456_story_07_jp.gtx": {
+          "pending": 0,
+          "total": 28,
+          "translated": 28,
+          "untranslated": 0
+        },
+        "event_0456_story_intro_jp.gtx": {
+          "pending": 0,
+          "total": 38,
+          "translated": 38,
+          "untranslated": 0
+        },
         "event_unit_talk_1000.unity3d": {
           "pending": 0,
           "total": 18,
@@ -49237,8 +49345,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 96555,
-      "translated": 96555,
+      "total": 96917,
+      "translated": 96917,
       "unit": "句",
       "untranslated": 0
     },
@@ -49665,6 +49773,12 @@
           "translated": 1,
           "untranslated": 0
         },
+        "liveresult_008tak_004_1000_jp.gtx": {
+          "pending": 0,
+          "total": 1,
+          "translated": 1,
+          "untranslated": 0
+        },
         "liveresult_009rit_001_1000_jp.gtx": {
           "pending": 0,
           "total": 1,
@@ -49864,6 +49978,12 @@
           "untranslated": 0
         },
         "liveresult_012mam_003_3000_jp.gtx": {
+          "pending": 0,
+          "total": 1,
+          "translated": 1,
+          "untranslated": 0
+        },
+        "liveresult_012mam_004_1000_jp.gtx": {
           "pending": 0,
           "total": 1,
           "translated": 1,
@@ -52117,8 +52237,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 477,
-      "translated": 477,
+      "total": 479,
+      "translated": 479,
       "unit": "句",
       "untranslated": 0
     },
@@ -53003,8 +53123,8 @@
       "bundles": {
         "ST_jp.gtx": {
           "pending": 0,
-          "total": 2212,
-          "translated": 2212,
+          "total": 2219,
+          "translated": 2219,
           "untranslated": 0
         }
       },
@@ -53017,8 +53137,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 2212,
-      "translated": 2212,
+      "total": 2219,
+      "translated": 2219,
       "unit": "句",
       "untranslated": 0
     },
@@ -53027,9 +53147,9 @@
       "bundles": {
         "MB_jp.gtx": {
           "pending": 0,
-          "total": 10158,
-          "translated": 10158,
-          "untranslated": 0
+          "total": 10192,
+          "translated": 10191,
+          "untranslated": 1
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -53041,10 +53161,10 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 10158,
-      "translated": 10158,
+      "total": 10192,
+      "translated": 10191,
       "unit": "句",
-      "untranslated": 0
+      "untranslated": 1
     },
     {
       "blocked": 0,
@@ -54701,8 +54821,8 @@
         },
         "MD_jp.gtx": {
           "pending": 0,
-          "total": 118491,
-          "translated": 118491,
+          "total": 118810,
+          "translated": 118810,
           "untranslated": 0
         },
         "guest_001_after_202xxx_jp.gtx": {
@@ -77629,8 +77749,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 186675,
-      "translated": 186675,
+      "total": 186994,
+      "translated": 186994,
       "unit": "句",
       "untranslated": 0
     },
@@ -77639,8 +77759,8 @@
       "bundles": {
         "CM_jp.gtx": {
           "pending": 0,
-          "total": 26701,
-          "translated": 26701,
+          "total": 26728,
+          "translated": 26728,
           "untranslated": 0
         }
       },
@@ -77653,8 +77773,8 @@
       "pending": 0,
       "reused": 0,
       "suggested": 0,
-      "total": 26701,
-      "translated": 26701,
+      "total": 26728,
+      "translated": 26728,
       "unit": "句",
       "untranslated": 0
     }
@@ -77670,50 +77790,50 @@
     {
       "id": "card",
       "pending": 0,
-      "total": 85055,
-      "translated": 85055,
+      "total": 85309,
+      "translated": 85309,
       "untranslated": 0
     },
     {
       "id": "dialogue",
       "pending": 0,
-      "total": 37878,
-      "translated": 37878,
-      "untranslated": 0
+      "total": 37941,
+      "translated": 37940,
+      "untranslated": 1
     },
     {
       "id": "story",
       "pending": 0,
-      "total": 105537,
-      "translated": 105537,
+      "total": 105910,
+      "translated": 105910,
       "untranslated": 0
     },
     {
       "id": "system",
       "pending": 0,
-      "total": 186675,
-      "translated": 186675,
+      "total": 186994,
+      "translated": 186994,
       "untranslated": 0
     }
   ],
-  "generated_at": "2026-11-13T04:01:58.651707+00:00",
+  "generated_at": "2026-11-17T17:17:32.212926+00:00",
   "kind": "assets",
   "release": {
-    "asset_version": "1078815",
-    "assets_commit": "4d0f349f3f1cada0a1cc4dc4a9b0cd1402ea2809",
-    "release_id": "assets-1078815",
+    "asset_version": "1079000",
+    "assets_commit": "c680ada09e8729c4f12aec0b500088d856646b67",
+    "release_id": "assets-1079000",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "6d540374048767c25a3d4635ffa21441acb6ae428c0773c8d954535e9e30a325",
+    "source_manifest_sha256": "908e3a339e157f7d058b6c08c25b53c273e9a2876693a63ac60abd3457542d1b",
     "status": "published",
-    "updated_at": "2026-11-13T13:00:02+09:00"
+    "updated_at": "2026-11-17T15:00:01+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "4d0f349f3f1cada0a1cc4dc4a9b0cd1402ea2809",
-    "generated_entry_count": 13632,
-    "generated_manifest_sha256": "6d540374048767c25a3d4635ffa21441acb6ae428c0773c8d954535e9e30a325",
+    "commit": "c680ada09e8729c4f12aec0b500088d856646b67",
+    "generated_entry_count": 13653,
+    "generated_manifest_sha256": "908e3a339e157f7d058b6c08c25b53c273e9a2876693a63ac60abd3457542d1b",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "c00bc5b958510b06f7a25427e007ad838ec708c3b62c211180a5fd6190d408f6",
+    "source_catalogue_sha256": "1127ffe4391bd6905dc6e5bc82cc7ab59e45254bbb7bbf2949b8bfe69c81ca8a",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77722,8 +77842,8 @@
     "pending": 0,
     "reused": 0,
     "suggested": 0,
-    "total": 421950,
-    "translated": 421950,
-    "untranslated": 0
+    "total": 422959,
+    "translated": 422958,
+    "untranslated": 1
   }
 }
