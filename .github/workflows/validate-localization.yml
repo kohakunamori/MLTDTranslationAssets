@@ -143,7 +143,7 @@ jobs:
         # where pip took six.  Its cache key follows `**/requirements*.txt` by
         # default, so requirements-ci.txt invalidates it on purpose; the wheel
         # cache setup-python used to keep is redundant now.
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 

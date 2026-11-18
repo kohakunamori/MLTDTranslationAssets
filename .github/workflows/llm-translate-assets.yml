@@ -91,7 +91,7 @@ jobs:
           echo 'Image generation is independent of publication of existing image translations.'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 
@@ -269,7 +269,7 @@ jobs:
           echo 'Image generation is independent of publication of existing image translations.'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 
