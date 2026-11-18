@@ -270,9 +270,12 @@ class ReviewLlmDraftsTests(unittest.TestCase):
             self.assertTrue(kept[fix_sid]["provenance"]["review_repaired"])
             self.assertEqual(kept[fix_sid]["provenance"]["repair_review_verdict"], "PASS")
 
-            # Quarantined persistent REJECT is recorded with review diagnostics.
+            # Quarantined persistent REJECT pairs the reviewed repair text with its blocking error
+            # and preserves the initial rejected draft separately.
             quarantined = read_jsonl(rej_out)
             self.assertEqual([r["source_sha256"] for r in quarantined], [bad_sid])
+            self.assertEqual(quarantined[0]["translation"], "一直这样就好。")
+            self.assertEqual(quarantined[0]["initial_translation"], "请别放在心上。")
             self.assertEqual(quarantined[0]["review_verdict"], "REJECT")
             self.assertIn("omission: 秘密未译出", quarantined[0]["review_blocking_errors"])
 

@@ -290,6 +290,7 @@ def run_gated_review(
 
     repaired_sids: list[str] = []
     still_rejected_sids: set[str] = set(rejected_reviews)
+    quarantined_candidates: dict[str, dict[str, Any]] = {}
     repair_attempted = False
 
     if rejected_reviews and repair_enabled and (
@@ -360,6 +361,12 @@ def run_gated_review(
                     repaired_sids.append(sid)
                     still_rejected_sids.discard(sid)
                 elif verdict == "REJECT":
+                    initial_rev = rejected_reviews.get(sid, {})
+                    quarantined_candidates[sid] = {
+                        **rep,
+                        "initial_translation": str(candidates[sid].get("translation", "")),
+                        "initial_review_blocking_errors": list(initial_rev.get("blocking_errors", []) or []),
+                    }
                     rejected_reviews[sid] = re_reviews[sid]
 
     quarantined_rows: list[dict[str, Any]] = []
@@ -372,8 +379,9 @@ def run_gated_review(
         seen_draft.add(sid)
         if quarantine_rejected and sid in still_rejected_sids:
             rev = rejected_reviews.get(sid, {})
+            quarantined_cand = quarantined_candidates.get(sid, candidates[sid])
             quarantined_rows.append({
-                **candidates[sid],
+                **quarantined_cand,
                 "review_verdict": "REJECT",
                 "review_blocking_errors": rev.get("blocking_errors", []),
                 "review_notes": rev.get("notes", ""),

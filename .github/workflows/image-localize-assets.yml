@@ -40,7 +40,7 @@ jobs:
     outputs:
       enabled: ${{ steps.features.outputs.images_generation_enabled }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           filter: blob:none
@@ -58,7 +58,7 @@ jobs:
     outputs:
       queue: ${{ steps.queue.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           filter: blob:none
@@ -72,7 +72,7 @@ jobs:
             !/generated/objects/
             !/generated/build-inputs/
           sparse-checkout-cone-mode: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Install hosted extraction and OCR tools
@@ -93,12 +93,12 @@ jobs:
           python -u scripts/incremental_images.py prepare "${args[@]}"
       - id: queue
         run: echo "sha=$(sha256sum work/image-batch/queue.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: image-prepared
           path: work/image-batch
           retention-days: 3
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: image-api-inputs
           path: |
@@ -115,7 +115,7 @@ jobs:
       queue: max
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           filter: blob:none
@@ -124,11 +124,11 @@ jobs:
             scripts
             pipelines
             manifests
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - run: python -m pip install Pillow
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: image-api-inputs
           path: work/image-api
@@ -136,7 +136,7 @@ jobs:
         env:
           QUEUE_SHA: ${{ needs.prepare.outputs.queue }}
         run: echo "$QUEUE_SHA  work/image-api/queue.json" | sha256sum -c -
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           key: image-api-${{ needs.prepare.outputs.queue }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: image-api-${{ needs.prepare.outputs.queue }}-
@@ -150,7 +150,7 @@ jobs:
         env:
           MLTD_LLM_API_KEY: ${{ secrets.MLTD_LLM_API_KEY }}
         run: python -u scripts/incremental_images.py generate --work work/image-api --max-seconds 7200
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: always()
         with:
           key: image-api-${{ needs.prepare.outputs.queue }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -160,7 +160,7 @@ jobs:
             work/image-api/tasks/**/*-generated.png
             work/image-api/tasks/**/*-candidate.png
             work/image-api/visual-reviews
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: image-api-results
@@ -187,7 +187,7 @@ jobs:
       remaining: ${{ steps.package.outputs.remaining }}
       completed: ${{ steps.package.outputs.completed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -197,7 +197,7 @@ jobs:
             /*
             !/generated/objects/
             !/generated/build-inputs/
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Install hosted publication and Japanese completeness checks
@@ -205,11 +205,11 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-jpn tesseract-ocr-jpn-vert
           python -m pip install -r pipelines/image/requirements-injection.txt msgpack requests pycryptodome
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: image-prepared
           path: work/image-batch
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: image-api-results
           path: work/image-batch
@@ -252,7 +252,7 @@ jobs:
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: image-publication-audit

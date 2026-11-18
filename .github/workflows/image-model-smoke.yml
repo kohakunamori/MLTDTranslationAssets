@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             scripts
@@ -41,7 +41,7 @@ jobs:
             manifests
             configs
           filter: blob:none
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Install image extraction dependencies
@@ -60,7 +60,7 @@ jobs:
           python "${args[@]}"
       - name: Upload source and generated comparison images
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: image-model-smoke
           path: ${{ runner.temp }}/image-model-smoke

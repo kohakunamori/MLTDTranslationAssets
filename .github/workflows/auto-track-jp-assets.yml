@@ -83,7 +83,7 @@ jobs:
       deploy: ${{ steps.plan.outputs.deploy }}
       source_commit: ${{ steps.plan.outputs.source_commit }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -92,7 +92,7 @@ jobs:
             scripts
             manifests
             configs
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Plan this production run
@@ -117,7 +117,7 @@ jobs:
       latest_version: ${{ steps.check-version.outputs.latest_version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.source_commit }}
           filter: blob:none
@@ -138,7 +138,7 @@ jobs:
           echo "CHECKOUT_SHA=${CHECKOUT_SHA}" >> "$GITHUB_ENV"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -195,7 +195,7 @@ jobs:
       contents: write  # 只用于推送冻结标签；不推分支、不建 PR
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.source_commit }}
           filter: blob:none

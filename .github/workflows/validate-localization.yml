@@ -58,7 +58,7 @@ jobs:
         # real: without it the fetch still transfers every blob and only the
         # write to disk gets smaller.  Add a top-level directory here when a
         # suite starts reading one.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: blob:none
@@ -79,7 +79,7 @@ jobs:
             tools
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload candidate layout report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: candidate-scenario-layout
           path: ${{ runner.temp }}/scenario-layout-report.json
@@ -116,7 +116,7 @@ jobs:
         # checkout from 210 MB to 11 MB.  `scripts/test_validate_workflow.py`
         # fails if a directory the suites import from disappears from this list
         # or if this list grows something the other job does not check out.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           filter: blob:none
           sparse-checkout: |
@@ -134,7 +134,7 @@ jobs:
             tools
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -143,7 +143,7 @@ jobs:
         # where pip took six.  Its cache key follows `**/requirements*.txt` by
         # default, so requirements-ci.txt invalidates it on purpose; the wheel
         # cache setup-python used to keep is redundant now.
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
 

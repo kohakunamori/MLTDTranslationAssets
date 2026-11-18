@@ -67,7 +67,7 @@ jobs:
       sha256: ${{ steps.handoff.outputs.sha256 }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_commit }}
           fetch-depth: 0
@@ -79,7 +79,7 @@ jobs:
             !/image-overlay/
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -91,7 +91,7 @@ jobs:
           echo 'Image generation is independent of publication of existing image translations.'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
 
@@ -200,7 +200,7 @@ jobs:
             --directory .mltd-text-handoff --source-commit "$(git rev-parse HEAD)"
 
       - name: Save exact-run text handoff
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .mltd-text-handoff
           key: text-handoff-${{ github.run_id }}-${{ github.run_attempt }}
@@ -226,7 +226,7 @@ jobs:
       stopped: ${{ steps.translate.outputs.stopped }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.source_commit }}
           fetch-depth: 0
@@ -240,12 +240,12 @@ jobs:
             !/image-overlay/
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
       - name: Restore exact-run text handoff
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .mltd-text-handoff
           key: text-handoff-${{ github.run_id }}-${{ github.run_attempt }}
@@ -269,7 +269,7 @@ jobs:
           echo 'Image generation is independent of publication of existing image translations.'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
 
@@ -547,7 +547,7 @@ jobs:
         # cannot override the separately verified translation/publish verdict.
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: llm-translation-diagnostics
           if-no-files-found: ignore

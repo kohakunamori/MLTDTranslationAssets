@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout source commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -62,7 +62,7 @@ jobs:
             !/image-overlay/
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -150,7 +150,7 @@ jobs:
       - name: Preserve manual image repack evidence
         if: always() && steps.gate.outputs.build == 'true' && steps.features.outputs.images_publication_enabled == 'true'
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: human-image-repack-audit
           path: |
@@ -163,7 +163,7 @@ jobs:
       - name: Restore the official object cache
         id: official-cache
         if: steps.gate.outputs.build == 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .generated-work/official-by-content
           # v5 scopes text, image and event sources by logical name: the catalogue
@@ -216,7 +216,7 @@ jobs:
       - name: Save the official object cache
         if: success() && steps.gate.outputs.build == 'true' && steps.official-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .generated-work/official-by-content
           key: ${{ steps.official-cache.outputs.cache-primary-key }}
