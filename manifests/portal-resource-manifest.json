@@ -53148,8 +53148,8 @@
         "MB_jp.gtx": {
           "pending": 0,
           "total": 10192,
-          "translated": 10191,
-          "untranslated": 1
+          "translated": 10192,
+          "untranslated": 0
         }
       },
       "description": "休息室白板留言涂鸦与问候",
@@ -53162,9 +53162,9 @@
       "reused": 0,
       "suggested": 0,
       "total": 10192,
-      "translated": 10191,
+      "translated": 10192,
       "unit": "句",
-      "untranslated": 1
+      "untranslated": 0
     },
     {
       "blocked": 0,
@@ -77798,8 +77798,8 @@
       "id": "dialogue",
       "pending": 0,
       "total": 37941,
-      "translated": 37940,
-      "untranslated": 1
+      "translated": 37941,
+      "untranslated": 0
     },
     {
       "id": "story",
@@ -77820,20 +77820,20 @@
   "kind": "assets",
   "release": {
     "asset_version": "1079000",
-    "assets_commit": "c680ada09e8729c4f12aec0b500088d856646b67",
+    "assets_commit": "6ac6f8731491f3350dc237aa117b27347ecf9f21",
     "release_id": "assets-1079000",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "908e3a339e157f7d058b6c08c25b53c273e9a2876693a63ac60abd3457542d1b",
+    "source_manifest_sha256": "8c08ae16e2ddb96a8aaac3e8a078e8faa9ad0abd28335851f377c388f0f64d7a",
     "status": "published",
     "updated_at": "2026-11-17T15:00:01+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "c680ada09e8729c4f12aec0b500088d856646b67",
+    "commit": "6ac6f8731491f3350dc237aa117b27347ecf9f21",
     "generated_entry_count": 13653,
-    "generated_manifest_sha256": "908e3a339e157f7d058b6c08c25b53c273e9a2876693a63ac60abd3457542d1b",
+    "generated_manifest_sha256": "8c08ae16e2ddb96a8aaac3e8a078e8faa9ad0abd28335851f377c388f0f64d7a",
     "repository": "kohakunamori/MLTDTranslationAssets",
-    "source_catalogue_sha256": "1127ffe4391bd6905dc6e5bc82cc7ab59e45254bbb7bbf2949b8bfe69c81ca8a",
+    "source_catalogue_sha256": "900a0acf97b7282134189b81a54e6264efbb751bb497a9c3e287d8cb51975f09",
     "summary": "github-assets-repository"
   },
   "summary_ready": true,
@@ -77843,7 +77843,7 @@
     "reused": 0,
     "suggested": 0,
     "total": 422959,
-    "translated": 422958,
-    "untranslated": 1
+    "translated": 422959,
+    "untranslated": 0
   }
 }
