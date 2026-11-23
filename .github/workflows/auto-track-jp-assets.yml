@@ -13,12 +13,22 @@ run-name: Assets [${{ github.event_name == 'push' && 'release' || inputs.stage |
       - 'manifests/**'
       - 'generated/**'
       - 'pipelines/**'
+      - '!pipelines/**/test_*.py'
+      - '!pipelines/**/*_test.py'
+      - '!pipelines/**/*.md'
       - 'scripts/**'
+      - '!scripts/test_*.py'
+      - '!scripts/**/*_test.py'
+      - '!scripts/**/*.md'
       - 'schema/**'
       - 'configs/**'
       - 'asset-server/cloudflare/**'
+      - '!asset-server/cloudflare/test_*'
       - 'asset-server/r2-publisher/**'
+      - '!asset-server/r2-publisher/test_*'
       - '.github/workflows/**'
+      - '!.github/workflows/validate-localization.yml'
+      - '!.github/workflows/image-model-smoke.yml'
   workflow_dispatch:
     inputs:
       stage:

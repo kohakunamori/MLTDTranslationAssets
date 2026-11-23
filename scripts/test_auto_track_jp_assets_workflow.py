@@ -1,6 +1,7 @@
 """Immutable outgoing-version freeze and fail-closed tracking, without network."""
 from __future__ import annotations
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -25,7 +26,79 @@ def run_git(cwd, *args):
     return subprocess.run([GIT, *args], cwd=str(cwd), capture_output=True, text=True,
                           encoding="utf-8", errors="replace", check=False)
 
+def _matches_github_glob(path: str, pattern: str) -> bool:
+    """Match a POSIX repo path against GitHub Actions path-filter glob semantics."""
+    # Convert GitHub glob (`**` = zero or more segments, `*` = non-slash) to regex.
+    regex = ["^"]
+    i = 0
+    while i < len(pattern):
+        if pattern[i:i + 3] == "**/":
+            regex.append("(?:.+/)?")
+            i += 3
+        elif pattern[i:i + 2] == "**":
+            regex.append(".*")
+            i += 2
+        elif pattern[i] == "*":
+            regex.append("[^/]*")
+            i += 1
+        elif pattern[i] == "?":
+            regex.append("[^/]")
+            i += 1
+        else:
+            regex.append(re.escape(pattern[i]))
+            i += 1
+    regex.append("$")
+    return bool(re.match("".join(regex), path))
+
+
+def _push_triggers(path: str, patterns: list[str]) -> bool:
+    matched = False
+    for raw in patterns:
+        if raw.startswith("!"):
+            if _matches_github_glob(path, raw[1:]):
+                matched = False
+        elif _matches_github_glob(path, raw):
+            matched = True
+    return matched
+
+
 class TrackingContractTest(unittest.TestCase):
+    def test_push_paths_ignore_docs_tests_and_validation_workflow(self):
+        doc = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+        triggers = doc.get("on", doc.get(True))
+        patterns = triggers["push"]["paths"]
+
+        for ignored in (
+            "AGENTS.md",
+            "README.md",
+            "docs/README.md",
+            "scripts/test_validate_workflow.py",
+            "scripts/test_auto_track_jp_assets_workflow.py",
+            "pipelines/core/test_core.py",
+            "pipelines/image/README.md",
+            "asset-server/cloudflare/test_check_gateway_cache.py",
+            "asset-server/r2-publisher/test_publisher.mjs",
+            ".github/workflows/validate-localization.yml",
+            ".github/workflows/image-model-smoke.yml",
+        ):
+            with self.subTest(ignored=ignored):
+                self.assertFalse(_push_triggers(ignored, patterns), f"unexpected trigger for {ignored}")
+
+        for production in (
+            "locales/master/MD_jp.gtx.jsonl",
+            "lyrics/songs/a.jsonl",
+            "manifests/asset-version.json",
+            "scripts/build_generated_release.py",
+            "pipelines/core/hashing.py",
+            "asset-server/cloudflare/src/index.js",
+            "asset-server/r2-publisher/src/index.js",
+            ".github/workflows/auto-track-jp-assets.yml",
+            ".github/workflows/assets-generated.yml",
+            ".github/workflows/cloudflare-gateway.yml",
+        ):
+            with self.subTest(production=production):
+                self.assertTrue(_push_triggers(production, patterns), f"missed trigger for {production}")
+
     def test_tracking_stays_read_only_and_freeze_is_a_separate_writer(self):
         doc = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
         jobs = doc["jobs"]
