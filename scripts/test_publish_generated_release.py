@@ -273,7 +273,12 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("needs.release.outputs.pushed == 'true'", deploy["if"])
         self.assertIn("needs.release.result == 'success'", deploy['if'])
         validation = yaml.safe_load((tool.ROOT / ".github/workflows/validate-localization.yml").read_text(encoding="utf-8"))
-        self.assertIn("scripts/test_publish_generated_release.py", str(validation["jobs"]["regression"]))
+        regression_step = next(
+            s for s in validation["jobs"]["regression"]["steps"]
+            if s.get("name") == "Run the offline suites that gate publishing"
+        )["run"]
+        self.assertIn("scripts", regression_step)
+        self.assertNotIn("--ignore=scripts/test_publish_generated_release.py", regression_step)
 
 
 if __name__ == "__main__":

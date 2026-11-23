@@ -19,6 +19,7 @@ each was measured, and each is one edit away from silently going back.
 """
 from __future__ import annotations
 
+import shlex
 import unittest
 from pathlib import Path
 
@@ -124,9 +125,57 @@ class SparseCheckoutTests(unittest.TestCase):
         self.assertNotIn("--dist loadfile", run)
         self.assertIn("pytest-xdist", REQUIREMENTS.read_text(encoding="utf-8"))
 
-    def test_bundle_incremental_regressions_are_in_the_publish_gate(self):
+    def regression_targets_and_ignores(self) -> tuple[list[str], set[str]]:
         run = self.step("regression", "Run the offline suites that gate publishing")["run"]
-        self.assertIn("scripts/test_bundle_incremental.py", run)
+        # Join shell line continuations before tokenizing.
+        joined = run.replace("\\\n", " ")
+        tokens = shlex.split(joined)
+        targets: list[str] = []
+        ignores: set[str] = set()
+        idx = 0
+        while idx < len(tokens):
+            tok = tokens[idx]
+            if tok == "--ignore" and idx + 1 < len(tokens):
+                ignores.add(tokens[idx + 1])
+                idx += 2
+                continue
+            if tok.startswith("--ignore="):
+                ignores.add(tok.split("=", 1)[1])
+            elif tok in ("-n", "--dist"):
+                idx += 2
+                continue
+            elif not tok.startswith("-") and tok not in ("python", "python3", "pytest"):
+                if tok == "-m":
+                    idx += 2
+                    continue
+                targets.append(tok)
+            idx += 1
+        return targets, ignores
+
+    def assert_suite_covered_by_publish_gate(self, relpath: str) -> None:
+        self.assertTrue((ROOT / relpath).is_file(), f"missing expected test file: {relpath}")
+        targets, ignores = self.regression_targets_and_ignores()
+        self.assertNotIn(relpath, ignores, f"{relpath} must not be excluded from the offline publish gate")
+        path = Path(relpath)
+        covered = any(
+            relpath == target or path.is_relative_to(Path(target))
+            for target in targets
+        )
+        self.assertTrue(
+            covered,
+            f"{relpath} is not covered by offline regression targets {targets}",
+        )
+
+    def test_the_offline_gate_discovers_suite_directories_with_explicit_exclusions(self):
+        targets, ignores = self.regression_targets_and_ignores()
+        for directory in ("scripts", "pipelines/core", "pipelines/text", "asset-server", "server/tests"):
+            with self.subTest(directory=directory):
+                self.assertIn(directory, targets)
+        self.assertIn("scripts/test_given_name_hint_authority.py", ignores)
+        self.assertIn("scripts/test_image_model.py", ignores)
+
+    def test_bundle_incremental_regressions_are_in_the_publish_gate(self):
+        self.assert_suite_covered_by_publish_gate("scripts/test_bundle_incremental.py")
 
     def test_authoritative_term_matching_is_in_the_publish_gate(self):
         """The matching contract (longest-first, katakana guard) must stay gated.
@@ -135,8 +184,7 @@ class SparseCheckoutTests(unittest.TestCase):
         is selected before masking, so dropping it from the suite would let a
         matching regression ship without the offline gate noticing.
         """
-        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
-        self.assertIn("scripts/test_authoritative_term_matching.py", run)
+        self.assert_suite_covered_by_publish_gate("scripts/test_authoritative_term_matching.py")
 
     def test_given_name_hints_are_in_the_publish_gate(self):
         """The scoped first-name hint contract must stay gated.
@@ -145,12 +193,12 @@ class SparseCheckoutTests(unittest.TestCase):
         behavior that keeps ordinary words such as ``未来`` and ``好み`` safe;
         dropping it would let an unsafe global alias mechanism ship unchecked.
         """
-        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
-        self.assertIn("scripts/test_given_name_hints.py", run)
+        self.assert_suite_covered_by_publish_gate("scripts/test_given_name_hints.py")
         # Committed locale evidence must run where its data is checked out.
         authority_run = self.step("validate", "Run repository validation")["run"]
         self.assertIn("python -m unittest scripts.test_given_name_hint_authority", authority_run)
-        self.assertNotIn("test_given_name_hint_authority", run)
+        _, ignores = self.regression_targets_and_ignores()
+        self.assertIn("scripts/test_given_name_hint_authority.py", ignores)
 
     def test_translation_unicode_quality_is_in_the_publish_gate(self):
         """The Unicode quality contract must stay gated.
@@ -159,15 +207,13 @@ class SparseCheckoutTests(unittest.TestCase):
         quality treats unsupported Unicode; dropping it from the suite would
         let a Unicode regression ship without the offline gate noticing.
         """
-        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
-        self.assertIn("scripts/test_translation_unicode_quality.py", run)
+        self.assert_suite_covered_by_publish_gate("scripts/test_translation_unicode_quality.py")
 
     def test_glossary_changes_trigger_validation_and_draft_review_is_gated(self):
         for event in ("push", "pull_request"):
             paths = self.workflow[True][event]["paths"]
             self.assertIn("glossary/**", paths)
-        run = self.step("regression", "Run the offline suites that gate publishing")["run"]
-        self.assertIn("scripts/test_review_llm_drafts.py", run)
+        self.assert_suite_covered_by_publish_gate("scripts/test_review_llm_drafts.py")
 
 
 if __name__ == "__main__":

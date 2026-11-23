@@ -157,9 +157,14 @@ jobs:
 
       - name: Run the offline suites that gate publishing
         # Workflow contracts run below; actionlint also validates Actions syntax.
-        # scripts/test_assets_generated_index.py keeps one known-red migration
-        # assertion (the old store notes wording "shard" vs
-        # "retired fan-out"). The immutable-freeze sandbox is part of this gate.
+        # Discover suites by directory instead of maintaining a hand-written file
+        # whitelist, with explicit exclusions only for files that do not belong
+        # to this offline regression step:
+        # - scripts/test_given_name_hint_authority.py: reads locales/ (runs in `validate` job).
+        # - scripts/test_image_model.py: manual live image-model experiment CLI (not a pytest suite).
+        # - scripts/test_scenario_text_layout.py: already runs in the dedicated targeted step above.
+        # - scripts/test_assets_generated_index.py: excluded historical migration suite
+        #   (the old store notes wording "shard" vs "retired fan-out").
         #
         # Standard hosted Linux runners use four workers.
         # --dist worksteal hands a free worker
@@ -175,56 +180,15 @@ jobs:
           PYTEST_WORKERS: '4'
         run: |
           python -m pytest -q -n "$PYTEST_WORKERS" --dist worksteal \
-            scripts/test_llm_translate_untranslated.py \
-            scripts/test_review_llm_drafts.py \
-            scripts/test_asset_translation_context.py \
-            scripts/test_translation_model_capabilities.py \
-            scripts/test_authoritative_term_review_queue.py \
-            scripts/test_authoritative_term_matching.py \
-            scripts/test_given_name_hints.py \
-            scripts/test_translation_quality_experiment.py \
-            scripts/test_translation_unicode_quality.py \
-            scripts/test_audit_human_lyrics.py \
-            scripts/test_llm_translate_workflow.py \
-            scripts/test_text_job_handoff.py \
-            scripts/test_translation_prompt_policy.py \
-            scripts/test_promote_merged_locales.py \
-            scripts/test_build_generated_release.py \
-            scripts/test_bundle_incremental.py \
-            scripts/test_localization_features.py \
-            scripts/test_localization_coverage.py \
-            scripts/test_image_model_contract.py \
-            scripts/test_publish_image_overlay.py \
-            scripts/test_reuse_published_images.py \
-            scripts/test_r2_release_storage.py \
-            scripts/test_analyze_r2_observability.py \
-            asset-server/cloudflare/test_check_gateway_cache.py \
-            scripts/test_incremental_images.py \
-            scripts/test_image_translation.py \
-            scripts/test_image_resources.py \
-            scripts/test_export_portal_originals.py \
-            scripts/test_materialize_human_images.py \
-            scripts/test_release_reuse.py \
-            scripts/test_build_lyric_overlay.py \
-            scripts/test_source_provenance.py \
-            scripts/test_commit_llm_drafts.py \
-            scripts/test_should_build_release.py \
-            scripts/test_publish_generated_release.py \
-            scripts/test_ci_pipeline.py \
-            scripts/test_auto_track_jp_assets_workflow.py \
-            scripts/test_assets_mirror.py \
-            scripts/test_refresh_latest_official_catalogue.py \
-            scripts/test_official_bundle_families.py \
-            scripts/test_discover_official_bundles.py \
-            scripts/test_refresh_lyrics_catalogue.py \
-            scripts/test_validate_repo_lyrics.py \
-            scripts/test_validate_workflow.py \
-            pipelines/core/test_core.py \
-            pipelines/text/test_mltd_localize_scrobj.py \
-            pipelines/text/test_mltd_lyric_rules.py \
-            pipelines/text/test_provider_text_closure.py \
+            scripts \
+            pipelines/core \
+            pipelines/text \
             asset-server \
-            server/tests
+            server/tests \
+            --ignore=scripts/test_given_name_hint_authority.py \
+            --ignore=scripts/test_image_model.py \
+            --ignore=scripts/test_scenario_text_layout.py \
+            --ignore=scripts/test_assets_generated_index.py
 
       - name: Validate all workflow syntax and reusable calls
         env:
