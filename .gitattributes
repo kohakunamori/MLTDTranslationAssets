@@ -17,3 +17,12 @@ scripts/assets_mirror.py text eol=lf
 # verbatim and re-hashed against overlay-manifest.json, so no checkout may
 # normalise or re-encode them.
 image-overlay/** -text
+
+# Standardize Python, workflow YAML, shell, Markdown, and INI files to LF
+# across Windows dev machines and Linux CI runners.
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.ini text eol=lf
