@@ -41,6 +41,7 @@ def test_image_generation_is_paused_by_policy_while_publication_stays_on():
     assert policy['visual_acceptance'] == {'enabled': True, 'model': 'gemini-3.8-flash-high', 'api_protocol': 'gemini_generate_content'}
 
 
+@pytest.mark.workflow_contract
 def test_repo_policy_skips_the_images_job_without_reaching_a_provider():
     image_job = workflow("llm-translate-assets.yml")["jobs"]["images"]
     enabled = str(features.inspect(ROOT)["images_generation_enabled"]).lower()
@@ -95,6 +96,7 @@ def test_switches_are_independent(tmp_path, generation, publication):
     assert result["images_publication_enabled"] is publication
 
 
+@pytest.mark.workflow_contract
 def test_images_have_opt_in_gates_for_translation_and_explicit_image_stage():
     jobs = workflow("llm-translate-assets.yml")["jobs"]
     image_job = jobs["images"]
@@ -110,6 +112,7 @@ def test_images_have_opt_in_gates_for_translation_and_explicit_image_stage():
     assert "stage == 'images'" in workflow('auto-track-jp-assets.yml')['jobs']['images']['if']
 
 
+@pytest.mark.workflow_contract
 @pytest.mark.parametrize("enabled,image_result,ready,text_published,image_published,expected", [
     ("false", "skipped", "", "true", "", True),
     ("false", "skipped", "", "false", "", True),
@@ -131,6 +134,7 @@ def test_packaging_waits_for_enabled_images_but_ignores_disabled_images(
     assert condition(package["if"], values) is False
 
 
+@pytest.mark.workflow_contract
 def test_image_overlay_is_exported_only_after_independent_repack_audit():
     jobs = workflow("image-localize-assets.yml")["jobs"]
     assert jobs['publish']['runs-on'] == jobs['prepare']['runs-on'] == 'ubuntu-latest'
@@ -143,6 +147,7 @@ def test_image_overlay_is_exported_only_after_independent_repack_audit():
     assert not any("gh workflow run assets-generated.yml" in step.get("run", "") for step in steps)
 
 
+@pytest.mark.workflow_contract
 def test_release_reuses_images_when_generation_is_paused():
     steps = workflow("assets-generated.yml")["jobs"]["build"]["steps"]
     build = next(step for step in steps if step.get("name") == "Build generated Unity3D release")

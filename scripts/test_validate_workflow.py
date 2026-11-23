@@ -23,7 +23,10 @@ import shlex
 import unittest
 from pathlib import Path
 
+import pytest
 import yaml
+
+pytestmark = pytest.mark.workflow_contract
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "validate-localization.yml"

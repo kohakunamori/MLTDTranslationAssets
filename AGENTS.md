@@ -3,7 +3,9 @@
 ## Offline Verification Commands
 - **Workflow & contract check** (mandatory after editing `.github/workflows/*.yml`):
   - Validate YAML syntax with Python `yaml.safe_load`.
-  - Run `python -m pytest scripts/test_validate_workflow.py -q -x`
+  - Run `PYTHONPATH=. python -m pytest -q -m "workflow_contract and not slow"` (plus `python -m pytest scripts/test_validate_workflow.py -q -x`).
+- **Fast local tier** (excludes `slow` git/subprocess/HTTP sandboxes and `workflow_contract` meta-tests, using `pytest.ini` markers):
+  - `PYTHONPATH=. python -m pytest -q -n 4 --dist worksteal -m "not slow and not workflow_contract" scripts pipelines/core pipelines/text asset-server server/tests --ignore=scripts/test_given_name_hint_authority.py --ignore=scripts/test_image_model.py --ignore=scripts/test_scenario_text_layout.py --ignore=scripts/test_assets_generated_index.py`
 - **Targeted scenario layout regression**:
   - `python -m pytest scripts/test_scenario_text_layout.py -q -x --maxfail=3`
 - **Full offline regression suite** (mirrors `.github/workflows/validate-localization.yml`, does not require `locales/` or `lyrics/`):

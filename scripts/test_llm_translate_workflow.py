@@ -21,7 +21,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
 import yaml
+
+pytestmark = pytest.mark.workflow_contract
 
 import commit_llm_drafts
 

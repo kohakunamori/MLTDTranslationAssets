@@ -12,9 +12,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 import should_build_release as tool
 
 
+@pytest.mark.slow
 class ReleaseGateTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -85,6 +88,7 @@ class ReleaseGateTests(unittest.TestCase):
         with patch.object(tool, "git", side_effect=git):
             self.assertTrue(self.decide()["build"])
 
+    @pytest.mark.workflow_contract
     def test_metadata_checkout_can_skip_then_materialize_only_needed_binaries(self):
         import yaml
         workflow = yaml.safe_load((Path(tool.__file__).resolve().parents[1] /
@@ -231,6 +235,7 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertTrue(self.decide()["build"])
 
 
+@pytest.mark.workflow_contract
 class WorkflowGateTests(unittest.TestCase):
     """The quota-saving gates must survive future workflow edits."""
 

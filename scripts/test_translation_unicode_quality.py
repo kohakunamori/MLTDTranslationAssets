@@ -31,6 +31,7 @@ import unittest
 from unittest import mock
 
 import httpx
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -97,6 +98,7 @@ def _config(**overrides: object) -> ModelConfig:
     return ModelConfig(**values)
 
 
+@pytest.mark.slow
 class TranslationUnicodeQualityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

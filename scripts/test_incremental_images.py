@@ -699,6 +699,7 @@ def test_version_rename_reuses_full_sha_verified_published_source_without_model_
     assert not (work / 'install.jsonl').read_text()
 
 
+@pytest.mark.workflow_contract
 def test_gc_and_all_publishers_share_one_lock_and_api_job_has_no_heavy_dependency():
     root = Path(__file__).resolve().parents[1]
     workflows = root / '.github/workflows'

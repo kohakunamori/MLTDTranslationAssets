@@ -58,6 +58,7 @@ def test_published_manual_result_skips_network_and_repack(tmp_path, monkeypatch)
     assert human.materialize(tmp_path, tmp_path / "work") == 0
 
 
+@pytest.mark.workflow_contract
 def test_manual_publication_is_independent_from_generation_switch():
     # The generation switch is operational state (it flips with provider
     # availability), so pinning its current value would make this a snapshot

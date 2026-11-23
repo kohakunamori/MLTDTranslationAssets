@@ -16,8 +16,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_reuse as reuse
+
+pytestmark = pytest.mark.slow
 
 
 def index_row(remote: str, size: int = 10) -> dict:

@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
@@ -62,6 +63,7 @@ def _push_triggers(path: str, patterns: list[str]) -> bool:
     return matched
 
 
+@pytest.mark.workflow_contract
 class TrackingContractTest(unittest.TestCase):
     def test_push_paths_ignore_docs_tests_and_validation_workflow(self):
         doc = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
@@ -121,6 +123,8 @@ class TrackingContractTest(unittest.TestCase):
         self.assertFalse(any("gh workflow run" in step.get("run", "")
                              for key in ("resolve-target", "freeze") for step in jobs[key]["steps"]))
 
+@pytest.mark.slow
+@pytest.mark.workflow_contract
 class FreezeSandboxTest(unittest.TestCase):
     """在本地 bare 远端上执行冻结步骤脚本；网络与真实仓库都不参与。"""
 

@@ -14,6 +14,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import commit_llm_drafts as committer  # noqa: E402
@@ -48,12 +50,14 @@ def _repository(tmp: str) -> Path:
 
 
 class TranslationCommitTests(unittest.TestCase):
+    @pytest.mark.slow
     def test_nothing_staged_is_not_an_error(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = _repository(tmp)
             self.assertEqual(committer.publish(root), 0)
             self.assertEqual(_git(root, "log", "--oneline").stdout.count("\n"), 1)
 
+    @pytest.mark.slow
     def test_applied_rows_are_committed_and_pushed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = _repository(tmp)
@@ -66,6 +70,7 @@ class TranslationCommitTests(unittest.TestCase):
             pushed = _git(root, "log", "-1", "--format=%s", "origin/main").stdout
             self.assertIn("apply LLM translations for asset 1077741", pushed)
 
+    @pytest.mark.slow
     def test_the_message_records_a_promotion_only_when_one_happened(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = _repository(tmp)
@@ -80,6 +85,7 @@ class TranslationCommitTests(unittest.TestCase):
             self.assertIn("1532 text row(s)", body)
             self.assertIn("1392 row(s)", body)
 
+    @pytest.mark.slow
     def test_a_push_reports_that_main_moved(self):
         """The build dispatch keys off this output; a GITHUB_TOKEN push is silent."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,6 +101,7 @@ class TranslationCommitTests(unittest.TestCase):
                 os.environ.pop("GITHUB_OUTPUT", None)
             self.assertEqual(output.read_text(encoding="utf-8"), "published=true\n")
 
+    @pytest.mark.slow
     def test_staged_paths_skip_manifests_that_do_not_exist(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = _repository(tmp)
@@ -104,6 +111,7 @@ class TranslationCommitTests(unittest.TestCase):
             self.assertNotIn("manifests/official-bundle-index.json", paths)
             self.assertNotIn("lyrics", paths, "a missing tree must not be staged")
 
+    @pytest.mark.workflow_contract
     def test_the_workflow_commits_inside_the_apply_step(self):
         workflow = (Path(__file__).resolve().parents[1]
                     / ".github" / "workflows" / "llm-translate-assets.yml").read_text(encoding="utf-8")
@@ -113,6 +121,7 @@ class TranslationCommitTests(unittest.TestCase):
                         apply_run.index("python scripts/commit_llm_drafts.py"),
                         "the rows must validate before they are committed")
 
+    @pytest.mark.slow
     def test_ignores_coverage_when_only_generated_source_commit_changed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = _repository(tmp)

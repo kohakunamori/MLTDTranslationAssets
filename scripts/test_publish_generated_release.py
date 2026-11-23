@@ -10,11 +10,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 import yaml
 
 import publish_generated_release as tool
 
 
+@pytest.mark.slow
+@pytest.mark.e2e
 class PublishTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="generated-publish-test-")
@@ -254,6 +257,7 @@ class PublishTests(unittest.TestCase):
         self.assertIn("rebuild=false\n", output.read_text())
 
 
+@pytest.mark.workflow_contract
 class WorkflowTests(unittest.TestCase):
     def test_stale_outputs_dispatch_a_latest_main_build_and_never_deploy(self):
         workflow = yaml.safe_load((tool.ROOT / ".github/workflows/assets-generated.yml").read_text(encoding="utf-8"))

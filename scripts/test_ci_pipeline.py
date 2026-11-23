@@ -50,6 +50,7 @@ def test_push_never_spends_model_tokens_and_detects_gateway_changes():
         plan('workflow_dispatch', 'unknown')
 
 
+@pytest.mark.workflow_contract
 def test_only_three_entry_points_and_no_dispatch_chains():
     entries = set()
     for path in FLOWS.glob('*.yml'):
@@ -67,6 +68,7 @@ def test_only_three_entry_points_and_no_dispatch_chains():
         assert child['concurrency']['cancel-in-progress'] is False
 
 
+@pytest.mark.workflow_contract
 @pytest.mark.parametrize('stage,extra,expected', [
     ('watch', {}, False),
     ('watch', {'inputs.daily_housekeeping': 'true'}, True),
@@ -85,6 +87,7 @@ def test_translation_cannot_run_before_required_freeze_or_failed_tracking(stage,
     assert job['needs'] == ['plan', 'resolve-target', 'freeze']
 
 
+@pytest.mark.workflow_contract
 @pytest.mark.parametrize('stage,extra,expected', [
     ('release', {'needs.translate.result': 'skipped'}, True),
     ('watch', {}, True),
@@ -99,6 +102,7 @@ def test_release_requires_verified_ready_localization_or_explicit_existing_resul
     assert evaluate(job['if'], states(stage, **extra)) is expected
 
 
+@pytest.mark.workflow_contract
 @pytest.mark.parametrize('stage,extra,expected', [
     ('release', {}, True),
     ('release', {'needs.release.outputs.pushed': ''}, False),
@@ -113,6 +117,7 @@ def test_gateway_requires_a_published_release_or_explicit_deploy(stage, extra, e
     assert job['uses'] == './.github/workflows/cloudflare-gateway.yml'
 
 
+@pytest.mark.workflow_contract
 def test_backlog_continuation_is_after_publication_and_needs_a_truncated_loop():
     job = workflow('auto-track-jp-assets.yml')['jobs']['continue-backlog']
     good = states('translate', **{'needs.translate.outputs.remaining': '50',
@@ -135,6 +140,7 @@ def test_backlog_continuation_is_after_publication_and_needs_a_truncated_loop():
                for value in workflow(child)['jobs'].values() for step in value.get('steps', []))
 
 
+@pytest.mark.workflow_contract
 def test_checkout_uses_actual_source_then_latest_published_metadata():
     parent = workflow('auto-track-jp-assets.yml')['jobs']
     for key in ('resolve-target', 'freeze'):
@@ -150,6 +156,7 @@ def test_checkout_uses_actual_source_then_latest_published_metadata():
         assert checkout['with']['ref'] == 'main'
 
 
+@pytest.mark.workflow_contract
 def test_r2_objects_precede_git_metadata_and_deploy_is_a_dag_dependency():
     steps = workflow('assets-generated.yml')['jobs']['build']['steps']
     names = [s.get('name', '') for s in steps]
