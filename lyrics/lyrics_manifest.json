@@ -5,7 +5,7 @@
   "counts": {
     "total_songs": 497,
     "total_slots": 14311,
-    "translated_slots": 12608,
+    "translated_slots": 12629,
     "english_bypass_slots": 1682
   },
   "songs": [
@@ -1822,7 +1822,7 @@
     {
       "bundle": "scrobj_s03iku.unity3d",
       "slots": 21,
-      "translated": 0
+      "translated": 21
     },
     {
       "bundle": "scrobj_s03ior.unity3d",
