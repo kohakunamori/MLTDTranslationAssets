@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "asset_version": "1079250",
-  "official_index_sha256": "4eb5007ea2fc8bca377e7ec454c155c8f6feeb71c5ca93ffd85f7fb9403effd2",
+  "asset_version": "1079260",
+  "official_index_sha256": "6ab98b1303291a2f8f48a9dc37ecfd1b7f0bc1443ffb82fa7b8e829ca513d97b",
   "source_sync_complete": true,
   "sources": {
     "gtx_text": {
-      "official_bundles": 12051,
+      "official_bundles": 12052,
       "unsynchronized_bundles": []
     },
     "song_lyrics": {
-      "official_bundles": 496,
+      "official_bundles": 497,
       "unsynchronized_bundles": []
     },
     "event_units": {
@@ -19,7 +19,8 @@
   },
   "locales": {
     "accepted": 423052,
-    "accepted_with_kana_candidates": 3315
+    "accepted_with_kana_candidates": 3315,
+    "untranslated": 2458
   },
   "repair_candidates": [],
   "images": {
@@ -8588,7 +8589,7 @@
         ]
       },
       "achievement": {
-        "official_bundles": 6843,
+        "official_bundles": 6845,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -14935,6 +14936,8 @@
           "achievement_7253.unity3d",
           "achievement_726.unity3d",
           "achievement_727.unity3d",
+          "achievement_7270.unity3d",
+          "achievement_7271.unity3d",
           "achievement_7276.unity3d",
           "achievement_7277.unity3d",
           "achievement_728.unity3d",
@@ -21780,6 +21783,8 @@
           "achievement_7253.unity3d",
           "achievement_726.unity3d",
           "achievement_727.unity3d",
+          "achievement_7270.unity3d",
+          "achievement_7271.unity3d",
           "achievement_7276.unity3d",
           "achievement_7277.unity3d",
           "achievement_728.unity3d",
@@ -31299,7 +31304,7 @@
         ]
       },
       "item_icons": {
-        "official_bundles": 3472,
+        "official_bundles": 3475,
         "reviewed_bundles": 0,
         "generated_bundles": 0,
         "missing_reviewed_bundles": [
@@ -34434,6 +34439,9 @@
           "item_902102.unity3d",
           "item_902103.unity3d",
           "item_902106.unity3d",
+          "item_903002.unity3d",
+          "item_903003.unity3d",
+          "item_903006.unity3d",
           "item_903302.unity3d",
           "item_903303.unity3d",
           "item_903306.unity3d",
@@ -37908,6 +37916,9 @@
           "item_902102.unity3d",
           "item_902103.unity3d",
           "item_902106.unity3d",
+          "item_903002.unity3d",
+          "item_903003.unity3d",
+          "item_903006.unity3d",
           "item_903302.unity3d",
           "item_903303.unity3d",
           "item_903306.unity3d",
