@@ -77934,18 +77934,18 @@
   "kind": "assets",
   "release": {
     "asset_version": "1079300",
-    "assets_commit": "1c8de58542a4907175dbf5945c657d88478fdc6f",
+    "assets_commit": "ec56aecb1f4dd38ea0c7dd84b62ec947db2de0d1",
     "release_id": "assets-1079300",
     "server_schema_version": "v1",
-    "source_manifest_sha256": "ec26dcc2e91596a00da3a0db3c4347d6dd3237ae987752478f8a2869f5a30c9c",
+    "source_manifest_sha256": "e550f626ab6edc30e6a6ee910dc130b90e58b9bc323a3ab9a3b1b96c7428dba8",
     "status": "published",
     "updated_at": "2026-11-26T15:00:00+09:00"
   },
   "schema": "mltd.portal.resource-manifest/v1",
   "source": {
-    "commit": "1c8de58542a4907175dbf5945c657d88478fdc6f",
+    "commit": "ec56aecb1f4dd38ea0c7dd84b62ec947db2de0d1",
     "generated_entry_count": 13673,
-    "generated_manifest_sha256": "ec26dcc2e91596a00da3a0db3c4347d6dd3237ae987752478f8a2869f5a30c9c",
+    "generated_manifest_sha256": "e550f626ab6edc30e6a6ee910dc130b90e58b9bc323a3ab9a3b1b96c7428dba8",
     "repository": "kohakunamori/MLTDTranslationAssets",
     "source_catalogue_sha256": "4ddfcf83311e105b21e97bf65ce6b7dd053f7ed81fe30222da0269e743ffc303",
     "summary": "github-assets-repository"
